@@ -2,6 +2,13 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [1.2.0] - 2026-05-12
+
+### Added
+
+- **Azure Automation managed identity runbook** (`Start-ActionConfirmationRunbook-MI.ps1`): Sample runbook demonstrating the migration from deprecated RunAs accounts to managed identity (system-assigned or user-assigned). Authenticates via `Connect-AzAccount -Identity`, acquires tokens for Graph and Dataverse, and runs the action confirmation compliance scan. Includes inline migration guide. Reference: [Azure Automation MI](https://learn.microsoft.com/azure/automation/learn/powershell-runbook-managed-identity).
+- **Purview AI Hub / DSPM for AI integration** (`Get-PurviewAIHubEvidence.ps1`): Queries Purview AI Hub for confirmed actions on AI-classified data, cross-references with ACA action-confirmation events from Dataverse, and generates dual-confirmation evidence (action-level + DSPM-level). Evidence includes SHA-256 integrity hashing for regulatory submissions. Reference: [Purview AI Hub](https://learn.microsoft.com/purview/ai-microsoft-purview).
+
 ## [Unreleased] - 2026-Q2 — Microsoft Learn refresh
 
 ### Fixed

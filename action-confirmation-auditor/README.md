@@ -74,6 +74,8 @@ When a required confirmation is missing, severity is classified as:
 - **Teams/Email Alerting** -- Automated notifications via Power Automate flows
 - **Evidence Export** -- SHA-256 hashed evidence packages for regulatory examination
 - **v1.1 Risk Classification Import** -- Stub for custom risk rules per connector/action (deferred)
+- **Managed Identity Runbook** -- Sample Azure Automation runbook using system-assigned or user-assigned MI authentication (replaces deprecated RunAs accounts)
+- **Purview AI Hub / DSPM Integration** -- Cross-references action confirmation events with Purview AI Hub activities for dual-confirmation evidence
 
 ## Components
 
@@ -95,11 +97,13 @@ action-confirmation-auditor/
 │   ├── Export-ActionAuditEvidence.ps1
 │   ├── Get-AgentActionSettings.ps1
 │   ├── Start-ActionConfirmationValidationRunbook.ps1
+│   ├── Start-ActionConfirmationRunbook-MI.ps1
 │   ├── Test-ActionConfirmationCompliance.ps1
 │   ├── Test-EvidenceIntegrity.ps1
 │   ├── governance/
 │   │   ├── Import-ActionRiskClassifications.ps1
 │   │   └── Test-UserDefinedActionMessages.ps1
+│   ├── Get-PurviewAIHubEvidence.ps1
 │   └── private/
 │       ├── ACAClient.psm1
 │       ├── Connect-EnvironmentDataverse.ps1
