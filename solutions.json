@@ -5,7 +5,7 @@
     "action-confirmation-auditor": {
       "id": "action-confirmation-auditor",
       "name": "Action Confirmation Auditor",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -84,7 +84,7 @@
     "agent-communication-restriction-detector": {
       "id": "agent-communication-restriction-detector",
       "name": "Agent Communication Restriction Detector",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -412,7 +412,7 @@
     "credential-oversharing-detector": {
       "id": "credential-oversharing-detector",
       "name": "Credential Oversharing Detector",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -640,7 +640,7 @@
     "generative-ai-config-auditor": {
       "id": "generative-ai-config-auditor",
       "name": "Generative AI Config Auditor",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -937,7 +937,7 @@
     "session-security-configurator": {
       "id": "session-security-configurator",
       "name": "Session Security Configurator",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
