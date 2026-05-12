@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-Q3 — H-item adoption wave (5 domains, 35 H items)
+
+Tracking summary: 6 triage aggregate issues #124, #125, #126, #127, #129, #130. This wave implements the **H-priority** consider-adopting items from each — shipping Microsoft Learn 2026-Q2 patterns as enforced code/schema across 22 solutions in 5 PRs. M-priority and Defer items remain in the aggregate issues for the next cycle.
+
+### Added — content-data domain (PR #138, closes #125 H)
+- **agent-knowledge-source-scanner**: Microsoft Graph v1.0 permissions scan path; JSON batching capped at 20 with `Retry-After` header handling and exponential backoff. (#125 H1+H2)
+- **content-moderation-monitor**: Purview Audit / DSPM correlation — joins moderation events with Purview signals by user + timestamp + content hash. (#125 H3)
+- **file-upload-security**: Downstream attachment validation examples (magic-number, Defender for Cloud, sensitivity label inheritance). (#125 H4)
+- **rag-source-validator**: 5 new Dataverse columns for change detection and lineage — `fsi_etag`, `fsi_ctag`, `fsi_deltalink`, `fsi_searchconnectorid`, `fsi_lineageuri`. Additive schema migration. (#125 H5)
+- **mime-type-restrictions**: WebP RIFF offset-8 `WEBP` signature validation (fixes RIFF/WAV collision). 32-test pytest suite covering WebP/TIFF/GIF/animated-GIF detection edge cases. (#125 H6+H8)
+  - **Policy decision (H7):** REMOVED TIFF from Enterprise Managed default allowlist (multi-page documents + complex metadata = attack surface; not a Copilot Studio supported input type). KEPT non-animated GIF (low risk). FLAGGED animated GIF separately via `animatedGifPolicy: "flag-for-review"` config field, detected via NETSCAPE2.0 application extension marker.
+
+### Added — lifecycle-ops domain (PR #137, closes #129 H)
+- **coi-testing**: PAC CLI inventory script `Get-CoiInventory.ps1` enumerating CoI testing solutions, environments, and connections to gitignored `output/`. (#129 H1)
+- **agent-365-lifecycle-governance**: Two new Dataverse environment variables — `fsi_ALG_DeletionHoldDays` (deletion grace period) and `fsi_ALG_AgentRegistryApiVersion` (Graph API version pinning). (#129 H2)
+- **dr-testing-framework**: 3 KQL templates (DR scenario detection, replication lag, RPO/RTO measurement); emergency-access drill doc with OCC 2011-12 quarterly cadence and evidence collection format. (#129 H3+H4)
+- **pipeline-governance-cleanup**: `Set-GovernanceConfig.ps1` wrapper for `pac admin set-governance-config` with verification; Manage pipelines walkthrough doc with structured screenshot placeholders. (#129 H5+H6)
+- **message-center-monitor**: Service-health Graph ingestion (`ingest_service_health.py`) using `/admin/serviceAnnouncement/healthOverviews` and `/issues` endpoints; PowerShell `Invoke-MgGraphRequest` snippet doc. (#129 H7+H8)
+
+### Added — agent-config domain (PR #139, closes #124 H)
+- **agent-communication-restriction-detector**: Cross-tenant Entra correlation via Graph `crossTenantAccessPolicy`; child-agent input/output 1MB payload validation. (#124 H1+H2)
+- **session-security-configurator**: Continuous Access Evaluation (CAE) configuration tracking per zone. (#124 H3)
+- **credential-oversharing-detector**: Workload identity Conditional Access policy detection; cert/MI auth detection (flag client-secret as legacy); name-level OAuth scope baseline comparison. (#124 H4+H5+H6)
+- **generative-ai-config-auditor**: Purview DLP / sensitivity label evidence collection. (#124 H7)
+- **action-confirmation-auditor**: Azure Automation managed-identity runbook sample; Purview AI Hub / DSPM dual-confirmation evidence. (#124 H8+H9)
+
+### Added — compliance-audit domain (PR #136, closes #126 H)
+- **compliance-dashboard**: Full 78-control baseline dataset (16 missing controls added: 1.25–1.29, 2.22–2.26, 3.11–3.14, 4.8–4.9, sourced from `judeper/FSI-AgentGov` `CONTROL-INDEX.md`); `--output-docs` flag on `create_cd_dataverse_schema.py` for auto-generated schema docs (Council Review 2026-04-16 finding #1 mitigation). (#126 H1+H2)
+- **audit-compliance-manager**: Validation tests asserting Dataverse logical names match the schema generator (no `_` between words). (#126 H3)
+- **hitl-workflow-governance**: Anti-drift connector op-ID + option-set tests catching the 0/1/2/3 vs 100000000+ option-set mismatch pattern documented in Council Review. (#126 H4)
+- **cross-solution-integration**: Dataverse alternate keys for upsert pattern (composite: `fsi_controlmasterid` + `fsi_assessmentdate` + `fsi_zone`). (#126 H5)
+- **model-risk-management-automation**: Agent ID migration evidence section (SR 11-7 audit trail). (#126 H6)
+
+### Added — access-identity domain (PR #135, closes #130 H)
+- **cross-tenant-external-sharing-governance**: Two new Dataverse Memo columns on `fsi_EntraCTARecord` for `automaticUserConsentSettings` and `inboundTrust` CTA policy fields; `Scan-ManagedEnvBotSharingBaseline.ps1` scanner detecting deviations from recommended Managed Environment bot-sharing baseline. (#130 H1+H2)
+- **unrestricted-agent-sharing-detector**: `Restore-AgentSharingFromEvidence.ps1` runbook restoring sharing relationships from evidence files via the `GrantAccess` Dataverse action; JSON audit trail. (#130 H3)
+- **agent-sharing-access-restriction-detector**: Dynamic Entra group admission gate with `securityEnabled`/`mailEnabled` validation (rejects security-disabled and mail-enabled groups). New `SecurityEnabled`, `MailEnabled`, `GroupTypes` columns on `fsi_ApprovedSecurityGroupPolicy` for drift detection. (#130 H4)
+
+### Skipped — monitoring-analytics domain (closes #127 H)
+- After investigation, both H items in #127 were already implemented in their source PRs:
+  - **H1** (dual-schema KQL `union isfuzzy=true`): already shipped in `copilot-studio-analytics` (PR #99) and `agent-observability-foundation` (PR #100). `deny-event-correlation-report` was already on the dual-schema pattern; `scope-drift-monitor` has no KQL files (it queries the Office 365 Management API via PowerShell).
+  - **H2** (managed-identity-first auth in Python analyzers): the two target solutions are PowerShell-only (no Python analyzers); their PowerShell scripts already adopted MI-first in prior releases.
+- No PR opened for monitoring-analytics. Tracking comment posted on #127.
+
+### Fixed
+- **unrestricted-agent-sharing-detector**: PowerShell parse error in `Restore-AgentSharingFromEvidence.ps1` — escaped `$agentId:` to `${agentId}:` in 7 interpolated strings (Linux pwsh in CI parses `$variable:` as scope-qualified variable; Windows pwsh is more lenient). All 7 occurrences fixed. Local Parser::ParseFile now passes on both platforms.
+
+### Notes
+- All 5 PRs validated locally before push: `lint-odata-columns.py` (0 violations across 695–701 files), per-solution pytest (84 tests passing across the wave), language linter clean.
+- No `solutions.json` or per-solution version-manifest changes required — H items were additive features that did not change manifest schema.
+- Out of scope this wave: ~39 M items + ~32 Defer items remain in the 6 triage aggregate issues for the next cycle. Issue #123 (agent-intake pilot validation) is tenant-dependent and remains open separately.
+
+---
+
 ## [Unreleased] - 2026-Q2 — Schema 1.5.0 (BREAKING)
 
 ### Changed (BREAKING)
