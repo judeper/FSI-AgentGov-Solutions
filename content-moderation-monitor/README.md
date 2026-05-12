@@ -186,6 +186,30 @@ expectations honest, please note:
   behavior, and egress. This solution contributes one configuration
   signal toward 1.8 evidence; it is not a primary control implementation.
 
+## Purview Audit / DSPM Correlation
+
+The `correlate_purview_events.py` script enriches moderation findings with Purview audit context:
+
+```bash
+python scripts/correlate_purview_events.py \
+    --tenant-id <tenant-id> \
+    --environment-url https://org.crm.dynamics.com \
+    --lookback-hours 24 \
+    --output enriched-events.json
+```
+
+**Correlation logic:**
+1. Pulls moderation violation records from the `fsi_moderationviolations` Dataverse table
+2. Creates a Purview audit log query via Graph `auditLogQuery` API targeting CopilotInteraction, MicrosoftTeams, and PowerPlatform record types
+3. Matches events by user principal name + timestamp proximity (5-minute window)
+4. Extracts DSPM context: sensitivity labels, sensitive info types, DLP policy matches, and Copilot interaction metadata
+
+**Required Graph permissions:** `AuditLogsQuery.Read.All` (application), `User.Read.All` (application)
+
+**Output:** JSON file with enriched events and correlation summary.
+
+> **Note:** This correlation provides supporting evidence for Controls 1.27 and 1.8 by linking configuration-time moderation findings with runtime Purview audit signals. It does not replace runtime Purview monitoring — organizations should use Microsoft Purview Insider Risk Management and Purview Audit for continuous monitoring.
+
 ## Related Controls
 
 | Control | Relationship |

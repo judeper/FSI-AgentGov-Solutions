@@ -53,6 +53,42 @@ This module is optional — the core solution operates independently without it.
 | [Build and Sign](docs/build-and-sign.md) | dotnet CLI build, cosign Sigstore signing, and DLL verification |
 | [Delivery Checklist](docs/delivery-checklist.md) | Pre-deployment verification checklist |
 
+## Enterprise Managed Default Allowlist (Zone 3)
+
+The default `mime-config.json` for Zone 3 includes:
+
+| MIME Type | Status | Rationale |
+|-----------|--------|-----------|
+| `application/pdf` | ✅ Allowed | Standard business document format |
+| `image/png` | ✅ Allowed | Common image format, no embedded code risk |
+| `image/jpeg` | ✅ Allowed | Common image format, no embedded code risk |
+| `image/gif` | ✅ Allowed (non-animated) | Non-animated GIF is low risk; animated GIF flagged for review |
+| `image/webp` | ✅ Allowed | Validated with offset-8 WEBP signature check to prevent RIFF collision |
+| `image/tiff` | ❌ Removed | TIFF supports multi-page documents and complex metadata (EXIF, IPTC, XMP) that can carry malicious payloads; not a supported Copilot Studio user file input type; uncommon for AI agent input |
+| `text/plain` | ✅ Allowed | Binary content absence check |
+| `text/csv` | ✅ Allowed | Binary content absence check |
+| OpenXML (docx/xlsx/pptx) | ✅ Allowed | PK header + `[Content_Types].xml` + subtype directory validation |
+
+### TIFF Removal Rationale
+
+TIFF was removed from the Enterprise Managed default allowlist based on:
+
+1. **Copilot Studio support matrix:** TIFF is not listed as a supported user file input type in Copilot Studio
+2. **Security posture:** TIFF supports multi-page documents, embedded scripts via EXIF/IPTC metadata, and complex IFD structures that have been historically exploited (CVE-2020-1599, CVE-2017-0263)
+3. **Business need:** TIFF is uncommon for AI agent input scenarios; organizations that require TIFF should add it to their zone-specific allowlist with explicit risk acceptance
+
+### Animated GIF Policy
+
+Non-animated GIF is retained in the allowlist. Animated GIFs (identifiable by the `NETSCAPE2.0` application extension block) are flagged for review because:
+
+1. Animated GIFs can be used for visual prompt injection via embedded text frames
+2. Multi-frame animation adds processing overhead and unpredictable behavior in AI responses
+3. Copilot Studio supports non-animated GIF for user file input but does not process animation
+
+Organizations can configure the `animatedGifPolicy` field in `mime-config.json` to `"block"`, `"flag-for-review"`, or `"allow"` based on their risk tolerance.
+
+> **Migration note:** If upgrading from a prior version where TIFF was in the allowlist, review your zone configuration. Existing TIFF files in Dataverse are not affected. The change only applies to new uploads validated by the plugin after configuration update.
+
 ## Components
 
 ```

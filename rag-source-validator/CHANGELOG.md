@@ -6,6 +6,10 @@ All notable changes to the RAG Source Validator.
 
 ## [Unreleased]
 
+### Added
+
+- **5 new Dataverse columns on `fsi_knowledgesource`.** Additive schema migration adding `fsi_etag` (eTag, String 255), `fsi_ctag` (cTag, String 255), `fsi_deltalink` (Delta Link, Url 2048), `fsi_searchconnectorid` (Search Connector ID, String 100), and `fsi_lineageuri` (Lineage URI, Url 2048). Re-run `create_rsv_dataverse_schema.py` to apply — existing data is unaffected.
+
 ### Changed
 - Bumped solution metadata to v1.3.0 for the Microsoft Learn 2026-Q2 refresh.
 - Added managed identity-first authentication guidance and support for the primary validator and governance reporting scripts, with client-secret authentication retained as a legacy development fallback.
