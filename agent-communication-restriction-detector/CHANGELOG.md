@@ -2,6 +2,13 @@
 
 All notable changes to the Agent Communication Restriction Detector are documented in this file.
 
+## [1.2.0] - 2026-05-12
+
+### Added
+
+- **Cross-tenant Entra correlation** (`Get-CrossTenantAccessCorrelation.ps1`): Pulls cross-tenant access policy from Microsoft Graph (`crossTenantAccessPolicy` and partner configurations), cross-references with ACRD CROSS_TENANT_VIOLATION records in Dataverse, and flags agents communicating with tenants outside the allowed cross-tenant access policy. Emits risk-level classification (Critical/High/Low) with B2B direct connect and inbound trust context.
+- **Child-agent payload size validation** (`Test-ChildAgentPayloadSize.ps1`): Scans Copilot Studio `InvokeConnectedAgentTaskAction` topic nodes and estimates child-agent input/output payload sizes against the documented 1 MB limit. Emits Warning (≥768 KB), High (≥960 KB), and Critical (≥1 MB) findings with optimization recommendations. Reference: [Copilot Studio flow input/output](https://learn.microsoft.com/microsoft-copilot-studio/advanced-flow-input-output).
+
 ## [1.1.1] - 2026-05-04
 
 ### Fixed
