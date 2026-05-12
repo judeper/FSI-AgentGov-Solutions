@@ -191,6 +191,38 @@ Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentU
     -WhatIf
 ```
 
+## Microsoft Graph Permissions
+
+When using the Graph v1.0 scanner (`Invoke-GraphPermissionScan.ps1`), the following Microsoft Graph application or delegated permissions are required:
+
+| Permission | Type | Purpose |
+|-----------|------|---------|
+| `Sites.Read.All` | Application or Delegated | Read SharePoint site and drive metadata |
+| `Files.Read.All` | Application or Delegated | Read file content and item permissions |
+| `Group.Read.All` | Application or Delegated | Resolve Entra ID group membership for permission grants |
+
+For delegated flows, the signed-in user must also have access to the target SharePoint site. For application-only flows, admin consent is required.
+
+## Graph v1.0 Permission Scan Mode
+
+The `Invoke-GraphPermissionScan.ps1` script provides an alternative scan path using Microsoft Graph v1.0 APIs instead of PnP/CSOM:
+
+- Uses `/drives/{driveId}/items/{itemId}/permissions` (v1.0, not beta)
+- Resolves `grantedToIdentitiesV2` for specific-people links (addressing the `FlexibleLink` limitation in the PnP scanner)
+- Implements JSON batching with a hard cap of 20 requests per batch ([Graph documented limit](https://learn.microsoft.com/graph/json-batching))
+- Handles `Retry-After` headers on 429/503 responses; falls back to exponential backoff when the header is absent
+
+```powershell
+# Get an access token (requires Sites.Read.All, Files.Read.All, Group.Read.All)
+$token = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+
+# Scan permissions for specific drive items
+.\scripts\Invoke-GraphPermissionScan.ps1 `
+    -DriveId "b!xyzDriveId" `
+    -ItemIds @("01ABCDEF", "02GHIJKL", "03MNOPQR") `
+    -AccessToken $token
+```
+
 ## Solution Components
 
 ```
@@ -199,7 +231,8 @@ agent-knowledge-source-scanner/
 ├── CHANGELOG.md                # Version history
 ├── docs/                       # Additional documentation
 ├── scripts/
-│   └── Get-KnowledgeSourceItemPermissions.ps1   # Item-level permission scanner
+│   ├── Get-KnowledgeSourceItemPermissions.ps1   # Item-level permission scanner (PnP/CSOM)
+│   └── Invoke-GraphPermissionScan.ps1           # Graph v1.0 batched permission scanner
 └── templates/
     └── item-scope-config.sample.json            # Configuration template
 ```
@@ -273,7 +306,7 @@ This solution supports compliance with these regulations by providing auditable 
 
 | Limitation | Description | Workaround |
 |------------|-------------|------------|
-| **Specific-people link detail** | PnP role assignments surface these as `FlexibleLink` without recipient details | Review the SharePoint Manage Access panel or adopt Microsoft Graph `driveItem` permissions for `grantedToIdentitiesV2` correlation |
+| **Specific-people link detail** | PnP role assignments surface these as `FlexibleLink` without recipient details | Use the Graph v1.0 scanner (`Invoke-GraphPermissionScan.ps1`) which resolves `grantedToIdentitiesV2` for specific-people links, or review the SharePoint Manage Access panel |
 | **PnP.PowerShell 3.x interactive auth requires a client ID** | The PnP multi-tenant app was removed in September 2024; interactive auth needs a tenant-specific Entra app registration or supported environment variable | Register an app with `Register-PnPEntraIDAppForInteractiveLogin` and pass `-ClientId` (see [Prerequisites](docs/prerequisites.md)) |
 | **No agent definition auto-resolution** | Agent user scope must be provided manually; automated resolution from Copilot Studio agent definition is not yet implemented | Provide `-AgentUserGroupId` or `-AgentUserGroupMembers` parameter |
 | **Sensitivity label field availability** | `_SensitivityLabel` field requires Microsoft Purview sensitivity labels to be published; falls back to `_ComplianceTag` | Verify sensitivity labels are enabled in your tenant; encrypted or password-protected files can have Copilot Studio indexing limitations depending on source type |

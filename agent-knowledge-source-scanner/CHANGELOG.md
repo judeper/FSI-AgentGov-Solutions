@@ -4,6 +4,12 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 
 ## [Unreleased]
 
+### Added
+
+- **Graph v1.0 permission scan path.** New `Invoke-GraphPermissionScan.ps1` script uses Microsoft Graph v1.0 `/drives/{driveId}/items/{itemId}/permissions` endpoint for permission scanning. Resolves `grantedToIdentitiesV2` for specific-people links, addressing the `FlexibleLink` limitation in the PnP-based scanner. Required Graph permissions: `Sites.Read.All`, `Files.Read.All`, `Group.Read.All`.
+- **JSON batching with ≤20 request cap.** Graph scanner implements JSON batching per [Microsoft Graph batching documentation](https://learn.microsoft.com/graph/json-batching) with a hard cap of 20 requests per batch (Graph's documented limit). Throttled sub-requests (429/503) are retried individually using per-response `Retry-After` headers, with exponential backoff as fallback when the header is absent.
+- Documented required Microsoft Graph permissions in README.
+
 ### Changed
 
 - Bumped solution metadata to v1.1.1 for the Microsoft Learn 2026-Q2 refresh.
