@@ -154,6 +154,53 @@ function Get-McmDvHeaders {
     return $headers
 }
 
+function Format-McmSafeUri {
+    <#
+    .SYNOPSIS
+        Returns a log-safe representation of a URI, redacting bearer-credential paths and queries.
+
+    .DESCRIPTION
+        Teams Workflows incoming webhook URLs, Logic Apps shared-access signature URLs, and
+        any URL with a `sig=` or `code=` query parameter carry the *credential* in the URL
+        itself. If Invoke-McmRest logs or throws the raw URI on failure, a transient
+        4xx/5xx response will leak the webhook bearer secret into console output, scheduled-
+        run logs, and any Application Insights / Log Analytics pipeline downstream.
+
+        This helper rewrites such URIs as `<scheme>://<host>/<redacted>` BEFORE they reach
+        any log sink. Dataverse and Microsoft Graph URLs are returned unchanged so legitimate
+        troubleshooting (which entity set, which $filter) is not impaired.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [AllowEmptyString()] [string]$Uri)
+
+    if ([string]::IsNullOrEmpty($Uri)) { return '' }
+
+    try {
+        $u = [uri]$Uri
+        # Relative URIs accept any string via cast but throw on .Host / .Scheme
+        # property access. Treat them as unparseable for safe-logging purposes.
+        if (-not $u.IsAbsoluteUri) { return '<unparseable-uri>' }
+    } catch {
+        return '<unparseable-uri>'
+    }
+
+    $hostLc = $u.Host.ToLowerInvariant()
+    $isBearerUrl = (
+        $hostLc -like '*.logic.azure.com' -or
+        $hostLc -like '*.azure-apim.net' -or
+        $hostLc -like '*.webhook.office.com' -or
+        $hostLc -eq  'webhook.office.com' -or
+        $u.Query -match '[?&]sig='   -or
+        $u.Query -match '[?&]code='
+    )
+
+    if ($isBearerUrl) {
+        return ('{0}://{1}/<redacted>' -f $u.Scheme, $u.Host)
+    }
+
+    return $Uri
+}
+
 function Invoke-McmRest {
     <#
     .SYNOPSIS
@@ -221,7 +268,7 @@ function Invoke-McmRest {
                     $body = $_.ErrorDetails.Message
                 }
             } catch {}
-            $msg = "Invoke-McmRest failed: status=$status method=$Method uri=$Uri error=$($_.Exception.Message)"
+            $msg = "Invoke-McmRest failed: status=$status method=$Method uri=$(Format-McmSafeUri $Uri) error=$($_.Exception.Message)"
             if ($body) { $msg += " body=$body" }
             throw $msg
         }

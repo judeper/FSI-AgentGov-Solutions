@@ -548,13 +548,19 @@ switch ($OutputFormat) {
     'Object' {
         # Object output is returned to the pipeline; callers can still
         # inspect $LASTEXITCODE for partial-failure detection.
-        if ($failedCount -gt 0) { $global:LASTEXITCODE = 1 }
+        $terminalFailures = $failedCount + $notifyFailedCount + $notifyWriteBackFailedCount
+        if ($terminalFailures -gt 0) { $global:LASTEXITCODE = 1 }
         return $summary
     }
 }
 
 # Surface partial-failure as a non-zero exit code so scheduled runs
 # (Azure Automation, Logic Apps, GitHub Actions) can alert on it.
-if ($failedCount -gt 0) { exit 1 }
+# Notification failures count as terminal failures: a silent webhook
+# regression is the same severity as a silent Dataverse regression for
+# the customer's POC, and on a write-back failure the NEXT run will
+# re-post the same Teams alert because fsi_notifiedon was never written.
+$terminalFailures = $failedCount + $notifyFailedCount + $notifyWriteBackFailedCount
+if ($terminalFailures -gt 0) { exit 1 }
 
 #endregion

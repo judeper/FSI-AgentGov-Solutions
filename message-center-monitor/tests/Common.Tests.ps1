@@ -66,6 +66,61 @@ Describe 'Format-McmODataDate' {
     }
 }
 
+Describe 'Format-McmSafeUri (council round 2 - HIGH: redact bearer-secret URLs in log paths)' {
+
+    # Background: Teams Workflows incoming webhook URLs, Logic Apps SAS URLs,
+    # and any URL with a sig= / code= query parameter carry the *credential*
+    # in the URL itself. Invoke-McmRest's error message previously embedded
+    # the raw URI on failure (line 224), which leaked the bearer secret into
+    # console output and any downstream log pipeline. Format-McmSafeUri is
+    # the single redaction point - these tests pin its behavior so future
+    # contributors don't regress the leak.
+
+    It 'redacts a Teams Workflows webhook URL with a sig= query param' {
+        $url = 'https://prod-12.northeurope.logic.azure.com:443/workflows/abc123/triggers/manual/paths/invoke?api-version=2016-06-01&sig=SUPER_SECRET_BEARER_TOKEN'
+        $safe = Format-McmSafeUri $url
+        $safe | Should -Be 'https://prod-12.northeurope.logic.azure.com/<redacted>'
+        $safe | Should -Not -Match 'SUPER_SECRET_BEARER_TOKEN'
+        $safe | Should -Not -Match 'sig='
+    }
+
+    It 'redacts a webhook.office.com URL even without a sig= parameter' {
+        $url = 'https://contoso.webhook.office.com/webhookb2/abc-def-ghi/IncomingWebhook/123/456'
+        $safe = Format-McmSafeUri $url
+        $safe | Should -Be 'https://contoso.webhook.office.com/<redacted>'
+        $safe | Should -Not -Match 'webhookb2'
+    }
+
+    It 'leaves a Dataverse OData URL completely unchanged' {
+        # Authorization is in the bearer token header, NOT the URL. Log-time
+        # redaction of Dataverse URLs would actively impede troubleshooting
+        # (which entity set? which $filter clause?).
+        $url = 'https://contoso.crm.dynamics.com/api/data/v9.2/fsi_messagecenterlogs?$select=fsi_messagecenterid&$filter=fsi_severity eq 100000000'
+        Format-McmSafeUri $url | Should -Be $url
+    }
+
+    It 'leaves a Microsoft Graph URL completely unchanged' {
+        $url = 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$top=1'
+        Format-McmSafeUri $url | Should -Be $url
+    }
+
+    It 'redacts an azure-apim.net URL with a code= parameter' {
+        $url = 'https://contoso.azure-apim.net/api/v1/notify?code=SUPER_SECRET_FUNCTION_KEY&category=high'
+        $safe = Format-McmSafeUri $url
+        $safe | Should -Be 'https://contoso.azure-apim.net/<redacted>'
+        $safe | Should -Not -Match 'SUPER_SECRET_FUNCTION_KEY'
+        $safe | Should -Not -Match 'category=high'
+    }
+
+    It 'returns the unparseable-uri sentinel for a non-URI string (does not leak garbage)' {
+        Format-McmSafeUri 'not a url at all' | Should -Be '<unparseable-uri>'
+    }
+
+    It 'returns empty string for empty input' {
+        Format-McmSafeUri '' | Should -Be ''
+    }
+}
+
 Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
 
     Context 'success on first try' {

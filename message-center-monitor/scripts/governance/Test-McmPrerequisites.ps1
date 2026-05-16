@@ -142,6 +142,8 @@ param(
 
     [Parameter(Mandatory=$false)] [switch]$PostTestMessage,
 
+    [Parameter(Mandatory=$false)] [switch]$AssumePhase1Only,
+
     [Parameter(Mandatory=$false)]
     [string]$TeamsCardTemplatePath = (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'templates\teams-notification-card.json')
 )
@@ -521,19 +523,25 @@ try {
             -Hint 'Supply -TeamsWebhookUrl or set $env:MCM_TEAMS_WEBHOOK_URL to validate'))
     }
     else {
-        $webhookUri = [uri]$TeamsWebhookUrl
-        if ($webhookUri.Scheme -ne 'https') {
+        $webhookUri      = [uri]$TeamsWebhookUrl
+        $safeWebhookHost = $webhookUri.Host
+        $isHttps         = ($webhookUri.Scheme -eq 'https')
+        $isLoopbackHttp  = ($webhookUri.Scheme -eq 'http' -and $webhookUri.IsLoopback)
+        if (-not $isHttps -and -not $isLoopbackHttp) {
             $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
-                -Hint "Webhook URL scheme is '$($webhookUri.Scheme)'; must be 'https'." `
-                -Detail $TeamsWebhookUrl))
+                -Hint "Webhook URL scheme is '$($webhookUri.Scheme)'; must be 'https' (or 'http' for loopback testing via lab/07)." `
+                -Detail $safeWebhookHost))
         }
         else {
             [System.Net.Dns]::GetHostAddresses($webhookUri.Host) | Out-Null
 
+            $loopbackNote = if ($isLoopbackHttp) { ' (loopback HTTP - lab/07 capture listener; NOT acceptable in production)' } else { '' }
+
             if (-not $PostTestMessage) {
-                $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
-                    -Hint 'URL parsed and DNS resolved; supply -PostTestMessage to also POST a test card' `
-                    -Detail $webhookUri.Host))
+                $status = if ($isLoopbackHttp) { 'WARN' } else { 'PASS' }
+                $results.Add((New-McmCheckResult -Name $checkName -Status $status `
+                    -Hint "URL parsed and DNS resolved$loopbackNote; supply -PostTestMessage to also POST a test card" `
+                    -Detail $safeWebhookHost))
             }
             else {
                 if (-not (Test-Path -LiteralPath $TeamsCardTemplatePath)) {
@@ -577,17 +585,21 @@ try {
                     try {
                         Invoke-McmRest -Uri $TeamsWebhookUrl -Headers $webhookHeaders `
                             -Method Post -Body $payloadJson | Out-Null
-                        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
-                            -Hint 'URL parsed, DNS resolved, and test card POSTed successfully.' `
-                            -Detail $webhookUri.Host))
+                        $status = if ($isLoopbackHttp) { 'WARN' } else { 'PASS' }
+                        $results.Add((New-McmCheckResult -Name $checkName -Status $status `
+                            -Hint "URL parsed, DNS resolved, and test card POSTed successfully$loopbackNote." `
+                            -Detail $safeWebhookHost))
                     }
                     catch {
-                        $postErr    = $_.Exception.Message
+                        # Invoke-McmRest already redacts the URI in its error message via
+                        # Format-McmSafeUri. Keep Detail short and safe; never echo
+                        # $TeamsWebhookUrl directly here.
+                        $postErr     = $_.Exception.Message
                         $statusMatch = $postErr -match 'status=(\d+)'
                         $statusCode  = if ($statusMatch) { $Matches[1] } else { 'unknown' }
                         $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
                             -Hint "Webhook URL was created in Teams Workflows but the POST returned $statusCode; verify the workflow is enabled" `
-                            -Detail $postErr))
+                            -Detail "host=$safeWebhookHost http=$statusCode"))
                     }
                 }
             }
@@ -595,58 +607,106 @@ try {
     }
 }
 catch {
-    $errMsg     = $_.Exception.Message
+    # Same redaction discipline as the inner POST catch: never include
+    # $TeamsWebhookUrl (a credential) in Detail.
+    $errMsg      = $_.Exception.Message
     $statusMatch = $errMsg -match 'status=(\d+)'
     $statusCode  = if ($statusMatch) { $Matches[1] } else { 'unknown' }
+    $safeHost    = try { ([uri]$TeamsWebhookUrl).Host } catch { '<unparseable>' }
     $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint "Teams webhook check failed (HTTP $statusCode); verify the URL is reachable and the workflow is enabled." `
-        -Detail $errMsg))
+        -Detail "host=$safeHost http=$statusCode"))
 }
 
 #endregion
 
 #region Check 11 — Phase 1 / Phase 3 mutual exclusion (CRITICAL)
+#
+# Heuristic deliberately tiered so a stale-leftover env-var DEFINITION (e.g.
+# from a prior lab/03 full run that was later rolled back to Phase-1-only)
+# does not lock the customer out of preflight:
+#
+#   - DEFINITION exists + VALUE bound -> Phase 3 is genuinely deployed -> FAIL on conflict
+#   - DEFINITION exists + VALUE absent -> leftover scaffolding         -> WARN on conflict
+#   - DEFINITION absent                 -> Phase 3 not deployed         -> PASS
+#
+# Passing -AssumePhase1Only bypasses Dataverse querying entirely and short-
+# circuits to PASS when $env:MCM_TEAMS_WEBHOOK_URL is set. Use when the
+# customer knows they will never enable Phase 3 and the WARN tier above is
+# noisier than they want.
 
 $checkName = 'Phase 1 / Phase 3 mutual exclusion'
 try {
     $phase1Active = -not [string]::IsNullOrWhiteSpace($TeamsWebhookUrl)
-    $phase3Active = $false
 
-    if ($script:dvHeaders) {
-        $escapedEnvVarName = Format-McmODataLiteral $Phase3EnvVarLogicalName
-        $envVarUri = "$($script:dvBaseUrl)/environmentvariabledefinitions" +
-                     "?`$select=schemaname&`$filter=schemaname eq '$escapedEnvVarName'"
-        $envVarResp = Invoke-McmRest -Uri $envVarUri -Headers $script:dvHeaders -Method Get
-        $phase3Active = ($envVarResp -and $envVarResp.value -and $envVarResp.value.Count -gt 0)
-    }
-
-    if ($phase1Active -and $phase3Active) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
-            -Hint ("Both Phase 1 webhook (`$env:MCM_TEAMS_WEBHOOK_URL set) AND Phase 3 flow " +
-                   "(environment variable $Phase3EnvVarLogicalName deployed) are configured. " +
-                   "Duplicate Teams alerts will fire. Choose ONE path: clear " +
-                   "`$env:MCM_TEAMS_WEBHOOK_URL to use only Phase 3, or remove the Phase 3 " +
-                   "env-var definition to use only Phase 1.") `
-            -Detail 'Both Phase 1 and Phase 3 notification paths active'))
-    }
-    elseif (-not $phase1Active -and -not $phase3Active) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
-            -Hint ("No notification path configured. Set `$env:MCM_TEAMS_WEBHOOK_URL for Phase 1 " +
-                   "OR deploy Phase 3 flow + env vars per docs/flow-configuration.md.") `
-            -Detail 'No notification path active'))
-    }
-    elseif ($phase1Active) {
+    if ($phase1Active -and $AssumePhase1Only) {
         $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
-            -Detail 'Phase 1 webhook active; Phase 3 flow not deployed'))
+            -Detail 'Phase 1 webhook active; -AssumePhase1Only suppresses Phase 3 detection'))
     }
     else {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
-            -Detail 'Phase 3 flow active; Phase 1 webhook not configured'))
+        $phase3DefExists = $false
+        $phase3HasValue  = $false
+
+        if ($script:dvHeaders) {
+            $escapedEnvVarName = Format-McmODataLiteral $Phase3EnvVarLogicalName
+
+            $defUri = "$($script:dvBaseUrl)/environmentvariabledefinitions" +
+                      "?`$select=schemaname&`$filter=schemaname eq '$escapedEnvVarName'"
+            $defResp = Invoke-McmRest -Uri $defUri -Headers $script:dvHeaders -Method Get
+            $phase3DefExists = ($defResp -and $defResp.value -and $defResp.value.Count -gt 0)
+
+            if ($phase3DefExists) {
+                # An env-var DEFINITION without a bound VALUE is leftover scaffolding;
+                # the Phase 3 flow has no concrete severities to act on.
+                $valUri = "$($script:dvBaseUrl)/environmentvariablevalues" +
+                          "?`$select=environmentvariablevalueid" +
+                          "&`$filter=environmentvariabledefinitionid/schemaname eq '$escapedEnvVarName'"
+                $valResp = Invoke-McmRest -Uri $valUri -Headers $script:dvHeaders -Method Get
+                $phase3HasValue = ($valResp -and $valResp.value -and $valResp.value.Count -gt 0)
+            }
+        }
+
+        $phase3Active = $phase3HasValue
+        $phase3Stale  = ($phase3DefExists -and -not $phase3HasValue)
+
+        if ($phase1Active -and $phase3Active) {
+            $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+                -Hint ("Both Phase 1 webhook (`$env:MCM_TEAMS_WEBHOOK_URL set) AND Phase 3 flow " +
+                       "(environment variable $Phase3EnvVarLogicalName has a bound value) are " +
+                       "configured. Duplicate Teams alerts will fire. Choose ONE path: clear " +
+                       "`$env:MCM_TEAMS_WEBHOOK_URL to use only Phase 3, or remove the Phase 3 " +
+                       "env-var VALUE binding to use only Phase 1.") `
+                -Detail 'Both Phase 1 and Phase 3 notification paths active'))
+        }
+        elseif ($phase1Active -and $phase3Stale) {
+            $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+                -Hint ("Phase 1 webhook active AND a stale Phase 3 env-var DEFINITION " +
+                       "($Phase3EnvVarLogicalName) exists in Dataverse, but with no VALUE " +
+                       "bound. This is most likely leftover from a prior lab/03 run or a " +
+                       "rolled-back Phase 3 trial. Remove the definition with Power Platform " +
+                       "CLI / Maker portal, OR re-run with -AssumePhase1Only to suppress " +
+                       "this warning.") `
+                -Detail 'Phase 3 env-var definition leftover (no value bound)'))
+        }
+        elseif (-not $phase1Active -and -not $phase3Active) {
+            $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+                -Hint ("No notification path configured. Set `$env:MCM_TEAMS_WEBHOOK_URL for Phase 1 " +
+                       "OR deploy Phase 3 flow + env vars per docs/flow-configuration.md.") `
+                -Detail 'No notification path active'))
+        }
+        elseif ($phase1Active) {
+            $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+                -Detail 'Phase 1 webhook active; Phase 3 flow not deployed'))
+        }
+        else {
+            $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+                -Detail 'Phase 3 flow active; Phase 1 webhook not configured'))
+        }
     }
 }
 catch {
     $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
-        -Hint 'Failed to query environment variable definitions. Verify Dataverse connectivity.' `
+        -Hint 'Failed to query environment variable definitions/values. Verify Dataverse connectivity, or re-run with -AssumePhase1Only to skip this check.' `
         -Detail $_.Exception.Message))
 }
 
