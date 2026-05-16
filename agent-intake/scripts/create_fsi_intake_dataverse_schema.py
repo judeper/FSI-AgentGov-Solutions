@@ -85,6 +85,8 @@ INTAKE_OPTIONSETS = {
             ("AutoApproved", 100000008),
             ("DeferredOutOfScope", 100000009),
             ("SponsorTimeout", 100000010),
+            ("InReview", 100000011),
+            ("LiveTracking", 100000012),
         ],
     },
     "fsi_intake_routingtopology": {
@@ -162,6 +164,36 @@ INTAKE_OPTIONSETS = {
             ("Denied", 100000002),
             ("EscalatedToManager", 100000003),
             ("WithdrawnByMaker", 100000004),
+        ],
+    },
+    "fsi_intake_auditeventtype": {
+        "name": "fsi_intake_auditeventtype",
+        "options": [
+            ("RouterDecided", 100000000),
+            ("RouterFailed", 100000001),
+            ("SponsorDecided", 100000002),
+            ("SponsorTimeout", 100000003),
+            ("SponsorEscalated", 100000004),
+            ("SponsorCardFailed", 100000005),
+            ("ReviewerQueued", 100000006),
+            ("ReviewerQueueFailed", 100000007),
+            ("ReviewerDecided", 100000008),
+            ("QuorumReached", 100000009),
+            ("RequestDenied", 100000010),
+            ("ReviewerDecisionHandlerFailed", 100000011),
+            ("ReviewerEscalated", 100000012),
+            ("ReviewerEscalationFailed", 100000013),
+            ("MrmHandoffSubmitted", 100000014),
+            ("MRMHandoffPending", 100000015),
+            ("MrmDecisionMirrored", 100000016),
+            ("DecisionPackWritten", 100000017),
+            ("EntraAgentIdMinted", 100000018),
+            ("RegistryHandoffComplete", 100000019),
+            ("DriftHandoffSubmitted", 100000020),
+            ("AppealSubmitted", 100000021),
+            ("AppealRejected", 100000022),
+            ("AppealCreateFailed", 100000023),
+            ("RetentionLabelApplied", 100000024),
         ],
     },
 }
@@ -298,6 +330,10 @@ def _optionset_metadata(optionset_def):
 INTAKE_REQUEST_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="Globally unique intake request identifier (GUID)"),
+    # v1.0-preview keeps appeal lineage as request-ID text. Convert this to a
+    # self-lookup once the schema deployment path adds relationship helpers.
+    _string_col("fsi_AppealOfId", "Appeal Of", 100, required=False,
+                description="Original intake request that this request is appealing"),
     _string_col("fsi_AgentDisplayName", "Agent Display Name", 200,
                 description="Maker-provided name for the proposed agent"),
     _picklist_col("fsi_AgentType", "Agent Type", "fsi_intake_agenttype",
@@ -362,6 +398,8 @@ INTAKE_REQUEST_COLUMNS = [
     # logical name: fsi_quorumrequired
     _integer_col("fsi_QuorumRequired", "Quorum Required", required=False,
                  description="Minimum reviewer approvals required before the request can advance"),
+    _boolean_col("fsi_NonMrmQuorumMet", "Non-MRM Quorum Met", default=False,
+                 description="TRUE when the non-MRM reviewer board (InfoSec/Privacy/Compliance/Legal) has reached quorum on a Tier-1 Full request; gates Flow 7 (MRM handoff)"),
     # v1.0-preview keeps reviewer-board state in JSON instead of a dedicated
     # fsi_IntakeReviewerAssignment table so the schema change stays small; v1.1
     # can add the table once the reviewer app needs Dataverse sub-grid views.
@@ -527,7 +565,7 @@ INTAKE_AUDITEVENT_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
     _string_col("fsi_EventType", "Event Type", 100,
-                description="Submitted / Routed / SponsorNotified / SponsorClicked / AutoApproved / Denied / HandoffComplete / RegistryWritten / EntraAgentIdMinted / RetentionStamped"),
+                description="Lifecycle event name emitted by intake flows. Bundled values are catalogued in the fsi_intake_auditeventtype option set, but this column remains text so customers can extend the inventory without a schema change."),
     # logical name: fsi_pathphase
     _string_col("fsi_PathPhase", "Path Phase", 100, required=False,
                 description="Submitted / RouterRouted / SponsorAttested / ReviewerQueued / ReviewerDecided / Escalated / Handed off"),

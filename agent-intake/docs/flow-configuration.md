@@ -20,11 +20,8 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 - Build every flow inside the **FSI Agent Intake** unmanaged solution created by `scripts/provision_solution_shell.ps1`.
 - Every **Add a new row** step below sets `fsi_name` to a deterministic value such as `RouterDecided - <requestId>` because Dataverse still requires the primary name attribute even when the schema script lists only the custom columns.
 - The current schema stores reviewer-board state on `fsi_intakerequest.fsi_parallelreviewersjson`; there is no dedicated reviewer-assignment table in v1.0.0-preview.
-- The current `fsi_intake_status` choice set does **not** include `InReview` or `LiveTracking`. In the build steps below:
-  - inventory `InReview` maps to `AwaitingSponsor` for Express and `AwaitingReviewers` for Standard and Full
-  - inventory `LiveTracking` maps to `Approved` plus a populated `fsi_entraagentid`, a populated `fsi_registryrecordid`, and the absence of a previous `DriftHandoffSubmitted` audit event
 - `fsi_intakereview` stores the reviewer decision in `fsi_reviewoutcome`, not `fsi_reviewdecision`.
-- `fsi_appealofid` is not present in the current schema. Until the foundation-schema workstream adds it, preserve appeal lineage in `fsi_standardfullquestionsjson.appealOfRequestId` and in `fsi_intakeauditevent.fsi_eventpayloadjson`.
+- `fsi_appealofid` stores the original request ID when Flow 11 creates an appealed intake request.
 - Sponsor self-approval prevention is enforced in two places: the Power Pages submit experience blocks it before submission, and Flow 1 re-checks it defensively so imports or replayed events cannot bypass the rule.
 - Keep the routing logic in Flow 1 and Flow 2 aligned with [`classification-rules.md`](./classification-rules.md) and `templates/policy-lookup-tables.yaml`. If you externalize the classifier behind HTTP or a custom connector, both flows should still consume the same request and response contract.
 
@@ -42,6 +39,8 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 | `fsi_intake_status` | Denied | `100000005` |
 | `fsi_intake_status` | Escalated | `100000007` |
 | `fsi_intake_status` | SponsorTimeout | `100000010` |
+| `fsi_intake_status` | InReview | `100000011` |
+| `fsi_intake_status` | LiveTracking | `100000012` |
 | `fsi_intake_reviewdecision` | Pending | `100000000` |
 | `fsi_intake_reviewdecision` | Approved | `100000001` |
 | `fsi_intake_reviewdecision` | Approved with conditions | `100000002` |
@@ -80,7 +79,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 
 **Inputs.** `fsi_intakerequest` row with the baseline maker fields, `fsi_standardfullquestionsjson`, `fsi_declareddatasourcesjson`, and the policy defaults from `templates/policy-lookup-tables.yaml`.
 
-**Outputs.** `fsi_pathused`, `fsi_decisionpath`, `fsi_risktier`, `fsi_zone`, `fsi_quorumrequired`, `fsi_parallelreviewersjson`, `fsi_mrmrequired`, `fsi_mrmhandoffstatus`, `fsi_triggerhitcount`, and a schema-compatible status (`AwaitingSponsor`, `AwaitingReviewers`, or `Denied`).
+**Outputs.** `fsi_pathused`, `fsi_decisionpath`, `fsi_risktier`, `fsi_zone`, `fsi_quorumrequired`, `fsi_parallelreviewersjson`, `fsi_mrmrequired`, `fsi_mrmhandoffstatus`, `fsi_triggerhitcount`, and an updated request status (`InReview` for routed requests or `Denied` for default-deny outcomes).
 
 **Steps.**
 
@@ -125,7 +124,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
    - If the classifier already returned `decisionPath = DefaultDeny` because of unresolved cross-border routing, keep that result and preserve the returned `routingReason`.
 5. Action: Microsoft Dataverse — **Update a row**.
    - Write back `fsi_pathused`, `fsi_decisionpath`, `fsi_risktier`, `fsi_zone`, `fsi_quorumrequired`, `fsi_parallelreviewersjson`, `fsi_mrmrequired`, `fsi_mrmhandoffstatus`, `fsi_triggerhitcount`, `fsi_submittedon`, and `fsi_policyversionapplied`.
-   - Set `fsi_status = AwaitingSponsor (100000002)` when `fsi_pathused = Express`, `fsi_status = AwaitingReviewers (100000003)` when `fsi_pathused = Standard` or `Full`, and `fsi_status = Denied (100000005)` when `fsi_decisionpath = DefaultDeny`.
+   - Set `fsi_status = InReview (100000011)` when `fsi_decisionpath <> DefaultDeny`, keep `fsi_pathused` as the downstream branch key, and set `fsi_status = Denied (100000005)` when `fsi_decisionpath = DefaultDeny`.
    - If the implementation also writes `fsi_intakerisksignal` rows, do it in the same scope so each T1-T6 answer is captured before reviewers receive a card.
 6. Audit event: Microsoft Dataverse — **Add a new row** to `fsi_intakeauditevent` with:
    - `fsi_name = RouterDecided - @{outputs('Get_a_row_by_ID')?['body/fsi_requestid']}`
@@ -214,7 +213,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 
 > Prerequisites: complete [`flow-build-prerequisites.md`](./flow-build-prerequisites.md) before building this flow.
 
-**Trigger.** Microsoft Dataverse connector — **When a row is added, modified or deleted** on `fsi_intakerequest` where `fsi_pathused = Express (100000000)` and `fsi_status = AwaitingSponsor (100000002)`.
+**Trigger.** Microsoft Dataverse connector — **When a row is added, modified or deleted** on `fsi_intakerequest` where `fsi_pathused = Express (100000000)` and `fsi_status = InReview (100000011)`.
 
 **Path scope.** Express.
 
@@ -225,7 +224,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 **Steps.**
 
 1. Trigger: Microsoft Dataverse — **When a row is added, modified or deleted**.
-   - Set **Change type = Added and Modified**, **Table = Intake Requests**, and guard on `fsi_pathused = Express` plus `fsi_status = AwaitingSponsor`.
+   - Set **Change type = Added and Modified**, **Table = Intake Requests**, and guard on `fsi_pathused = Express` plus `fsi_status = InReview`.
 2. Action: Microsoft Dataverse — **Get a row by ID**.
    - Pull the Express request row, including `fsi_requestid`, `fsi_agentdisplayname`, `fsi_makerdisplayname`, `fsi_makerupn`, `fsi_intendedaudience`, `fsi_submittedon`, `fsi_risktier`, `fsi_zone`, `fsi_sponsorupn`, and `fsi_businessjustification`.
 3. Action: Microsoft Teams — **Post adaptive card and wait for a response**.
@@ -258,7 +257,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 
 > Prerequisites: complete [`flow-build-prerequisites.md`](./flow-build-prerequisites.md) before building this flow.
 
-**Trigger.** Microsoft Dataverse connector — **When a row is added, modified or deleted** on `fsi_intakerequest` where `fsi_pathused in {Standard, Full}` and `fsi_status = AwaitingReviewers (100000003)`.
+**Trigger.** Microsoft Dataverse connector — **When a row is added, modified or deleted** on `fsi_intakerequest` where `fsi_pathused in {Standard, Full}` and `fsi_status = InReview (100000011)`.
 
 **Path scope.** Standard / Full.
 
@@ -269,7 +268,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 **Steps.**
 
 1. Trigger: Microsoft Dataverse — **When a row is added, modified or deleted**.
-   - Guard on `fsi_pathused = Standard or Full`, `fsi_status = AwaitingReviewers`, and non-empty `fsi_parallelreviewersjson`.
+   - Guard on `fsi_pathused = Standard or Full`, `fsi_status = InReview`, and non-empty `fsi_parallelreviewersjson`.
 2. Action: Microsoft Dataverse — **Get a row by ID**.
    - Pull the request row and parse `fsi_parallelreviewersjson` into an array shaped like:
 
@@ -314,7 +313,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 
 **Inputs.** `requestId`, `reviewId`, `reviewerRole`, `decision`, `fsi_conditionstext`, `fsi_reviewnotes`, and the current state of all `fsi_intakereview` rows for the same request.
 
-**Outputs.** Updated `fsi_intakereview` row, optional `fsi_intakeapproval` evidence row, request status transitions for deny/escalation branches, child-flow call to Flow 7 or Flow 8, and reviewer/quorum audit events.
+**Outputs.** Updated `fsi_intakereview` row, optional `fsi_intakeapproval` evidence row, request status and `fsi_nonmrmquorummet` transitions, Flow 8 hand-off when decisions are final, and reviewer/quorum audit events.
 
 **Steps.**
 
@@ -322,7 +321,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
    - Filter the trigger to reviewer cards by checking `triggerBody()?['data']?['action'] = reviewerDecision`.
 2. Action: Microsoft Dataverse — **Get a row by ID** on `fsi_intakereview` and **Get a row by ID** on `fsi_intakerequest`.
    - Use `reviewId` for the review row.
-   - Pull the request row so the flow can read `fsi_quorumrequired`, `fsi_pathused`, `fsi_mrmrequired`, and `fsi_parallelreviewersjson`.
+   - Pull the request row so the flow can read `fsi_quorumrequired`, `fsi_pathused`, `fsi_mrmrequired`, `fsi_nonmrmquorummet`, and `fsi_parallelreviewersjson`.
 3. Action: Microsoft Dataverse — **Update a row** on `fsi_intakereview`.
    - Set `fsi_reviewoutcome` to `Approved`, `Approved with conditions`, `Denied`, or `Recused`.
    - Set `fsi_conditionstext` when the card submits conditions.
@@ -342,9 +341,9 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 6. Branch: **Condition**.
    - **Any deny**: update `fsi_intakerequest.fsi_status = Denied (100000005)`, run Flow 8 with `decisionOutcome = Denied`, and send the maker denial card with the `Appeal` button that Flow 11 listens for.
    - **Recusal makes quorum impossible**: update `fsi_status = Escalated (100000007)` and notify the governance lead or escalation target from policy.
-   - **Quorum met and `fsi_pathused = Full` and `fsi_mrmrequired = true` and the MRM review is not yet complete**: call Flow 7.
+   - **Quorum met and `fsi_pathused = Full` and `fsi_mrmrequired = true` and the MRM review is not yet complete**: update `fsi_intakerequest.fsi_nonmrmquorummet = true`, leave `fsi_status = InReview (100000011)`, and let Flow 7 trigger on the request update.
    - **Quorum met and no MRM wait remains**: call Flow 8.
-   - **Quorum not yet met**: leave `fsi_status = AwaitingReviewers`.
+   - **Quorum not yet met**: leave `fsi_status = InReview (100000011)` and `fsi_nonmrmquorummet = false`.
 7. Audit event: Microsoft Dataverse — **Add a new row** to `fsi_intakeauditevent` with `fsi_pathphase = ReviewerDecided` and `fsi_eventtype = ReviewerDecided`, `QuorumReached`, or `RequestDenied` depending on the branch taken.
 
 **Failure handling.** Protect the Dataverse row update and quorum recomputation inside a single `Try/Catch` scope. If the decision row updates but the quorum logic fails, write `ReviewerDecisionHandlerFailed` to `fsi_intakeauditevent` and stop before any final status transition runs.
@@ -379,7 +378,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 4. Action: Microsoft Teams — **Post card in a chat or channel** or Office 365 Outlook — **Send an email (V2)**.
    - Include the request ID, reviewer role, original due date, and reviewer-app deep link.
    - If the role-specific escalation contact is blank, fall back to `fsi_intake_sponsorbackupgroup` or a governance mailbox.
-5. Action: Microsoft Dataverse — **Update a row** on `fsi_intakerequest` when the parent is still `AwaitingReviewers`.
+5. Action: Microsoft Dataverse — **Update a row** on `fsi_intakerequest` when the parent is still `InReview`.
    - Set `fsi_status = Escalated (100000007)` if the customer wants the request-level queue to highlight overdue work.
 6. Audit event: Microsoft Dataverse — **Add a new row** to `fsi_intakeauditevent` with `fsi_pathphase = Escalated` and `fsi_eventtype = ReviewerEscalated`.
 
@@ -395,20 +394,20 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 
 > Prerequisites: complete [`flow-build-prerequisites.md`](./flow-build-prerequisites.md) before building this flow.
 
-**Trigger.** Recommended current-schema pattern: **Run a Child Flow** from Flow 5 as soon as non-MRM quorum is met for a Full-path request. If a future schema update adds a dedicated MRM handoff marker on `fsi_intakerequest`, you can replace the child-flow call with the Dataverse update trigger in the flow inventory.
+**Trigger.** Microsoft Dataverse connector — **When a row is added, modified or deleted** on `fsi_intakerequest` where `fsi_pathused = Full (100000002)`, `fsi_status = InReview (100000011)`, `fsi_mrmrequired = true`, `fsi_nonmrmquorummet = true`, and `fsi_mrmhandoffstatus` is `Pending (100000000)` or `Failed (100000003)`.
 
 **Path scope.** Full.
 
-**Inputs.** Full-path request row, related reviewer evidence, `fsi_mrmrequired = true`, `fsi_mrmhandoffstatus`, and the payload contract in [`mrm-integration.md`](./mrm-integration.md) plus `templates/mrm-handoff-payload-schema.json`.
+**Inputs.** Full-path request row, related reviewer evidence, `fsi_mrmrequired = true`, `fsi_nonmrmquorummet = true`, `fsi_mrmhandoffstatus`, and the payload contract in [`mrm-integration.md`](./mrm-integration.md) plus `templates/mrm-handoff-payload-schema.json`.
 
 **Outputs.** Upsert to `model-risk-management-automation`, updated `fsi_mrmhandoffstatus`, local fallback audit event when the downstream solution is absent, and a pending or completed `MRM` review row.
 
 **Steps.**
 
-1. Trigger: child flow inputs `requestId`, `decisionPackHash`, and `nonMrmQuorumMet = true`.
-   - If you later move this to a Dataverse trigger, keep the same inputs in the helper compose block so the transport can change without changing the payload shape.
+1. Trigger: Microsoft Dataverse — **When a row is added, modified or deleted**.
+   - Guard on `fsi_pathused = Full`, `fsi_status = InReview`, `fsi_mrmrequired = true`, `fsi_nonmrmquorummet = true`, and `fsi_mrmhandoffstatus = Pending or Failed`.
 2. Action: Microsoft Dataverse — **Get a row by ID** on `fsi_intakerequest` and **List rows** on `fsi_intakereviews`.
-   - Confirm `fsi_pathused = Full`, `fsi_mrmrequired = true`, and `fsi_mrmhandoffstatus = Pending or Failed` before proceeding.
+   - Confirm `fsi_pathused = Full`, `fsi_mrmrequired = true`, `fsi_nonmrmquorummet = true`, and `fsi_mrmhandoffstatus = Pending or Failed` before proceeding.
 3. Action: **Compose** the payload required by `templates/mrm-handoff-payload-schema.json`.
    - Reference [`mrm-integration.md`](./mrm-integration.md) for the field-level mapping.
    - Body excerpt:
@@ -508,7 +507,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 
 **Inputs.** Approved request row, latest decision-pack JSON/hash, sponsor evidence, reviewer evidence for Standard and Full, and the Microsoft Entra Agent ID prerequisites in [`identity-records-automation.md`](./identity-records-automation.md).
 
-**Outputs.** Microsoft Entra Agent ID, registry handoff payload, updated `fsi_entraagentid`, updated `fsi_registryrecordid`, and `EntraAgentIdMinted` / `RegistryHandoffComplete` audit events.
+**Outputs.** Microsoft Entra Agent ID, registry handoff payload, updated `fsi_entraagentid`, updated `fsi_registryrecordid`, updated `fsi_status = LiveTracking`, and `EntraAgentIdMinted` / `RegistryHandoffComplete` audit events.
 
 **Steps.**
 
@@ -542,8 +541,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 5. Action: HTTP with Microsoft Entra ID — **HTTP** or a customer-specific custom connector.
    - POST the registry handoff payload expected by `agent-registry-automation`. Reuse the decision-pack envelope from Flow 8 and include `pathUsed`, `riskTier`, `zone`, `retentionLabel`, `decisionPackHash`, and `entraAgentId`.
 6. Action: Microsoft Dataverse — **Update a row** on `fsi_intakerequest`.
-   - Set `fsi_registryrecordid` from the registry response.
-   - If the schema later adds `LiveTracking`, set it here. In the current schema, keep `fsi_status = Approved` and let Flow 10 key off `fsi_entraagentid`, `fsi_registryrecordid`, and the missing drift-hand-off audit marker.
+   - Set `fsi_registryrecordid` from the registry response and `fsi_status = LiveTracking (100000012)` so Flow 10 can key off the completed registry handoff.
 7. Audit event: Microsoft Dataverse — **Add a new row** to `fsi_intakeauditevent` with `fsi_eventtype = EntraAgentIdMinted` after the Graph call succeeds and `fsi_eventtype = RegistryHandoffComplete` after the registry call succeeds.
 
 **Failure handling.** If Agent ID creation fails, stop before the registry call and log the exception payload to `fsi_intakeauditevent`. If the registry call fails after the Agent ID exists, keep `fsi_entraagentid` on the request row and mark only the registry step for retry.
@@ -558,18 +556,18 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 
 > Prerequisites: complete [`flow-build-prerequisites.md`](./flow-build-prerequisites.md) before building this flow.
 
-**Trigger.** Microsoft Dataverse connector — **When a row is added, modified or deleted** on `fsi_intakerequest` where `fsi_status = Approved (100000004)`, `fsi_entraagentid` is populated, `fsi_registryrecordid` is populated, and no prior `DriftHandoffSubmitted` audit event exists for the request.
+**Trigger.** Microsoft Dataverse connector — **When a row is added, modified or deleted** on `fsi_intakerequest` where `fsi_status = LiveTracking (100000012)`, `fsi_entraagentid` is populated, `fsi_registryrecordid` is populated, and no prior `DriftHandoffSubmitted` audit event exists for the request.
 
 **Path scope.** All.
 
-**Inputs.** Approved request row, latest decision-pack JSON, sponsor and reviewer evidence, and the drift target in `fsi_intake_driftdetectorenv`.
+**Inputs.** Live-tracking request row, latest decision-pack JSON, sponsor and reviewer evidence, and the drift target in `fsi_intake_driftdetectorenv`.
 
 **Outputs.** Drift-detector handoff payload and `DriftHandoffSubmitted` audit event.
 
 **Steps.**
 
 1. Trigger: Microsoft Dataverse — **When a row is added, modified or deleted**.
-   - The current schema-safe gate is `Approved + fsi_entraagentid + fsi_registryrecordid + no prior DriftHandoffSubmitted event`. If the schema later adds `LiveTracking`, move that gate into the trigger condition.
+   - Guard on `fsi_status = LiveTracking`, populated `fsi_entraagentid`, populated `fsi_registryrecordid`, and no prior `DriftHandoffSubmitted` event for the request.
 2. Action: Microsoft Dataverse — **Get a row by ID** on `fsi_intakerequest` and **List rows** on `fsi_intakedecisionlog` for the latest immutable decision pack.
 3. Action: **Compose** the payload defined by `templates/drift-handoff-payload-schema.json`.
    - At minimum include `payloadVersion`, `originIntakeId`, `pathUsed`, `riskTier`, `zone`, `declaredAudience`, `intendedAudience`, `declaredDataSourcesJson`, `declaredDataSources`, `connectorAllowlist`, `sponsorUpn`, `sponsor`, `reviewerAttestations`, `mrmHandoffStatus`, `policyVersion`, `retentionLabel`, `decisionPackHash`, and `entraAgentId`.
@@ -618,7 +616,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 4. Action: Microsoft Dataverse — **Add a new row** to `fsi_intakerequest` when the appeal is allowed.
    - Set `fsi_name = Appeal - <newRequestId>`.
    - Copy the original request's maker, sponsor, audience, trigger answers, and Standard/Full JSON blob.
-   - Set a new `fsi_requestid`, `fsi_status = Submitted (100000001)`, and preserve lineage in `fsi_standardfullquestionsjson.appealOfRequestId` until `fsi_appealofid` exists as a first-class column.
+   - Set a new `fsi_requestid`, `fsi_status = Submitted (100000001)`, `fsi_appealofid = <original request ID>`, and preserve any customer-specific appeal narrative in `fsi_standardfullquestionsjson`.
 5. Action: Microsoft Dataverse — **Add a new row** to `fsi_intakeauditevent` on both requests.
    - Original request: `fsi_eventtype = AppealSubmitted`, `fsi_pathphase = Submitted`.
    - New request: `fsi_eventtype = AppealSubmitted`, `fsi_pathphase = Submitted`, with the original request ID in the payload.

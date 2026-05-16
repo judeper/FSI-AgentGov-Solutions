@@ -25,6 +25,7 @@ Dataverse uses two names for every column:
 | Logical name | Schema name | Type | Required | Description |
 |--------------|-------------|------|----------|-------------|
 | `fsi_requestid` | `fsi_RequestId` | String(100) | Yes | Globally unique intake request identifier (GUID) |
+| `fsi_appealofid` | `fsi_AppealOfId` | String(100) | No | Original intake request that this request is appealing |
 | `fsi_agentdisplayname` | `fsi_AgentDisplayName` | String(200) | Yes | Maker-provided name for the proposed agent |
 | `fsi_agenttype` | `fsi_AgentType` | Choice (fsi_intake_agenttype) | Yes | Authoring tool / runtime type the maker intends to use |
 | `fsi_businessoutcome` | `fsi_BusinessOutcome` | String(500) | Yes | Structured business outcome category (BJ-001 dropdown value) |
@@ -56,6 +57,7 @@ Dataverse uses two names for every column:
 | `fsi_decisionpath` | `fsi_DecisionPath` | String(100) | No | Express, Standard, Full, DeferredOutOfScope, or DefaultDeny computed by routing rules |
 | `fsi_triggerhitcount` | `fsi_TriggerHitCount` | Integer | No | Count of trigger answers equal to Yes or Not sure |
 | `fsi_quorumrequired` | `fsi_QuorumRequired` | Integer | No | Minimum reviewer approvals required before the request can advance |
+| `fsi_nonmrmquorummet` | `fsi_NonMrmQuorumMet` | Boolean | Yes | TRUE when the non-MRM reviewer board (InfoSec/Privacy/Compliance/Legal) has reached quorum on a Tier-1 Full request; gates Flow 7 (MRM handoff) |
 | `fsi_parallelreviewersjson` | `fsi_ParallelReviewersJson` | Memo(65536) | No | JSON array of reviewer role, UPN, due date, weight, and state for routed reviewers |
 | `fsi_dataresidencycountry` | `fsi_DataResidencyCountry` | String(100) | No | Maker-declared or detected residency for data sources |
 | `fsi_retentionyears` | `fsi_RetentionYears` | Integer | No | Effective retention period in years |
@@ -198,7 +200,7 @@ Dataverse uses two names for every column:
 | Logical name | Schema name | Type | Required | Description |
 |--------------|-------------|------|----------|-------------|
 | `fsi_requestid` | `fsi_RequestId` | String(100) | Yes | FK to fsi_IntakeRequest.fsi_RequestId |
-| `fsi_eventtype` | `fsi_EventType` | String(100) | Yes | Submitted / Routed / SponsorNotified / SponsorClicked / AutoApproved / Denied / HandoffComplete / RegistryWritten / EntraAgentIdMinted / RetentionStamped |
+| `fsi_eventtype` | `fsi_EventType` | String(100) | Yes | Lifecycle event name emitted by intake flows. Bundled values are catalogued in the fsi_intake_auditeventtype option set, but this column remains text so customers can extend the inventory without a schema change. |
 | `fsi_pathphase` | `fsi_PathPhase` | String(100) | No | Submitted / RouterRouted / SponsorAttested / ReviewerQueued / ReviewerDecided / Escalated / Handed off |
 | `fsi_actorupn` | `fsi_ActorUpn` | String(200) | No | UPN of the actor who triggered the event (system events use 'system') |
 | `fsi_eventon` | `fsi_EventOn` | DateTime | Yes | Timestamp the event occurred |
@@ -257,6 +259,8 @@ All option sets are global (cross-table) so the same numeric value can be used i
 | AutoApproved | 100000008 |
 | DeferredOutOfScope | 100000009 |
 | SponsorTimeout | 100000010 |
+| InReview | 100000011 |
+| LiveTracking | 100000012 |
 
 ### `fsi_intake_routingtopology`
 
@@ -334,6 +338,36 @@ All option sets are global (cross-table) so the same numeric value can be used i
 | Denied | 100000002 |
 | EscalatedToManager | 100000003 |
 | WithdrawnByMaker | 100000004 |
+
+### `fsi_intake_auditeventtype`
+
+| Label | Value |
+|-------|-------|
+| RouterDecided | 100000000 |
+| RouterFailed | 100000001 |
+| SponsorDecided | 100000002 |
+| SponsorTimeout | 100000003 |
+| SponsorEscalated | 100000004 |
+| SponsorCardFailed | 100000005 |
+| ReviewerQueued | 100000006 |
+| ReviewerQueueFailed | 100000007 |
+| ReviewerDecided | 100000008 |
+| QuorumReached | 100000009 |
+| RequestDenied | 100000010 |
+| ReviewerDecisionHandlerFailed | 100000011 |
+| ReviewerEscalated | 100000012 |
+| ReviewerEscalationFailed | 100000013 |
+| MrmHandoffSubmitted | 100000014 |
+| MRMHandoffPending | 100000015 |
+| MrmDecisionMirrored | 100000016 |
+| DecisionPackWritten | 100000017 |
+| EntraAgentIdMinted | 100000018 |
+| RegistryHandoffComplete | 100000019 |
+| DriftHandoffSubmitted | 100000020 |
+| AppealSubmitted | 100000021 |
+| AppealRejected | 100000022 |
+| AppealCreateFailed | 100000023 |
+| RetentionLabelApplied | 100000024 |
 
 ## Alternate Keys
 

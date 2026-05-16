@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Extended `fsi_IntakeReview`, `fsi_IntakeApproval`, and `fsi_IntakeAuditEvent` with reviewer-role normalization, quorum metadata, sequencing support, and path-phase checkpoints.
 - Regenerated `docs/dataverse-schema.md` from the updated schema script so downstream flow and portal workstreams can consume the canonical field list.
 - Expanded `templates/policy-lookup-tables.yaml` with reviewer routing, quorum, MRM handoff, parallel-routing, and path-specific denial-appeal defaults.
+- Added `fsi_appealofid` and `fsi_nonmrmquorummet` to `fsi_IntakeRequest`, extended `fsi_intake_status` with `InReview` / `LiveTracking`, added the bundled `fsi_intake_auditeventtype` inventory values used by the 12 documented flows, regenerated `docs/dataverse-schema.md`, and updated `docs/flow-configuration.md` to remove the remaining schema-gap notes.
 - Bumped `manifest.yaml` to `1.0.0-preview` and updated the verification text to reference the full lab-rebuild test.
 
 ## [0.2.0-preview] - 2026-05-06
