@@ -1,5 +1,21 @@
 # Power Automate Flow Setup
 
+> **Phase 3 — OPTIONAL.**
+> Complete [Phase 1 (POC bar)](poc-quickstart.md#phase-1--poc-bar-schema--sync--teams-alert) and
+> [Phase 2 (Operationalize)](poc-quickstart.md#phase-2--operationalize-assessment--evidence) of the
+> POC Quickstart first. The PowerShell sync alone is enough for a working POC.
+>
+> **⛔ Mutually exclusive with the Phase 1 PowerShell webhook.** Running both notification paths at
+> the same time produces duplicate Teams alerts because `fsi_notifiedon` provides per-row idempotency
+> within one path only — not cross-path deduplication. Before enabling this flow:
+>
+> 1. Clear `$env:MCM_TEAMS_WEBHOOK_URL` on every host that runs `Invoke-MessageCenterSync.ps1`:
+>    ```powershell
+>    Remove-Item Env:\MCM_TEAMS_WEBHOOK_URL -ErrorAction SilentlyContinue
+>    ```
+> 2. Re-run `Test-McmPrerequisites.ps1` — check 11 (mutual-exclusion) must report **PASS** before
+>    you continue building the flow.
+
 This guide walks through creating the Message Center Monitor flow in Power Automate.
 
 ## Overview
