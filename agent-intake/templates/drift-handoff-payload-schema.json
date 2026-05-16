@@ -1,0 +1,709 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/judeper/FSI-AgentGov-Solutions/main/agent-intake/templates/drift-handoff-payload-schema.json",
+  "title": "Agent Intake Drift Handoff Payload",
+  "description": "Draft 2020-12 schema for the agent-intake registry handoff consumed by downstream drift detectors. The same contract is also referenced by agent-intake/scripts/handoff_mrm.py for informational parity. The MRM handoff payload schema (mrm-handoff-payload-schema.json) is a superset variant owned by a separate workstream; this schema is the registry-handoff contract drift detectors can validate before routing findings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "payloadVersion",
+    "originIntakeId",
+    "pathUsed",
+    "riskTier",
+    "zone",
+    "declaredAudience",
+    "intendedAudience",
+    "declaredDataSourcesJson",
+    "declaredDataSources",
+    "connectorAllowlist",
+    "sponsorUpn",
+    "sponsor",
+    "reviewerAttestations",
+    "mrmHandoffStatus",
+    "policyVersion",
+    "retentionLabel",
+    "decisionPackHash",
+    "entraAgentId"
+  ],
+  "properties": {
+    "payloadVersion": {
+      "$ref": "#/$defs/semverString",
+      "description": "Version of the registry handoff payload contract emitted by agent-intake.",
+      "examples": [
+        "1.0.0-preview"
+      ]
+    },
+    "originIntakeId": {
+      "$ref": "#/$defs/guidString",
+      "description": "Original intake request identifier copied from fsi_requestid before the registry shell row is created.",
+      "examples": [
+        "58c2dd51-7b29-4a4d-ae62-5d3b4f9c2f43"
+      ]
+    },
+    "pathUsed": {
+      "type": "string",
+      "enum": [
+        "Express",
+        "Standard",
+        "Full"
+      ],
+      "description": "Routing path used for the approved intake request.",
+      "examples": [
+        "Standard"
+      ]
+    },
+    "riskTier": {
+      "type": "string",
+      "enum": [
+        "Tier 1 (High)",
+        "Tier 2 (Medium)",
+        "Tier 3 (Low)"
+      ],
+      "description": "Canonical risk-tier label copied from the intake decision at handoff time.",
+      "examples": [
+        "Tier 2 (Medium)"
+      ]
+    },
+    "zone": {
+      "type": "string",
+      "enum": [
+        "Zone 1 (Enterprise)",
+        "Zone 2 (Team)",
+        "Zone 3 (Personal)"
+      ],
+      "description": "Canonical zone label copied from the intake decision at handoff time.",
+      "examples": [
+        "Zone 2 (Team)"
+      ]
+    },
+    "declaredAudience": {
+      "type": "string",
+      "enum": [
+        "Just me",
+        "My team",
+        "My department",
+        "Anyone in the firm",
+        "External users"
+      ],
+      "description": "Legacy flat audience field preserved for additive compatibility with the v0.2.0-preview drift handoff.",
+      "examples": [
+        "My team"
+      ]
+    },
+    "intendedAudience": {
+      "type": "string",
+      "enum": [
+        "Just me",
+        "My team",
+        "My department",
+        "Anyone in the firm",
+        "External users"
+      ],
+      "description": "Canonical v1 audience value used for path-aware drift routing.",
+      "examples": [
+        "My team"
+      ]
+    },
+    "declaredDataSourcesJson": {
+      "type": "string",
+      "minLength": 2,
+      "description": "Legacy serialized JSON snapshot of declared data sources copied from fsi_declareddatasourcesjson for existing consumers.",
+      "examples": [
+        "[{\"dataSourceName\":\"https://contoso.sharepoint.com/sites/wealth\",\"dataSourceType\":\"SharePoint\"}]"
+      ]
+    },
+    "declaredDataSources": {
+      "type": "array",
+      "description": "Parsed declared data-source baseline copied from the intake decision pack and related fsi_intakedatasource rows.",
+      "items": {
+        "$ref": "#/$defs/dataSource"
+      },
+      "examples": [
+        [
+          {
+            "dataSourceName": "https://contoso.sharepoint.com/sites/wealth",
+            "dataSourceType": "SharePoint",
+            "dataClassification": "Confidential",
+            "isCustomerData": true,
+            "isRestricted": false,
+            "dataResidencyCountry": "US"
+          }
+        ]
+      ]
+    },
+    "connectorAllowlist": {
+      "type": "array",
+      "description": "Canonical connector and API allowlist approved at decision time. Drift detectors compare runtime behavior against this array before treating an expansion as approved scope.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "examples": [
+        [
+          "SharePoint",
+          "Dataverse",
+          "Office365Users"
+        ]
+      ]
+    },
+    "sponsorUpn": {
+      "$ref": "#/$defs/upnString",
+      "description": "Legacy flat sponsor field preserved for additive compatibility with the v0.2.0-preview drift handoff.",
+      "examples": [
+        "alex.sponsor@contoso.com"
+      ]
+    },
+    "sponsor": {
+      "$ref": "#/$defs/sponsorAttestation",
+      "description": "Structured sponsor attestation record emitted alongside sponsorUpn in the v1 contract.",
+      "examples": [
+        {
+          "role": "LineOfBusinessSponsor",
+          "upn": "alex.sponsor@contoso.com",
+          "attestationCardHash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "decidedOnUtc": "2026-06-01T15:22:11Z"
+        }
+      ]
+    },
+    "reviewerAttestations": {
+      "type": "array",
+      "description": "Ordered reviewer chain beyond the sponsor. Express payloads use an empty array; Standard and Full payloads carry the reviewer-board quorum in decision order.",
+      "items": {
+        "$ref": "#/$defs/reviewerAttestation"
+      },
+      "examples": [
+        [
+          {
+            "role": "InfoSec",
+            "upn": "isec.reviewer@contoso.com",
+            "decidedOnUtc": "2026-06-01T16:05:00Z",
+            "decisionPackHash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+            "conditionsText": "Quarterly access review required before widening the audience."
+          },
+          {
+            "role": "Compliance",
+            "upn": "compliance.reviewer@contoso.com",
+            "decidedOnUtc": "2026-06-01T16:14:00Z",
+            "decisionPackHash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+            "conditionsText": ""
+          }
+        ]
+      ]
+    },
+    "mrmHandoffStatus": {
+      "type": "string",
+      "enum": [
+        "NotApplicable",
+        "Pending",
+        "Completed",
+        "Failed"
+      ],
+      "description": "MRM handoff state captured at registry handoff time. Express paths should emit NotApplicable.",
+      "examples": [
+        "Pending"
+      ]
+    },
+    "policyVersion": {
+      "$ref": "#/$defs/semverString",
+      "description": "Version of policy-lookup-tables.yaml applied when the request was classified and approved.",
+      "examples": [
+        "1.0.0-preview"
+      ]
+    },
+    "retentionLabel": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Retention label captured from fsi_retentionlabelapplied or the decision-pack snapshot.",
+      "examples": [
+        "FSI-AgentIntake-7yr"
+      ]
+    },
+    "decisionPackHash": {
+      "$ref": "#/$defs/sha256String",
+      "description": "SHA-256 hash of the immutable decision pack copied from fsi_decisionpackhash.",
+      "examples": [
+        "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+      ]
+    },
+    "entraAgentId": {
+      "$ref": "#/$defs/guidString",
+      "description": "Microsoft Entra Agent ID service principal object ID minted at handoff and written to fsi_entraagentid.",
+      "examples": [
+        "2d29777c-6495-4782-af8d-52a3d0f47d06"
+      ]
+    },
+    "agentDisplayName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional display name copied from fsi_agentdisplayname for operator context.",
+      "examples": [
+        "Wealth Research Assistant"
+      ]
+    },
+    "agentType": {
+      "type": "string",
+      "enum": [
+        "Agent Builder (M365 Copilot)",
+        "Copilot Studio (classic)",
+        "Declarative Agent (M365 Copilot)",
+        "Custom Engine Agent",
+        "Azure AI Foundry / Pro-Dev"
+      ],
+      "description": "Optional agent-type label copied from fsi_agenttype for downstream routing context.",
+      "examples": [
+        "Copilot Studio (classic)"
+      ]
+    },
+    "decisionOutcome": {
+      "type": "string",
+      "enum": [
+        "Approved",
+        "AutoApproved",
+        "Denied",
+        "EscalatedToManager",
+        "WithdrawnByMaker"
+      ],
+      "description": "Optional final intake outcome copied from fsi_decisionoutcome. Registry handoffs normally use Approved or AutoApproved.",
+      "examples": [
+        "Approved"
+      ]
+    },
+    "targetEnvironmentId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional target Power Platform environment identifier copied from fsi_targetenvironmentid.",
+      "examples": [
+        "Default-7f4e8f8f-1d6f-4f7e-bd4d-0b6b9c8af620"
+      ]
+    },
+    "targetEnvironmentName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional target Power Platform environment display name copied from fsi_targetenvironmentname.",
+      "examples": [
+        "FSI Team Agents"
+      ]
+    },
+    "registryRecordId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional agent-registry-automation record identifier if the registry shell row already exists when the payload is persisted.",
+      "examples": [
+        "c4e5032b-7a11-4d41-a8fd-60a97d8a2b33"
+      ]
+    },
+    "auditPointer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional opaque pointer or URI to the immutable decision-pack evidence bundle.",
+      "examples": [
+        "dataverse://fsi_intakedecisionlog/f0aa8f55-7df8-4a46-9ee2-9471fc2c9893"
+      ]
+    },
+    "conditionsText": {
+      "type": "string",
+      "description": "Optional consolidated approval conditions carried forward from the decision pack for consumers that have not yet parsed reviewerAttestations.",
+      "examples": [
+        "Keep the agent scoped to the approved wealth-advisory team and complete quarterly access reviews.",
+        ""
+      ]
+    }
+  },
+  "$defs": {
+    "semverString": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "guidString": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+    },
+    "sha256String": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
+    },
+    "upnString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataSourceName",
+        "dataSourceType"
+      ],
+      "properties": {
+        "dataSourceName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Maker-declared or reviewer-confirmed data-source identifier.",
+          "examples": [
+            "https://contoso.sharepoint.com/sites/wealth"
+          ]
+        },
+        "dataSourceType": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Connector or source type.",
+          "examples": [
+            "SharePoint"
+          ]
+        },
+        "dataClassification": {
+          "type": "string",
+          "enum": [
+            "Public",
+            "Internal",
+            "Confidential",
+            "Restricted"
+          ],
+          "description": "Highest declared classification for the data source.",
+          "examples": [
+            "Confidential"
+          ]
+        },
+        "isCustomerData": {
+          "type": "boolean",
+          "description": "True when the source contains customer data relevant to the intake decision.",
+          "examples": [
+            true
+          ]
+        },
+        "isRestricted": {
+          "type": "boolean",
+          "description": "True when the source contains restricted, MNPI, or similarly controlled data.",
+          "examples": [
+            false
+          ]
+        },
+        "dataResidencyCountry": {
+          "type": "string",
+          "minLength": 2,
+          "description": "Declared residency country for the source when captured in the intake decision pack.",
+          "examples": [
+            "US"
+          ]
+        }
+      }
+    },
+    "sponsorAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "upn",
+        "attestationCardHash",
+        "decidedOnUtc"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "LineOfBusinessSponsor",
+            "RegisteredPrincipal",
+            "DataOwner"
+          ],
+          "description": "Sponsor role carried from the intake sponsorship evidence.",
+          "examples": [
+            "LineOfBusinessSponsor"
+          ]
+        },
+        "upn": {
+          "$ref": "#/$defs/upnString",
+          "description": "Sponsor user principal name.",
+          "examples": [
+            "alex.sponsor@contoso.com"
+          ]
+        },
+        "attestationCardHash": {
+          "$ref": "#/$defs/sha256String",
+          "description": "SHA-256 hash of the rendered sponsor attestation card or equivalent approval artifact.",
+          "examples": [
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          ]
+        },
+        "decidedOnUtc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC timestamp when the sponsor attested.",
+          "examples": [
+            "2026-06-01T15:22:11Z"
+          ]
+        }
+      }
+    },
+    "reviewerAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "upn",
+        "decidedOnUtc",
+        "decisionPackHash",
+        "conditionsText"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "InfoSec",
+            "Privacy",
+            "Compliance",
+            "MRM",
+            "Records",
+            "Legal"
+          ],
+          "description": "Reviewer role captured in the intake review quorum.",
+          "examples": [
+            "InfoSec"
+          ]
+        },
+        "upn": {
+          "$ref": "#/$defs/upnString",
+          "description": "Reviewer user principal name.",
+          "examples": [
+            "isec.reviewer@contoso.com"
+          ]
+        },
+        "decidedOnUtc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC timestamp when the reviewer approved or recorded the attestation.",
+          "examples": [
+            "2026-06-01T16:05:00Z"
+          ]
+        },
+        "decisionPackHash": {
+          "$ref": "#/$defs/sha256String",
+          "description": "SHA-256 hash of the decision pack version this reviewer signed.",
+          "examples": [
+            "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+          ]
+        },
+        "conditionsText": {
+          "type": "string",
+          "description": "Reviewer-specific condition or caveat. Use an empty string when the reviewer approved without conditions.",
+          "examples": [
+            "Quarterly access review required before production widening.",
+            ""
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "pathUsed": {
+            "const": "Express"
+          }
+        },
+        "required": [
+          "pathUsed"
+        ]
+      },
+      "then": {
+        "properties": {
+          "riskTier": {
+            "const": "Tier 3 (Low)"
+          },
+          "zone": {
+            "const": "Zone 3 (Personal)"
+          },
+          "declaredAudience": {
+            "const": "Just me"
+          },
+          "intendedAudience": {
+            "const": "Just me"
+          },
+          "reviewerAttestations": {
+            "maxItems": 0
+          },
+          "mrmHandoffStatus": {
+            "const": "NotApplicable"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "pathUsed": {
+            "const": "Standard"
+          }
+        },
+        "required": [
+          "pathUsed"
+        ]
+      },
+      "then": {
+        "properties": {
+          "riskTier": {
+            "const": "Tier 2 (Medium)"
+          },
+          "zone": {
+            "const": "Zone 2 (Team)"
+          },
+          "declaredAudience": {
+            "enum": [
+              "My team",
+              "My department"
+            ]
+          },
+          "intendedAudience": {
+            "enum": [
+              "My team",
+              "My department"
+            ]
+          },
+          "reviewerAttestations": {
+            "minItems": 2,
+            "maxItems": 3,
+            "allOf": [
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "InfoSec"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "Compliance"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "pathUsed": {
+            "const": "Full"
+          }
+        },
+        "required": [
+          "pathUsed"
+        ]
+      },
+      "then": {
+        "properties": {
+          "riskTier": {
+            "const": "Tier 1 (High)"
+          },
+          "zone": {
+            "const": "Zone 1 (Enterprise)"
+          },
+          "declaredAudience": {
+            "enum": [
+              "Anyone in the firm",
+              "External users"
+            ]
+          },
+          "intendedAudience": {
+            "enum": [
+              "Anyone in the firm",
+              "External users"
+            ]
+          },
+          "reviewerAttestations": {
+            "minItems": 5,
+            "maxItems": 5,
+            "allOf": [
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "InfoSec"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "Privacy"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "Compliance"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "Legal"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              },
+              {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "const": "MRM"
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ]
+                }
+              }
+            ]
+          },
+          "mrmHandoffStatus": {
+            "enum": [
+              "Pending",
+              "Completed",
+              "Failed"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
