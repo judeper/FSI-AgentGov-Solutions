@@ -270,7 +270,18 @@ function Invoke-McmDvUpsertMessage {
         this function stays free of solution-specific constants.
 
     .OUTPUTS
-        [pscustomobject] @{ Action = 'Created' | 'Updated'; MessageId = <string> }
+        [pscustomobject] with properties:
+          - Action       : 'Created' or 'Updated'
+          - MessageId    : the Message Center post id (string, as supplied)
+          - EntityId     : the Dataverse row primary-key GUID (string, or
+                           $null if the caller did not set
+                           Prefer: return=representation in $DataverseHeaders,
+                           or the response did not include
+                           fsi_messagecenterlogid)
+          - ResponseBody : the parsed Dataverse response body (or $null when
+                           Prefer: return=representation is absent); callers
+                           can read additional columns such as fsi_notifiedon
+                           for idempotent notification logic
 
     .NOTES
         On terminal failure throws a descriptive message; caller catches and
@@ -300,9 +311,25 @@ function Invoke-McmDvUpsertMessage {
 
     $existed = $false
     try {
-        Invoke-McmRest -Uri $upsertUrl -Headers $createHeaders -Method Patch `
-            -Body ($createPayload | ConvertTo-Json -Depth 5) | Out-Null
-        return [pscustomobject]@{ Action = 'Created'; MessageId = $MessageId }
+        # Capture the response body. Callers that set the Prefer:
+        # return=representation header on $DataverseHeaders (the sync script
+        # does) receive the full Dataverse row back, including the row's
+        # fsi_messagecenterlogid primary-key GUID and any admin-owned
+        # columns (e.g. fsi_notifiedon) that already exist on the row.
+        # Callers without that Prefer header (or mocks) receive $null —
+        # ResponseBody is then $null and EntityId resolves to $null.
+        $resp = Invoke-McmRest -Uri $upsertUrl -Headers $createHeaders -Method Patch `
+            -Body ($createPayload | ConvertTo-Json -Depth 5)
+        $entityId = $null
+        if ($resp -and ($resp.PSObject.Properties.Name -contains 'fsi_messagecenterlogid')) {
+            $entityId = [string]$resp.fsi_messagecenterlogid
+        }
+        return [pscustomobject]@{
+            Action       = 'Created'
+            MessageId    = $MessageId
+            EntityId     = $entityId
+            ResponseBody = $resp
+        }
     }
     catch {
         $errMsg = $_.Exception.Message
@@ -321,12 +348,192 @@ function Invoke-McmDvUpsertMessage {
         try {
             # Update path: $Record (NOT $createPayload) is sent. By contract it
             # excludes admin-owned columns, so PATCH cannot overwrite them.
-            Invoke-McmRest -Uri $upsertUrl -Headers $DataverseHeaders -Method Patch `
-                -Body ($Record | ConvertTo-Json -Depth 5) | Out-Null
-            return [pscustomobject]@{ Action = 'Updated'; MessageId = $MessageId }
+            $resp = Invoke-McmRest -Uri $upsertUrl -Headers $DataverseHeaders -Method Patch `
+                -Body ($Record | ConvertTo-Json -Depth 5)
+            $entityId = $null
+            if ($resp -and ($resp.PSObject.Properties.Name -contains 'fsi_messagecenterlogid')) {
+                $entityId = [string]$resp.fsi_messagecenterlogid
+            }
+            return [pscustomobject]@{
+                Action       = 'Updated'
+                MessageId    = $MessageId
+                EntityId     = $entityId
+                ResponseBody = $resp
+            }
         }
         catch {
             throw "Update failed for ${MessageId}: $($_.Exception.Message)"
+        }
+    }
+}
+
+function Expand-McmCardTokens {
+    <#
+    .SYNOPSIS
+        Recursively substitutes {token} placeholders in a parsed adaptive card tree.
+
+    .DESCRIPTION
+        Walks a tree of hashtables, arrays, and strings produced by
+        ConvertFrom-Json -AsHashtable, replacing every occurrence of {tokenName}
+        inside string values with the corresponding value from $Tokens.
+
+        Substitution happens at the OBJECT level (parsed JSON tree), so quote,
+        newline, backslash, and other special characters in token values are
+        correctly JSON-escaped when the result is re-serialized with
+        ConvertTo-Json. This prevents JSON-injection from message titles that
+        contain quotes or control characters - the brittleness of naive
+        string.Replace() on raw template text is avoided entirely.
+
+        Missing tokens are left as the literal placeholder (e.g. "{missing}").
+        Null token values are substituted as empty strings.
+
+    .PARAMETER Node
+        Current node in the tree. Initial call passes the parsed root.
+
+    .PARAMETER Tokens
+        Hashtable of token names -> string values.
+
+    .OUTPUTS
+        The same shape as the input (hashtable, array, string, or scalar) with
+        substitutions applied.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [AllowNull()] $Node,
+        [Parameter(Mandatory)] [hashtable]$Tokens
+    )
+
+    if ($null -eq $Node) { return $null }
+
+    if ($Node -is [string]) {
+        $captured = $Tokens
+        $evaluator = [System.Text.RegularExpressions.MatchEvaluator] {
+            param($match)
+            $name = $match.Groups[1].Value
+            if ($captured.ContainsKey($name)) {
+                $val = $captured[$name]
+                if ($null -eq $val) { return '' }
+                return [string]$val
+            }
+            return $match.Value
+        }.GetNewClosure()
+        return [System.Text.RegularExpressions.Regex]::Replace($Node, '\{(\w+)\}', $evaluator)
+    }
+
+    if ($Node -is [System.Collections.IDictionary]) {
+        $out = [ordered]@{}
+        foreach ($k in @($Node.Keys)) {
+            $out[$k] = Expand-McmCardTokens -Node $Node[$k] -Tokens $Tokens
+        }
+        return $out
+    }
+
+    if ($Node -is [System.Collections.IEnumerable] -and -not ($Node -is [string])) {
+        $list = New-Object System.Collections.ArrayList
+        foreach ($item in $Node) {
+            $null = $list.Add((Expand-McmCardTokens -Node $item -Tokens $Tokens))
+        }
+        return ,$list.ToArray()
+    }
+
+    return $Node
+}
+
+function Send-McmTeamsWebhook {
+    <#
+    .SYNOPSIS
+        Posts an adaptive card to a Microsoft Teams Workflows incoming webhook.
+
+    .DESCRIPTION
+        Loads the shared adaptive card template, performs object-level token
+        substitution (safe against JSON injection from quotes/newlines/specials
+        in token values), wraps the result in the Teams Workflows message
+        envelope (type='message' + attachments[] with contentType
+        application/vnd.microsoft.card.adaptive), and POSTs via Invoke-McmRest.
+
+        On 2xx: returns a result object with Success=$true.
+        On 4xx/5xx after retries: returns Success=$false with the error
+        message. This function does NOT throw on HTTP failure - callers (the
+        sync loop) want to continue processing remaining messages and surface
+        the failure as a warning. Other terminal failures (template missing,
+        JSON parse error) throw.
+
+    .PARAMETER WebhookUrl
+        The Teams Workflows incoming webhook URL (HTTPS, from the Workflows
+        app's "When a Teams webhook request is received" trigger).
+
+    .PARAMETER CardTokens
+        Hashtable of token names -> string values to substitute into the card
+        template. Token names match the {tokenName} placeholders in the
+        template (e.g. severity, title, category, services, startDateTime,
+        actionRequiredByDateTime, id, environment, appId, publisherPrefix,
+        recordId).
+
+    .PARAMETER AdaptiveCardTemplatePath
+        Filesystem path to the adaptive card template JSON. Default is
+        ../../templates/teams-notification-card.json relative to this script.
+
+    .PARAMETER MaxRetries
+        Forwarded to Invoke-McmRest. Default: 3.
+
+    .OUTPUTS
+        [pscustomobject] @{ Success = $true|$false; Error = $null|<string> }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string]$WebhookUrl,
+        [Parameter(Mandatory)] [hashtable]$CardTokens,
+        [Parameter(Mandatory)] [string]$AdaptiveCardTemplatePath,
+        [int]$MaxRetries = 3
+    )
+
+    if (-not (Test-Path -LiteralPath $AdaptiveCardTemplatePath)) {
+        throw "Adaptive card template not found: $AdaptiveCardTemplatePath"
+    }
+
+    $templateRaw = Get-Content -LiteralPath $AdaptiveCardTemplatePath -Raw
+    try {
+        $card = $templateRaw | ConvertFrom-Json -AsHashtable -Depth 50
+    } catch {
+        throw "Failed to parse adaptive card template ${AdaptiveCardTemplatePath}: $($_.Exception.Message)"
+    }
+
+    # Strip the author-only _comment field; it is not part of the Adaptive
+    # Cards schema and adds noise to the wire payload.
+    if ($card -is [System.Collections.IDictionary] -and $card.Contains('_comment')) {
+        $null = $card.Remove('_comment')
+    }
+
+    $renderedCard = Expand-McmCardTokens -Node $card -Tokens $CardTokens
+
+    $envelope = [ordered]@{
+        type        = 'message'
+        attachments = @(
+            [ordered]@{
+                contentType = 'application/vnd.microsoft.card.adaptive'
+                contentUrl  = $null
+                content     = $renderedCard
+            }
+        )
+    }
+
+    $body = $envelope | ConvertTo-Json -Depth 20 -Compress
+    $headers = @{ 'Content-Type' = 'application/json' }
+
+    try {
+        # Workflows incoming webhook typically responds 202 Accepted.
+        # Invoke-McmRest handles 429/5xx retry with Retry-After honoring.
+        $null = Invoke-McmRest -Uri $WebhookUrl -Headers $headers -Method Post `
+            -Body $body -MaxRetries $MaxRetries
+        return [pscustomobject]@{
+            Success = $true
+            Error   = $null
+        }
+    }
+    catch {
+        return [pscustomobject]@{
+            Success = $false
+            Error   = $_.Exception.Message
         }
     }
 }
