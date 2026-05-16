@@ -1,0 +1,73 @@
+{
+  "scenario": "standard-conditional",
+  "sponsorRole": "LineOfBusinessSponsor",
+  "reviewers": {
+    "InfoSec": "infosec-standard@contoso.example",
+    "Privacy": "privacy-standard@contoso.example",
+    "Compliance": "compliance-standard@contoso.example",
+    "Legal": "legal-standard@contoso.example",
+    "MRM": "mrm-standard@contoso.example"
+  },
+  "seedArtifacts": {
+    "syntheticEntraAgentId": "bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb",
+    "registryRecordId": "bbbb0000-2222-4222-8222-bbbbbbbbbbbb",
+    "mrmOfficerUpn": "mrm-officer@contoso.example",
+    "auditorUpn": "audit-intake@contoso.example"
+  },
+  "expectedClassification": {
+    "pathUsed": "Standard",
+    "decisionPath": "Standard",
+    "riskTier": "Tier 2 (Medium)",
+    "zone": "Zone 2 (Team)",
+    "quorumRequired": 2
+  },
+  "expectedOutcome": {
+    "decisionOutcome": "Approved",
+    "reviewerCount": 3,
+    "agentIdExpected": true,
+    "mrmExpected": false,
+    "driftPayloadExpected": true
+  },
+  "fsi_intakerequest": {
+    "fsi_requestid": "22222222-2222-4222-8222-222222222222",
+    "fsi_agentdisplayname": "Sales Coverage Coach",
+    "fsi_agenttype": "Copilot Studio (classic)",
+    "fsi_businessoutcome": "Coach a named sales-operations team on approved account coverage patterns.",
+    "fsi_businessjustification": "The team needs a guided assistant for internal account-planning preparation with controlled customer-data use.",
+    "fsi_makerupn": "taylor.maker@contoso.example",
+    "fsi_makerdepartment": "Sales Operations",
+    "fsi_makercountry": "US",
+    "fsi_makerdisplayname": "Taylor Maker",
+    "fsi_makerjobtitle": "Sales Operations Lead",
+    "fsi_sponsorupn": "casey.sponsor@contoso.example",
+    "fsi_intendedaudience": "My team",
+    "fsi_t1initiatesfinancialtxn": "No",
+    "fsi_t2customerfacing": "No",
+    "fsi_t3autonomousunmonitored": "No",
+    "fsi_t4handlesnpi": "Yes",
+    "fsi_t5handlesmnpi": "No",
+    "fsi_t6crossborderdata": "No",
+    "fsi_makerattestation": true,
+    "fsi_dataresidencycountry": "US",
+    "fsi_privacyoverride": false
+  },
+  "dataSources": [
+    {
+      "name": "CRM Opportunity Summary",
+      "type": "Dataverse",
+      "classification": "Confidential",
+      "isCustomerData": true,
+      "isRestricted": false,
+      "dataResidencyCountry": "US"
+    },
+    {
+      "name": "Sales Playbook Library",
+      "type": "SharePoint",
+      "classification": "Internal",
+      "isCustomerData": false,
+      "isRestricted": false,
+      "dataResidencyCountry": "US"
+    }
+  ]
+}
+
