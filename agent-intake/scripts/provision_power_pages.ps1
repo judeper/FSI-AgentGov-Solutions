@@ -70,7 +70,7 @@ $summary = [System.Collections.Generic.List[object]]::new()
 
 function Write-Section {
     param([Parameter(Mandatory)][string]$Title)
-    Write-Host "`n== $Title ==" -ForegroundColor Cyan
+    Write-Information ("`n== $Title ==") -InformationAction Continue
 }
 
 function Add-SummaryRow {
@@ -111,7 +111,7 @@ function Invoke-PacCommand {
     $commandText = 'pac ' + ($escapedArguments -join ' ')
 
     if ($DryRun -and $ChangesState) {
-        Write-Host "[DRY-RUN] $commandText" -ForegroundColor Yellow
+        Write-Information "[DRY-RUN] $commandText" -InformationAction Continue
         return [pscustomobject]@{
             Succeeded = $true
             Output    = ''
@@ -268,9 +268,9 @@ function Show-Summary {
     if ($manualSteps.Count -gt 0) {
         Write-Section 'Manual fallback steps'
         for ($index = 0; $index -lt $manualSteps.Count; $index++) {
-            Write-Host ('{0}. {1}' -f ($index + 1), $manualSteps[$index])
+            Write-Information ('{0}. {1}' -f ($index + 1), $manualSteps[$index]) -InformationAction Continue
         }
-        Write-Host "See $portalDocPath and $progressiveDocPath for the full manual build sequence." -ForegroundColor Yellow
+        Write-Information "See $portalDocPath and $progressiveDocPath for the full manual build sequence." -InformationAction Continue
     }
 }
 

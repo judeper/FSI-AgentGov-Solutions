@@ -11,6 +11,8 @@ The Express path is the conservative default for personal-scope requests in comm
 
 The maker completes the portal form, the sponsor receives a Teams adaptive card, and the approval decision is written into the immutable decision pack. All wording and defaults assume commercial Microsoft 365 and en-US maker-facing text. These questions help firms collect evidence and route the right reviewers; they do not certify compliance.
 
+For v1.0.0-preview, every maker-entered Express answer maps to a first-class Dataverse column on `fsi_intakerequest`. When a request routes beyond Express, the additional Standard and Full answers are stored in `fsi_intakerequest.fsi_standardfullquestionsjson.<jsonKey>`, where `<jsonKey>` uses a stable lower-camel-case form of the proposed v1.1 field name (for example, `s1AudienceExtension`). If v1.1 adds first-class `fsi_s*` or `fsi_f*` columns, treat them as mirrors of the preview JSON payload rather than a rename of the preview storage contract.
+
 ## Section A — Maker identity & sponsor (auto-prefilled from Graph)
 
 | Field (Dataverse logical name) | Source | Use in decision pack |
@@ -63,5 +65,5 @@ If a firm needs extra local prompts, add them as customer-specific extensions or
 
 - Maker-entered Express values are stored on `fsi_intakerequest` alongside the auto-prefilled identity block.
 - Sponsor approval evidence is captured in `fsi_intakeapproval` and `fsi_intakesponsorship`, then retained immutably in `fsi_intakedecisionlog`.
-- Routing outputs such as `fsi_pathused`, `fsi_decisionpath`, `fsi_tier`, `fsi_zone`, reviewer flags, and retention metadata are written into the decision pack.
+- Routing outputs such as `fsi_pathused`, `fsi_decisionpath`, `fsi_risktier`, `fsi_zone`, reviewer flags, and retention metadata are written into the decision pack.
 - The authoritative audit artifact is `fsi_decisionpackjson` plus the stamped retention evidence (`fsi_retentionlabelapplied`, `fsi_retentionlabelappliedon`, approval timestamps, and card-render/hash evidence where implemented).

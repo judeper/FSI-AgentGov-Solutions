@@ -36,7 +36,7 @@ REPO_ROOT = SOLUTION_ROOT.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from autodetect_environments import get_token_via_cli, get_token_via_managed_identity
+from autodetect_environments import get_token_via_cli, get_token_via_managed_identity  # noqa: E402
 
 LOG = logging.getLogger("agent-intake.mrm")
 

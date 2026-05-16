@@ -114,6 +114,14 @@ dlp_connector_group:
   tier_2: "businessDataOnly"
   tier_3: "nonBusinessDataOnly"
 
+# Default connector allowlist payload shape used by decision-pack generation and
+# downstream drift checks. Populate these arrays with the tenant-approved
+# connector names or IDs before production use.
+connector_allowlist:
+  businessDataOnly: []
+  nonBusinessDataOnly: []
+  blockedConnectors: []
+
 # Default zone classification rules (Zone 1 = enterprise/highest-risk).
 zone_routing:
   zone_1:

@@ -32,9 +32,12 @@ QUESTION_HEADING_PATTERN = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 CODE_SPAN_PATTERN = re.compile(r"`([^`]+)`")
-CATALOG_TOKEN_PATTERN = re.compile(r"\bfsi_[a-z0-9]+(?:\.[a-z0-9]+)?\b")
+CATALOG_TOKEN_PATTERN = re.compile(r"\bfsi_[a-z0-9]+(?:\.[A-Za-z0-9_]+){0,2}\b")
 RANGE_SHORTHAND_PATTERN = re.compile(r"^fsi_[a-z]\d+$")
 PREFIX_PLACEHOLDERS = {"fsi_f", "fsi_s"}
+JSON_BLOB_TABLE = "fsi_intakerequest"
+JSON_BLOB_FIELD = "fsi_standardfullquestionsjson"
+JSON_KEY_PATTERN = re.compile(r"^[a-z][A-Za-z0-9_]*$")
 
 
 @dataclass(frozen=True)
@@ -162,8 +165,24 @@ def validate_catalog(
 
     missing_symbols: set[str] = set()
     for token in collect_catalog_tokens(text):
-        if "." in token:
-            table_name, field_name = token.split(".", 1)
+        parts = token.split(".")
+        if len(parts) == 3:
+            table_name, field_name, json_key = parts
+            if table_name != JSON_BLOB_TABLE or field_name != JSON_BLOB_FIELD:
+                missing_symbols.add(token)
+                continue
+            if table_name not in inventory.table_fields:
+                missing_symbols.add(token)
+                continue
+            if field_name not in inventory.table_fields[table_name]:
+                missing_symbols.add(token)
+                continue
+            if not JSON_KEY_PATTERN.fullmatch(json_key):
+                missing_symbols.add(token)
+            continue
+
+        if len(parts) == 2:
+            table_name, field_name = parts
             if table_name not in inventory.table_fields:
                 missing_symbols.add(token)
                 continue
