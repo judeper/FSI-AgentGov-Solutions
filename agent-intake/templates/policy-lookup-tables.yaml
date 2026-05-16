@@ -1,16 +1,16 @@
-# Policy lookup tables for agent-intake v0.2.0-preview Express path
+# Policy lookup tables for agent-intake v1.0.0-preview foundations
 #
 # IT administrators set these once during deployment. The classification script
-# (`scripts/seed_classification_rules.py`) and the router flow read from this
+# (`scripts/seed_classification_rules.py`) and the router flows read from this
 # file (or a customer-specific Dataverse/config store) to compute tier, zone,
-# retention, and routing.
+# retention, reviewer routing, and handoff behavior.
 #
 # Defaults below reflect product-owner decisions captured in
 # `research/04-open-questions-resolved.md`. Customers should review and override
-# per their firm's policy before pilot.
+# per their firm's policy before pilot or lab rebuild validation.
 
-schema_version: "0.2.0-preview"
-last_updated_utc: "2026-05-06T00:00:00Z"
+schema_version: "1.0.0-preview"
+last_updated_utc: "2026-05-16T00:00:00Z"
 
 # Cross-border data residency policy (default-deny if maker country differs
 # from data residency country; Privacy can override).
@@ -31,6 +31,67 @@ sponsor_sla:
   initial_response_days: 3
   escalation_after_days: 7
   escalate_to: "manager"           # manager | governance_lead | deny
+
+# Reviewer routing defaults for Standard and Full paths. Override these role
+# blocks here (or mirror them into a Dataverse config table) before enabling
+# customer-specific reviewer fan-out.
+reviewer_routing:
+  infosec:
+    default_sla_days: 5
+    escalation_contact: "infosec-escalations@contoso.com"
+    quorum_weight: 1
+    conditional_approval_allowed: true
+  privacy:
+    default_sla_days: 5
+    escalation_contact: "privacy-escalations@contoso.com"
+    quorum_weight: 1
+    conditional_approval_allowed: true
+  compliance:
+    default_sla_days: 5
+    escalation_contact: "compliance-escalations@contoso.com"
+    quorum_weight: 1
+    conditional_approval_allowed: true
+  legal:
+    default_sla_days: 7
+    escalation_contact: "legal-escalations@contoso.com"
+    quorum_weight: 1
+    conditional_approval_allowed: false
+  mrm:
+    default_sla_days: 10
+    escalation_contact: "mrm-escalations@contoso.com"
+    quorum_weight: 1
+    conditional_approval_allowed: true
+
+# Quorum thresholds by tier. Customers can override these minima here before
+# they move the defaults into production routing logic.
+quorum:
+  tier_1:
+    minimum_approvals: 3
+    total_reviewers: 5
+  tier_2:
+    minimum_approvals: 2
+    total_reviewers: 3
+  tier_3:
+    minimum_approvals: 1
+    total_reviewers: 1
+
+# Model Risk Management handoff defaults. Override this block when the target
+# solution name, payload contract, or local fallback queue differs.
+mrm:
+  handoff_target_solution: "model-risk-management-automation"
+  payload_version: "1.0"
+  fallback_behavior: "queue-locally"
+  fallback_status: "MRMHandoffPending"   # maps to fsi_MrmHandoffStatus = Pending until the downstream target is available
+
+# Routing-topology defaults by tier. `parallel-with-quorum` maps to the schema
+# choice `Quorum` plus concurrent reviewer fan-out in the routing flow.
+parallel_routing:
+  tier_1:
+    topology: "parallel"
+  tier_2:
+    topology: "parallel-with-quorum"
+  tier_3:
+    topology: "sequential"              # sponsor only
 
 # Retention class mapping (Tier -> Purview retention label).
 retention_labels:
@@ -72,9 +133,8 @@ zone_routing:
     privacy_required: false
     compliance_required: false
 
-# Audience -> default zone (intake form Q3 maps to zone). Express auto-approval
-# is personal-only in this preview; team and broader audiences are captured and
-# routed to the follow-up intake path.
+# Audience -> default zone (intake form Q3 maps to zone). Team and enterprise
+# audiences route into the richer Standard and Full path question sets.
 audience_to_zone:
   "Just me": 3
   "My team": 2
@@ -86,6 +146,15 @@ audience_to_zone:
 modification_cutoff:
   trigger_changes_force_re_review: true
   descriptive_changes_require_sponsor_reconfirm: true
+
+# Denial-appeal defaults by path. ADR-010 used a single-value
+# `appeal.max_resubmissions = 1`; keep 1 for Express/Standard and use 2 for
+# Full-path honest mistakes unless firm policy requires a stricter cap.
+denial_appeal:
+  max_resubmissions:
+    express: 1
+    standard: 1
+    full: 2
 
 # Sponsor attestation language (FINRA 3110).
 sponsor_attestation:
@@ -100,7 +169,7 @@ sponsor_attestation:
   retention_years: 7
   immutable: true
 
-# Out-of-scope for this preview.
+# Experience components still deferred after the schema/policy foundation work.
 deferred:
   standard_path_questions: 20
   full_path_questions: 35

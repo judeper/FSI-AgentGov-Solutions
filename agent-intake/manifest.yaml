@@ -1,7 +1,7 @@
 id: agent-intake
 name: Agent Intake
-description: Pre-build user intake workflow for AI agent requests — captures business case, classifies risk, routes for sponsor approval, and hands off to agent-registry-automation. MVP supports the Express path (low-risk Tier-3/Zone-3 personal agents) with sponsor 1-click approval.
-version: 0.2.0-preview
+description: "Pre-build user intake workflow for AI agent requests — supports Express, Standard, and Full paths with sponsor approval, multi-reviewer routing, and handoff to agent-registry-automation."
+version: 1.0.0-preview
 status: preview
 domain: lifecycle-ops
 tier: '1'
@@ -13,14 +13,14 @@ controls:
 - '3.1'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-intake/
 prerequisites:
-  power-platform-admin: Power Platform Admin to deploy Dataverse schema, configure Power Pages portal, and provision Express-path environment.
+  power-platform-admin: Power Platform Admin to deploy Dataverse schema, configure the Power Pages portal, and provision the intake environment for Express, Standard, and Full routing.
   records-management-admin: Microsoft 365 Records Management Admin to create the FSI-AgentIntake-7yr Purview retention label one-time at setup (supports SEC 17a-4, FINRA 4511, CFTC 1.31 retention expectations).
   security-admin: Microsoft Entra Agent ID Administrator, Cloud Application Administrator, or Global Administrator to consent AgentIdentity.CreateAsManager or AgentIdentity.Create.All for the handoff script in tenants where Microsoft Entra Agent ID is available.
   m365-admin: Microsoft 365 admin for Teams notifications (sponsor adaptive card delivery) and Graph /me/manager pre-fill.
-verification: After deployment, submit a test Express-path intake from the Power Pages portal; confirm sponsor receives the Teams adaptive card; confirm 1-click approval writes an immutable fsi_intakedecisionlog row stamped with the FSI-AgentIntake-7yr retention label; confirm handoff to agent-registry-automation creates the registry entry with the minted Microsoft Entra Agent ID service principal.
+verification: "After deployment, run the full agent-intake lab rebuild: submit Express, Standard, and Full path test requests; confirm sponsor and parallel reviewer routing records are written; validate MRM handoff fallback behavior; and confirm handoff to agent-registry-automation creates the registry entry with the minted Microsoft Entra Agent ID service principal."
 
-# Express-path MVP runs in personal-agent scenarios only; wider audiences are
-# captured and routed to the follow-up Standard/Full intake path.
+# Preview foundations now cover personal, team, and enterprise zones; later
+# workstreams add the portal and flow runtime experience for Standard and Full paths.
 zones:
 - personal
 - team

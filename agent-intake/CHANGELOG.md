@@ -4,6 +4,17 @@ All notable changes to the **agent-intake** solution will be documented in this 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — toward v1.0.0-preview
+
+### Added — Standard + Full path foundations
+
+- Added reviewer-role, review-decision, routing-topology, and MRM-handoff option sets to `scripts/create_fsi_intake_dataverse_schema.py` for Standard and Full path routing.
+- Extended `fsi_IntakeRequest` with quorum, routing-topology, parallel-reviewer JSON, MRM handoff, and extended-question payload fields for multi-reviewer workflows.
+- Extended `fsi_IntakeReview`, `fsi_IntakeApproval`, and `fsi_IntakeAuditEvent` with reviewer-role normalization, quorum metadata, sequencing support, and path-phase checkpoints.
+- Regenerated `docs/dataverse-schema.md` from the updated schema script so downstream flow and portal workstreams can consume the canonical field list.
+- Expanded `templates/policy-lookup-tables.yaml` with reviewer routing, quorum, MRM handoff, parallel-routing, and path-specific denial-appeal defaults.
+- Bumped `manifest.yaml` to `1.0.0-preview` and updated the verification text to reference the full lab-rebuild test.
+
 ## [0.2.0-preview] - 2026-05-06
 
 ### Changed — Microsoft Learn 2026-Q2 accuracy refresh

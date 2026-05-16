@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Create Dataverse schema for Agent Intake (Express-path MVP).
+"""Create Dataverse schema for Agent Intake (Express + Standard + Full foundations).
 
-Defines 9 tables that capture the full intake decision pack for the Express
-path, plus 7 global option sets. All operations are idempotent.
+Defines 9 tables that capture the intake decision pack for the Express,
+Standard, and Full paths, plus the global option sets used for routing,
+review, and MRM handoff state. All operations are idempotent.
 
 Tables:
   - fsi_IntakeRequest (UserOwned): The maker's submitted request — parent record
@@ -86,6 +87,14 @@ INTAKE_OPTIONSETS = {
             ("SponsorTimeout", 100000010),
         ],
     },
+    "fsi_intake_routingtopology": {
+        "name": "fsi_intake_routingtopology",
+        "options": [
+            ("Sequential", 100000000),
+            ("Parallel", 100000001),
+            ("Quorum", 100000002),
+        ],
+    },
     "fsi_intake_risktier": {
         "name": "fsi_intake_risktier",
         "options": [
@@ -111,6 +120,38 @@ INTAKE_OPTIONSETS = {
             ("Internal", 100000001),
             ("Confidential", 100000002),
             ("Restricted", 100000003),
+        ],
+    },
+    "fsi_intake_reviewerrole": {
+        "name": "fsi_intake_reviewerrole",
+        "options": [
+            ("InfoSec", 100000000),
+            ("Privacy", 100000001),
+            ("Compliance", 100000002),
+            ("Legal", 100000003),
+            ("MRM", 100000004),
+            ("Sponsor", 100000005),
+            ("Sponsor Manager", 100000006),
+        ],
+    },
+    "fsi_intake_reviewdecision": {
+        "name": "fsi_intake_reviewdecision",
+        "options": [
+            ("Pending", 100000000),
+            ("Approved", 100000001),
+            ("Approved with conditions", 100000002),
+            ("Denied", 100000003),
+            ("Recused", 100000004),
+            ("Timeout", 100000005),
+        ],
+    },
+    "fsi_intake_mrmhandoffstatus": {
+        "name": "fsi_intake_mrmhandoffstatus",
+        "options": [
+            ("Pending", 100000000),
+            ("Handed off", 100000001),
+            ("NotApplicable", 100000002),
+            ("Failed", 100000003),
         ],
     },
     "fsi_intake_decisionoutcome": {
@@ -171,7 +212,7 @@ def _memo_col(schema_name, display, max_length, description=""):
     return defn
 
 
-def _integer_col(schema_name, display, required=True, description=""):
+def _integer_col(schema_name, display, required=True, default=None, description=""):
     defn = {
         "@odata.type": "#Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
         "SchemaName": schema_name,
@@ -180,6 +221,8 @@ def _integer_col(schema_name, display, required=True, description=""):
         "MinValue": 0,
         "MaxValue": 2147483647,
     }
+    if default is not None:
+        defn["DefaultValue"] = default
     if description:
         defn["Description"] = _label(description)
     return defn
@@ -293,12 +336,15 @@ INTAKE_REQUEST_COLUMNS = [
                  description="Maker acknowledged the acceptable-use and accuracy attestation before submission"),
     _picklist_col("fsi_PathUsed", "Path Used", "fsi_intake_pathused",
                   description="Express / Standard / Full — set by routing rules"),
+    # logical name: fsi_routingtopology
+    _picklist_col("fsi_RoutingTopology", "Routing Topology", "fsi_intake_routingtopology", required=False,
+                  description="Sequential / Parallel / Quorum topology selected by routing rules"),
     _picklist_col("fsi_RiskTier", "Risk Tier", "fsi_intake_risktier",
                   description="Tier 1 / 2 / 3 per SR 11-7 mapping; computed from trigger Qs"),
     _picklist_col("fsi_Zone", "Zone", "fsi_acv_zone",
-                  description="Zone classification — Express MVP locks to Zone 3"),
+                  description="Zone classification selected by policy and routing rules"),
     _picklist_col("fsi_DataClassification", "Data Classification", "fsi_intake_dataclassification",
-                  description="Highest sensitivity of declared data sources (maker-declared in Express MVP)"),
+                  description="Highest sensitivity of declared data sources used for intake routing"),
     _picklist_col("fsi_Status", "Status", "fsi_intake_status",
                   description="Lifecycle status of the intake request"),
     _string_col("fsi_TargetEnvironmentId", "Target Environment ID", 100, required=False,
@@ -310,9 +356,18 @@ INTAKE_REQUEST_COLUMNS = [
     _string_col("fsi_DlpPolicyOutcome", "DLP Policy Outcome", 100, required=False,
                 description="Result from the Power Platform data policy simulation"),
     _string_col("fsi_DecisionPath", "Decision Path", 100, required=False,
-                description="Express, DeferredOutOfScope, or DefaultDeny computed by routing rules"),
+                description="Express, Standard, Full, DeferredOutOfScope, or DefaultDeny computed by routing rules"),
     _integer_col("fsi_TriggerHitCount", "Trigger Hit Count", required=False,
                  description="Count of trigger answers equal to Yes or Not sure"),
+    # logical name: fsi_quorumrequired
+    _integer_col("fsi_QuorumRequired", "Quorum Required", required=False,
+                 description="Minimum reviewer approvals required before the request can advance"),
+    # v1.0-preview keeps reviewer-board state in JSON instead of a dedicated
+    # fsi_IntakeReviewerAssignment table so the schema change stays small; v1.1
+    # can add the table once the reviewer app needs Dataverse sub-grid views.
+    # logical name: fsi_parallelreviewersjson
+    _memo_col("fsi_ParallelReviewersJson", "Parallel Reviewers JSON", 65536,
+              description="JSON array of reviewer role, UPN, due date, weight, and state for routed reviewers"),
     _string_col("fsi_DataResidencyCountry", "Data Residency Country", 100, required=False,
                 description="Maker-declared or detected residency for data sources"),
     _integer_col("fsi_RetentionYears", "Retention Years", required=False,
@@ -321,8 +376,17 @@ INTAKE_REQUEST_COLUMNS = [
                  description="True when the decision pack is stamped with the WORM retention label"),
     _boolean_col("fsi_PrivacyOverride", "Privacy Override", default=False,
                  description="Set only by Privacy to override the cross-border default-deny rule"),
+    # logical name: fsi_mrmrequired
+    _boolean_col("fsi_MrmRequired", "MRM Required", default=False,
+                 description="True when policy requires model-risk-management-automation handoff evidence"),
+    # logical name: fsi_mrmhandoffstatus
+    _picklist_col("fsi_MrmHandoffStatus", "MRM Handoff Status", "fsi_intake_mrmhandoffstatus", required=False,
+                  description="Pending / Handed off / NotApplicable / Failed for the MRM handoff"),
     _memo_col("fsi_DeclaredDataSourcesJson", "Declared Data Sources JSON", 65536,
               description="JSON snapshot of maker-declared data sources/connectors for drift comparison"),
+    # logical name: fsi_standardfullquestionsjson
+    _memo_col("fsi_StandardFullQuestionsJson", "Standard Full Questions JSON", 65536,
+              description="JSON snapshot of the extended Standard and Full path question responses"),
     _string_col("fsi_EntraAgentId", "Entra Agent ID", 100, required=False,
                 description="Microsoft Entra Agent ID service principal ID minted at handoff"),
     _string_col("fsi_RegistryRecordId", "Registry Record ID", 100, required=False,
@@ -366,16 +430,26 @@ INTAKE_RISKSIGNAL_COLUMNS = [
 INTAKE_REVIEW_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
-    _string_col("fsi_ReviewerRole", "Reviewer Role", 100,
-                description="InfoSec / Privacy / Compliance / MRM / Records / Legal"),
+    # logical name: fsi_reviewerrole
+    _picklist_col("fsi_ReviewerRole", "Reviewer Role", "fsi_intake_reviewerrole",
+                  description="InfoSec / Privacy / Compliance / Legal / MRM / Sponsor"),
     _string_col("fsi_ReviewerUpn", "Reviewer UPN", 200,
                 description="Reviewer user principal name"),
     _string_col("fsi_ReviewType", "Review Type", 100,
                 description="SampleAudit / Standard / Full"),
-    _string_col("fsi_ReviewOutcome", "Review Outcome", 100, required=False,
-                description="Approve / Override / Reject / NoAction"),
+    _picklist_col("fsi_ReviewOutcome", "Review Outcome", "fsi_intake_reviewdecision", required=False,
+                  description="Pending / Approved / Approved with conditions / Denied / Recused / Timeout"),
     _memo_col("fsi_ReviewNotes", "Review Notes", 4000,
               description="Reviewer notes (optional)"),
+    # logical name: fsi_quorumweight
+    _integer_col("fsi_QuorumWeight", "Quorum Weight", required=False, default=1,
+                 description="Weight contributed by this reviewer toward quorum calculations"),
+    # logical name: fsi_dueon
+    _datetime_col("fsi_DueOn", "Due On", required=False,
+                  description="Date/time when the reviewer response is due under policy"),
+    # logical name: fsi_conditionstext
+    _memo_col("fsi_ConditionsText", "Conditions Text", 4000,
+              description="Reviewer conditions recorded when the decision is Approved with conditions"),
     _datetime_col("fsi_StartedOn", "Started On", required=False,
                   description="Timestamp review started"),
     _datetime_col("fsi_CompletedOn", "Completed On", required=False,
@@ -385,8 +459,9 @@ INTAKE_REVIEW_COLUMNS = [
 INTAKE_APPROVAL_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
-    _string_col("fsi_ApproverRole", "Approver Role", 100,
-                description="Sponsor / SponsorManager (escalation) / ReviewerLead"),
+    # logical name: fsi_approverrole
+    _picklist_col("fsi_ApproverRole", "Approver Role", "fsi_intake_reviewerrole",
+                  description="Sponsor / InfoSec / Privacy / Compliance / Legal / MRM / Sponsor Manager"),
     _string_col("fsi_ApproverUpn", "Approver UPN", 200,
                 description="Approver user principal name"),
     _picklist_col("fsi_DecisionOutcome", "Decision Outcome", "fsi_intake_decisionoutcome",
@@ -399,6 +474,9 @@ INTAKE_APPROVAL_COLUMNS = [
                 description="SHA-256 of the rendered decision context shown to the approver (tamper evidence)"),
     _string_col("fsi_ClientIpAddress", "Client IP Address", 100, required=False,
                 description="Source IP recorded at decision time (supervisory evidence)"),
+    # logical name: fsi_dependsonapprovalid
+    _string_col("fsi_DependsOnApprovalId", "Depends On Approval ID", 100, required=False,
+                description="Optional predecessor approval row ID used for sequential approval chains"),
 ]
 
 INTAKE_DECISIONLOG_COLUMNS = [
@@ -450,6 +528,9 @@ INTAKE_AUDITEVENT_COLUMNS = [
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
     _string_col("fsi_EventType", "Event Type", 100,
                 description="Submitted / Routed / SponsorNotified / SponsorClicked / AutoApproved / Denied / HandoffComplete / RegistryWritten / EntraAgentIdMinted / RetentionStamped"),
+    # logical name: fsi_pathphase
+    _string_col("fsi_PathPhase", "Path Phase", 100, required=False,
+                description="Submitted / RouterRouted / SponsorAttested / ReviewerQueued / ReviewerDecided / Escalated / Handed off"),
     _string_col("fsi_ActorUpn", "Actor UPN", 200, required=False,
                 description="UPN of the actor who triggered the event (system events use 'system')"),
     _datetime_col("fsi_EventOn", "Event On",
@@ -479,7 +560,7 @@ TABLES = {
         "schema_name": "fsi_IntakeRequest",
         "display": "Intake Request",
         "plural": "Intake Requests",
-        "description": "Maker-submitted request to build an AI agent (parent record)",
+        "description": "Maker-submitted request to build an AI agent across Express, Standard, and Full paths",
         "ownership": "UserOwned",
         "columns": INTAKE_REQUEST_COLUMNS,
         "entity_set_name": "fsi_intakerequests",
@@ -506,7 +587,7 @@ TABLES = {
         "schema_name": "fsi_IntakeReview",
         "display": "Intake Review",
         "plural": "Intake Reviews",
-        "description": "Reviewer activity (sample audit on Express; Standard/Full reviewer outcomes)",
+        "description": "Reviewer activity (sample audit on Express; Standard/Full and MRM reviewer outcomes)",
         "ownership": "UserOwned",
         "columns": INTAKE_REVIEW_COLUMNS,
         "entity_set_name": "fsi_intakereviews",
@@ -515,7 +596,7 @@ TABLES = {
         "schema_name": "fsi_IntakeApproval",
         "display": "Intake Approval",
         "plural": "Intake Approvals",
-        "description": "Per-approver decision (sponsor + reviewers)",
+        "description": "Per-approver decision (sponsor + sequential or parallel approvers)",
         "ownership": "UserOwned",
         "columns": INTAKE_APPROVAL_COLUMNS,
         "entity_set_name": "fsi_intakeapprovals",
@@ -545,7 +626,7 @@ TABLES = {
         "schema_name": "fsi_IntakeAuditEvent",
         "display": "Intake Audit Event",
         "plural": "Intake Audit Events",
-        "description": "Lifecycle event audit trail",
+        "description": "Lifecycle event audit trail with path-phase checkpoints",
         "ownership": "OrganizationOwned",
         "columns": INTAKE_AUDITEVENT_COLUMNS,
         "entity_set_name": "fsi_intakeauditevents",
@@ -669,6 +750,8 @@ def write_schema_docs(path):
     lines.append("")
     lines.append("All child tables (`fsi_intakedatasource`, `fsi_intakerisksignal`, `fsi_intakereview`, `fsi_intakeapproval`, `fsi_intakedecisionlog`, `fsi_intakesponsorship`, `fsi_intakeauditevent`, `fsi_intakeretentionrecord`) carry an `fsi_requestid` string column that references the parent `fsi_intakerequest.fsi_requestid`. This is intentionally a **soft FK** (not a Dataverse lookup) so that the immutable `fsi_intakedecisionlog` records survive deletion of the parent request — required for FINRA 4511 / SEC 17a-4 evidence retention.")
     lines.append("")
+    lines.append("Reviewer-board state for Standard and Full requests is intentionally stored in `fsi_intakerequest.fsi_parallelreviewersjson` in v1.0-preview to keep the schema small; a dedicated reviewer-assignment table is deferred until the reviewer app needs Dataverse sub-grid views.")
+    lines.append("")
 
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
@@ -742,7 +825,7 @@ def deploy(client, dry_run=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Create Dataverse schema for Agent Intake (Express-path MVP)",
+        description="Create Dataverse schema for Agent Intake (Express + Standard + Full foundations)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--tenant-id", default=os.environ.get("INTAKE_TENANT_ID") or os.environ.get("DATAVERSE_TENANT_ID"),
