@@ -16,13 +16,25 @@
 .PARAMETER ConfigPath
     Path to lab-config.json.
 
+.PARAMETER PocOnly
+    Skip the env-var + connection-reference Python scripts. Only run
+    create_mcm_dataverse_schema.py (and wait for alternate-key
+    activation). This is the Phase 1 ("POC bar") deployment path used by
+    lab/07_Invoke-PocSmokeTest.ps1 and by customers following the POC
+    Quickstart runbook in docs/poc-quickstart.md.
+
+    The skipped scripts (environment variables and connection references)
+    are only needed by the Phase 3 Power Automate flow, not by the
+    Phase 1 PowerShell sync.
+
 .NOTES
     Lab dry-run step 3 of 7. Solution: message-center-monitor v2.5.0+
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter()] [string] $ConfigPath,
-    [Parameter()] [switch] $AllowProduction
+    [Parameter()] [switch] $AllowProduction,
+    [Parameter()] [switch] $PocOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,7 +70,17 @@ $env:MCM_DATAVERSE_URL = $cfg.powerPlatform.environmentUrl
 try {
     $pyScriptsDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts'
 
-    foreach ($script in 'create_mcm_dataverse_schema.py', 'create_mcm_environment_variables.py', 'create_mcm_connection_references.py') {
+    # In -PocOnly mode, skip env-vars + connection-references scripts
+    # (those exist only for the Phase 3 Power Automate flow path).
+    $allScripts = @('create_mcm_dataverse_schema.py', 'create_mcm_environment_variables.py', 'create_mcm_connection_references.py')
+    if ($PocOnly) {
+        $scriptsToRun = @('create_mcm_dataverse_schema.py')
+        Write-LabLog -Level Info -Message "PocOnly mode: skipping create_mcm_environment_variables.py and create_mcm_connection_references.py"
+    } else {
+        $scriptsToRun = $allScripts
+    }
+
+    foreach ($script in $scriptsToRun) {
         $path = Join-Path $pyScriptsDir $script
         Write-LabLog -Level Info -Message "Running $script..."
         if ($PSCmdlet.ShouldProcess($script, 'python')) {
