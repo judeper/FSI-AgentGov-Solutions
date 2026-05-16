@@ -199,8 +199,10 @@ if (-not $Quiet) {
     Write-Information "  To Date:   $($ToDate.ToString('yyyy-MM-dd HH:mm:ss'))" -InformationAction Continue
 }
 
-# fsi_assessedby is a Lookup; reference its raw value as _fsi_assessedby_value.
-$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_services,fsi_startdatetime,fsi_enddatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,fsi_ismajorchange,fsi_body,fsi_tags,fsi_hasattachments,fsi_assessmentstatus,fsi_assessment,fsi_impactsagents,_fsi_assessedby_value,fsi_assesseddate,fsi_actionstaken,fsi_notifiedon"
+# fsi_assessedby is a String column (StringAttributeMetadata, MaxLength 200) — NOT a Lookup.
+# Never use _fsi_assessedby_value OData syntax on it; that returns 400 Bad Request.
+# See message-center-monitor/.ralph-config.json for the column-type contract.
+$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_services,fsi_startdatetime,fsi_enddatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,fsi_ismajorchange,fsi_body,fsi_tags,fsi_hasattachments,fsi_assessmentstatus,fsi_assessment,fsi_impactsagents,fsi_assessedby,fsi_assesseddate,fsi_actionstaken,fsi_notifiedon"
 $filter = "fsi_startdatetime ge $fromDateStr and fsi_startdatetime le $toDateStr"
 $queryUrl = "$dvBaseUrl/fsi_messagecenterlogs?`$select=$selectFields&`$filter=$filter&`$orderby=fsi_startdatetime desc"
 
@@ -257,15 +259,9 @@ $severityLabels = @{
     100000002 = 'Critical'
 }
 
-# Convert records to readable format
+# Convert records to readable format. fsi_assessedby is a plain String column
+# (UPN of the user who recorded the assessment), so we read it directly.
 $messagesReadable = $allRecords | ForEach-Object {
-    $assessedByDisplay = $null
-    try {
-        $annot = '_fsi_assessedby_value@OData.Community.Display.V1.FormattedValue'
-        if ($_.PSObject.Properties.Name -contains $annot) {
-            $assessedByDisplay = $_.$annot
-        }
-    } catch {}
     [PSCustomObject]@{
         messageCenterId       = $_.fsi_messagecenterid
         title                 = $_.fsi_title
@@ -282,8 +278,7 @@ $messagesReadable = $allRecords | ForEach-Object {
         assessmentStatus      = if ($statusLabels.ContainsKey($_.fsi_assessmentstatus)) { $statusLabels[$_.fsi_assessmentstatus] } else { $_.fsi_assessmentstatus }
         assessment            = $_.fsi_assessment
         impactsAgents         = $_.fsi_impactsagents
-        assessedBy            = $assessedByDisplay
-        assessedById          = $_._fsi_assessedby_value
+        assessedBy            = $_.fsi_assessedby
         assessedDate          = $_.fsi_assesseddate
         actionsTaken          = $_.fsi_actionstaken
     }

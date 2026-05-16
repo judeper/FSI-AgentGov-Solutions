@@ -184,9 +184,10 @@ if (-not $Quiet) { Write-Information "Authentication successful." -InformationAc
 #region Build Query
 
 $cutoffDate = Format-McmODataDate ((Get-Date).AddDays(-$DaysBack))
-# fsi_assessedby is a Lookup; reference its raw value and request FormattedValue
-# annotations (set in Authentication header) to surface the display name.
-$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_assessmentstatus,fsi_startdatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,_fsi_assessedby_value,fsi_assesseddate,fsi_ismajorchange"
+# fsi_assessedby is a String column (StringAttributeMetadata, MaxLength 200) — NOT a Lookup.
+# Never use _fsi_assessedby_value OData syntax on it; that returns 400 Bad Request.
+# See message-center-monitor/.ralph-config.json for the column-type contract.
+$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_assessmentstatus,fsi_startdatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,fsi_assessedby,fsi_assesseddate,fsi_ismajorchange"
 
 $filterParts = @("fsi_startdatetime ge $cutoffDate")
 
