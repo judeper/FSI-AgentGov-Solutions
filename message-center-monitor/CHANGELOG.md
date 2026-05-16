@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+### Fixed
+- `fsi_assessedby` column read as Lookup at 4 code sites (and described as Lookup in 2 comments) across `scripts/governance/Export-MessageCenterEvidence.ps1` and `scripts/governance/Get-MessageCenterAssessmentStatus.ps1`. The schema defines `fsi_AssessedBy` as a String column (`StringAttributeMetadata`, MaxLength 200); the `_fsi_assessedby_value` OData syntax that v2.4.0 introduced returns 400 Bad Request because that syntax is Lookup-only. Reverts the mistaken Lookup treatment introduced in v2.4.0 (see the correction note appended to the v2.4.0 entry below).
+- `scripts/governance/Export-MessageCenterEvidence.ps1` output object previously exposed two fields (`assessedBy` mapped to the `_<col>_value@OData.Community.Display.V1.FormattedValue` annotation and `assessedById` mapped to `_<col>_value`) that were both modeled on Lookup semantics. Collapsed to a single `assessedBy` String field and removed the dead `_fsi_assessedby_value@OData.Community.Display.V1.FormattedValue` annotation block (the annotation never appears on a String column).
+
+### Added
+- `scripts/governance/Test-McmPrerequisites.ps1` — preflight script run before the first sync. 11 checks: PowerShell 7.2+, MSAL.PS and Az.KeyVault modules, Key Vault reachable, client secret present, Graph token, `ServiceMessage.Read.All` consent, Dataverse reachable, authorized read on `fsi_messagecenterlogs` (not just `$metadata`), alternate-key `fsi_MessageCenterIdKey` Active, Teams webhook URL (`-PostTestMessage` switch opts in to a real labeled test POST; default is dry-run only to avoid cluttering the channel), and **Phase 1 ⊕ Phase 3 mutual exclusion** (FAIL if both `$env:MCM_TEAMS_WEBHOOK_URL` is set and the Phase 3 flow's environment variable is deployed). Guards-compliant: dot-sources `_Common.ps1`; routes all HTTP through `Invoke-McmRest`; uses `Az.KeyVault` module (no `az` CLI).
+- Teams Workflows incoming webhook posting in `scripts/governance/Invoke-MessageCenterSync.ps1`. Configurable via `-TeamsWebhookUrl` parameter or `$env:MCM_TEAMS_WEBHOOK_URL`; empty / unset disables Teams calls entirely. Idempotent per row via `fsi_notifiedon` (a sync re-run does not re-post). On a successful 200/202, the sync writes `fsi_notifiedon` via **direct PATCH** through `Invoke-McmRest` with a targeted single-field body — NOT through `Invoke-McmDvUpsertMessage`, which forbids admin-owned columns in its `$Record` parameter per the C1 invariant.
+- `Send-McmTeamsWebhook` helper in `scripts/governance/_Common.ps1`. Loads the shared adaptive card template, walks the parsed object tree, substitutes `{token}` placeholders at the object level, wraps the result in the Teams Workflows `{type: message, attachments: [...]}` envelope, then `ConvertTo-Json -Depth 20`. Object-tree substitution (not naive `string.Replace` on raw JSON) is safe against double quotes, newlines, angle brackets, and Unicode in token values. Returns `{Success, Error}`; does not throw on HTTP failure so a single Teams outage cannot halt sync of the remaining messages.
+- `Expand-McmCardTokens` helper in `scripts/governance/_Common.ps1` — the object-tree token expander that `Send-McmTeamsWebhook` is built on.
+- `docs/poc-quickstart.md` — multi-phase POC runbook (Step 0 tooling bootstrap, Phase 1 customer POC bar, Phase 2 operationalization, Phase 3 Power Automate flow handoff, day-2 ops, troubleshooting decision tree, rollback). Includes a per-step role matrix, an at-a-glance Mermaid diagram, and an explicit alternate-key activation wait gate.
+- `lab/07_Invoke-PocSmokeTest.ps1` — end-to-end POC smoke test mirroring the customer Phase 1 journey. 10 steps: preflight, alternate-key Active poll, local HTTP capture listener, sync 1, payload-shape assertion (`type=message`, `attachments[0].contentType=application/vnd.microsoft.card.adaptive`, `attachments[0].content.type=AdaptiveCard`), `fsi_notifiedon` populated assertion, sync 2, capture-count-unchanged assertion (per-row idempotency), `fsi_notifiedon` byte-identical assertion (C1 admin-column-preservation extended to the new write-back path), teardown.
+- `lab/03_Deploy-Schema.ps1 -PocOnly` switch — skips the environment-variables and connection-references Python scripts (Phase 3 only) so the lab POC path matches the customer POC path exactly.
+- `.ralph-config.json` — 17 verified domain facts that lock in column types, option-set value mappings (severity / category / assessment status), entity-set vs SchemaName, the 7 admin-owned columns, the C1 enforcement location, the direct-PATCH escape hatch, the adaptive card token contract, and the Phase 1 ⊕ Phase 3 mutual-exclusion rule. Future agents should read this before editing any script in this solution.
+- `tests/AssessmentStatus.Query.Tests.ps1`, `tests/EvidenceExport.Query.Tests.ps1` — regression tests that assert the OData query shape (NOT a non-existent output schema, per the council critique on plan v1). They read the script source and assert that `fsi_assessedby` appears in `$selectFields`/`$select` and that `_fsi_assessedby_value` and `assessedById` do not appear anywhere.
+- `tests/TeamsWebhook.Tests.ps1` — 26 tests covering `Expand-McmCardTokens` (object-level substitution; special-char round-trip safety for quotes, newlines, backslashes, angle brackets, Unicode) and `Send-McmTeamsWebhook` (envelope shape, retry on transient 5xx, no-throw contract on persistent 4xx and on DNS failure).
+
+### Removed
+- `scripts/ingest_service_health.py` — orphaned half-integration. Required `ServiceHealth.Read.All`, which `README.md` and `docs/setup-checklist.md` actively tell customers NOT to grant.
+- `docs/graph-powershell-snippet.md` — companion to the removed script above.
+
+### Changed
+- `README.md` — added a top-of-doc fork between the **POC path** (Phase 1, the customer success bar), the **Operationalize path** (Phase 2, Status/Export/Assess), and the **Production flow path** (Phase 3, Power Automate). Each path points at its own runbook.
+- `docs/flow-configuration.md` — added a Phase 3 banner at the top emphasizing that the Power Automate flow is **mutually exclusive** with the Phase 1 PowerShell webhook (run one, not both). Concrete `Remove-Item env:` step included for the migration.
+- `templates/teams-notification-card.json` — updated `_comment` to document that the template is rendered by both the Phase 1 PowerShell sync (via `Send-McmTeamsWebhook`) and the Phase 3 Power Automate flow. Do not rename tokens or restructure the body without coordinating both paths.
+
+No version bump — manifest stays at v2.5.1.
+
 ## [2.5.1] - 2026-05-04
 
 ### Changed
@@ -84,6 +111,7 @@
 - **High:** Removed regulatory citations (FINRA Rule 4511(a), SEC Rule 17a-4, SOX 302/404) from `Export-MessageCenterEvidence.ps1` and `Test-EvidenceIntegrity.ps1`. The README explicitly disclaims compliance/audit scope; prior CHANGELOG entries had stripped these claims and they had drifted back in.
 - **High:** Repaired corrupt markdown table cell at `teams-integration.md:89`; resolved self-contradictory publisher-prefix note at `teams-integration.md:332`; removed multiple empty `> **Note:**` placeholders.
 - **Medium:** `Export-MessageCenterEvidence.ps1` `$select` changed from `fsi_assessedby` (returned null) to `_fsi_assessedby_value` with FormattedValue annotation for Lookup column display.
+  > _Correction (vNext): the Lookup treatment described here was a mistake — `fsi_assessedby` is a String column (`StringAttributeMetadata`, MaxLength 200), not a Lookup, so the `_fsi_assessedby_value` syntax returns 400 Bad Request. See the `[Unreleased]` "Fixed" entry above for the revert._
 - **Medium:** OData literals (`$messageId`, dates) now URL-encoded and apostrophe-escaped to prevent filter injection.
 - **Medium:** `[ValidateRange(1, 365)]` on `DaysBack` parameters prevents zero/negative values producing empty windows or excessive ranges that hit Graph throttling.
 - Removed unused `from typing import Optional` imports (ruff would flag).
