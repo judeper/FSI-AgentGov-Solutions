@@ -192,10 +192,20 @@ while ((Get-Date) -lt $altKeyDeadline) {
 }
 if (-not $altKeyActive) { Add-Failure 'Step2.AltKey' "Alt-key did not reach Active within $MaxAltKeyWaitSeconds s. Re-run with -MaxAltKeyWaitSeconds 900 or wait and retry." }
 
-# ---------- Step 3: Start the local HTTP capture listener ------------------
+# ---------- Step 3: Start the local HTTP capture listener -----------------
+#
+# Steps 3-9 are wrapped in a single try/finally so that Add-Failure's throw
+# (when -ContinueOnFailure is NOT supplied) still leaves the listener job
+# and the capture file in a clean state. Step 10's teardown lives in the
+# finally block; without that, a Step 4 abort would silently leak port
+# 18765 (forcing manual `Stop-Job` / `Remove-Item` cleanup) and the next
+# lab/07 run would FAIL Step 3 with "Address already in use".
+$listenerJob = $null
+$probePathFilter = '"path":\s*"/(ping|probe-[a-z]+)"'
+try {
+
 Write-LabLog -Level Info -Message "[Step 3/10] Starting local HTTP listener at $listenerUrl (capture -> $captureFile)..."
 if (Test-Path -LiteralPath $captureFile) { Remove-Item -LiteralPath $captureFile -Force }
-$listenerJob = $null
 try {
     $listenerJob = Start-Job -Name 'mcm-poc-smoke-listener' -ScriptBlock {
         param($Url, $LogFile)
@@ -239,6 +249,9 @@ try {
 
     # Verify the listener is up by hitting it ourselves. -NoProxy bypasses any
     # system proxy so localhost POSTs are not routed through a corporate gateway.
+    # Self-ping (and the liveness probes below) write to the same capture
+    # file as real Teams POSTs; we filter them out via $probePathFilter at
+    # every read site rather than mutating the file in place.
     $pingOk = $false
     try {
         $pingResp = Invoke-WebRequest -Uri ($listenerUrl + 'ping') -Method Post -Body 'ping' -ContentType 'text/plain' -UseBasicParsing -TimeoutSec 5 -NoProxy
@@ -248,14 +261,8 @@ try {
     }
     if (-not $pingOk) { Add-Failure 'Step3.Listener' "Local HTTP listener did not respond. Check port $ListenerPort is free and the job is still running." }
 
-    # Allow the listener's background job to flush /ping to disk before we filter
+    # Allow the listener's background job to flush /ping to disk
     Start-Sleep -Milliseconds 500
-
-    # Drop the self-ping from the capture so it does not pollute the count
-    if (Test-Path -LiteralPath $captureFile) {
-        $lines = Get-Content -LiteralPath $captureFile
-        $lines | Where-Object { $_ -notmatch '"path":\s*"/ping"' } | Set-Content -LiteralPath $captureFile -Encoding utf8
-    }
 } catch {
     Add-Failure 'Step3.Listener' $_.Exception.Message
 }
@@ -278,7 +285,11 @@ Write-LabLog -Level Info -Message "[Step 5/10] Asserting captured payload shape.
 $capturedAfterSync1 = @()
 try {
     if (Test-Path -LiteralPath $captureFile) {
-        $capturedAfterSync1 = Get-Content -LiteralPath $captureFile | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_ | ConvertFrom-Json }
+        # Filter at read time (not in-place file rewrite) so the probe
+        # records the liveness checks emit between syncs don't pollute counts.
+        $capturedAfterSync1 = Get-Content -LiteralPath $captureFile |
+            Where-Object { $_ -and $_.Trim() -and ($_ -notmatch $probePathFilter) } |
+            ForEach-Object { $_ | ConvertFrom-Json }
     }
     Write-LabLog -Level Info -Message "  captured POSTs after sync 1: $($capturedAfterSync1.Count)"
     if ($capturedAfterSync1.Count -lt 1) {
@@ -330,6 +341,27 @@ try {
     }
 } catch { Add-Failure 'Step6' $_.Exception.Message }
 
+# ---------- Liveness probe (mid): prove the listener is still receiving ----
+#
+# Without this, Step 8's "capture count unchanged" assertion can FALSE-PASS
+# if the listener job crashed silently between sync 1 and sync 2: sync 2's
+# Send-McmTeamsWebhook is no-throw by contract, so failed POSTs would be
+# logged as warnings (not errors) and the capture file would stay frozen
+# at the sync-1 count for the WRONG reason. The probe POST going through
+# end-to-end proves the listener was alive at this moment in time.
+Write-LabLog -Level Info -Message "  liveness probe (mid): POST /probe-mid..."
+$probeMidOk = $false
+try {
+    $probeMidResp = Invoke-WebRequest -Uri ($listenerUrl + 'probe-mid') -Method Post -Body 'probe' -ContentType 'text/plain' -UseBasicParsing -TimeoutSec 5 -NoProxy
+    if ($probeMidResp.StatusCode -eq 202) { $probeMidOk = $true }
+} catch {
+    Write-LabLog -Level Warn -Message "  probe-mid POST failed: $($_.Exception.Message)"
+}
+if (-not $probeMidOk) {
+    Add-Failure 'Step6.ListenerLiveness' "Listener did not accept the mid-syncs liveness probe. Sync 2's count-unchanged assertion would FALSE-PASS; aborting before that point."
+}
+Start-Sleep -Milliseconds 500
+
 # ---------- Step 7+8+9: Sync run 2 -> cross-run idempotency ----------------
 Write-LabLog -Level Info -Message "[Step 7/10] Sync run 2 (idempotency: notify count and fsi_notifiedon must not change)..."
 $captureCountBeforeSync2 = $capturedAfterSync1.Count
@@ -341,11 +373,27 @@ try {
     Start-Sleep -Seconds 5
 } catch { Add-Failure 'Step7.Sync2' $_.Exception.Message }
 
+# ---------- Liveness probe (end): prove the listener survived sync 2 ------
+Write-LabLog -Level Info -Message "  liveness probe (end): POST /probe-end..."
+$probeEndOk = $false
+try {
+    $probeEndResp = Invoke-WebRequest -Uri ($listenerUrl + 'probe-end') -Method Post -Body 'probe' -ContentType 'text/plain' -UseBasicParsing -TimeoutSec 5 -NoProxy
+    if ($probeEndResp.StatusCode -eq 202) { $probeEndOk = $true }
+} catch {
+    Write-LabLog -Level Warn -Message "  probe-end POST failed: $($_.Exception.Message)"
+}
+if (-not $probeEndOk) {
+    Add-Failure 'Step7.ListenerLiveness' "Listener died sometime during sync 2. Cannot trust Step 8's count-unchanged assertion (any sync-2 POSTs that arrived after the death are missing from the capture file)."
+}
+Start-Sleep -Milliseconds 500
+
 Write-LabLog -Level Info -Message "[Step 8/10] Asserting capture count unchanged..."
 $capturedAfterSync2 = @()
 try {
     if (Test-Path -LiteralPath $captureFile) {
-        $capturedAfterSync2 = Get-Content -LiteralPath $captureFile | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_ | ConvertFrom-Json }
+        $capturedAfterSync2 = Get-Content -LiteralPath $captureFile |
+            Where-Object { $_ -and $_.Trim() -and ($_ -notmatch $probePathFilter) } |
+            ForEach-Object { $_ | ConvertFrom-Json }
     }
     Write-LabLog -Level Info -Message "  captured POSTs after sync 2: $($capturedAfterSync2.Count) (before sync 2: $captureCountBeforeSync2)"
     if ($capturedAfterSync2.Count -ne $captureCountBeforeSync2) {
@@ -373,16 +421,19 @@ try {
     }
 } catch { Add-Failure 'Step9' $_.Exception.Message }
 
-# ---------- Step 10: Teardown ---------------------------------------------
-Write-LabLog -Level Info -Message "[Step 10/10] Tearing down listener and capture file..."
-if ($listenerJob) {
-    try {
-        Stop-Job -Job $listenerJob -ErrorAction SilentlyContinue
-        Remove-Job -Job $listenerJob -Force -ErrorAction SilentlyContinue
-    } catch {}
 }
-if (Test-Path -LiteralPath $captureFile) {
-    try { Remove-Item -LiteralPath $captureFile -Force -ErrorAction SilentlyContinue } catch {}
+finally {
+    # ---------- Step 10: Teardown (runs even when Add-Failure throws) ------
+    Write-LabLog -Level Info -Message "[Step 10/10] Tearing down listener and capture file..."
+    if ($listenerJob) {
+        try {
+            Stop-Job -Job $listenerJob -ErrorAction SilentlyContinue
+            Remove-Job -Job $listenerJob -Force -ErrorAction SilentlyContinue
+        } catch {}
+    }
+    if (Test-Path -LiteralPath $captureFile) {
+        try { Remove-Item -LiteralPath $captureFile -Force -ErrorAction SilentlyContinue } catch {}
+    }
 }
 
 # ---------- Summary --------------------------------------------------------
