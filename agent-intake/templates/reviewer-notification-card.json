@@ -1,0 +1,170 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "msteams": {
+    "width": "Full"
+  },
+  "fsiRoleAttestationCatalog": {
+    "InfoSec": "By approving, you attest that the proposed controls, access pattern, and delivery path are acceptable for the stated risk tier and zone, subject to the conditions you record.",
+    "Privacy": "By approving, you attest that the declared data use, residency posture, and personal-data handling are acceptable for the stated purpose, subject to the conditions you record.",
+    "Compliance": "By approving, you attest that the proposed use case aligns with the firm policy framework and the supervisory controls recorded for this intake, subject to the conditions you record.",
+    "Legal": "By approving, you attest that the declared legal and contractual posture is acceptable for the stated use case, subject to the conditions you record.",
+    "MRM": "By approving, you attest that the request has the model-risk governance evidence required by your firm for the stated tier and handoff state, subject to the conditions you record."
+  },
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Agent intake reviewer triage",
+      "weight": "Bolder",
+      "size": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Review the assigned Standard or Full-path request, capture your decision, and open the reviewer app when you need the full queue context.",
+      "wrap": true
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Request ID",
+          "value": "${fsi_requestid}"
+        },
+        {
+          "title": "Agent",
+          "value": "${fsi_agentdisplayname}"
+        },
+        {
+          "title": "Maker",
+          "value": "${fsi_makerdisplayname} (${fsi_makerupn})"
+        },
+        {
+          "title": "Audience",
+          "value": "${fsi_intendedaudience}"
+        },
+        {
+          "title": "Submitted",
+          "value": "${fsi_submittedon}"
+        },
+        {
+          "title": "Tier / Zone",
+          "value": "Tier ${fsi_risktier} / Zone ${fsi_zone}"
+        },
+        {
+          "title": "Path",
+          "value": "${fsi_pathused}"
+        },
+        {
+          "title": "Reviewer role",
+          "value": "${fsi_reviewerrole}"
+        },
+        {
+          "title": "Due",
+          "value": "${fsi_reviewdueon}"
+        },
+        {
+          "title": "Quorum",
+          "value": "${fsi_quorumrequired}"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Business justification",
+      "weight": "Bolder",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "${fsi_businessjustification}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Declared data sources summary",
+      "weight": "Bolder",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${fsi_declareddatasourcessummary}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Reviewer attestation",
+      "weight": "Bolder",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${fsi_reviewerattestation}",
+      "wrap": true
+    },
+    {
+      "type": "Input.Text",
+      "id": "fsi_conditionstext",
+      "label": "Conditions or rationale",
+      "isMultiline": true,
+      "maxLength": 2000,
+      "placeholder": "Record approval conditions, denial rationale, or review notes."
+    },
+    {
+      "type": "Input.Text",
+      "id": "fsi_reviewnotes",
+      "label": "Additional notes (optional)",
+      "isMultiline": true,
+      "maxLength": 2000,
+      "placeholder": "Add any extra context for the decision log."
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Approve",
+      "style": "positive",
+      "associatedInputs": "auto",
+      "data": {
+        "action": "reviewerDecision",
+        "decision": "Approved",
+        "requestId": "${fsi_requestid}",
+        "reviewId": "${fsi_reviewid}",
+        "reviewerRole": "${fsi_reviewerrole}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Approve with conditions",
+      "associatedInputs": "auto",
+      "data": {
+        "action": "reviewerDecision",
+        "decision": "ApprovedWithConditions",
+        "requestId": "${fsi_requestid}",
+        "reviewId": "${fsi_reviewid}",
+        "reviewerRole": "${fsi_reviewerrole}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Deny",
+      "style": "destructive",
+      "associatedInputs": "auto",
+      "data": {
+        "action": "reviewerDecision",
+        "decision": "Denied",
+        "requestId": "${fsi_requestid}",
+        "reviewId": "${fsi_reviewid}",
+        "reviewerRole": "${fsi_reviewerrole}"
+      }
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open in reviewer app",
+      "url": "${fsi_reviewerappurl}"
+    }
+  ]
+}
