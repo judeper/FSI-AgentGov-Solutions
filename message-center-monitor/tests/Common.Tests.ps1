@@ -121,6 +121,61 @@ Describe 'Format-McmSafeUri (council round 2 - HIGH: redact bearer-secret URLs i
     }
 }
 
+Describe 'Format-McmSafeErrorBody (council round 3 - defense in depth)' {
+
+    # Some APIs echo the original request URL inside their error response body.
+    # Even after the URI argument is redacted via Format-McmSafeUri, the body
+    # itself can re-leak sig= / code= bearer credentials. This helper scrubs
+    # those query parameters anywhere in a free-text body string.
+
+    It 'scrubs sig= even when embedded inside a JSON error body' {
+        $body = '{"error":"Forbidden","requestUrl":"https://prod-01.westus.logic.azure.com/workflows/abc/triggers/manual/paths/invoke?api-version=2016-06-01&sig=SUPER_SECRET_BEARER_TOKEN"}'
+        $safe = Format-McmSafeErrorBody $body
+        $safe | Should -Not -Match 'SUPER_SECRET_BEARER_TOKEN'
+        $safe | Should -Match 'sig=<redacted>'
+        # other diagnostic context preserved
+        $safe | Should -Match 'Forbidden'
+        $safe | Should -Match 'logic.azure.com'
+    }
+
+    It 'scrubs code= regardless of host' {
+        $body = 'Request to https://my-function.azurewebsites.net/api/notify?code=FUNCTION_KEY_HERE failed: 401 Unauthorized'
+        $safe = Format-McmSafeErrorBody $body
+        $safe | Should -Not -Match 'FUNCTION_KEY_HERE'
+        $safe | Should -Match 'code=<redacted>'
+        $safe | Should -Match '401 Unauthorized'
+    }
+
+    It 'scrubs both sig= and code= in the same body' {
+        $body = 'url1=...sig=AAA&...; url2=...code=BBB&...'
+        $safe = Format-McmSafeErrorBody $body
+        $safe | Should -Not -Match 'AAA'
+        $safe | Should -Not -Match 'BBB'
+        $safe | Should -Match 'sig=<redacted>'
+        $safe | Should -Match 'code=<redacted>'
+    }
+
+    It 'is case-insensitive (SIG= and Code= must also be scrubbed)' {
+        $body = 'request?SIG=upper&Code=mixed'
+        $safe = Format-McmSafeErrorBody $body
+        $safe | Should -Not -Match 'upper'
+        $safe | Should -Not -Match 'mixed'
+    }
+
+    It 'leaves a clean Dataverse error body unchanged' {
+        $body = '{"error":{"code":"0x8004431a","message":"The given key was not present in the dictionary."}}'
+        Format-McmSafeErrorBody $body | Should -Be $body
+    }
+
+    It 'returns empty string for null input' {
+        Format-McmSafeErrorBody $null | Should -Be ''
+    }
+
+    It 'returns empty string for empty input' {
+        Format-McmSafeErrorBody '' | Should -Be ''
+    }
+}
+
 Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
 
     Context 'success on first try' {

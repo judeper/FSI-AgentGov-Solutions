@@ -640,8 +640,18 @@ try {
     $phase1Active = -not [string]::IsNullOrWhiteSpace($TeamsWebhookUrl)
 
     if ($phase1Active -and $AssumePhase1Only) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
-            -Detail 'Phase 1 webhook active; -AssumePhase1Only suppresses Phase 3 detection'))
+        # Downgraded from PASS to WARN: a misconfigured environment where
+        # Phase 3 is actually deployed would silently double-notify if we
+        # short-circuited to PASS. The switch still bypasses the Dataverse
+        # query (its purpose), but the operator now sees an explicit
+        # incomplete-check banner instead of a false all-clear.
+        $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+            -Hint ("-AssumePhase1Only skipped the Dataverse query for the Phase 3 " +
+                   "environment-variable binding. If Phase 3 is actually deployed in " +
+                   "this environment, duplicate Teams alerts will fire on every sync. " +
+                   "Re-run preflight WITHOUT -AssumePhase1Only to verify no Phase 3 " +
+                   "env-var VALUE binding exists.") `
+            -Detail 'Phase 1 webhook active; Phase 3 detection skipped (-AssumePhase1Only)'))
     }
     else {
         $phase3DefExists = $false
@@ -659,10 +669,23 @@ try {
                 # An env-var DEFINITION without a bound VALUE is leftover scaffolding;
                 # the Phase 3 flow has no concrete severities to act on.
                 $valUri = "$($script:dvBaseUrl)/environmentvariablevalues" +
-                          "?`$select=environmentvariablevalueid" +
+                          "?`$select=environmentvariablevalueid,value" +
                           "&`$filter=environmentvariabledefinitionid/schemaname eq '$escapedEnvVarName'"
                 $valResp = Invoke-McmRest -Uri $valUri -Headers $script:dvHeaders -Method Get
-                $phase3HasValue = ($valResp -and $valResp.value -and $valResp.value.Count -gt 0)
+                # A value-row whose 'value' is empty/whitespace is leftover
+                # scaffolding (e.g. an unset binding created by a prior lab/03
+                # run), not an active Phase 3 configuration. Treat it the same
+                # as no value row so the WARN tier below catches it instead of
+                # the FAIL tier - the Phase 3 flow has no concrete severities
+                # to act on without a bound value.
+                $phase3HasValue = $false
+                if ($valResp -and $valResp.value) {
+                    $phase3HasValue = @(
+                        $valResp.value | Where-Object {
+                            -not [string]::IsNullOrWhiteSpace([string]$_.value)
+                        }
+                    ).Count -gt 0
+                }
             }
         }
 

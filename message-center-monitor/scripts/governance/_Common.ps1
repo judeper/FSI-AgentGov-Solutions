@@ -201,6 +201,33 @@ function Format-McmSafeUri {
     return $Uri
 }
 
+function Format-McmSafeErrorBody {
+    <#
+    .SYNOPSIS
+        Returns a log-safe representation of an HTTP error response body, scrubbing
+        bearer-credential query parameters.
+
+    .DESCRIPTION
+        Even after Invoke-McmRest's URI argument is redacted via Format-McmSafeUri,
+        some APIs echo the original request URL inside the error response body
+        (e.g. "Request to https://prod-XX.westus.logic.azure.com/.../triggers/.../paths/invoke?sig=ABC123 failed").
+        Logging the raw body would re-leak the bearer credential the URI redaction
+        was meant to suppress.
+
+        This helper performs a defense-in-depth scrub: it rewrites any sig=...
+        and code=... query parameter value to <redacted>, regardless of the URL
+        host. This preserves all other diagnostic value (status code, error
+        message text, field-level validation errors) while preventing credential
+        leak through this alternate path.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [AllowEmptyString()] [AllowNull()] [string]$Body)
+
+    if ([string]::IsNullOrEmpty($Body)) { return '' }
+
+    return ($Body -replace '(?i)(sig|code)=[^&\s"''>]+', '$1=<redacted>')
+}
+
 function Invoke-McmRest {
     <#
     .SYNOPSIS
@@ -269,7 +296,7 @@ function Invoke-McmRest {
                 }
             } catch {}
             $msg = "Invoke-McmRest failed: status=$status method=$Method uri=$(Format-McmSafeUri $Uri) error=$($_.Exception.Message)"
-            if ($body) { $msg += " body=$body" }
+            if ($body) { $msg += " body=$(Format-McmSafeErrorBody $body)" }
             throw $msg
         }
     }

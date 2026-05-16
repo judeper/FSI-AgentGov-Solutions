@@ -546,11 +546,15 @@ switch ($OutputFormat) {
         $summary | ConvertTo-Json -Depth 5
     }
     'Object' {
-        # Object output is returned to the pipeline; callers can still
-        # inspect $LASTEXITCODE for partial-failure detection.
-        $terminalFailures = $failedCount + $notifyFailedCount + $notifyWriteBackFailedCount
-        if ($terminalFailures -gt 0) { $global:LASTEXITCODE = 1 }
-        return $summary
+        # Emit the summary to the pipeline so -OutputFormat Object callers
+        # still receive the structured result. Do NOT 'return' here: the
+        # unified exit-code logic below must run for all formats so
+        # scheduled callers (pwsh -File ...) see process exit = 1 on
+        # partial failure. Setting $global:LASTEXITCODE = 1 is NOT
+        # sufficient - $LASTEXITCODE only reflects the last native-command
+        # exit and does NOT set the host process exit code; that requires
+        # an explicit 'exit N' statement.
+        $summary
     }
 }
 
