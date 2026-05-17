@@ -315,7 +315,7 @@ try {
     Write-Section 'Verifying Dataverse tables'
     $tableSearch = $requiredTables -join ','
     $tableList = Invoke-PacCommand -Arguments @('model', 'list-tables', '--environment', $EnvironmentUrl, '--search', $tableSearch)
-    $missingTables = $requiredTables | Where-Object { $tableList.Output -notmatch [regex]::Escape($_) }
+    $missingTables = @($requiredTables | Where-Object { $tableList.Output -notmatch [regex]::Escape($_) })
     if ($missingTables.Count -gt 0) {
         $missingList = $missingTables -join ', '
         Add-SummaryRow -Component 'Dataverse tables' -Status 'Blocked' -Details "Missing or not visible via PAC CLI: $missingList"
