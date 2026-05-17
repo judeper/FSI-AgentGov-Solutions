@@ -922,7 +922,7 @@ function Set-EnvironmentVariableCurrentValue {
         Invoke-DataverseRequest -Method POST -RelativeUri 'environmentvariablevalues' -Body @{
             schemaname = $SchemaName
             value = $Value
-            'environmentvariabledefinitionid@odata.bind' = "/environmentvariabledefinitions($($definition.environmentvariabledefinitionid))"
+            'EnvironmentVariableDefinitionId@odata.bind' = "/environmentvariabledefinitions($($definition.environmentvariabledefinitionid))"
         } | Out-Null
     }
 

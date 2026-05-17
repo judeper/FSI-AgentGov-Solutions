@@ -702,7 +702,7 @@ function Upsert-EnvironmentVariable {
         $body = @{
             schemaname = "{0}_value" -f $schemaName
             value      = $desiredValue
-            'environmentvariabledefinitionid@odata.bind' = "/environmentvariabledefinitions($definitionId)"
+            'EnvironmentVariableDefinitionId@odata.bind' = "/environmentvariabledefinitions($definitionId)"
         }
         Invoke-DataverseRequest -Method POST -RelativeUri 'environmentvariablevalues' -Token $Token -Body $body | Out-Null
         Write-Info "Created current value for $schemaName."
