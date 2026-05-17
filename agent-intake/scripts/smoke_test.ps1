@@ -192,18 +192,26 @@ function Get-PythonCommand {
 }
 
 function Get-DataverseToken {
+    param([switch]$Force)
+
     if ($DryRun) {
         return 'dry-run-token'
+    }
+
+    if ($Force) {
+        $script:DataverseToken = $null
     }
 
     if (-not [string]::IsNullOrWhiteSpace($script:DataverseToken)) {
         return $script:DataverseToken
     }
 
-    $envToken = $env:DATAVERSE_ACCESS_TOKEN
-    if (-not [string]::IsNullOrWhiteSpace($envToken)) {
-        $script:DataverseToken = $envToken.Trim()
-        return $script:DataverseToken
+    if (-not $Force) {
+        $envToken = $env:DATAVERSE_ACCESS_TOKEN
+        if (-not [string]::IsNullOrWhiteSpace($envToken)) {
+            $script:DataverseToken = $envToken.Trim()
+            return $script:DataverseToken
+        }
     }
 
     $az = Get-Command -Name 'az' -ErrorAction SilentlyContinue
@@ -250,6 +258,11 @@ function Invoke-DataverseRequest {
     }
 
     $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers (Get-DataverseHeader) -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -eq 401) {
+        Write-Info "Dataverse token rejected (HTTP 401); refreshing and retrying $Method $RelativeUri."
+        Get-DataverseToken -Force | Out-Null
+        $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers (Get-DataverseHeader) -UseBasicParsing -SkipHttpErrorCheck
+    }
     if ($AllowNotFound -and $response.StatusCode -eq 404) {
         return $null
     }
