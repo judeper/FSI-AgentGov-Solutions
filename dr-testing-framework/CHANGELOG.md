@@ -6,6 +6,8 @@ All notable changes to the DR Readiness Validation Framework.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-05-17
+
 ### Changed
 
 - Bumped manifest metadata to v2.0.1 for the 2026-Q2 Microsoft Learn refresh.

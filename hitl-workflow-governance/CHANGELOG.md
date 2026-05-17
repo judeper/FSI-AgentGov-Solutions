@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-17
+
 ### Added
 
 - Added optional exception-request audit columns (`fsi_RequestedBy`, `fsi_RequestedAt`, `fsi_ApprovalStatus`, `fsi_ApprovalNotes`) so the Power Automate approval flow can track pending, approved, rejected, and timed-out exception requests without relying on non-existent Dataverse fields.

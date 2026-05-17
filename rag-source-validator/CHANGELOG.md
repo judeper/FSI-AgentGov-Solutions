@@ -6,6 +6,8 @@ All notable changes to the RAG Source Validator.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-17
+
 ### Added
 
 - **5 new Dataverse columns on `fsi_knowledgesource`.** Additive schema migration adding `fsi_etag` (eTag, String 255), `fsi_ctag` (cTag, String 255), `fsi_deltalink` (Delta Link, Url 2048), `fsi_searchconnectorid` (Search Connector ID, String 100), and `fsi_lineageuri` (Lineage URI, Url 2048). Re-run `create_rsv_dataverse_schema.py` to apply — existing data is unaffected.
