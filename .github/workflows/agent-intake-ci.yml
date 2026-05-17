@@ -177,6 +177,7 @@ jobs:
             --include='*.json' \
             --include='*.yaml' \
             --exclude='CHANGELOG.md' \
+            --exclude='AGENTS.md' \
             "$patterns" agent-intake || true)
           workflow_hits=$(grep -nE "$patterns" .github/workflows/agent-intake-ci.yml || true)
           hits=$(printf '%s\n%s\n' "$dir_hits" "$workflow_hits" | sed '/^$/d')
@@ -201,6 +202,7 @@ jobs:
             --include='*.json' \
             --include='*.yaml' \
             --exclude='CHANGELOG.md' \
+            --exclude='AGENTS.md' \
             "$legacy_pattern" agent-intake || true)
           workflow_hits=$(grep -nE "$legacy_pattern" .github/workflows/agent-intake-ci.yml || true)
           hits=$(printf '%s\n%s\n' "$dir_hits" "$workflow_hits" | sed '/^$/d')
