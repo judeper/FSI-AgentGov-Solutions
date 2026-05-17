@@ -77,6 +77,27 @@ if ([string]::IsNullOrWhiteSpace($envUrl)) {
     exit 1
 }
 
+# Tenant cross-check (P2): warn if the active az session is signed into a different
+# tenant than the one the lab config targets. Non-fatal — the wrapper continues so a
+# dry-run still works without az login.
+$configTenantId = $null
+if ($config.environment.PSObject.Properties.Name -contains 'tenantId') {
+    $configTenantId = [string]$config.environment.tenantId
+}
+if (-not [string]::IsNullOrWhiteSpace($configTenantId) -and $configTenantId -notmatch '^0{8}-0{4}-0{4}-0{4}-0{12}$') {
+    $azCmd = Get-Command -Name 'az' -ErrorAction SilentlyContinue
+    if ($null -ne $azCmd) {
+        $azTenantId = & $azCmd.Source account show --query tenantId -o tsv 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($azTenantId)) {
+            $azTenantId = $azTenantId.Trim()
+            if ($azTenantId -ne $configTenantId) {
+                Write-Warning ("Tenant mismatch: az session tenant '$azTenantId' differs from config.environment.tenantId '$configTenantId'. " +
+                    "Run 'az login --tenant $configTenantId' before a live deploy, or this run will operate against the wrong tenant.")
+            }
+        }
+    }
+}
+
 if ($config.pac -and -not [string]::IsNullOrWhiteSpace($config.pac.profileName)) {
     $pacProfile = $config.pac.profileName
     Write-Information "Selecting pac auth profile: $pacProfile"
