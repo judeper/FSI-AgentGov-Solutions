@@ -30,6 +30,9 @@ One-sentence intent: a pre-build maker-intake layer that captures FSI AI-agent r
 - Per-solution AGENTS.md pattern landed (this file)
 - Stale version-ref cleanup in `README.md`, `docs/decisions.md`, `docs/onboarding-checklist.md`, `docs/auto-detect-playbook.md`
 - P1 / P2 / P5 polish items (see [Pending Work](#pending-work) below)
+- CI alignment: `agent-intake-ci.yml` language-rules now mirrors the root workflow's `AGENTS.md` exclude
+
+> ✅ Update: all of the above landed in PR #142 across 7 commits (`1730ad8`..`81c80b1`). The "Pending work" checklist below is now fully checked. Refresh this entire status block when next session starts.
 
 **Next action when work resumes:**
 
@@ -119,15 +122,20 @@ Many `-m` flags hang the PowerShell tool harness silently. For multi-paragraph c
 
 ## Pending work
 
-P1 polish items from the v1.0 rubber-duck pass. Strike through as they land in this push.
+P1 polish items from the v1.0 rubber-duck pass. All landed in PR #142.
 
-- [ ] **P1.** Managed-identity-first for billing-policy validation. `Get-BapAccessToken` and `Get-PowerPlatformApiAccessToken` in `scripts/deploy.ps1` currently only call `az` CLI. Extend them to honor env-var-supplied tokens (`BAP_ACCESS_TOKEN`, `POWERPLATFORM_API_TOKEN`) the way `Get-DataverseToken` already honors `DATAVERSE_ACCESS_TOKEN`. Mark the az path as `# legacy: dev-only — replace with managed identity in production`.
-- [ ] **P2.** Tenant cross-check warning in `lab/Invoke-Deploy.ps1`. Run `az account show --query tenantId` and compare against `config.tenant.tenantId`; emit `Write-Warning` (not fail) on mismatch.
-- [x] **P3.** `@odata.nextLink` pagination — already implemented in `scripts/shared/dataverse_client.py:227–234` (`query()` follows `@odata.nextLink` to completion). No change needed.
-- [x] **P4.** `ValidateSet` ordering for `AllowedEnvironmentType` — already correct in `scripts/deploy.ps1:72–73` (attribute before declaration, default value `'Sandbox,Production'`). No change needed.
-- [ ] **P5.** Help-block refresh. Add missing `.PARAMETER` blocks for `BillingPolicyId`, `EnvironmentId`, `AllowedEnvironmentType` in `deploy.ps1`; tighten `.DESCRIPTION` to mention v1.0 capabilities; add `.EXAMPLE` for managed-identity / billing-policy flow.
+- [x] **P1.** Managed-identity-first for billing-policy validation. `Get-AzureAccessTokenForResource` in `scripts/deploy.ps1` now honors env-var-supplied tokens (`BAP_ACCESS_TOKEN`, `POWERPLATFORM_API_TOKEN`) before falling back to az CLI; the az path is marked `# legacy: dev-only — replace with managed identity in production`. Commit `535a3d6`.
+- [x] **P2.** Tenant cross-check warning in `lab/Invoke-Deploy.ps1`. Compares `config.environment.tenantId` against `az account show --query tenantId` and emits `Write-Warning` (non-fatal) on mismatch. Commit `de3b416`.
+- [x] **P3.** `@odata.nextLink` pagination — verified already implemented in `scripts/shared/dataverse_client.py:227–234` (`query()` follows `@odata.nextLink` to completion). No change needed.
+- [x] **P4.** `ValidateSet` ordering for `AllowedEnvironmentType` — verified already correct in `scripts/deploy.ps1:72–73` (attribute before declaration, default value `'Sandbox,Production'`). No change needed.
+- [x] **P5.** Help-block refresh. Added missing `.PARAMETER` blocks for `BillingPolicyId`, `EnvironmentId`, `AllowedEnvironmentType` in `deploy.ps1`; documented env-var token hooks in the `AuthMode` description; named the 5 seed scenarios in `seed-test-data.ps1`; enumerated the 8 deployment checks in `smoke_test.ps1`. Commit `3537488`.
 
-When the push for this session lands, the three open boxes flip to checked.
+Next-iteration follow-ups (not in scope of v1.0.0-preview):
+
+- `fsi_appealofid` is currently a Single Line of Text column — convert to self-lookup in v1.1.
+- Microsoft Entra Agent ID `fsiReviewerAttestations` open-type field acceptance pending live-tenant verification.
+- PAC CLI cannot programmatically create Power Pages multistep form bindings; Stage 4 of `deploy.ps1` keeps **MANUAL STEP REQUIRED** markers until PAC adds the capability.
+- Two legacy PSScriptAnalyzer warnings in `provision_power_pages.ps1` remain soft-gated as the current baseline.
 
 ---
 
