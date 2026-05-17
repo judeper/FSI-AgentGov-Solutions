@@ -863,7 +863,7 @@ function Get-SolutionRecord {
 
     $filter = ConvertTo-ODataStringLiteral -Value $UniqueName
     $response = Invoke-DataverseRequest -Method GET -RelativeUri ("solutions?`$select=solutionid,uniquename,friendlyname,version&`$filter=uniquename eq $filter")
-    return @($response.Body.value | Select-Object -First 1)[0]
+    return $response.Body.value | Select-Object -First 1
 }
 
 function Get-EnvironmentVariableDefinitionRecord {
@@ -871,7 +871,7 @@ function Get-EnvironmentVariableDefinitionRecord {
 
     $filter = ConvertTo-ODataStringLiteral -Value $SchemaName
     $response = Invoke-DataverseRequest -Method GET -RelativeUri ("environmentvariabledefinitions?`$select=environmentvariabledefinitionid,schemaname,displayname,defaultvalue,type&`$filter=schemaname eq $filter")
-    return @($response.Body.value | Select-Object -First 1)[0]
+    return $response.Body.value | Select-Object -First 1
 }
 
 function Get-EnvironmentVariableValueRecord {
@@ -879,7 +879,7 @@ function Get-EnvironmentVariableValueRecord {
 
     $filter = ConvertTo-ODataStringLiteral -Value $SchemaName
     $response = Invoke-DataverseRequest -Method GET -RelativeUri ("environmentvariablevalues?`$select=environmentvariablevalueid,schemaname,value&`$filter=schemaname eq $filter")
-    return @($response.Body.value | Select-Object -First 1)[0]
+    return $response.Body.value | Select-Object -First 1
 }
 
 function Get-EnvironmentVariableCurrentValue {
@@ -934,7 +934,7 @@ function Get-ConnectionReferenceRecord {
 
     $filter = ConvertTo-ODataStringLiteral -Value $LogicalName
     $response = Invoke-DataverseRequest -Method GET -RelativeUri ("connectionreferences?`$select=connectionreferenceid,connectionreferencelogicalname,connectionreferencedisplayname&`$filter=connectionreferencelogicalname eq $filter")
-    return @($response.Body.value | Select-Object -First 1)[0]
+    return $response.Body.value | Select-Object -First 1
 }
 
 function Get-ReviewerSpecRecord {
@@ -950,7 +950,7 @@ function Get-ReviewerAppRecord {
 
     $filter = ConvertTo-ODataStringLiteral -Value ([string]$Spec.appDisplayName)
     $response = Invoke-DataverseRequest -Method GET -RelativeUri ("appmodules?`$select=appmoduleid,name,uniquename&`$filter=name eq $filter")
-    return @($response.Body.value | Select-Object -First 1)[0]
+    return $response.Body.value | Select-Object -First 1
 }
 
 function Get-RoleRecord {
@@ -958,7 +958,7 @@ function Get-RoleRecord {
 
     $filter = ConvertTo-ODataStringLiteral -Value $Name
     $response = Invoke-DataverseRequest -Method GET -RelativeUri ("roles?`$select=roleid,name&`$filter=name eq $filter")
-    return @($response.Body.value | Select-Object -First 1)[0]
+    return $response.Body.value | Select-Object -First 1
 }
 
 function Get-PortalSiteStatus {
@@ -976,12 +976,12 @@ function Get-PortalSiteStatus {
         return [pscustomobject]@{ Found = $false; Detail = ($output -join ' ') }
     }
 
-    $line = @($output | Where-Object { $_ -match 'agent-intake' } | Select-Object -First 1)[0]
-    if ([string]::IsNullOrWhiteSpace($line)) {
+    $line = $output | Where-Object { $_ -match 'agent-intake' } | Select-Object -First 1
+    if ([string]::IsNullOrWhiteSpace([string]$line)) {
         return [pscustomobject]@{ Found = $false; Detail = 'Site agent-intake was not listed by pac pages list.' }
     }
 
-    return [pscustomobject]@{ Found = $true; Detail = ($line.Trim()) }
+    return [pscustomobject]@{ Found = $true; Detail = ([string]$line).Trim() }
 }
 
 function Get-OverrideValue {
