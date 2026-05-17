@@ -31,6 +31,13 @@ Thumbs.db
 # Working documents
 GAP_ANALYSIS_REPORT.md
 
+# Local lab configuration (per-developer, never committed)
+# Convention: agent-intake/lab/ and per-solution lab/ folders.
+# config.example.* files ARE committed; config.local.* files are NOT.
+**/lab/*.local.*
+**/lab/.deploy-runtime/
+**/lab/*.log
+
 # MkDocs build output
 site/
 
