@@ -38,11 +38,11 @@ This module is optional — the core solution operates independently without it.
 
 | Control | Relationship |
 |---------|--------------|
-| [1.25 - MIME Type Restrictions](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions-for-file-uploads/) | Primary — File upload type enforcement |
+| [1.25 - MIME Type Restrictions for File Uploads](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions/) | Primary — File upload type enforcement |
 | [1.5 - DLP and Sensitivity Labels](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels/) | Defence-in-depth: connector classification informed by the DLP reference template |
-| [1.13 - File and Attachment Controls](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.13-file-and-attachment-controls/) | Server-side validation of file attachment types |
-| [3.3 - Compliance Reporting and Attestation](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.3-compliance-reporting-and-attestation/) | Blocked-upload reporting for compliance evidence |
-| [3.7 - Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.7-monitoring/) | Continuous upload monitoring and alerting |
+| [1.13 - Sensitive Information Types (SITs) and Pattern Recognition](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.13-sensitive-information-types-sits-and-pattern-recognition/) | Server-side validation of file attachment types |
+| [3.3 - Compliance and Regulatory Reporting](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.3-compliance-and-regulatory-reporting/) | Blocked-upload reporting for compliance evidence |
+| [3.7 - PPAC Security Posture Assessment](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.7-ppac-security-posture-assessment/) | Continuous upload monitoring and alerting |
 
 ## Documentation
 
@@ -125,7 +125,7 @@ mime-type-restrictions/
 2. Translate the DLP reference into Power Platform data policy connector classifications; do not import the reference JSON directly
 3. Configure `templates/mime-config.json` with your organization's allowed/blocked MIME types
 4. Deploy Sentinel queries to your Log Analytics workspace
-5. Verify deployment using the control implementation playbooks for [Control 1.25](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions-for-file-uploads/) in FSI-AgentGov
+5. Verify deployment using the control implementation playbooks for [Control 1.25](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.25-mime-type-restrictions/) in FSI-AgentGov
 
 ## Troubleshooting
 
