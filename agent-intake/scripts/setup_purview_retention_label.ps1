@@ -234,7 +234,11 @@ try {
     $resolvedAdminUpn = Get-ResolvedAdminUpn -CurrentValue $AdminUpn
 
     Write-Host ("Connecting to Security & Compliance PowerShell as {0}..." -f $resolvedAdminUpn)
-    Connect-IPPSSession -UserPrincipalName $resolvedAdminUpn -ShowBanner:$false | Out-Null
+    # Use -DisableWAM to avoid silent/invisible webview2 popups (the WAM broker can
+    # produce a popup that is invisible to remote-desktop / non-interactive operators
+    # and causes Connect-IPPSSession to hang indefinitely). Default browser auth is
+    # visible and reliable; MSAL token cache still applies on subsequent runs.
+    Connect-IPPSSession -UserPrincipalName $resolvedAdminUpn -ShowBanner:$false -DisableWAM | Out-Null
     $connected = $true
 
     $results += Add-RetentionLabelResult -Name $LabelName -IsRecordLabel:$false -Comment 'FSI agent-intake decision records retained for 7 years.'
