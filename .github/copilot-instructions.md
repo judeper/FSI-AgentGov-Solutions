@@ -73,6 +73,16 @@ FSI-AgentGov-Solutions/
 └── CHANGELOG.md
 ```
 
+## Per-Solution AGENTS.md (Context Cascade)
+
+Some solutions carry a per-solution `AGENTS.md` at their root (e.g., `agent-intake/AGENTS.md`). When working on a solution that has one, **read it first** — it captures dev/AI-agent context: active development status, resume-on-new-machine workflow, auth quirks specific to that solution, pending polish items, and recent design decisions. Per-solution `AGENTS.md` files are **not** customer-facing (that's `README.md`); they exist so a new session or a new machine picks up exactly where the previous one left off.
+
+Active per-solution `AGENTS.md` files:
+
+- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · PR #142 open
+
+When you add a per-solution `AGENTS.md`, list it here and link to it from the solution's README.
+
 ## Solution Content Policy (CRITICAL)
 
 **Solutions must NOT contain Power Platform runtime artifacts** — no exported Power Automate flow JSON, Canvas app packages, connection references, or environment variable exports. Solutions provide only:
