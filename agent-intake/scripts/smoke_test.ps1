@@ -200,7 +200,7 @@ function Get-DataverseToken {
         return $script:DataverseToken
     }
 
-    $envToken = (Get-Item -Path 'Env:DATAVERSE_ACCESS_TOKEN' -ErrorAction SilentlyContinue).Value
+    $envToken = $env:DATAVERSE_ACCESS_TOKEN
     if (-not [string]::IsNullOrWhiteSpace($envToken)) {
         $script:DataverseToken = $envToken.Trim()
         return $script:DataverseToken

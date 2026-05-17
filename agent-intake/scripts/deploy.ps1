@@ -359,7 +359,7 @@ function Test-AzCliContext {
 function Get-RequiredEnvironmentValue {
     param([Parameter(Mandatory)][string]$Name)
 
-    $value = (Get-Item -Path ("Env:{0}" -f $Name) -ErrorAction SilentlyContinue).Value
+    $value = [System.Environment]::GetEnvironmentVariable($Name)
     if ([string]::IsNullOrWhiteSpace($value)) {
         throw "Environment variable '$Name' is required for AuthMode ServicePrincipal."
     }
@@ -497,7 +497,7 @@ function Get-DataverseToken {
         return $script:DataverseToken
     }
 
-    $envToken = (Get-Item -Path 'Env:DATAVERSE_ACCESS_TOKEN' -ErrorAction SilentlyContinue).Value
+    $envToken = $env:DATAVERSE_ACCESS_TOKEN
     if (-not [string]::IsNullOrWhiteSpace($envToken)) {
         $script:DataverseToken = $envToken.Trim()
         return $script:DataverseToken
