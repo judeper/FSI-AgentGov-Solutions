@@ -799,6 +799,31 @@ function Get-PolicyDocument {
     return Get-Content -LiteralPath $script:PolicyTablesPath -Raw | ConvertFrom-Yaml
 }
 
+function ConvertTo-RedactedCommand {
+    <#
+    .SYNOPSIS
+        Returns a copy of the command array with values following sensitive
+        flags replaced by ***REDACTED*** so the command line can be safely
+        echoed to stdout / CI logs without leaking bearer tokens or secrets.
+    #>
+    param([Parameter(Mandatory)][string[]]$Command)
+
+    $redacted = @()
+    $skipNext = $false
+    foreach ($part in $Command) {
+        if ($skipNext) {
+            $redacted += '***REDACTED***'
+            $skipNext = $false
+            continue
+        }
+        $redacted += $part
+        if ($part -match '^-{1,2}(access[-_]?token|client[-_]?secret|password|token)$') {
+            $skipNext = $true
+        }
+    }
+    return $redacted
+}
+
 function Invoke-PowerShellChildScript {
     param(
         [Parameter(Mandatory)][string]$ScriptPath,
@@ -812,7 +837,7 @@ function Invoke-PowerShellChildScript {
     }
 
     $command = @('pwsh', '-NoLogo', '-NoProfile', '-File', $resolvedPath) + $Argument
-    Write-Info ($command -join ' ')
+    Write-Info ((ConvertTo-RedactedCommand -Command $command) -join ' ')
     $output = & $command[0] @($command[1..($command.Count - 1)]) 2>&1
     $exitCode = $LASTEXITCODE
     if ($exitCode -notin $AllowedExitCode) {
@@ -836,20 +861,7 @@ function Invoke-PythonChildScript {
 
     $python = Get-PythonCommand
     $command = @($python, $resolvedPath) + $Argument
-    $redactedCommand = @()
-    $skipNext = $false
-    foreach ($part in $command) {
-        if ($skipNext) {
-            $redactedCommand += '***REDACTED***'
-            $skipNext = $false
-            continue
-        }
-        $redactedCommand += $part
-        if ($part -match '^--(access-token|client-secret|password|token)$') {
-            $skipNext = $true
-        }
-    }
-    Write-Info ($redactedCommand -join ' ')
+    Write-Info ((ConvertTo-RedactedCommand -Command $command) -join ' ')
     $output = & $command[0] @($command[1..($command.Count - 1)]) 2>&1
     $exitCode = $LASTEXITCODE
     if ($exitCode -notin $AllowedExitCode) {
