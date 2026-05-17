@@ -477,30 +477,40 @@ try {
                 -Hint 'Alt-key not found; re-run create_mcm_dataverse_schema.py'))
         }
         else {
-            $statusVal = [int]$altKey.EntityKeyIndexStatus
-            switch ($statusVal) {
-                2 {
+            # EntityKeyIndexStatus can come back as either an int (older API
+            # responses) or a string label like "Active" (current Dataverse
+            # response shape). Normalise to one of the four canonical labels
+            # without going through [int] cast (which throws on "Active").
+            $raw = "$($altKey.EntityKeyIndexStatus)"
+            $statusLabel = switch -Regex ($raw) {
+                '^(0|Pending)$'    { 'Pending'; break }
+                '^(1|InProgress)$' { 'InProgress'; break }
+                '^(2|Active)$'     { 'Active'; break }
+                '^(3|Failed)$'     { 'Failed'; break }
+                default            { "Unknown($raw)" }
+            }
+            switch ($statusLabel) {
+                'Active' {
                     $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
-                        -Detail 'EntityKeyIndexStatus: Active (2)'))
+                        -Detail "EntityKeyIndexStatus: Active"))
                     break
                 }
-                { $_ -eq 0 -or $_ -eq 1 } {
-                    $statusLabel = if ($statusVal -eq 0) { 'Pending (0)' } else { 'InProgress (1)' }
+                { $_ -eq 'Pending' -or $_ -eq 'InProgress' } {
                     $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
                         -Hint 'Alt-key activation in progress — wait 60s and re-run preflight; OR see docs/poc-quickstart.md Step 1.3 wait gate' `
                         -Detail "EntityKeyIndexStatus: $statusLabel"))
                     break
                 }
-                3 {
+                'Failed' {
                     $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
                         -Hint 'Alt-key activation FAILED — open the table in Power Apps maker portal → Keys → inspect; re-run create_mcm_dataverse_schema.py' `
-                        -Detail 'EntityKeyIndexStatus: Failed (3)'))
+                        -Detail "EntityKeyIndexStatus: Failed"))
                     break
                 }
                 default {
                     $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
-                        -Hint "Unknown EntityKeyIndexStatus value: $statusVal. Validate manually in Power Apps maker portal." `
-                        -Detail "EntityKeyIndexStatus: $statusVal"))
+                        -Hint "Unknown EntityKeyIndexStatus value: $statusLabel. Validate manually in Power Apps maker portal." `
+                        -Detail "EntityKeyIndexStatus: $statusLabel"))
                 }
             }
         }

@@ -410,6 +410,49 @@ function Invoke-McmDvUpsertMessage {
         if ($errMsg -match 'status=412' -or $errMsg -match 'PreconditionFailed') {
             $existed = $true
         }
+        elseif ($errMsg -match 'A record with the specified key values does not exist') {
+            # Dataverse quirk: PATCH on alt-key URL with If-None-Match=*
+            # returns 404 "record does not exist" instead of the documented
+            # 201 Created when the row truly doesn't exist by alt-key. Fall
+            # back to POST on the entity set (create-only). This branch is
+            # specifically for the "row missing" 404, NOT the "alt-key not
+            # provisioned" 404 — those have different message text.
+            try {
+                $postHeaders = @{}
+                foreach ($k in $DataverseHeaders.Keys) { $postHeaders[$k] = $DataverseHeaders[$k] }
+                # Remove If-* headers that would interfere with POST.
+                $postHeaders.Remove('If-None-Match') | Out-Null
+                $postHeaders.Remove('If-Match') | Out-Null
+                $postUrl = "$DataverseBaseUrl/fsi_messagecenterlogs"
+                $postPayload = $createPayload.Clone()
+                # Ensure the alt-key column value is in the body (it may have
+                # been omitted because the URL carried it).
+                if (-not $postPayload.ContainsKey('fsi_messagecenterid')) {
+                    $postPayload['fsi_messagecenterid'] = $MessageId
+                }
+                $resp = Invoke-McmRest -Uri $postUrl -Headers $postHeaders -Method Post `
+                    -Body ($postPayload | ConvertTo-Json -Depth 5)
+                $entityId = $null
+                if ($resp -and ($resp.PSObject.Properties.Name -contains 'fsi_messagecenterlogid')) {
+                    $entityId = [string]$resp.fsi_messagecenterlogid
+                }
+                return [pscustomobject]@{
+                    Action       = 'Created'
+                    MessageId    = $MessageId
+                    EntityId     = $entityId
+                    ResponseBody = $resp
+                }
+            } catch {
+                $postErr = $_.Exception.Message
+                if ($postErr -match 'status=412' -or $postErr -match 'duplicate' -or $postErr -match 'PreconditionFailed' -or $postErr -match 'already exists') {
+                    # Race: another caller created the row between PATCH and POST.
+                    # Continue to the update branch.
+                    $existed = $true
+                } else {
+                    throw "Create failed for ${MessageId} on POST fallback: $postErr"
+                }
+            }
+        }
         elseif ($errMsg -match 'status=404' -or $errMsg -match 'Resource not found for the segment') {
             throw "Upsert failed for ${MessageId}: Alternate key fsi_MessageCenterIdKey not found - re-run create_mcm_dataverse_schema.py to provision it."
         }

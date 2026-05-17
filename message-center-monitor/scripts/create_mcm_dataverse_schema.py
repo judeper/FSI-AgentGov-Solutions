@@ -36,8 +36,12 @@ ALTERNATE_KEYS = [
 ]
 
 # MCM-specific option sets
+# Note: @odata.type discriminator is required by Dataverse Web API when POSTing
+# to metadata endpoints that take a base type (here: OptionSetMetadataBase).
+# Without it the request returns 400 ("Bad Request") with no body detail.
 OPTIONSETS = {
     "fsi_MCM_messagecategory": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_MCM_messagecategory",
         "DisplayName": {"LocalizedLabels": [{"Label": "Message Category", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Category of the Message Center post", "LanguageCode": 1033}]},
@@ -50,6 +54,7 @@ OPTIONSETS = {
         ],
     },
     "fsi_MCM_messageseverity": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_MCM_messageseverity",
         "DisplayName": {"LocalizedLabels": [{"Label": "Message Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Severity level of the Message Center post", "LanguageCode": 1033}]},
@@ -62,6 +67,7 @@ OPTIONSETS = {
         ],
     },
     "fsi_MCM_assessmentstatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_MCM_assessmentstatus",
         "DisplayName": {"LocalizedLabels": [{"Label": "Assessment Status", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Assessment status of a Message Center post for agent impact", "LanguageCode": 1033}]},
@@ -77,8 +83,17 @@ OPTIONSETS = {
 }
 
 # Table definitions
+# Notes:
+#   - Dataverse Web API CreateEntity requires @odata.type discriminator on the
+#     entity body itself (Microsoft.Dynamics.CRM.EntityMetadata).
+#   - The "primary attribute" of the entity (the column shown in lookups, the
+#     row title) is identified by setting IsPrimaryName=true on one of the
+#     string attributes in Attributes, AND setting PrimaryNameAttribute to that
+#     attribute's logical name on the entity. Both are required; omitting
+#     IsPrimaryName returns 400 "Required field 'PrimaryAttribute' is missing".
 TABLES = {
     "fsi_MessageCenterLog": {
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
         "SchemaName": "fsi_MessageCenterLog",
         "DisplayName": {"LocalizedLabels": [{"Label": "Message Center Log", "LanguageCode": 1033}]},
         "DisplayCollectionName": {"LocalizedLabels": [{"Label": "Message Center Logs", "LanguageCode": 1033}]},
@@ -97,6 +112,7 @@ TABLES = {
                 "Description": {"LocalizedLabels": [{"Label": "The MC post ID from M365 Message Center", "LanguageCode": 1033}]},
                 "MaxLength": 100,
                 "FormatName": {"Value": "Text"},
+                "IsPrimaryName": True,
             }
         ],
         "PrimaryNameAttribute": f"{PUBLISHER_PREFIX}_messagecenterid",
@@ -503,8 +519,17 @@ def create_tables(client: DataverseClient, dry_run: bool) -> dict:
 
 
 def create_columns(client: DataverseClient, dry_run: bool) -> None:
-    """Create columns on tables."""
+    """Create columns on tables.
+
+    Picklist columns that reference a Global Option Set need the option set's
+    MetadataId GUID in the @odata.bind ref. Dataverse rejects Name=... binds
+    here with 500 'Guid should contain 32 digits with 4 dashes' (only the
+    GlobalOptionSetDefinitions endpoint accepts the Name='...' alternate-key
+    lookup; the binding ref needs the canonical GUID). We resolve once per
+    referenced option set name and rewrite the bind ref before POST.
+    """
     logger.info("=== Creating Columns ===")
+    option_set_id_cache: dict[str, str] = {}
     for table_logical_name, columns in COLUMNS.items():
         logger.info(f"{table_logical_name}:")
         for column_metadata in columns:
@@ -512,9 +537,24 @@ def create_columns(client: DataverseClient, dry_run: bool) -> None:
             col_logical_name = schema_name.lower()
             if client.get_attribute_metadata(table_logical_name, col_logical_name):
                 logger.info(f"  {schema_name}: Already exists")
-            else:
-                logger.info(f"  {schema_name}: Creating")
-                client.create_column(table_logical_name, column_metadata)
+                continue
+
+            bind_ref = column_metadata.get("GlobalOptionSet@odata.bind")
+            if bind_ref and "Name=" in bind_ref and not dry_run:
+                import re
+                m = re.search(r"Name='([^']+)'", bind_ref)
+                if m:
+                    os_name = m.group(1).lower()
+                    if os_name not in option_set_id_cache:
+                        os_meta = client.get_global_optionset(os_name)
+                        if not os_meta or not os_meta.get("MetadataId"):
+                            raise RuntimeError(f"Cannot resolve MetadataId for global option set '{os_name}' referenced by column '{schema_name}'")
+                        option_set_id_cache[os_name] = os_meta["MetadataId"]
+                    column_metadata = dict(column_metadata)
+                    column_metadata["GlobalOptionSet@odata.bind"] = f"/GlobalOptionSetDefinitions({option_set_id_cache[os_name]})"
+
+            logger.info(f"  {schema_name}: Creating")
+            client.create_column(table_logical_name, column_metadata)
 
 
 def create_keys(client: DataverseClient, dry_run: bool) -> dict:
@@ -658,9 +698,20 @@ def main() -> None:
     if not args.client_id and not args.interactive:
         parser.error("--client-id is required (or set MCM_CLIENT_ID env var) unless --interactive is specified")
 
+    # Auth source priority (highest to lowest):
+    #   1. MCM_ACCESS_TOKEN env var — pre-acquired Dataverse bearer token (e.g.,
+    #      from an admin's `az account get-access-token --resource <env>`). Used
+    #      when the lab runner has env-admin perms but the SP has not yet been
+    #      added as an application user (chicken-and-egg before lab/04).
+    #   2. --interactive flag — opens a browser for user auth.
+    #   3. MCM_CLIENT_SECRET env var + --client-id — SP client-credentials flow
+    #      (requires the SP to already be registered as a Dataverse app user
+    #      with schema-write role).
+    access_token = os.environ.get("MCM_ACCESS_TOKEN")
+
     # legacy: dev-only — replace with managed identity in production
     client_secret = os.environ.get("MCM_CLIENT_SECRET")
-    if not args.interactive and not args.dry_run:
+    if not access_token and not args.interactive and not args.dry_run:
         if not client_secret:
             import getpass
             client_secret = getpass.getpass("Client secret: ")
@@ -671,6 +722,7 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
+            access_token=access_token,
             interactive=args.interactive,
             dry_run=args.dry_run,
         )

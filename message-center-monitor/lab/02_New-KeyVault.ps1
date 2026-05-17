@@ -64,20 +64,40 @@ if (-not $rg) {
 }
 
 # --- 3. Key Vault (RBAC mode) ------------------------------------------------
+# Az.KeyVault 6.x changed defaults: RBAC is now the default (use
+# -DisableRbacAuthorization to opt out), and soft-delete is mandatory (no
+# -EnableSoftDelete switch). We build the param hashtable so the script works
+# on both Az.KeyVault 4.x (used in older CI runners) and 6.x.
 $kv = Get-AzKeyVault -VaultName $cfg.keyVault.name -ErrorAction SilentlyContinue
 if (-not $kv) {
     Write-LabLog -Level Info -Message "Creating Key Vault '$($cfg.keyVault.name)'..."
     if ($PSCmdlet.ShouldProcess($cfg.keyVault.name, 'New-AzKeyVault')) {
-        $kv = New-AzKeyVault `
-            -Name $cfg.keyVault.name `
-            -ResourceGroupName $cfg.azure.resourceGroup `
-            -Location $cfg.azure.region `
-            -EnableRbacAuthorization `
-            -EnabledForTemplateDeployment:$false `
-            -EnableSoftDelete `
-            -SoftDeleteRetentionInDays 7 `
-            -Sku Standard `
-            -ErrorAction Stop
+        $newKvParams = @{
+            Name                          = $cfg.keyVault.name
+            ResourceGroupName             = $cfg.azure.resourceGroup
+            Location                      = $cfg.azure.region
+            EnabledForTemplateDeployment  = $false
+            SoftDeleteRetentionInDays     = 7
+            Sku                           = 'Standard'
+            ErrorAction                   = 'Stop'
+        }
+        $createCmd = Get-Command New-AzKeyVault
+        if ($createCmd.Parameters.ContainsKey('EnableRbacAuthorization')) {
+            $newKvParams['EnableRbacAuthorization'] = $true
+        }
+        # Az.KeyVault 4.x default is access-policy mode and needs explicit
+        # -EnableSoftDelete; 6.x removed both, so only set them if present.
+        if ($createCmd.Parameters.ContainsKey('EnableSoftDelete')) {
+            $newKvParams['EnableSoftDelete'] = $true
+        }
+        # Az.KeyVault 6.x default for new vaults is PublicNetworkAccess=Disabled
+        # which blocks the lab runner from calling Get-AzKeyVaultSecret over
+        # the public internet. Force Enabled for the lab (the vault is non-prod
+        # and the operator-only RBAC grant gates access).
+        if ($createCmd.Parameters.ContainsKey('PublicNetworkAccess')) {
+            $newKvParams['PublicNetworkAccess'] = 'Enabled'
+        }
+        $kv = New-AzKeyVault @newKvParams
     }
 } else {
     Write-LabLog -Level Info -Message "Key Vault '$($cfg.keyVault.name)' already exists."
@@ -86,20 +106,24 @@ if (-not $kv) {
     }
 }
 
-# --- 4. RBAC: Key Vault Secrets User for the runner -------------------------
+# --- 4. RBAC: grant the runner BOTH Officer (write) and User (read) ----------
+# We need Officer to call Set-AzKeyVaultSecret. The script's runner is the
+# admin/dev who's bootstrapping the lab; granting Officer here matches the
+# documented runbook role expectation (lab is non-prod) and the smoke test
+# subsequently reads (Officer also implies User-level read).
 $kvScope = $kv.ResourceId
 $runnerObjectId = (Get-AzADUser -UserPrincipalName $cfg.operator.runnerUpn -ErrorAction SilentlyContinue).Id
 if (-not $runnerObjectId) {
     Write-LabLog -Level Warn -Message "Could not resolve runner UPN '$($cfg.operator.runnerUpn)' to a directory object; skipping RBAC grant. Add manually if needed."
 } else {
-    $existing = Get-AzRoleAssignment -ObjectId $runnerObjectId -Scope $kvScope -RoleDefinitionName 'Key Vault Secrets User' -ErrorAction SilentlyContinue
+    $existing = Get-AzRoleAssignment -ObjectId $runnerObjectId -Scope $kvScope -RoleDefinitionName 'Key Vault Secrets Officer' -ErrorAction SilentlyContinue
     if (-not $existing) {
-        Write-LabLog -Level Info -Message "Granting 'Key Vault Secrets User' to $($cfg.operator.runnerUpn) on $kvScope..."
+        Write-LabLog -Level Info -Message "Granting 'Key Vault Secrets Officer' to $($cfg.operator.runnerUpn) on $kvScope..."
         if ($PSCmdlet.ShouldProcess($kvScope, 'New-AzRoleAssignment')) {
-            New-AzRoleAssignment -ObjectId $runnerObjectId -Scope $kvScope -RoleDefinitionName 'Key Vault Secrets User' -ErrorAction Stop | Out-Null
+            New-AzRoleAssignment -ObjectId $runnerObjectId -Scope $kvScope -RoleDefinitionName 'Key Vault Secrets Officer' -ErrorAction Stop | Out-Null
         }
     } else {
-        Write-LabLog -Level Info -Message "Runner already has 'Key Vault Secrets User' on this vault."
+        Write-LabLog -Level Info -Message "Runner already has 'Key Vault Secrets Officer' on this vault."
     }
 }
 
@@ -118,7 +142,28 @@ if ([string]::IsNullOrEmpty($secretValueToStore)) {
     Write-LabLog -Level Info -Message "Storing client secret as '$($cfg.keyVault.secretName)' in Key Vault..."
     if ($PSCmdlet.ShouldProcess("$($cfg.keyVault.name)/$($cfg.keyVault.secretName)", 'Set-AzKeyVaultSecret')) {
         $secVal = ConvertTo-SecureString $secretValueToStore -AsPlainText -Force
-        Set-AzKeyVaultSecret -VaultName $cfg.keyVault.name -Name $cfg.keyVault.secretName -SecretValue $secVal -ErrorAction Stop | Out-Null
+        # RBAC propagation on a fresh role assignment can take 30-300s before
+        # the KV data-plane will honour it. Retry with exponential backoff so
+        # the fresh-from-zero lab provisioning works without a manual rerun.
+        $maxAttempts = 8
+        $delays = @(2, 5, 10, 20, 30, 45, 60, 90)
+        $stored = $false
+        for ($i = 0; $i -lt $maxAttempts -and -not $stored; $i++) {
+            try {
+                Set-AzKeyVaultSecret -VaultName $cfg.keyVault.name -Name $cfg.keyVault.secretName -SecretValue $secVal -ErrorAction Stop | Out-Null
+                $stored = $true
+            } catch {
+                $msg = $_.Exception.Message
+                if ($msg -match 'Forbidden|not authorized|Assignment: \(not found\)') {
+                    if ($i -eq $maxAttempts - 1) { throw }
+                    $wait = $delays[$i]
+                    Write-LabLog -Level Info -Message "  RBAC not yet propagated (attempt $($i+1)/$maxAttempts). Sleeping $wait s..."
+                    Start-Sleep -Seconds $wait
+                } else {
+                    throw
+                }
+            }
+        }
     }
     # Scrub from process env in case it was the source.
     $env:MCM_LAB_LAST_SECRET = ''

@@ -251,7 +251,10 @@ while ($pageUrl) {
     if ($response.value) {
         $allMessages.AddRange($response.value)
     }
-    $pageUrl = $response.'@odata.nextLink'
+    # StrictMode (Version Latest) throws on a missing property access via dot
+    # syntax. Graph returns @odata.nextLink only when there's another page;
+    # use PSObject.Properties to probe-then-read.
+    $pageUrl = if ($response.PSObject.Properties['@odata.nextLink']) { $response.'@odata.nextLink' } else { $null }
     if ($pageUrl) {
         Write-Verbose "Fetching next page ($($allMessages.Count) messages so far)..."
     }

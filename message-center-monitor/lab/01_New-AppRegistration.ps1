@@ -58,12 +58,44 @@ $GraphAppId     = '00000003-0000-0000-c000-000000000000'  # Microsoft Graph
 $DataverseAppId = '00000007-0000-0000-c000-000000000000'  # Common Data Service / Dataverse
 
 Write-LabLog -Level Info -Message "Connecting to Microsoft Graph (tenant=$($cfg.tenant.tenantId))..."
-Connect-MgGraph -Scopes @(
+# Idempotency: if Mg context already exists (e.g. caller pre-authenticated via
+# Connect-MgGraph -UseDeviceCode, or via az CLI token forwarded with
+# Connect-MgGraph -AccessToken), reuse it as long as it covers the scopes we
+# need. This makes the script reusable in CI/automation contexts where the
+# default WAM-interactive flow is unavailable.
+$requiredScopes = @(
     'Application.ReadWrite.All'
     'AppRoleAssignment.ReadWrite.All'
     'DelegatedPermissionGrant.ReadWrite.All'
     'Directory.Read.All'
-) -TenantId $cfg.tenant.tenantId -NoWelcome -ErrorAction Stop | Out-Null
+)
+$existingCtx = Get-MgContext
+$needConnect = $true
+if ($existingCtx -and $existingCtx.TenantId -eq $cfg.tenant.tenantId) {
+    # Treat broader scopes as covering their narrower equivalents. az CLI's
+    # default first-party app grants Directory.AccessAsUser.All which subsumes
+    # Directory.Read.All for the calls this script makes (Get-MgServicePrincipal
+    # / app reg CRUD); accept it as a substitute.
+    $scopeAliases = @{
+        'Directory.Read.All' = @('Directory.AccessAsUser.All','Directory.ReadWrite.All')
+    }
+    $missing = @()
+    foreach ($req in $requiredScopes) {
+        if ($req -in $existingCtx.Scopes) { continue }
+        $alts = $scopeAliases[$req]
+        if ($alts -and ($alts | Where-Object { $_ -in $existingCtx.Scopes })) { continue }
+        $missing += $req
+    }
+    if ($missing.Count -eq 0) {
+        Write-LabLog -Level Info -Message "  Reusing existing Mg context ($($existingCtx.Account))"
+        $needConnect = $false
+    } else {
+        Write-LabLog -Level Info -Message "  Existing Mg context missing scopes: $($missing -join ', '). Re-connecting."
+    }
+}
+if ($needConnect) {
+    Connect-MgGraph -Scopes $requiredScopes -TenantId $cfg.tenant.tenantId -NoWelcome -ErrorAction Stop | Out-Null
+}
 
 try {
     # --- 1. Resolve required permissions DYNAMICALLY (no hardcoded GUIDs) ----
