@@ -330,9 +330,10 @@ function Test-GlobalOptionSetPresence {
         return $true
     }
 
-    $filter = ConvertTo-ODataStringLiteral -Value $Name
-    $response = Invoke-DataverseRequest -Method GET -RelativeUri ("GlobalOptionSetDefinitions?`$select=Name&`$filter=Name eq $filter")
-    return (@($response.Body.value).Count -gt 0)
+    # Dataverse rejects $filter on GlobalOptionSetDefinitions ('not supported',
+    # HTTP 405). Use direct key access with -AllowNotFound instead.
+    $response = Invoke-DataverseRequest -Method GET -RelativeUri ("GlobalOptionSetDefinitions(Name='{0}')?`$select=Name" -f $Name) -AllowNotFound
+    return $null -ne $response
 }
 
 function Get-EnvironmentVariableCurrentValue {
