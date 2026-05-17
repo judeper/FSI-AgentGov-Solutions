@@ -933,7 +933,11 @@ function Get-AppRoleNames {
         $null = $names.Add($item.name)
     }
 
-    return $names
+    # Comma operator prevents PowerShell from unrolling the HashSet via
+    # IEnumerable on function return. Without this, the caller receives
+    # $null (empty set), a string (1 item), or string[] (fixed-size array)
+    # and any subsequent .Add() throws "Collection was of a fixed size."
+    return , $names
 }
 
 function Add-AppRoleAssociation {
