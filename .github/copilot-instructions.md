@@ -139,7 +139,7 @@ When updating solution READMEs, ensure Related Controls sections match the contr
 
 The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in two steps by CI (`.github/workflows/publish_docs.yml`):
 
-1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root), the README solutions table, `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), and the home-page hero metrics block. Sub-docs from `{slug}/docs/*.md` are copied with filename normalization.
+1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root, including canonical per-solution `solutions[*].controls` coverage), the README solutions table, any solution README blocks opted into manifest-managed implemented-controls markers, `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), and the home-page hero metrics block. Sub-docs from `{slug}/docs/*.md` are copied with filename normalization.
 2. `mkdocs build --strict` — renders the site from `site-docs/`.
 
 A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest.py --check` on every PR and fails when manifests reference unknown framework control IDs or generated artifacts drift.
@@ -152,7 +152,7 @@ A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest
 
 ### To change overview pages
 
-- **Description, version, domain, tier, controls, prerequisites, verification, status**: edit `<slug>/manifest.yaml` — single source of truth, schema-validated by `scripts/manifest.schema.json`.
+- **Description, version, domain, tier, controls, prerequisites, verification, status**: edit `<slug>/manifest.yaml` — single source of truth, schema-validated by `scripts/manifest.schema.json`. `manifest.yaml.controls` is projected into `solutions.json` and any opt-in README implemented-controls block.
 - **Layout / table structure**: edit `scripts/build-manifest.py`.
 
 ### To change detail-page sub-docs
