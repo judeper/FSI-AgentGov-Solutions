@@ -1,6 +1,6 @@
 id: agent-intake
 name: Agent Intake
-description: "Pre-build user intake workflow for AI agent requests — supports Express, Standard, and Full paths with sponsor approval, multi-reviewer routing, and handoff to agent-registry-automation."
+description: "Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting"
 version: 1.0.0-preview
 status: preview
 domain: lifecycle-ops

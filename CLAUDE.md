@@ -36,7 +36,7 @@ git rev-parse --show-toplevel
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
 | [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.1.0 |
-| [agent-intake](./agent-intake/) | Pre-build maker intake — Express-path MVP with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff | PowerShell/Python/Docs | v0.1.0-preview |
+| [agent-intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | PowerShell/Python/Docs | v1.0.0-preview |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.0 |
 | [ |
@@ -77,7 +77,7 @@ git rev-parse --show-toplevel
 | Solution | Primary Controls | Description |
 |----------|-----------------|-------------|
 | action-confirmation-auditor | 2.12, 1.10 | HITL confirmation node validation in Copilot Studio agent topics; FINRA 3110 supervision evidence |
-| agent-intake | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake with risk-tiered routing, sponsor attestation (FINRA 3110), immutable decision log (FINRA 4511 / SEC 17a-4) |
+| agent-intake | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
 | agent-365-lifecycle-governance | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Agent lifecycle governance with sponsor enforcement and access reviews |
 | agent-access-monitor | 3.8 | Overly permissive agent access detection per governance zone |
 | agent-communication-restriction-detector | 2.17 | Multi-agent orchestration limits per zone routing policy |

@@ -4,17 +4,47 @@ All notable changes to the **agent-intake** solution will be documented in this 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — toward v1.0.0-preview
+## [Unreleased]
 
-### Added — Standard + Full path foundations
+## [1.0.0-preview] - 2026-05-16
 
-- Added reviewer-role, review-decision, routing-topology, and MRM-handoff option sets to `scripts/create_fsi_intake_dataverse_schema.py` for Standard and Full path routing.
-- Extended `fsi_IntakeRequest` with quorum, routing-topology, parallel-reviewer JSON, MRM handoff, and extended-question payload fields for multi-reviewer workflows.
-- Extended `fsi_IntakeReview`, `fsi_IntakeApproval`, and `fsi_IntakeAuditEvent` with reviewer-role normalization, quorum metadata, sequencing support, and path-phase checkpoints.
-- Regenerated `docs/dataverse-schema.md` from the updated schema script so downstream flow and portal workstreams can consume the canonical field list.
-- Expanded `templates/policy-lookup-tables.yaml` with reviewer routing, quorum, MRM handoff, parallel-routing, and path-specific denial-appeal defaults.
-- Added `fsi_appealofid` and `fsi_nonmrmquorummet` to `fsi_IntakeRequest`, extended `fsi_intake_status` with `InReview` / `LiveTracking`, added the bundled `fsi_intake_auditeventtype` inventory values used by the 12 documented flows, regenerated `docs/dataverse-schema.md`, and updated `docs/flow-configuration.md` to remove the remaining schema-gap notes.
-- Bumped `manifest.yaml` to `1.0.0-preview` and updated the verification text to reference the full lab-rebuild test.
+### Added
+
+- Added the v1.0.0-preview schema and policy foundations for three intake paths, including new option sets, status values, audit event inventories, and routing columns such as `fsi_routingtopology`, `fsi_quorumrequired`, `fsi_parallelreviewersjson`, `fsi_mrmrequired`, `fsi_mrmhandoffstatus`, `fsi_standardfullquestionsjson`, `fsi_appealofid`, and `fsi_nonmrmquorummet` (`f10cabe`).
+- Added refreshed Express questions plus the new Standard and Full question catalogs, including 22 Standard questions, 35 Full questions, and the overview map that explains when each pack is used (`4dfc9d0`).
+- Added drift-detection handoff payload guidance for Standard and Full paths so downstream monitoring solutions can consume richer post-approval context (`2632f5a`).
+- Added Microsoft Entra Agent ID blueprint automation with the `fsiReviewerAttestations` open-type payload pattern and extended Purview retention-label automation to cover reviewer attestations in the decision pack (`fa411b4`).
+- Added MRM handoff integration to `model-risk-management-automation`, including alternate-key lookup guidance for `fsi_modelinventory` and status tracking for the intake handoff (`8f41f90`).
+- Added a model-driven reviewer queues app and ADR-011 implementation notes, with the managed `.zip` artifact explicitly permitted for this app-only packaging scenario (`9f76e15`).
+- Added a dedicated CI workflow with four validators and 42 pytest cases to keep the preview lab rebuild and schema docs aligned (`9f177be`).
+- Added a full enablement suite for makers, sponsors, reviewers, admins, and demo operators so pilot teams can rehearse all three paths before broad rollout (`18dc8cf`).
+
+### Changed
+
+- Changed the classification model from Express-only routing to Express, Standard, and Full paths, with refreshed Express logic and policy mapping that now supports reviewer quorum, non-MRM quorum tracking, and MRM-required escalation (`6570da8`).
+- Changed the maker experience to a multistep Power Pages form with progressive disclosure, plus PAC CLI scaffolding for the portal assets that can be automated today (`5a24d1b`).
+- Changed the build guidance from the original Express-only flow set to 12 documented Power Automate flows (build instructions only, no exported JSON per repo policy), plus supporting PAC shell and prerequisites guidance (`1adf2d8`).
+- Changed lab operations to a single-command `deploy.ps1` orchestrator with `-Teardown`, `-SeedTestData`, and `-DryRun`, five test data fixtures, and an expanded `smoke_test.ps1` with `-PathScope` and `-IncludeSeededDataChecks` (`3bc5400`).
+
+### Removed
+
+- Removed the remaining schema-gap caveats from the flow build guide once the missing request columns, status values, and audit-event inventories were added to the Dataverse model (`9461a38`).
+
+### Fixed
+
+- Fixed release-adjacent reconciliation issues across catalog field references, ruff `E402`, and `Write-Host` usage so the preview content is internally consistent for the v1.0.0-preview drop (`c1e32ec`).
+- Fixed flow-spec-driven schema gaps by closing the open items around `fsi_appealofid`, the extra intake statuses, `fsi_nonmrmquorummet`, and the newer audit event values, then regenerating `docs/dataverse-schema.md` to match (`9461a38`).
+
+### Security
+
+- Extended records and identity automation so reviewer attestations, sponsor approvals, and Agent ID minting events can be retained and replayed as part of the same decision pack, which supports compliance with FINRA Rule 4511(a), SEC Rule 17a-4, and CFTC Rule 1.31 when customers complete the tenant-side retention and approval setup (`fa411b4`).
+
+### Known limitations / v1.1 evolution
+
+- `fsi_appealofid` is currently a Single Line of Text column; convert it to a self-lookup in v1.1.
+- Microsoft Entra Agent ID `fsiReviewerAttestations` open-type field acceptance is pending live-tenant verification.
+- PAC CLI cannot programmatically create Power Pages multistep form bindings; Stage 4 of `deploy.ps1` includes **MANUAL STEP REQUIRED** markers.
+- Two legacy PSScriptAnalyzer warnings in `provision_power_pages.ps1` remain soft-gated as the current baseline.
 
 ## [0.2.0-preview] - 2026-05-06
 

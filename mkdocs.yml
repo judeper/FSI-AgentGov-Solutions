@@ -227,16 +227,39 @@ nav:
       - Agent 365 Lifecycle Governance: solutions/agent-365-lifecycle-governance/index.md
       - Agent Intake:
         - solutions/agent-intake/index.md
-        - Maker Quick Start: solutions/agent-intake/maker-quick-start.md
-        - Sponsor Cheat Sheet: solutions/agent-intake/sponsor-cheat-sheet.md
-        - Onboarding Checklist: solutions/agent-intake/onboarding-checklist.md
-        - Decisions (ADR): solutions/agent-intake/decisions.md
-        - Portal Configuration: solutions/agent-intake/portal-configuration.md
-        - Flow Configuration: solutions/agent-intake/flow-configuration.md
-        - Dataverse Schema: solutions/agent-intake/dataverse-schema.md
-        - Auto-detect Playbook: solutions/agent-intake/auto-detect-playbook.md
-        - Drift Detection Integration: solutions/agent-intake/drift-detection-integration.md
-        - Pilot Deployment Runbook: solutions/agent-intake/pilot-deployment-runbook.md
+        - Overview:
+          - Auto-detect Playbook: solutions/agent-intake/auto-detect-playbook.md
+          - Classification Rules: solutions/agent-intake/classification-rules.md
+        - Catalogs:
+          - Question Catalog Overview: solutions/agent-intake/question-catalog-overview.md
+          - Express Questions: solutions/agent-intake/intake-questions-express.md
+          - Standard Questions: solutions/agent-intake/intake-questions-standard.md
+          - Full Questions: solutions/agent-intake/intake-questions-full.md
+        - Build:
+          - Flow Build Prerequisites: solutions/agent-intake/flow-build-prerequisites.md
+          - Portal Configuration: solutions/agent-intake/portal-configuration.md
+          - Maker Form Progressive Disclosure: solutions/agent-intake/maker-form-progressive-disclosure.md
+          - Reviewer App Build: solutions/agent-intake/reviewer-app-build.md
+          - Flow Configuration: solutions/agent-intake/flow-configuration.md
+          - Identity & Records Automation: solutions/agent-intake/identity-records-automation.md
+          - MRM Integration: solutions/agent-intake/mrm-integration.md
+        - Operate:
+          - Dataverse Schema: solutions/agent-intake/dataverse-schema.md
+          - Drift Detection Integration: solutions/agent-intake/drift-detection-integration.md
+          - Orchestrator Architecture: solutions/agent-intake/orchestrator-architecture.md
+          - Pilot Deployment Runbook: solutions/agent-intake/pilot-deployment-runbook.md
+        - Enablement:
+          - Enablement Overview: solutions/agent-intake/enablement-overview.md
+          - Maker Guide: solutions/agent-intake/maker-guide.md
+          - Maker Quick Start: solutions/agent-intake/maker-quick-start.md
+          - Sponsor Guide: solutions/agent-intake/sponsor-guide.md
+          - Sponsor Cheat Sheet: solutions/agent-intake/sponsor-cheat-sheet.md
+          - Reviewer Cheat Sheet: solutions/agent-intake/reviewer-cheat-sheet.md
+          - Admin Onboarding Guide: solutions/agent-intake/admin-onboarding-guide.md
+          - Onboarding Checklist: solutions/agent-intake/onboarding-checklist.md
+          - Demo Script: solutions/agent-intake/demo-script.md
+        - Decisions:
+          - Decisions (ADR): solutions/agent-intake/decisions.md
       - Agent Registry Automation:
         - solutions/agent-registry-automation/index.md
         - Prerequisites: solutions/agent-registry-automation/prerequisites.md
