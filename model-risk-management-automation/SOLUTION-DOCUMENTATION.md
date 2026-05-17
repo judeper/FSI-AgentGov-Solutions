@@ -10,7 +10,9 @@
 
 ### 1.1 Problem Statement
 
-OCC 2011-12 and Federal Reserve SR 11-7 are the primary supervisory frameworks for model risk management at all US banks and many insurance companies. The 2021 Interagency Request for Information confirmed these frameworks apply to traditional machine learning systems; their application to large language models and agentic AI is an active area of supervisory guidance and institutions should consult their legal and compliance teams when applying MRM to LLM-based agents.
+OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) and Fed SR 26-2 (formerly Fed SR 11-7) are the current supervisory frameworks for traditional model risk management at US financial institutions. This solution uses those frameworks as the baseline for model inventory, validation, and ongoing monitoring workflows on Power Platform.
+
+> **Scope note**: SR 26-2 / OCC Bulletin 2026-13 (issued April 17, 2026) explicitly excludes generative AI and agentic AI models from its scope. This automation reflects analogous sound risk management principles applied to GenAI/agentic AI scenarios; for those scenarios the citation is informational rather than a direct regulatory obligation. For traditional ML models (algorithmic credit scoring, fraud detection, statistical models), SR 26-2 / OCC 2026-13 applies directly per the guidance.
 
 This solution automates three operational gaps examiners consistently cite:
 
@@ -20,9 +22,9 @@ This solution automates three operational gaps examiners consistently cite:
 
 **The core examiner question this solution answers:** *"Show me your complete model inventory, the current validation status of each model, and the documented basis for each model's risk rating."*
 
-### 1.2 SR 11-7 Three-Pillar Mapping
+### 1.2 MRM Three-Pillar Mapping
 
-| SR 11-7 Pillar | Examiner Requirement | Solution Component |
+| Supervisory Pillar | Examiner Requirement | Solution Component |
 |----------------|---------------------|--------------------|
 | Pillar 1: Model Development | Documented model purpose, design, inputs, limitations | `fsi_modelinventory` + Agent Card (Flow 5) |
 | Pillar 2: Model Validation | Independent validation, ongoing monitoring | `fsi_validationcycle` + Flow 3 + Flow 4 |
@@ -32,7 +34,7 @@ This solution automates three operational gaps examiners consistently cite:
 
 | Field | Value |
 |-------|-------|
-| **Primary Control** | Control 2.6 — Model Risk Management (OCC 2011-12 / SR 11-7) |
+| **Primary Control** | Control 2.6 — Model Risk Management (OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7)) |
 | **Secondary Controls** | 2.5, 2.9, 2.11, 2.13, 3.1, 1.2 |
 | **Pillar** | Pillar 2: Management |
 | **Solution Type** | Detective (with optional preventive controls — e.g., gating production deployment until risk scoring is complete or validation findings are remediated) |
@@ -59,7 +61,7 @@ This solution automates three operational gaps examiners consistently cite:
 |-----------|------|------|---------|
 | Flow 1 | Sync-AgentInventory-ToMRM | Scheduled (Daily) | Pull agents from fsi_agentinventory, sync to MRM inventory |
 | Flow 2 | Score-ModelRisk-OnSubmission | Instant | Apply 7-factor risk scoring, assign MRM tier |
-| Flow 3 | Execute-ValidationWorkflow | Approval-gated | Full SR 11-7 validation lifecycle |
+| Flow 3 | Execute-ValidationWorkflow | Approval-gated | Full MRM validation lifecycle |
 | Flow 4 | Monitor-ModelPerformance-Scheduled | Scheduled (Weekly) | Ongoing monitoring, SLA enforcement |
 | Flow 5 | Generate-AgentCard-OnChange | Instant | Agent Card document generation (Word + JSON fallback) |
 | Flow 6 | Trigger-Revalidation-OnThreshold | Instant | Threshold-triggered revalidation approval |
@@ -239,4 +241,4 @@ See README.md Known Limitations section.
 
 ---
 
-*This solution supports compliance with OCC 2011-12, Fed SR 11-7, SOX 302/404, and FINRA Rule 3110. Organizations should verify all configurations meet their specific regulatory obligations.*
+*This solution supports institution-specific model risk management programs informed by OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12), Fed SR 26-2 (formerly Fed SR 11-7), SOX 302/404, and FINRA Rule 3110. Organizations should verify all configurations meet their specific regulatory obligations.*

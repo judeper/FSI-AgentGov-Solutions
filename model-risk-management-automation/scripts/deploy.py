@@ -35,7 +35,7 @@ Post-Deployment Steps
    - Navigate to Settings > Security > Security Roles
    - Remove Delete privileges for fsi_MrmComplianceEvent for all
      roles except System Administrator
-   - This supports immutable audit records (OCC 2011-12, SOX 302)
+   - This supports immutable audit records (OCC Bulletin 2026-13 [formerly OCC Bulletin 2011-12], SOX 302)
 
 2. LTR -- Enable Dataverse Long-Term Retention:
    - Enable on fsi_mrmcomplianceevent with 7-year retention policy

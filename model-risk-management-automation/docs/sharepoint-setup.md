@@ -4,7 +4,7 @@
 
 Agent Cards are the primary examiner-facing evidence documents for model risk management. This guide covers the SharePoint site and library configuration required before activating Flow 5 (Generate-AgentCard-OnChange).
 
-Agent Cards support compliance with Fed SR 11-7 documentation requirements by consolidating model metadata, risk ratings, validation status, and monitoring summaries into a single retrievable document per agent.
+Agent Cards support compliance with model risk management documentation requirements by consolidating model metadata, risk ratings, validation status, and monitoring summaries into a single retrievable document per agent.
 
 > **Important:** Complete all steps in this guide before setting `IsMRMAutomationEnabled` to `"true"`. Flow 5 depends on the library, metadata columns, template, and permissions described here.
 

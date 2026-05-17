@@ -12,7 +12,7 @@ Power Automate flow specifications for the Model Risk Management Automation solu
 | **Score-ModelRisk-OnSubmission** | Instant | Apply 7-factor automated risk scoring | On submission or manual |
 | **Execute-ValidationWorkflow** | Instant | Orchestrate end-to-end validation lifecycle | On risk scoring or revalidation |
 | **Monitor-ModelPerformance-Scheduled** | Scheduled | Weekly performance monitoring and SLA checks | Weekly (Monday 08:00 UTC) |
-| **Generate-AgentCard-OnChange** | Instant | Generate SR 11-7 Agent Card document | On new, material change, or validation |
+| **Generate-AgentCard-OnChange** | Instant | Generate MRM Agent Card document | On new, material change, or validation |
 | **Trigger-Revalidation-OnThreshold** | Instant | Revalidation approval workflow | On monitoring breach or material change |
 
 ---
@@ -896,7 +896,7 @@ Performs weekly performance monitoring across all validated models, checks monit
 
 ## Flow 5: Generate-AgentCard-OnChange
 
-Generates an SR 11-7 Agent Card document containing model risk evidence across all three pillars (Development, Validation, Governance). Supports Word document generation with a JSON fallback when the Word Online connector is unavailable.
+Generates an MRM Agent Card document containing model risk evidence across all three supervisory pillars (Development, Validation, Governance). Supports Word document generation with a JSON fallback when the Word Online connector is unavailable.
 
 ### Trigger
 
@@ -952,7 +952,7 @@ Generates an SR 11-7 Agent Card document containing model risk evidence across a
          replace(model.fsi_agentcardversion, 'v', ''), '.'))), 1)), '.0')}
 
 4. Compose Agent Card JSON
-   Compose action with SR 11-7 pillar evidence plus current Microsoft Learn
+   Compose action with pillar evidence plus current Microsoft Learn,
    Agent ID, Agent 365 registry, model-card, and evaluation evidence fields:
    {
      "metadata": {

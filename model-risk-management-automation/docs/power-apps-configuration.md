@@ -1,6 +1,6 @@
 # Power Apps Configuration — Model Risk Management
 
-This guide provides step-by-step instructions for manually building two Power Apps that support the MRM automation solution. These apps are designed to help meet Fed SR 11-7 model risk management requirements for AI agents governed by Copilot Studio.
+This guide provides step-by-step instructions for manually building two Power Apps that support the MRM automation solution. These apps are designed to help meet institution-specific model risk management requirements for AI agents governed by Copilot Studio, using OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) terminology and Fed SR 26-2 (formerly Fed SR 11-7) principles where applicable.
 
 > **Important:** This guide describes how to build apps in the Power Apps designer. No exported app packages are provided. Administrators should adapt screen layouts, branding, and field placement to their organization's standards.
 
@@ -28,7 +28,7 @@ The MRM Submission Portal provides two core functions:
 1. **Agent owner interface** — submit agents for MRM review, track status, and respond to validation findings
 2. **MRM team dashboard** — inventory management, filtering, evidence export, and risk rating overrides
 
-This app supports compliance with Fed SR 11-7 first-line-of-defense responsibilities by providing agent owners a structured submission and remediation workflow.
+This app supports compliance with first-line-of-defense model risk management responsibilities by providing agent owners a structured submission and remediation workflow.
 
 ### Create the App
 
@@ -293,7 +293,7 @@ Displays open `fsi_validationfinding` records for agents owned by the current us
 
 #### Purpose
 
-Provides MRM Officers with a full inventory table across all tiers and statuses. Supports evidence package export and risk rating override capabilities required for second-line-of-defense responsibilities under SR 11-7.
+Provides MRM Officers with a full inventory table across all tiers and statuses. Supports evidence package export and risk rating override capabilities required for second-line-of-defense model risk management responsibilities.
 
 #### Build Steps
 
@@ -439,7 +439,7 @@ Set the default screen to `MyStatusScreen`.
 
 ### Overview
 
-The Validation Workbench is a model-driven app that provides independent validators with a structured workflow interface for reviewing and closing validation cycles. It supports compliance with SR 11-7 second-line-of-defense validation requirements by enforcing one-directional status transitions, minimum documentation lengths, and severity-based blocking rules.
+The Validation Workbench is a model-driven app that provides independent validators with a structured workflow interface for reviewing and closing validation cycles. It supports compliance with second-line-of-defense model risk management validation requirements by enforcing one-directional status transitions, minimum documentation lengths, and severity-based blocking rules.
 
 ### Create the App
 
@@ -699,7 +699,7 @@ Dataverse model-driven forms do not natively enforce minimum character counts. I
 
 ### Business Rules
 
-Configure the following business rules on the Dataverse tables to enforce MRM workflow integrity. These rules support compliance with SR 11-7 governance requirements.
+Configure the following business rules on the Dataverse tables to enforce MRM workflow integrity. These rules support compliance with model risk management governance requirements.
 
 #### Rule 1 — One-Directional Cycle Status Transitions
 
@@ -858,9 +858,9 @@ These Power Apps support the following regulatory requirements. Organizations sh
 
 | Regulation | Requirement | App Support |
 |-----------|-------------|-------------|
-| Fed SR 11-7 | Independent model validation | Validation Workbench enforces validator separation from model owners |
-| Fed SR 11-7 | Three lines of defense | Security roles map to 1LoD (Agent Owner), 2LoD (MRM Officer, Validator), 3LoD (Auditor read access) |
-| OCC 2011-12 | Model inventory maintenance | MRM Submission Portal provides structured inventory with required fields |
+| Fed SR 26-2 (formerly Fed SR 11-7) | Independent model validation | Validation Workbench enforces validator separation from model owners |
+| Fed SR 26-2 (formerly Fed SR 11-7) | Three lines of defense | Security roles map to 1LoD (Agent Owner), 2LoD (MRM Officer, Validator), 3LoD (Auditor read access) |
+| OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) | Model inventory maintenance | MRM Submission Portal provides structured inventory with required fields |
 | FINRA 25-07 | AI governance documentation | Agent Card links and finding documentation support examiner review |
 | SOX 302/404 | Internal controls over reporting | Audit trail via `fsi_mrmcomplianceevent`, one-directional status transitions |
 | SEC 17a-3/4 | Record retention | Immutable compliance event log with recommended 7-year retention |
