@@ -4,6 +4,8 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-17
+
 ### Added
 
 - **Graph v1.0 permission scan path.** New `Invoke-GraphPermissionScan.ps1` script uses Microsoft Graph v1.0 `/drives/{driveId}/items/{itemId}/permissions` endpoint for permission scanning. Resolves `grantedToIdentitiesV2` for specific-people links, addressing the `FlexibleLink` limitation in the PnP-based scanner. Required Graph permissions: `Sites.Read.All`, `Files.Read.All`, `Group.Read.All`.

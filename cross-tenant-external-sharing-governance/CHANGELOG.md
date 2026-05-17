@@ -6,6 +6,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-17
+
 ### Fixed
 
 - Refreshed Microsoft Learn-aligned guidance for Power Platform tenant isolation, replacing stale preview governance-path flow/checklist references with PPAC and `Get-PowerAppTenantIsolationPolicy` / `Set-PowerAppTenantIsolationPolicy` validation guidance.

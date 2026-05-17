@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-05-17
+
 ### Changed
 - Bumped solution manifest version to 1.2.1 for the 2026-Q2 Microsoft Learn refresh.
 - Refreshed Power Platform Pipelines guidance for custom host prerequisites, pipeline table references, trigger configuration, PAC CLI authentication, and solution checker integration.
