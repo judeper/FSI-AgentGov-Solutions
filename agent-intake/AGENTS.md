@@ -13,6 +13,20 @@ One-sentence intent: a pre-build maker-intake layer that captures FSI AI-agent r
 
 ---
 
+## 🛑 Before you do ANYTHING on a new machine
+
+**Copy your `lab/config.local.json` into `agent-intake/lab/` before running any script.**
+
+This file is **gitignored on purpose** (contains tenant ID, env GUID, billing policy ID, Purview operator UPN). It is not on GitHub and never will be. You stored a copy of it outside this repo when you closed the previous machine's session — retrieve it now from your secure source (password manager / OneDrive note / key vault) and drop it at:
+
+```
+agent-intake\lab\config.local.json
+```
+
+If you skip this step, `Invoke-Deploy.ps1` and every other lab script will fail with a missing-config error. Full bootstrap checklist below in [Resuming on a different dev machine](#resuming-on-a-different-dev-machine).
+
+---
+
 ## Active Development Status (2026-05-17)
 
 > ⚠️ When work resumes, refresh this section with a new date and new content. Keep the structure; the date-stamp tells the next session whether this is current.
