@@ -548,15 +548,49 @@ function Get-DataverseHeader {
 }
 
 function Get-AzureAccessTokenForResource {
+    <#
+    .SYNOPSIS
+        Acquires a bearer token for an Azure / Power Platform resource.
+
+    .DESCRIPTION
+        Resolution order (managed-identity-first):
+          1. If a resource-specific env var is set, return that token. Production callers
+             SHOULD inject a token acquired from managed identity, workload identity
+             federation, or another production-grade credential source via env var.
+          2. Fall back to delegated `az` CLI. This is the development path and is
+             marked legacy below.
+
+        Recognised env vars by resource:
+          - https://api.bap.microsoft.com/   → BAP_ACCESS_TOKEN
+          - https://api.powerplatform.com/   → POWERPLATFORM_API_TOKEN
+    #>
     param([Parameter(Mandatory)][string]$Resource)
 
     if ($DryRun) {
         return 'dry-run-token'
     }
 
+    $envVarName = switch -Regex ($Resource) {
+        '^https://api\.bap\.microsoft\.com/?$'  { 'BAP_ACCESS_TOKEN';        break }
+        '^https://api\.powerplatform\.com/?$'   { 'POWERPLATFORM_API_TOKEN'; break }
+        default                                 { $null }
+    }
+    if ($envVarName) {
+        $envToken = [Environment]::GetEnvironmentVariable($envVarName)
+        if (-not [string]::IsNullOrWhiteSpace($envToken)) {
+            return $envToken.Trim()
+        }
+    }
+
+    # legacy: dev-only — replace with managed identity in production
     $az = Get-Command -Name 'az' -ErrorAction SilentlyContinue
     if ($null -eq $az) {
-        throw 'Azure CLI (az) is required to acquire access tokens.'
+        $hint = if ($envVarName) {
+            "For production, set env var $envVarName with a managed-identity or WIF-acquired token."
+        } else {
+            'Set the appropriate access-token env var to bypass az CLI in production.'
+        }
+        throw "Azure CLI (az) is required to acquire access tokens. $hint"
     }
 
     $token = & $az.Source account get-access-token --resource $Resource --query accessToken -o tsv 2>$null
