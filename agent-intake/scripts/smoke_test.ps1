@@ -229,7 +229,6 @@ function Get-DataverseHeader {
         Accept = 'application/json'
         'OData-MaxVersion' = '4.0'
         'OData-Version' = '4.0'
-        'If-None-Match' = 'null'
     }
 }
 
