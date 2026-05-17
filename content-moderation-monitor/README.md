@@ -214,8 +214,8 @@ python scripts/correlate_purview_events.py \
 
 | Control | Relationship |
 |---------|--------------|
-| [1.27 - AI Agent Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-foundation/1.27-ai-agent-content-moderation-enforcement/) | Primary — agent-default content moderation level enforcement |
-| [1.8 - Runtime Protection and External Threat Detection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-foundation/1.8-runtime-protection-and-external-threat-detection/) | Complementary — provides one configuration signal; 1.8 also requires runtime threat detection beyond this solution's scope |
+| [1.27 - AI Agent Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/) | Primary — agent-default content moderation level enforcement |
+| [1.8 - Runtime Protection and External Threat Detection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-protection-and-external-threat-detection/) | Complementary — provides one configuration signal; 1.8 also requires runtime threat detection beyond this solution's scope |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Governance dashboard integration |
 

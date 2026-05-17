@@ -21,9 +21,9 @@ The Action Confirmation Auditor (ACA) scans Power Platform environments for Copi
 
 | Control | Relationship |
 |---------|--------------|
-| [2.12 - Human-in-the-Loop Checkpoints](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-lifecycle/2.12-human-in-the-loop-checkpoints/) | Primary -- HITL confirmation node validation in agent topics |
-| [1.10 - Communication Compliance](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.10-communication-compliance/) | Supporting -- Aids FINRA 3110 supervisory review evidence |
-| [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-lifecycle/2.1-managed-environments/) | Dependency -- Zone classification source |
+| [2.12 - Supervision and Oversight (FINRA Rule 3110)](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.12-supervision-and-oversight-finra-rule-3110/) | Primary -- HITL confirmation node validation in agent topics |
+| [1.10 - Communication Compliance Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.10-communication-compliance-monitoring/) | Supporting -- Aids FINRA 3110 supervisory review evidence |
+| [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Dependency -- Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Downstream -- Evidence export for governance dashboard |
 
 > **Note on Control 1.23:** Earlier versions claimed Control 1.23 (Step-Up Authentication for Agent Operations). Control 1.23 is implemented through Entra Authentication Contexts, Conditional Access policies, and phishing-resistant MFA -- see the *Conditional Access Automation* and *Session Security Configurator* solutions. ACA validates HITL/approval prompts in agent topics, which is governed by Control 2.12. ACA does not by itself satisfy AAL2/AAL3 step-up authentication requirements.
