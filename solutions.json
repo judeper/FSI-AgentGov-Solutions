@@ -1,6 +1,11 @@
 {
   "schemaVersion": "1.5.0",
   "generatedBy": "scripts/build-manifest.py",
+  "counts": {
+    "total": 36,
+    "live": 35,
+    "preview": 1
+  },
   "solutions": {
     "action-confirmation-auditor": {
       "id": "action-confirmation-auditor",
