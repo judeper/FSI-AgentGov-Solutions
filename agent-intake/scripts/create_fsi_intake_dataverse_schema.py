@@ -311,6 +311,9 @@ def _optionset_metadata(optionset_def):
     name = optionset_def["name"]
     display_name = name.replace("fsi_", "").replace("_", " ").title()
     return {
+        # Dataverse rejects the payload as 'Invalid property Options ... on OptionSetMetadataBase'
+        # unless the derived OptionSetMetadata type is declared on the root resource.
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": name,
         "DisplayName": _label(display_name),
         "Description": _label(f"Agent Intake option set {name}"),

@@ -835,7 +835,20 @@ function Invoke-PythonChildScript {
 
     $python = Get-PythonCommand
     $command = @($python, $resolvedPath) + $Argument
-    Write-Info ($command -join ' ')
+    $redactedCommand = @()
+    $skipNext = $false
+    foreach ($part in $command) {
+        if ($skipNext) {
+            $redactedCommand += '***REDACTED***'
+            $skipNext = $false
+            continue
+        }
+        $redactedCommand += $part
+        if ($part -match '^--(access-token|client-secret|password|token)$') {
+            $skipNext = $true
+        }
+    }
+    Write-Info ($redactedCommand -join ' ')
     $output = & $command[0] @($command[1..($command.Count - 1)]) 2>&1
     $exitCode = $LASTEXITCODE
     if ($exitCode -notin $AllowedExitCode) {
