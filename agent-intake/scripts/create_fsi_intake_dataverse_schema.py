@@ -219,7 +219,9 @@ def _label(text):
 
 def _string_col(schema_name, display, max_length, required=True, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        "AttributeType": "String",
+        "AttributeTypeName": {"Value": "StringType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
@@ -233,7 +235,9 @@ def _string_col(schema_name, display, max_length, required=True, description="")
 
 def _memo_col(schema_name, display, max_length, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+        "AttributeType": "Memo",
+        "AttributeTypeName": {"Value": "MemoType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "None"},
@@ -246,7 +250,9 @@ def _memo_col(schema_name, display, max_length, description=""):
 
 def _integer_col(schema_name, display, required=True, default=None, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+        "AttributeType": "Integer",
+        "AttributeTypeName": {"Value": "IntegerType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
@@ -262,12 +268,16 @@ def _integer_col(schema_name, display, required=True, default=None, description=
 
 def _boolean_col(schema_name, display, default=False, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "DefaultValue": default,
         "OptionSet": {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+            "OptionSetType": "Boolean",
             "TrueOption": {"Value": 1, "Label": _label("Yes")},
             "FalseOption": {"Value": 0, "Label": _label("No")},
         },
@@ -279,7 +289,9 @@ def _boolean_col(schema_name, display, default=False, description=""):
 
 def _datetime_col(schema_name, display, required=True, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+        "AttributeType": "DateTime",
+        "AttributeTypeName": {"Value": "DateTimeType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
@@ -292,7 +304,9 @@ def _datetime_col(schema_name, display, required=True, description=""):
 
 def _picklist_col(schema_name, display, global_optionset_name, required=True, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
@@ -821,7 +835,7 @@ def deploy(client, dry_run=False):
         print(f"\n  --- {tdef['display']} ({tdef['ownership']}) ---")
         if not client.check_table_exists(tname):
             definition = {
-                "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
+                "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
                 "SchemaName": tdef["schema_name"],
                 "DisplayName": _label(tdef["display"]),
                 "DisplayCollectionName": _label(tdef["plural"]),
@@ -834,13 +848,16 @@ def deploy(client, dry_run=False):
                 "PrimaryNameAttribute": "fsi_name",
                 "Attributes": [
                     {
-                        "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                        "AttributeType": "String",
+                        "AttributeTypeName": {"Value": "StringType"},
                         "SchemaName": "fsi_Name",
                         "DisplayName": _label(f"{tdef['display']} ID"),
                         "Description": _label("Primary name attribute"),
                         "RequiredLevel": {"Value": "ApplicationRequired"},
                         "MaxLength": 500,
                         "FormatName": {"Value": "Text"},
+                        "IsPrimaryName": True,
                     }
                 ],
             }
