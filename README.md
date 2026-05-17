@@ -40,7 +40,7 @@ Read [DEPLOYMENT-GUIDE.md](./DEPLOYMENT-GUIDE.md) for the layered rollout (found
 
 This repository currently includes **36 solution implementations (35 live, 1 preview)**.
 
-Downstream consumers should treat `solutions.json` (`counts` + `solutions`) as the authoritative machine-readable inventory export; this README block is a generated summary only.
+Downstream consumers should treat `solutions.json` (top-level `counts` plus each `solutions.<solution-id>.controls` list mirrored from `manifest.yaml.controls`) as the authoritative machine-readable export; this README block and its Controls column are generated summaries only.
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|

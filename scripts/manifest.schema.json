@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/manifest.schema.json",
   "title": "FSI-AgentGov Solution Manifest",
-  "description": "Per-solution metadata. Aggregated into solutions.json which mirrors the framework solutions-lock.json schema 1:1.",
+  "description": "Per-solution metadata. Aggregated into solutions.json, where manifest.controls is projected into solutions[*].controls as the canonical downstream control-coverage export.",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -64,7 +64,7 @@
       "type": "array",
       "items": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
       "uniqueItems": true,
-      "description": "Framework control IDs implemented by this solution."
+      "description": "Framework control IDs implemented by this solution. Projected verbatim into solutions.json solutions[*].controls and the generated README catalog Controls column."
     },
     "dependencies": {
       "type": "array",
