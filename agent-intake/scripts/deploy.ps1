@@ -6,7 +6,11 @@
     End-to-end orchestrator for the FSI agent-intake solution.
 
 .DESCRIPTION
-    Idempotently deploys or tears down the agent-intake solution in a Power Platform environment.
+    Idempotently deploys or tears down the agent-intake solution in a Power Platform
+    environment. Covers 8 stages: schema, solution containers, reviewer-app provisioning,
+    documented Power Automate flows, identity / security roles, Purview retention-label
+    hydration, policy-table hydration, optional seed + smoke verification. Safe to re-run
+    against the same environment; each stage detects existing state and is additive.
 
 .PARAMETER EnvironmentUrl
     The Power Platform environment URL (for example, https://contoso-dev.crm.dynamics.com).
@@ -30,7 +34,27 @@
     File path for the structured log. Default: ./agent-intake-deploy-<UTC timestamp>.log
 
 .PARAMETER AuthMode
-    AzCli (default, delegated; az login) | ManagedIdentity | ServicePrincipal (legacy, requires env vars).
+    AzCli (default — delegated; az login) | ManagedIdentity | ServicePrincipal (legacy: dev-only).
+    For production deployments, prefer ManagedIdentity. Token-acquisition functions also accept
+    pre-acquired tokens via env vars (managed-identity-friendly without changing AuthMode):
+        DATAVERSE_ACCESS_TOKEN    — for Dataverse Web API calls
+        BAP_ACCESS_TOKEN          — for https://api.bap.microsoft.com
+        POWERPLATFORM_API_TOKEN   — for https://api.powerplatform.com (billing)
+
+.PARAMETER BillingPolicyId
+    GUID of a Power Platform Pay-as-you-go billing policy to attach the environment to so
+    Copilot/AI Builder credits draw from the customer's Azure subscription. When supplied
+    together with EnvironmentId, Stage 0 validates and attaches the policy. Discover via
+    GET https://api.powerplatform.com/licensing/billingPolicies?api-version=2022-03-01-preview.
+
+.PARAMETER EnvironmentId
+    GUID of the Power Platform environment (the underlying env, not the org). Required when
+    BillingPolicyId is supplied. Used by Stage 0 BAP / billing pre-flight checks.
+
+.PARAMETER AllowedEnvironmentType
+    Comma-separated list of environment SKUs allowed for billing-policy attachment.
+    Default 'Sandbox,Production' fails fast when the env is Trial/Developer/Teams (which
+    cannot be attached to a billing policy). Set 'Any' to bypass the SKU guard for testing.
 
 .EXAMPLE
     pwsh ./deploy.ps1 -EnvironmentUrl https://contoso-dev.crm.dynamics.com
@@ -40,6 +64,13 @@
 
 .EXAMPLE
     pwsh ./deploy.ps1 -EnvironmentUrl https://contoso-dev.crm.dynamics.com -Teardown
+
+.EXAMPLE
+    # Attach a billing policy in the same run (typical lab cycle)
+    pwsh ./deploy.ps1 `
+        -EnvironmentUrl  https://contoso-dev.crm.dynamics.com `
+        -EnvironmentId   00000000-0000-0000-0000-000000000000 `
+        -BillingPolicyId 00000000-0000-0000-0000-000000000000
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(

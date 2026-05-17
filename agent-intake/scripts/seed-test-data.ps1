@@ -5,12 +5,21 @@
     Seeds deterministic lab data for the agent-intake solution.
 
 .DESCRIPTION
-    Creates five request scenarios that cover the Express, Standard, Full, and
-    defensive deny paths. The script uses deterministic request IDs so reruns are
-    idempotent. By default, it creates the request and declared data-source rows.
-    When -RunClassifierInline is set, it also mirrors the routing result into the
-    intake tables, reviewer rows, decision-log evidence, drift handoff payloads,
-    and the Tier-1 MRM handoff bridge.
+    Creates five deterministic request scenarios that together exercise every
+    classifier code path, every routing path, and the defensive deny logic:
+
+      1. express-happy              — Tier-3 / Zone-3, sponsor 1-click auto-approve
+      2. standard-conditional       — mid-risk, conditional reviewer approval
+      3. full-parallel-board        — high-risk, parallel-board reviewer queue
+      4. cross-border-deny          — cross-border data flag → deny
+      5. sponsor-self-approval-deny — sponsor == maker → deny
+
+    Each scenario uses a deterministic request ID so reruns are idempotent. By default
+    the script creates the request and declared data-source rows. When
+    -RunClassifierInline is set, it also mirrors the routing result into the intake
+    tables, reviewer rows, decision-log evidence, drift handoff payloads, and the
+    Tier-1 MRM handoff bridge — useful when the Power Automate router flow is not
+    available in the lab.
 
 .PARAMETER EnvironmentUrl
     Dataverse environment URL.
@@ -21,7 +30,7 @@
     available in the lab.
 
 .PARAMETER Cleanup
-    Deletes only the deterministic seeded lab data.
+    Deletes only the deterministic seeded lab data (leaves real customer data alone).
 
 .PARAMETER DryRun
     Logs the actions that would run without writing to Dataverse.

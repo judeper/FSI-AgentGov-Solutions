@@ -3,15 +3,28 @@
     Extended smoke test for the agent-intake solution.
 
 .DESCRIPTION
-    Runs the original seven deployment checks plus schema integrity validation,
-    documentation language scanning, and optional seeded-data assertions for the
-    Express, Standard, and Full paths.
+    Runs eight deployment checks plus optional seeded-data assertions for the Express,
+    Standard, and Full paths. Deployment checks (always run):
+
+      1. dataverse-schema           — 9 tables and key columns present
+      2. portal-page                — Power Pages portal page deployed
+      3. router-flow                — router Power Automate flow present and enabled
+      4. sponsor-card-json          — sponsor adaptive-card template parses cleanly
+      5. classification-self-test   — local classifier self-test against fixtures
+      6. env-autodetect             — environment-context auto-detect helper runs
+      7. purview-label              — FSI-AgentIntake-7yr retention label visible
+      8. docs-language-scan         — FSI language-rule scan over docs/ (no banned terms)
+
+    When -IncludeSeededDataChecks is set, additional per-fixture assertions cover
+    classification, reviewer queue rows, happy-path artifacts (decision log + drift
+    handoff payload), defensive deny semantics, MRM bridge writes, and audit-trail
+    completeness. Scope these with -PathScope (Express | Standard | Full | All).
 
 .PARAMETER EnvironmentUrl
     Dataverse environment URL.
 
 .PARAMETER PathScope
-    Limits seeded-data assertions to Express, Standard, Full, or All.
+    Limits seeded-data assertions to Express, Standard, Full, or All (default).
 
 .PARAMETER IncludeSeededDataChecks
     Requires that seed-test-data.ps1 has already been run and validates the
