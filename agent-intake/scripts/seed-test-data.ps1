@@ -548,10 +548,31 @@ function Get-Sha256Hex {
     return ([System.BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
 }
 
+function Get-RequestRecordGuid {
+    param([Parameter(Mandatory)][string]$RequestId)
+
+    if ($DryRun) {
+        return $null
+    }
+
+    $filter = "fsi_requestid eq {0}" -f (ConvertTo-ODataStringLiteral -Value $RequestId)
+    $records = @(Get-RecordsByFilter -LogicalName 'fsi_intakerequest' -Filter $filter -Select 'fsi_intakerequestid')
+    if ($records.Count -eq 0) {
+        return $null
+    }
+
+    return [string]$records[0].fsi_intakerequestid
+}
+
 function Get-RequestLookupUri {
     param([Parameter(Mandatory)][string]$RequestId)
 
-    return 'fsi_intakerequests(fsi_requestid={0})' -f (ConvertTo-ODataStringLiteral -Value $RequestId)
+    $guid = Get-RequestRecordGuid -RequestId $RequestId
+    if ([string]::IsNullOrWhiteSpace($guid)) {
+        return $null
+    }
+
+    return 'fsi_intakerequests({0})' -f $guid
 }
 
 function Set-RequestRecord {
@@ -561,8 +582,18 @@ function Set-RequestRecord {
         [Parameter(Mandatory)][hashtable]$Body
     )
 
-    if ($PSCmdlet.ShouldProcess($RequestId, 'Update intake request row')) {
-        Invoke-DataverseRequest -Method PATCH -RelativeUri (Get-RequestLookupUri -RequestId $RequestId) -Body (Get-RecordWithoutNull -InputObject $Body) | Out-Null
+    if (-not $PSCmdlet.ShouldProcess($RequestId, 'Upsert intake request row')) {
+        return
+    }
+
+    $body = Get-RecordWithoutNull -InputObject $Body
+    $existingUri = Get-RequestLookupUri -RequestId $RequestId
+    if ($existingUri) {
+        Invoke-DataverseRequest -Method PATCH -RelativeUri $existingUri -Body $body | Out-Null
+    }
+    else {
+        $entityInfo = $script:EntityMap['fsi_intakerequest']
+        Invoke-DataverseRequest -Method POST -RelativeUri $entityInfo.EntitySetName -Body $body | Out-Null
     }
 }
 
@@ -1647,7 +1678,10 @@ function Remove-ScenarioRecord {
         Write-Info "[DRY RUN] Would delete request row for $requestId."
     }
     elseif ($PSCmdlet.ShouldProcess($requestId, 'Delete seeded request row')) {
-        Invoke-DataverseRequest -Method DELETE -RelativeUri (Get-RequestLookupUri -RequestId $requestId) -AllowNotFound | Out-Null
+        $lookupUri = Get-RequestLookupUri -RequestId $requestId
+        if ($lookupUri) {
+            Invoke-DataverseRequest -Method DELETE -RelativeUri $lookupUri -AllowNotFound | Out-Null
+        }
     }
 
     Remove-ExternalMrmArtifact -RequestId $requestId -PlatformAgentId $requestId

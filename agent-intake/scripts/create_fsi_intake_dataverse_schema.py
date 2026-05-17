@@ -914,8 +914,20 @@ def deploy(client, dry_run=False):
             col_payload = _resolve_picklist_bind(col, optionset_metadata_ids, dry_run)
             client.create_column(tname, col_payload)
 
-    print("\n[3/4] Alternate key (best-effort idempotent)")
-    print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}")
+    print("\n[3/4] Alternate key (idempotent)")
+    key_payload = {
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityKeyMetadata",
+        "SchemaName": ALTERNATE_KEY["schema_name"],
+        "DisplayName": _label(ALTERNATE_KEY["display"]),
+        "KeyAttributes": ALTERNATE_KEY["key_columns"],
+    }
+    key_logical_name = ALTERNATE_KEY["schema_name"].lower()
+    existing_key = client.get_entity_key(ALTERNATE_KEY["entity"], key_logical_name)
+    if existing_key:
+        print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}: already exists")
+    else:
+        client.create_entity_key(ALTERNATE_KEY["entity"], key_payload)
+        print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}: created (Dataverse may take 30-90s to activate the supporting index)")
 
     print("\n[4/4] Done")
 

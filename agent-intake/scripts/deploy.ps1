@@ -1750,7 +1750,7 @@ function Invoke-TeardownStage {
         $seedArgument += '-DryRun'
     }
     $null = Invoke-PowerShellChildScript -ScriptPath $seedScript -Argument $seedArgument
-    Add-TeardownSummaryRecord -Component 'seed-test-data' -Status (if ($DryRun) { 'Planned' } else { 'Destroyed' }) -Detail 'Seeded lab data cleanup invoked.'
+    Add-TeardownSummaryRecord -Component 'seed-test-data' -Status $(if ($DryRun) { 'Planned' } else { 'Destroyed' }) -Detail 'Seeded lab data cleanup invoked.'
 
     foreach ($logicalName in $script:TableNameList) {
         Clear-EntityData -LogicalName $logicalName

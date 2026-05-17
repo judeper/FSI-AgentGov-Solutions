@@ -384,6 +384,57 @@ class DataverseClient:
         data = response.json()
         return data.get("value", [None])[0] if data.get("value") else None
 
+    def get_entity_key(self, entity_logical_name, key_logical_name):
+        """Return the alternate-key (EntityKeyMetadata) for an entity, or None if absent."""
+        if self.dry_run:
+            print(f"  [DRY RUN] Would check entity key: {entity_logical_name}.{key_logical_name}")
+            return None
+        url = urljoin(
+            self.api_url,
+            f"EntityDefinitions(LogicalName='{entity_logical_name}')/Keys(LogicalName='{key_logical_name}')",
+        )
+        try:
+            response = self._session.get(url, headers=self._get_headers())
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
+
+    def create_entity_key(self, entity_logical_name, key_metadata):
+        """Create an alternate key on an entity.
+
+        Dataverse processes alternate-key creation as an async system job; the POST
+        returns 204 (or 202) and the actual key becomes queryable shortly after. The
+        caller can poll with get_entity_key for guaranteed availability.
+        """
+        if self.dry_run:
+            schema_name = key_metadata.get("SchemaName", "Unknown")
+            print(f"  [DRY RUN] Would create entity key: {entity_logical_name}.{schema_name}")
+            return None
+        url = urljoin(
+            self.api_url,
+            f"EntityDefinitions(LogicalName='{entity_logical_name}')/Keys",
+        )
+        response = self._session.post(url, headers=self._get_headers(), json=key_metadata)
+        self._raise_for_status(
+            response,
+            context=f"create entity key {entity_logical_name}.{key_metadata.get('SchemaName', '?')}",
+        )
+        return response.headers.get("OData-EntityId")
+
+    def ensure_entity_key(self, entity_logical_name, key_metadata):
+        """Create an alternate key only if it does not already exist (idempotent)."""
+        schema_name = key_metadata.get("SchemaName", "")
+        key_logical_name = schema_name.lower()
+        existing = self.get_entity_key(entity_logical_name, key_logical_name)
+        if existing:
+            return None
+        return self.create_entity_key(entity_logical_name, key_metadata)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Shared Dataverse Web API client for FSI-AgentGov-Solutions", formatter_class=argparse.RawDescriptionHelpFormatter)

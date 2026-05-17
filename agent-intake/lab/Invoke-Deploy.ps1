@@ -88,6 +88,11 @@ if ($config.environment.environmentId) {
     pac org select --environment $config.environment.environmentId | Out-Null
 }
 
+if ($config.purview -and -not [string]::IsNullOrWhiteSpace($config.purview.operatorUpn) -and $config.purview.operatorUpn -notlike '*<tenant>*') {
+    $env:AGENT_INTAKE_PURVIEW_ADMIN_UPN = [string]$config.purview.operatorUpn
+    Write-Information "Set AGENT_INTAKE_PURVIEW_ADMIN_UPN from config: $($env:AGENT_INTAKE_PURVIEW_ADMIN_UPN)"
+}
+
 $deployScript = Join-Path -Path (Split-Path -Parent $PSScriptRoot) -ChildPath 'scripts\deploy.ps1'
 if (-not (Test-Path -Path $deployScript)) {
     Write-Error "deploy.ps1 not found at: $deployScript"

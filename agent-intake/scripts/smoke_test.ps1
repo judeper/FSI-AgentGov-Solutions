@@ -458,12 +458,19 @@ function Get-ScopedFixtureRecordSet {
 function Get-RequestRecord {
     param([Parameter(Mandatory)][string]$RequestId)
 
-    $response = Invoke-DataverseRequest -Method GET -RelativeUri ("fsi_intakerequests(fsi_requestid={0})?`$select=fsi_requestid,fsi_pathused,fsi_decisionpath,fsi_risktier,fsi_zone,fsi_quorumrequired,fsi_entraagentid,fsi_mrmhandoffstatus,fsi_status,fsi_registryrecordid,fsi_targetenvironmentid,fsi_targetenvironmentname" -f (ConvertTo-ODataStringLiteral -Value $RequestId)) -AllowNotFound
-    if ($null -eq $response) {
+    $filter = ConvertTo-ODataStringLiteral -Value $RequestId
+    $select = 'fsi_intakerequestid,fsi_requestid,fsi_pathused,fsi_decisionpath,fsi_risktier,fsi_zone,fsi_quorumrequired,fsi_entraagentid,fsi_mrmhandoffstatus,fsi_status,fsi_registryrecordid,fsi_targetenvironmentid,fsi_targetenvironmentname'
+    $listResponse = Invoke-DataverseRequest -Method GET -RelativeUri ("fsi_intakerequests?`$select={0}&`$filter=fsi_requestid eq {1}&`$top=1" -f $select, $filter) -AllowNotFound
+    if ($null -eq $listResponse) {
         return $null
     }
 
-    return $response.Body
+    $records = @($listResponse.Body.value)
+    if ($records.Count -eq 0) {
+        return $null
+    }
+
+    return $records[0]
 }
 
 function Get-RecordSetByRequestId {
