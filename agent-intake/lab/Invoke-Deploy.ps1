@@ -102,6 +102,18 @@ if ($config.auth -and $config.auth.mode) {
     $deployArgs.AuthMode = $config.auth.mode
 }
 
+if ($config.environment.environmentId) {
+    $deployArgs.EnvironmentId = $config.environment.environmentId
+}
+
+if ($config.billing -and -not [string]::IsNullOrWhiteSpace($config.billing.policyId)) {
+    $deployArgs.BillingPolicyId = $config.billing.policyId
+}
+
+if ($config.billing -and -not [string]::IsNullOrWhiteSpace($config.billing.allowedEnvironmentType)) {
+    $deployArgs.AllowedEnvironmentType = $config.billing.allowedEnvironmentType
+}
+
 $shouldSeed = if ($PSBoundParameters.ContainsKey('SeedTestData')) {
     [bool]$SeedTestData
 } elseif ($PSBoundParameters.ContainsKey('NoSeedTestData')) {

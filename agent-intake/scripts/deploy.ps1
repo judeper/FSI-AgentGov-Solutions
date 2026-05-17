@@ -61,7 +61,16 @@ param(
     [string]$LogPath,
 
     [ValidateSet('AzCli', 'ManagedIdentity', 'ServicePrincipal')]
-    [string]$AuthMode = 'AzCli'
+    [string]$AuthMode = 'AzCli',
+
+    [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
+    [string]$BillingPolicyId,
+
+    [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
+    [string]$EnvironmentId,
+
+    [ValidateSet('Sandbox', 'Production', 'Sandbox,Production', 'Any')]
+    [string]$AllowedEnvironmentType = 'Sandbox,Production'
 )
 
 Set-StrictMode -Version Latest
@@ -80,6 +89,8 @@ $script:StageSummary = [System.Collections.Generic.List[object]]::new()
 $script:TeardownSummary = [System.Collections.Generic.List[object]]::new()
 $script:EnvironmentMetadata = $null
 $script:DataverseToken = $null
+$script:BapAccessToken = $null
+$script:PowerPlatformApiAccessToken = $null
 $script:StructuredLogPath = if ([string]::IsNullOrWhiteSpace($LogPath)) {
     Join-Path -Path $PSScriptRoot -ChildPath ('agent-intake-deploy-{0}.log' -f ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')))
 }
@@ -526,6 +537,136 @@ function Get-DataverseHeader {
     }
 }
 
+function Get-AzureAccessTokenForResource {
+    param([Parameter(Mandatory)][string]$Resource)
+
+    if ($DryRun) {
+        return 'dry-run-token'
+    }
+
+    $az = Get-Command -Name 'az' -ErrorAction SilentlyContinue
+    if ($null -eq $az) {
+        throw 'Azure CLI (az) is required to acquire access tokens.'
+    }
+
+    $token = & $az.Source account get-access-token --resource $Resource --query accessToken -o tsv 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($token)) {
+        throw "Could not acquire access token for resource '$Resource' from Azure CLI."
+    }
+
+    return $token.Trim()
+}
+
+function Get-BapAccessToken {
+    if (-not [string]::IsNullOrWhiteSpace($script:BapAccessToken)) {
+        return $script:BapAccessToken
+    }
+    $script:BapAccessToken = Get-AzureAccessTokenForResource -Resource 'https://api.bap.microsoft.com/'
+    return $script:BapAccessToken
+}
+
+function Get-PowerPlatformApiAccessToken {
+    if (-not [string]::IsNullOrWhiteSpace($script:PowerPlatformApiAccessToken)) {
+        return $script:PowerPlatformApiAccessToken
+    }
+    $script:PowerPlatformApiAccessToken = Get-AzureAccessTokenForResource -Resource 'https://api.powerplatform.com/'
+    return $script:PowerPlatformApiAccessToken
+}
+
+function Get-EnvironmentSkuFromBap {
+    <#
+    .SYNOPSIS
+        Returns the environmentSku (Trial / Sandbox / Production / Developer / Teams / Default)
+        for the deploy-target environment from the BAP admin API.
+    #>
+    param([Parameter(Mandatory)][string]$EnvironmentId)
+
+    if ($DryRun) {
+        return 'Sandbox'
+    }
+
+    $token = Get-BapAccessToken
+    $uri = 'https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/{0}/?api-version=2021-04-01' -f $EnvironmentId
+    $response = Invoke-WebRequest -Uri $uri -Headers @{ Authorization = "Bearer $token"; Accept = 'application/json' } -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -ge 400) {
+        $body = if ($response.Content.Length -gt 500) { $response.Content.Substring(0,500) + '...' } else { $response.Content }
+        throw "Could not read environment metadata from BAP for $EnvironmentId (HTTP $($response.StatusCode) $body)."
+    }
+    $body = $response.Content | ConvertFrom-Json
+    if ($null -eq $body -or $null -eq $body.PSObject.Properties['properties']) {
+        throw "BAP response for $EnvironmentId did not include 'properties'."
+    }
+    $sku = $body.properties.PSObject.Properties['environmentSku']
+    if ($null -eq $sku) {
+        throw "BAP response for $EnvironmentId did not include 'environmentSku'."
+    }
+    return [string]$sku.Value
+}
+
+function Test-BillingPolicyAttachment {
+    <#
+    .SYNOPSIS
+        Returns $true when EnvironmentId is already attached to BillingPolicyId.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$BillingPolicyId,
+        [Parameter(Mandatory)][string]$EnvironmentId
+    )
+
+    if ($DryRun) {
+        return $false
+    }
+
+    $token = Get-PowerPlatformApiAccessToken
+    $uri = 'https://api.powerplatform.com/licensing/billingPolicies/{0}/environments?api-version=2022-03-01-preview' -f $BillingPolicyId
+    $response = Invoke-WebRequest -Uri $uri -Headers @{ Authorization = "Bearer $token"; Accept = 'application/json' } -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -ge 400) {
+        $body = if ($response.Content.Length -gt 500) { $response.Content.Substring(0,500) + '...' } else { $response.Content }
+        throw "Could not list billing-policy environments for $BillingPolicyId (HTTP $($response.StatusCode) $body)."
+    }
+    $payload = $response.Content | ConvertFrom-Json
+    if ($null -eq $payload -or $null -eq $payload.PSObject.Properties['value'] -or $null -eq $payload.value) {
+        return $false
+    }
+    foreach ($item in $payload.value) {
+        if ($null -eq $item -or $null -eq $item.PSObject.Properties['environmentId']) { continue }
+        if ([string]::Equals([string]$item.environmentId, $EnvironmentId, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Add-BillingPolicyAttachment {
+    <#
+    .SYNOPSIS
+        Attaches EnvironmentId to BillingPolicyId via api.powerplatform.com.
+        Idempotent: skips when already attached.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$BillingPolicyId,
+        [Parameter(Mandatory)][string]$EnvironmentId
+    )
+
+    if ($DryRun) {
+        return 'PlannedAttach'
+    }
+
+    if (Test-BillingPolicyAttachment -BillingPolicyId $BillingPolicyId -EnvironmentId $EnvironmentId) {
+        return 'AlreadyAttached'
+    }
+
+    $token = Get-PowerPlatformApiAccessToken
+    $uri = 'https://api.powerplatform.com/licensing/billingPolicies/{0}/environments/add?api-version=2022-03-01-preview' -f $BillingPolicyId
+    $body = @{ environmentIds = @($EnvironmentId) } | ConvertTo-Json -Compress
+    $response = Invoke-WebRequest -Uri $uri -Method Post -Headers @{ Authorization = "Bearer $token"; Accept = 'application/json'; 'Content-Type' = 'application/json' } -Body $body -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -ge 400) {
+        $bodyText = if ($response.Content.Length -gt 500) { $response.Content.Substring(0,500) + '...' } else { $response.Content }
+        throw "Could not attach environment $EnvironmentId to billing policy $BillingPolicyId (HTTP $($response.StatusCode) $bodyText)."
+    }
+    return 'Attached'
+}
+
 function Invoke-DataverseRequest {
     param(
         [Parameter(Mandatory)]
@@ -585,6 +726,65 @@ function Invoke-DataverseRequest {
 function ConvertTo-ODataStringLiteral {
     param([Parameter(Mandatory)][string]$Value)
     return "'{0}'" -f $Value.Replace("'", "''")
+}
+
+function Get-EnvironmentIdByUrl {
+    <#
+    .SYNOPSIS
+        Looks up the environment ID via the BAP admin API by matching the
+        deploy-target Dataverse URL against properties.linkedEnvironmentMetadata.instanceUrl.
+        Used only when the caller did not supply -EnvironmentId.
+    #>
+    param([Parameter(Mandatory)][string]$Url)
+
+    if ($DryRun) {
+        return '00000000-0000-4000-8000-000000000000'
+    }
+
+    $token = Get-BapAccessToken
+    $uri = 'https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2021-04-01&$expand=properties&$top=999'
+    $response = Invoke-WebRequest -Uri $uri -Headers @{ Authorization = "Bearer $token"; Accept = 'application/json' } -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -ge 400) {
+        throw "Could not list environments from BAP (HTTP $($response.StatusCode))."
+    }
+    $payload = $response.Content | ConvertFrom-Json
+    if ($null -eq $payload -or $null -eq $payload.PSObject.Properties['value']) {
+        throw "Unexpected BAP response shape when listing environments for $Url."
+    }
+    $needle = $Url.TrimEnd('/')
+    foreach ($envItem in $payload.value) {
+        if ($null -eq $envItem -or $null -eq $envItem.PSObject.Properties['properties']) { continue }
+        $linked = $envItem.properties.PSObject.Properties['linkedEnvironmentMetadata']
+        if ($null -eq $linked -or $null -eq $linked.Value) { continue }
+        $instance = $linked.Value.PSObject.Properties['instanceUrl']
+        if ($null -eq $instance) { continue }
+        $candidate = [string]$instance.Value
+        if (-not [string]::IsNullOrWhiteSpace($candidate) -and [string]::Equals($candidate.TrimEnd('/'), $needle, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return [string]$envItem.name
+        }
+    }
+    throw "Could not resolve EnvironmentId for $Url via BAP. Pass -EnvironmentId explicitly."
+}
+
+function Test-EnvironmentTypeAllowed {
+    <#
+    .SYNOPSIS
+        Validates the env sku against the AllowedEnvironmentType policy. Throws on mismatch
+        unless AllowedEnvironmentType is 'Any'.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Sku,
+        [Parameter(Mandatory)][string]$Allowed
+    )
+
+    if ($Allowed -eq 'Any') {
+        return
+    }
+    $allowedList = $Allowed.Split(',') | ForEach-Object { $_.Trim() }
+    if ($Sku -in $allowedList) {
+        return
+    }
+    throw "Environment sku '$Sku' is not in the allowed set ($Allowed). Trial/Developer/Teams environments cannot be attached to PayAsYouGo billing policies. Recreate the environment as Sandbox or Production, or pass -AllowedEnvironmentType Any to override (no credit attachment will be attempted)."
 }
 
 function Get-EnvironmentMetadataRecord {
@@ -916,12 +1116,33 @@ function Test-PreflightStage {
     $script:EnvironmentMetadata = Get-EnvironmentMetadataRecord
     $null = Get-DataverseToken
 
+    $billingSummary = $null
+    if ($AuthMode -eq 'AzCli') {
+        $resolvedEnvId = if ([string]::IsNullOrWhiteSpace($EnvironmentId)) { Get-EnvironmentIdByUrl -Url $EnvironmentUrl } else { $EnvironmentId }
+        $envSku = Get-EnvironmentSkuFromBap -EnvironmentId $resolvedEnvId
+        Write-Info "Environment sku: $envSku (id: $resolvedEnvId)"
+        Test-EnvironmentTypeAllowed -Sku $envSku -Allowed $AllowedEnvironmentType
+
+        if (-not [string]::IsNullOrWhiteSpace($BillingPolicyId)) {
+            $attachResult = Add-BillingPolicyAttachment -BillingPolicyId $BillingPolicyId -EnvironmentId $resolvedEnvId
+            Write-Info "Billing-policy attachment: $attachResult (policy: $BillingPolicyId)"
+            $billingSummary = [pscustomobject]@{ PolicyId = $BillingPolicyId; EnvironmentId = $resolvedEnvId; State = $attachResult }
+        }
+        else {
+            Write-WarnMessage 'No -BillingPolicyId provided. Skipping Copilot/AI Builder credit attachment. Pass -BillingPolicyId or set billing.policyId in lab/config.local.json to enable.'
+        }
+    }
+    else {
+        Write-WarnMessage "AuthMode '$AuthMode' is not Azure CLI; skipping environment-type and billing-policy validation (Azure CLI is required for the BAP/PowerPlatform admin APIs)."
+    }
+
     return [pscustomobject]@{
         Status = 'Success'
         Detail = ('Python {0}; PAC {1}; auth ok; organization {2}' -f $pythonVersion, $pacVersion, $script:EnvironmentMetadata.OrganizationId)
         Auth = $authSummary
         Pac = $pacSummary
         PacSelection = $pacSelection
+        Billing = $billingSummary
     }
 }
 
