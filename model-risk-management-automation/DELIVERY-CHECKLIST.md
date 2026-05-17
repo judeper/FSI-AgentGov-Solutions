@@ -129,4 +129,4 @@ After setting `IsMRMAutomationEnabled` to `"true"`:
 
 ---
 
-*This checklist supports compliance with OCC 2011-12 / Fed SR 11-7 model risk management requirements. Organizations should verify all configurations meet their specific regulatory obligations.*
+*This checklist supports institution-specific model risk management programs informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7). Organizations should verify all configurations meet their specific regulatory obligations.*

@@ -122,7 +122,7 @@ This guide covers common issues encountered during deployment and operation of t
 
 ### Dataverse Long-Term Retention Not Configured
 
-**Symptom:** `fsi_mrmcomplianceevent` records may be purged before the 7-year regulatory retention period required for Fed SR 11-7 and OCC 2011-12 audit trail obligations.
+**Symptom:** `fsi_mrmcomplianceevent` records may be purged before the 7-year regulatory retention period required for institution-specific model risk audit trail obligations informed by Fed SR 26-2 (formerly Fed SR 11-7) and OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12).
 
 **Resolution:**
 
