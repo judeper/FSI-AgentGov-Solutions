@@ -38,7 +38,7 @@
   "resources": [
     {
       "type": "Microsoft.Insights/workbooks",
-      "apiVersion": "2018-06-17-preview",
+      "apiVersion": "2023-06-01",
       "name": "[parameters('workbookId')]",
       "location": "[resourceGroup().location]",
       "kind": "shared",
