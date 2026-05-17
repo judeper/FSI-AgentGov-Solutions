@@ -70,6 +70,23 @@ Identifies recurring patterns using frequency thresholds:
 
 ## Usage
 
+### Microsoft 365 Product Feedback import
+
+```bash
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output normalized-product-feedback.json \
+  --dry-run
+
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output dataverse \
+  --environment-url https://your-org.crm.dynamics.com \
+  --interactive
+```
+
+Imported rows land in `fsi_hallucinationreports` with `fsi_source = 100000004`; `analyze_patterns.py` reads them directly for source, topic, channel, and day-level analysis.
+
 ### Live Mode
 
 ```bash
@@ -106,7 +123,6 @@ python scripts/analyze_patterns.py --environment "https://example.crm.dynamics.c
 ## Future Enhancements
 
 - CSV/Dataverse importer for Copilot Studio transcript reactions and comments.
-- CSV importer for Microsoft 365 admin center Product Feedback exports.
 - Semantic clustering and similarity search after governance approval for prompt/response/comment data handling.
 - Dedicated CSAT and groundedness score columns if product-team review confirms reporting requirements.
 - Automated remediation recommendations.

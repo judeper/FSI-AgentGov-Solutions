@@ -6,6 +6,10 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ## [Unreleased] - 2026-Q2 — Microsoft Learn refresh
 
+### Added
+
+- Added `scripts/import_product_feedback_csv.py` plus pytest coverage to normalize Microsoft 365 admin center Product Feedback CSV exports into `fsi_hallucinationreports` with dry-run validation, deterministic deduplication, and optional content-sample import.
+
 ### Changed
 
 - Bumped solution manifest to 1.2.0 for the Microsoft Learn 2026-Q2 technical review.

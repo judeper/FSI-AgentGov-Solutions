@@ -23,7 +23,7 @@ The Hallucination Feedback Tracker collects user reactions, feedback comments, s
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Multi-Source Collection** | Feedback from users, supervisors, Microsoft 365 Copilot exports, automated checks, and customer complaints | Documented |
+| **Multi-Source Collection** | Feedback from users, supervisors, Microsoft 365 Copilot exports, automated checks, and customer complaints | Partial (Microsoft 365 Product Feedback CSV importer implemented) |
 | **Pattern Detection** | Identify recurring error patterns by category, agent, topic, channel, and day | Implemented |
 | **Agent Comparison** | Compare risk profile across agents | Implemented |
 | **Groundedness Signal** | Optional Azure AI Content Safety groundedness detection / Microsoft Foundry evaluation ingestion | Documented |
@@ -181,7 +181,24 @@ See [Dataverse Schema](docs/dataverse-schema.md) for the full table specificatio
 
 See [docs/source-configuration.md](docs/source-configuration.md).
 
-### 3. Run Pattern Analysis
+### 3. Import Microsoft 365 Product Feedback CSV
+
+```powershell
+# Validate and preview a Microsoft 365 admin center Product Feedback export.
+python scripts/import_product_feedback_csv.py `
+    --input exports\product-feedback.csv `
+    --output normalized-product-feedback.json `
+    --dry-run
+
+# Write normalized rows to Dataverse.
+python scripts/import_product_feedback_csv.py `
+    --input exports\product-feedback.csv `
+    --output dataverse `
+    --environment-url https://your-org.crm.dynamics.com `
+    --interactive
+```
+
+### 4. Run Pattern Analysis
 
 ```powershell
 # Preferred for Azure-hosted automation: managed identity or workload identity.
@@ -196,7 +213,7 @@ python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.
 
 Use `--dry-run` to validate the script with sample data without contacting Dataverse.
 
-### 4. Deploy Dashboard
+### 5. Deploy Dashboard
 
 > **Note:** The Power BI template (`templates/HallucinationDashboard.pbit`) is planned for a future release. Use `Get-HallucinationSummary.ps1` for console-based reporting in the interim.
 
@@ -208,8 +225,47 @@ The Dataverse setup scripts (`create_ht_*.py`) support interactive admin-worksta
 2. Create environment variables: `python scripts/create_ht_environment_variables.py --environment-url "https://your-org.crm.dynamics.com" --tenant-id "<tenant-id>" --interactive`
 3. Create connection references: `python scripts/create_ht_connection_references.py --environment-url "https://your-org.crm.dynamics.com" --tenant-id "<tenant-id>" --interactive`
 4. Configure feedback sources (see [docs/source-configuration.md](docs/source-configuration.md))
-5. Build Power Automate flows or approved import scripts per source configuration documentation
-6. Deploy the Power BI dashboard (template planned for future release)
+5. Import Microsoft 365 Product Feedback CSV or build other approved source-specific importers
+6. Run `python scripts/analyze_patterns.py --environment "https://your-org.crm.dynamics.com"`
+7. Deploy the Power BI dashboard (template planned for future release)
+
+## Microsoft 365 Product Feedback CSV importer
+
+Source the CSV from **Microsoft 365 admin center > Health > Product Feedback**. The importer normalizes actionable rows into `fsi_hallucinationreports` with `fsi_source = 100000004`, then `scripts/analyze_patterns.py` reads those rows directly for source, topic, channel, and time-window clustering.
+
+### Expected export columns
+
+| CSV column | Required | Dataverse mapping | Notes |
+|------------|----------|-------------------|-------|
+| `App` (`Product` alias accepted) | Yes | `fsi_topicname` | Microsoft 365 Copilot app or workload area |
+| `Date Submitted` | Yes | `fsi_reportedat` | Normalized to UTC ISO 8601 |
+| `Feedback Type` | Yes | `fsi_description` | Preserved in the record metadata |
+| `Comments` | Yes | `fsi_feedbackcomment` | Used for category and severity heuristics |
+| `User Id` / `User Email` | No | `fsi_reportedby` | Imported when the export includes user identity |
+| `Channel` | No | `fsi_channelid` | Used for clustering when present |
+| `Feature Area` / `App module` / `Feedback Id` | No | `fsi_topicid` / `fsi_conversationid` | Preserved for clustering and traceability |
+| `Prompt` / `Generated Response` | No | `fsi_userquery` / `fsi_agentresponse` | Imported only with `--include-content-samples` after tenant privacy review |
+
+Additional metadata columns such as `Language or Comment Language`, `App Build`, `App Language`, `Attachments`, `TenantId`, `Survey Questions`, and `Survey Responses` are preserved in `fsi_description`.
+
+### Import commands
+
+```bash
+# Validate and preview normalization without writing to Dataverse.
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output normalized-product-feedback.json \
+  --dry-run
+
+# Write normalized Product Feedback rows to Dataverse.
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output dataverse \
+  --environment-url https://your-org.crm.dynamics.com \
+  --interactive
+```
+
+Microsoft Graph Copilot interaction history can provide governed prompt/response context for investigations, but it is not a feedback API and does not replace the Product Feedback export as the primary ingestion source.
 
 ## Documentation
 
@@ -280,7 +336,7 @@ Hallucination metrics contribute to Control 3.10 status in Compliance Dashboard.
 | **Sharing Restrictions** | Not implemented | No security role definitions or row-level security |
 | **Audit Logging** | Partial | Dataverse table auditing is enabled in schema; environment-level audit configuration remains an admin responsibility |
 | **Power BI Dashboard** | Not implemented | Template planned for future release |
-| **Import Connectors** | Not implemented | Copilot Studio transcript and Microsoft 365 Product Feedback importers are documented patterns only |
+| **Import Connectors** | Partial | Microsoft 365 Product Feedback CSV importer is implemented; Copilot Studio transcript import remains a documented pattern only |
 
 > These controls are required for production use in regulated environments. The regulatory alignment
 > claims below describe the *intended* coverage once the solution is fully implemented and configured.
