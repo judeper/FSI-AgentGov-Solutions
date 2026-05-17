@@ -143,6 +143,17 @@ See [`docs/pilot-deployment-runbook.md`](docs/pilot-deployment-runbook.md) for t
 | `templates/policy-lookup-tables.yaml` | Customer-overridable policy defaults |
 | `research/` | Historical research artifacts; current implementation guidance is in `docs/` and `scripts/` |
 
+### Enablement & demo
+
+| Path | Audience | Purpose |
+|------|----------|---------|
+| `docs/enablement-overview.md` | All audiences | Entry point that links the enablement set by role |
+| `docs/maker-guide.md` | Makers | Plain-English guide to Express, Standard, Full, denial, appeal, and post-approval expectations |
+| `docs/sponsor-guide.md` | Sponsors | Teams-card walkthrough, sponsor accountability, denial handling, and audit-trail summary |
+| `docs/reviewer-cheat-sheet.md` | Reviewer board | Quorum mechanics, per-role attestation guidance, SLA, escalation, and recusal rules |
+| `docs/admin-onboarding-guide.md` | Customer admins | End-to-end deployment, policy hydration, flow build, smoke testing, operations, and troubleshooting |
+| `docs/demo-script.md` | Demo operators | 20-25 minute customer architecture demo narrative with seeded scenarios and teardown |
+
 ## Related solutions
 
 | Solution | Relationship |
