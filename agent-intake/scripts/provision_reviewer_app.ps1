@@ -228,6 +228,28 @@ function Resolve-AccessToken {
     return $null
 }
 
+function Update-DataverseToken {
+    param([Parameter(Mandatory = $true)][string]$ResolvedEnvironmentUrl)
+
+    $az = Get-Command az -ErrorAction SilentlyContinue
+    if ($null -eq $az) {
+        return $null
+    }
+
+    try {
+        $token = & az account get-access-token --resource $ResolvedEnvironmentUrl --query accessToken -o tsv 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($token)) {
+            $script:ResolvedDataverseToken = $token.Trim()
+            return $script:ResolvedDataverseToken
+        }
+    }
+    catch {
+        Write-WarnMessage "Azure CLI access-token refresh failed: $_"
+    }
+
+    return $null
+}
+
 function Get-DataverseHeaders {
     param(
         [Parameter(Mandatory = $true)][string]$Token,
@@ -276,7 +298,8 @@ function Invoke-DataverseRequest {
     )
 
     $uri = $script:BaseApiUrl + $RelativeUri.TrimStart('/')
-    $headers = Get-DataverseHeaders -Token $Token -SolutionUniqueName $SolutionUniqueName
+    $effectiveToken = if (-not [string]::IsNullOrWhiteSpace($script:ResolvedDataverseToken)) { $script:ResolvedDataverseToken } else { $Token }
+    $headers = Get-DataverseHeaders -Token $effectiveToken -SolutionUniqueName $SolutionUniqueName
 
     if ($Body) {
         $headers['Content-Type'] = 'application/json; charset=utf-8'
@@ -301,6 +324,17 @@ function Invoke-DataverseRequest {
     }
 
     $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -eq 401) {
+        Write-Info "Dataverse token rejected (HTTP 401); refreshing via Azure CLI and retrying $Method $RelativeUri."
+        $refreshed = Update-DataverseToken -ResolvedEnvironmentUrl $EnvironmentUrl
+        if ($refreshed) {
+            $headers = Get-DataverseHeaders -Token $refreshed -SolutionUniqueName $SolutionUniqueName
+            if ($Body) {
+                $headers['Content-Type'] = 'application/json; charset=utf-8'
+            }
+            $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
+        }
+    }
     if ($AllowNotFound -and $response.StatusCode -eq 404) {
         return $null
     }
@@ -984,6 +1018,7 @@ Write-Info "PAC CLI version: $pacVersion"
 $spec = Get-Content -Path $AppSpecJson -Raw | ConvertFrom-Json -AsHashtable
 $tableMap = Get-TableMap -Spec $spec
 $accessToken = Resolve-AccessToken -ProvidedAccessToken $AccessToken -ResolvedEnvironmentUrl $EnvironmentUrl
+$script:ResolvedDataverseToken = $accessToken
 
 if (-not [string]::IsNullOrWhiteSpace($accessToken)) {
     Write-Info 'Dataverse Web API automation is enabled.'

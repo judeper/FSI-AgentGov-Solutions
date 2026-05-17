@@ -500,18 +500,28 @@ function Get-PythonTokenSource {
 }
 
 function Get-DataverseToken {
+    param(
+        [switch]$Force
+    )
+
     if ($DryRun) {
         return 'dry-run-token'
+    }
+
+    if ($Force) {
+        $script:DataverseToken = $null
     }
 
     if (-not [string]::IsNullOrWhiteSpace($script:DataverseToken)) {
         return $script:DataverseToken
     }
 
-    $envToken = $env:DATAVERSE_ACCESS_TOKEN
-    if (-not [string]::IsNullOrWhiteSpace($envToken)) {
-        $script:DataverseToken = $envToken.Trim()
-        return $script:DataverseToken
+    if (-not $Force) {
+        $envToken = $env:DATAVERSE_ACCESS_TOKEN
+        if (-not [string]::IsNullOrWhiteSpace($envToken)) {
+            $script:DataverseToken = $envToken.Trim()
+            return $script:DataverseToken
+        }
     }
 
     $az = Get-Command -Name 'az' -ErrorAction SilentlyContinue
@@ -702,6 +712,20 @@ function Invoke-DataverseRequest {
     }
 
     $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -eq 401) {
+        Write-Info "Dataverse token rejected (HTTP 401); refreshing via Azure CLI and retrying $Method $RelativeUri."
+        try {
+            Get-DataverseToken -Force | Out-Null
+            $headers = Get-DataverseHeader
+            if ($PSBoundParameters.ContainsKey('Body') -and $null -ne $Body) {
+                $headers['Content-Type'] = 'application/json; charset=utf-8'
+            }
+            $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
+        }
+        catch {
+            Write-WarnMessage "Dataverse token refresh failed: $_"
+        }
+    }
     if ($AllowNotFound -and $response.StatusCode -eq 404) {
         return $null
     }
@@ -1148,7 +1172,7 @@ function Test-PreflightStage {
 
 function Test-SchemaStage {
     $schemaScript = Join-Path -Path $PSScriptRoot -ChildPath 'create_fsi_intake_dataverse_schema.py'
-    $arguments = @('--environment-url', $EnvironmentUrl, '--access-token', (Get-DataverseToken))
+    $arguments = @('--environment-url', $EnvironmentUrl, '--access-token', (Get-DataverseToken -Force))
     if ($DryRun) {
         $arguments += '--dry-run'
     }
@@ -1191,7 +1215,7 @@ function Test-SolutionShellStage {
         return [pscustomobject]@{ Status = 'Success'; Detail = $detail }
     }
 
-    $arguments = @('-EnvironmentUrl', $EnvironmentUrl, '-AccessToken', (Get-DataverseToken))
+    $arguments = @('-EnvironmentUrl', $EnvironmentUrl, '-AccessToken', (Get-DataverseToken -Force))
     if (-not [string]::IsNullOrWhiteSpace($graphApiId)) {
         $arguments += @('-GraphCustomConnectorApiId', $graphApiId)
     }
@@ -1329,7 +1353,7 @@ function Test-ReviewerStage {
         return [pscustomobject]@{ Status = 'Success'; Detail = ('Dry-run: would invoke provision_reviewer_app.ps1 for {0} and validate {1} reviewer role(s).' -f $spec.appDisplayName, @($spec.securityRoles).Count) }
     }
 
-    $arguments = @('-EnvironmentUrl', $EnvironmentUrl, '-AccessToken', (Get-DataverseToken))
+    $arguments = @('-EnvironmentUrl', $EnvironmentUrl, '-AccessToken', (Get-DataverseToken -Force))
     $result = Invoke-PowerShellChildScript -ScriptPath $reviewerScript -Argument $arguments
 
     $solution = Get-SolutionRecord -UniqueName ([string]$spec.solutionName)
@@ -1443,8 +1467,16 @@ function Test-PolicyStage {
     $hydration = Get-PolicyHydrationValueMap -Policy $policy -ReviewerApp $reviewerApp
     $changed = [System.Collections.Generic.List[string]]::new()
     foreach ($entry in $hydration.Value.GetEnumerator()) {
-        $result = Set-EnvironmentVariableCurrentValue -SchemaName $entry.Key -Value ([string]$entry.Value)
-        $changed.Add('{0}:{1}' -f $entry.Key, $result) | Out-Null
+        $schemaName = [string]$entry.Key
+        $rawValue = [string]$entry.Value
+        try {
+            $result = Set-EnvironmentVariableCurrentValue -SchemaName $schemaName -Value $rawValue
+        }
+        catch {
+            $detail = "Stage 6 sub-step failed at SchemaName='$schemaName' Value='$rawValue': $($_.Exception.Message). InnerStack: $($_.ScriptStackTrace)"
+            throw $detail
+        }
+        $changed.Add(('{0}:{1}' -f $schemaName, [string]$result)) | Out-Null
     }
 
     foreach ($schemaName in $script:EnvVarSchemaNameList) {

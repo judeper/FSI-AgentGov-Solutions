@@ -352,6 +352,28 @@ function Resolve-AccessToken {
     return $null
 }
 
+function Update-DataverseToken {
+    param([Parameter(Mandatory = $true)][string]$ResolvedEnvironmentUrl)
+
+    $az = Get-Command az -ErrorAction SilentlyContinue
+    if ($null -eq $az) {
+        return $null
+    }
+
+    try {
+        $token = & az account get-access-token --resource $ResolvedEnvironmentUrl --query accessToken -o tsv 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($token)) {
+            $script:ResolvedDataverseToken = $token.Trim()
+            return $script:ResolvedDataverseToken
+        }
+    }
+    catch {
+        Write-WarnMessage "Azure CLI access-token refresh failed: $_"
+    }
+
+    return $null
+}
+
 function Get-DataverseHeaders {
     param([Parameter(Mandatory = $true)][string]$Token)
 
@@ -379,7 +401,8 @@ function Invoke-DataverseRequest {
     )
 
     $uri = $script:BaseApiUrl + $RelativeUri.TrimStart('/')
-    $headers = Get-DataverseHeaders -Token $Token
+    $effectiveToken = if (-not [string]::IsNullOrWhiteSpace($script:ResolvedDataverseToken)) { $script:ResolvedDataverseToken } else { $Token }
+    $headers = Get-DataverseHeaders -Token $effectiveToken
 
     if ($DryRun -and $Method -ne 'GET') {
         Write-Info "[DRY RUN] $Method $uri"
@@ -396,6 +419,14 @@ function Invoke-DataverseRequest {
     }
 
     $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
+    if ($response.StatusCode -eq 401) {
+        Write-Info "Dataverse token rejected (HTTP 401); refreshing via Azure CLI and retrying $Method $RelativeUri."
+        $refreshed = Update-DataverseToken -ResolvedEnvironmentUrl $EnvironmentUrl
+        if ($refreshed) {
+            $headers = Get-DataverseHeaders -Token $refreshed
+            $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
+        }
+    }
     if ($AllowNotFound -and $response.StatusCode -eq 404) {
         return $null
     }
@@ -822,6 +853,7 @@ $resolvedToken = Resolve-AccessToken -ProvidedAccessToken $AccessToken -Resolved
 if ([string]::IsNullOrWhiteSpace($resolvedToken)) {
     Write-WarnMessage 'No Dataverse access token was resolved. PAC CLI solution actions can continue, but publisher/solution bootstrap, environment-variable upserts, and connection-reference upserts require Azure CLI cached auth, DATAVERSE_ACCESS_TOKEN, or -AccessToken.'
 }
+$script:ResolvedDataverseToken = $resolvedToken
 
 $solutionRecord = Get-ExistingSolution -Token $resolvedToken
 if ($null -eq $solutionRecord) {
