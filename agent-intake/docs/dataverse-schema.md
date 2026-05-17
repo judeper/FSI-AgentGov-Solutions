@@ -122,7 +122,7 @@ Dataverse uses two names for every column:
 | `fsi_reviewtype` | `fsi_ReviewType` | String(100) | Yes | SampleAudit / Standard / Full |
 | `fsi_reviewoutcome` | `fsi_ReviewOutcome` | Choice (fsi_intake_reviewdecision) | No | Pending / Approved / Approved with conditions / Denied / Recused / Timeout |
 | `fsi_reviewnotes` | `fsi_ReviewNotes` | Memo(4000) | No | Reviewer notes (optional) |
-| `fsi_quorumweight` | `fsi_QuorumWeight` | Integer | No | Weight contributed by this reviewer toward quorum calculations |
+| `fsi_quorumweight` | `fsi_QuorumWeight` | Integer | No | Weight contributed by this reviewer toward quorum calculations (default: 1) |
 | `fsi_dueon` | `fsi_DueOn` | DateTime | No | Date/time when the reviewer response is due under policy |
 | `fsi_conditionstext` | `fsi_ConditionsText` | Memo(4000) | No | Reviewer conditions recorded when the decision is Approved with conditions |
 | `fsi_startedon` | `fsi_StartedOn` | DateTime | No | Timestamp review started |

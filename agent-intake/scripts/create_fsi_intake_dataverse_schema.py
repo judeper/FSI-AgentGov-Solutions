@@ -259,8 +259,14 @@ def _integer_col(schema_name, display, required=True, default=None, description=
         "MinValue": 0,
         "MaxValue": 2147483647,
     }
-    if default is not None:
-        defn["DefaultValue"] = default
+    # IntegerAttributeMetadata does not expose DefaultValue through the Web API
+    # EDM schema (the SDK does, but POSTing it returns 0x80048d19). When a
+    # default is requested we surface it in the description so the maker can
+    # set it through the column designer after deploy.
+    if default is not None and description:
+        description = f"{description} (default: {default})"
+    elif default is not None:
+        description = f"Default: {default}"
     if description:
         defn["Description"] = _label(description)
     return defn
