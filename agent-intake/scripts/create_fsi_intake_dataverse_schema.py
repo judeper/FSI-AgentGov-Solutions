@@ -310,7 +310,6 @@ def _picklist_col(schema_name, display, global_optionset_name, required=True, de
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
-        "OptionSet": None,
         "GlobalOptionSet@odata.bind": (
             f"/GlobalOptionSetDefinitions(Name='{global_optionset_name}')"
         ),
@@ -318,6 +317,32 @@ def _picklist_col(schema_name, display, global_optionset_name, required=True, de
     if description:
         defn["Description"] = _label(description)
     return defn
+
+
+def _resolve_picklist_bind(col, optionset_metadata_ids, dry_run):
+    """Rewrite Picklist columns to bind by MetadataId GUID (Dataverse requirement).
+
+    The compact column builder writes ``GlobalOptionSet@odata.bind`` using a
+    ``Name='...'`` key for readability, but Dataverse only accepts GUID keys on
+    the @odata.bind reference and returns ``Guid should contain 32 digits ...``
+    when given a Name key. We replace the key with the previously resolved
+    MetadataId at deploy time.
+    """
+    bind_key = "GlobalOptionSet@odata.bind"
+    bind_value = col.get(bind_key)
+    if not bind_value or "Name='" not in bind_value:
+        return col
+    if dry_run:
+        return col
+    name = bind_value.split("Name='", 1)[1].split("'", 1)[0]
+    metadata_id = optionset_metadata_ids.get(name)
+    if not metadata_id:
+        raise RuntimeError(
+            f"Picklist column {col.get('SchemaName', '?')} references unknown global option set '{name}'"
+        )
+    resolved = dict(col)
+    resolved[bind_key] = f"/GlobalOptionSetDefinitions({metadata_id})"
+    return resolved
 
 
 def _optionset_metadata(optionset_def):
@@ -831,6 +856,18 @@ def deploy(client, dry_run=False):
             client.create_option_set(_optionset_metadata(os_def))
 
     print("\n[2/4] Tables and columns")
+    # Resolve global option-set MetadataIds because Dataverse's
+    # GlobalOptionSet@odata.bind only accepts GUID keys, not Name keys.
+    optionset_metadata_ids = {}
+    if not dry_run:
+        for _, os_dict in [("shared", SHARED_OPTIONSETS), ("intake", INTAKE_OPTIONSETS)]:
+            for _, os_def in os_dict.items():
+                name = os_def["name"]
+                meta = client.get_global_optionset(name)
+                if not meta or not meta.get("MetadataId"):
+                    raise RuntimeError(f"Could not resolve MetadataId for global option set '{name}'")
+                optionset_metadata_ids[name] = meta["MetadataId"]
+
     for tname, tdef in TABLES.items():
         print(f"\n  --- {tdef['display']} ({tdef['ownership']}) ---")
         if not client.check_table_exists(tname):
@@ -868,7 +905,8 @@ def deploy(client, dry_run=False):
         else:
             print(f"  {tname}: already exists")
         for col in tdef["columns"]:
-            client.create_column(tname, col)
+            col_payload = _resolve_picklist_bind(col, optionset_metadata_ids, dry_run)
+            client.create_column(tname, col_payload)
 
     print("\n[3/4] Alternate key (best-effort idempotent)")
     print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}")
