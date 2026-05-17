@@ -69,7 +69,7 @@ Before pilot, the customer admin must:
 4. Confirm the Microsoft Entra Agent ID feature is available in the target tenant/cloud and consent either `AgentIdentity.CreateAsManager` or `AgentIdentity.Create.All` for handoff automation.
 5. Create or identify an Agent Identity blueprint and store its ID in `AGENT_INTAKE_AGENT_BLUEPRINT_ID`.
 
-## Out of scope for v0.2.0-preview
+## Out of scope for v1.0.0-preview
 
 - Defender for Cloud Apps signal enrichment
 - Microsoft Entra ID Governance access-package integration

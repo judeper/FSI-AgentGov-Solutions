@@ -1,4 +1,4 @@
-# Customer Onboarding Checklist — Agent Intake v0.2.0-preview
+# Customer Onboarding Checklist — Agent Intake v1.0.0-preview
 
 A single-file checklist for customer admins deploying Agent Intake into a pilot tenant. Pair this with [`pilot-deployment-runbook.md`](pilot-deployment-runbook.md) for detailed steps.
 

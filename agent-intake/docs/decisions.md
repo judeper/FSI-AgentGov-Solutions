@@ -1,12 +1,14 @@
-# Architecture Decision Record — Agent Intake v0.2.0-preview
+# Architecture Decision Record — Agent Intake
 
-This ADR consolidates the locked product-owner decisions that shape the v0.2.0-preview MVP. The full reasoning and override paths live in [`research/04-open-questions-resolved.md`](../research/04-open-questions-resolved.md); this document is the shippable summary for customer admins, reviewers, and auditors.
+> **Version coverage:** This ADR locks the product-owner decisions that originated with the v0.2.0-preview Express-only MVP. v1.0.0-preview extends the same decision frame to add the Standard and Full paths, the reviewer-queue app, and the MRM handoff — see [`../CHANGELOG.md`](../CHANGELOG.md) for the v1.0 deltas. Original ADR text below is preserved as the historical baseline.
+
+This ADR consolidates the locked product-owner decisions that shape agent-intake. The full reasoning and override paths live in [`research/04-open-questions-resolved.md`](../research/04-open-questions-resolved.md); this document is the shippable summary for customer admins, reviewers, and auditors.
 
 > **All defaults are overridable** via [`templates/policy-lookup-tables.yaml`](../templates/policy-lookup-tables.yaml) without code changes.
 
 ---
 
-## ADR-001 — Express path is the only path in v0.2-preview
+## ADR-001 — Express path is the only path in v0.2-preview *(superseded in v1.0)*
 
 **Decision:** v0.2.0-preview ships only the **Express path**: maker submits 10 questions, sponsor approves with one Teams click, system auto-provisions the agent identity. Standard and Full paths are deferred to v0.3 / v0.4.
 
