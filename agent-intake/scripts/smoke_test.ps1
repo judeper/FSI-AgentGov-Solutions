@@ -733,7 +733,7 @@ try {
             throw 'Environment variable fsi_intake_makerportalurl is empty.'
         }
         if ($portalUrl -match 'manual-step-required') {
-            throw 'fsi_intake_makerportalurl still contains a placeholder.'
+            return [pscustomobject]@{ Status = 'MANUAL'; Detail = "fsi_intake_makerportalurl still resolves to the documented placeholder ($portalUrl). Complete the Power Pages classic site provisioning per docs\portal-configuration.md, then update the environment variable and re-run the smoke check." }
         }
         $response = Invoke-WebRequest -Uri $portalUrl -Method Head -UseBasicParsing -TimeoutSec 30
         if ($response.StatusCode -notin @(200, 302)) {
