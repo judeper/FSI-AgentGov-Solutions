@@ -36,7 +36,7 @@ git rev-parse --show-toplevel
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
 | [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.1.0 |
-| [agent-intake](./agent-intake/) | Pre-build maker intake — Express-path MVP with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff | PowerShell/Python/Docs | v0.1.0-preview |
+| [agent-intake](./agent-intake/) | Pre-build maker intake — Express-path MVP with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff | PowerShell/Python/Docs | v0.2.1-preview |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.0 |
 | [ |
@@ -152,6 +152,24 @@ FSI-AgentGov-Solutions/
 | `pipeline-governance-cleanup/scripts/hooks/*` | Nested | Simple pass-throughs for standalone use |
 
 **Note:** The nested hooks in `pipeline-governance-cleanup/scripts/hooks/` are intentionally different from root hooks. They allow all commands when that solution is used standalone.
+
+## Per-solution AGENTS.md (opt-in convention)
+
+Solutions with active in-flight work ship a `<solution>/AGENTS.md` that **adds
+to this root file**. Loading order for any agent working in a solution folder:
+
+1. This `CLAUDE.md` (and `AGENTS.md`, `.github/copilot-instructions.md`) — cross-cutting rules
+2. `.github/instructions/*.md` — auto-included rules by file path
+3. `<solution>/AGENTS.md` — solution-specific context + current operational state
+4. `<solution>/.ralph-config.json` — machine-readable domain facts (column names, option-set values)
+
+Solution-specific guidance wins only on solution-specific topics; cross-cutting
+rules (FSI language, Dataverse naming, lab guards, commit conventions) always
+apply. **Backfilling stable solutions with their own AGENTS.md is not
+required** — the convention is opt-in when there's non-trivial state to hand off
+across machines / sessions / agents.
+
+Currently shipped: `message-center-monitor/AGENTS.md` (POC dry-run in progress).
 
 ## Dataverse Column Naming (CRITICAL)
 

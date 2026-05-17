@@ -83,6 +83,15 @@ The script is idempotent: re-runs detect an existing env with the same `displayN
 
 Required Azure prerequisite: an existing `Microsoft.PowerPlatform/accounts` resource fronting a billing policy whose Power Platform products list includes Dataverse (or Power Apps + Power Automate; selected during the PPAC "Azure subscription" PAYG flow). The script auto-selects the first `Enabled` policy; specify `-BillingPolicyId <guid>` to pin a particular one.
 
+### Step 0c (optional) — Resume on a different workstation
+
+If you have already provisioned the lab on one workstation and want to continue from a different one (e.g. switching from a desktop to a laptop), the cloud resources still exist but the two local-only state files (`lab/lab-config.json` and `lab/lab-state.json`, both gitignored) do not transfer through git. Two ways to rehydrate:
+
+1. **Copy the local files.** Move `lab/lab-config.json` and `lab/lab-state.json` from the source workstation to the same paths on the new one. Done.
+2. **Or rebuild from the cloud.** Bring over `lab/lab-config.json` only (it has the names — env URL, KV name, app-reg displayName — that the rebuild needs), then run `pwsh ./message-center-monitor/lab/Resume-LabState.ps1`. The script does no provisioning — it only queries Graph + ARM + BAP + Dataverse to rediscover the GUIDs your lab scripts generated last time, and writes a complete `lab-state.json`. Requires `az login --tenant <tenantId>` first.
+
+See the solution-specific [`AGENTS.md`](../AGENTS.md) `§ 4 Resume on a new machine` for the full 5-step bootstrap including the post-resume preflight call.
+
 ---
 
 ## Prerequisites checklist

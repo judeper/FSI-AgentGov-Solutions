@@ -14,7 +14,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
 | action-confirmation-auditor | v1.2.0 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
-| agent-intake | v0.2.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express path MVP) with sponsor 1-click approval and Entra Agent ID handoff |
+| agent-intake | v0.2.1-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express path MVP) with sponsor 1-click approval and Entra Agent ID handoff |
 | agent-365-lifecycle-governance | v1.1.4 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.1.1 | 3.8 | Automated detection of overly permissive agent access configurations |
 |  | 2.17 | Inter-agent communication restriction validation |
@@ -67,11 +67,25 @@ FSI-AgentGov-Solutions/
 ├── {solution-name}/
 │   ├── README.md              # Solution overview and setup
 │   ├── CHANGELOG.md           # Version history
+│   ├── AGENTS.md              # (Optional) AI-agent context — present for solutions with active work
 │   ├── docs/                  # Setup and configuration guides
 │   ├── scripts/               # Automation scripts (PowerShell, Python, KQL)
 │   └── templates/             # JSON samples, schemas
 └── CHANGELOG.md
 ```
+
+## Per-solution AGENTS.md (opt-in convention)
+
+When a solution has non-trivial in-flight work (active POC dry-run, customer
+handoff, multi-session refactor), it ships a `<solution>/AGENTS.md` that
+**adds to this file**. Read it AFTER `.github/instructions/*` when working
+inside that solution folder. It carries the current operational state and
+solution-specific conventions. Solution-specific guidance wins only on
+solution-specific topics; cross-cutting rules (Dataverse naming, language
+guidelines, lab guards) here always apply.
+
+Backfilling stable solutions is not required. Currently shipped:
+`message-center-monitor/AGENTS.md`.
 
 ## Solution Content Policy (CRITICAL)
 

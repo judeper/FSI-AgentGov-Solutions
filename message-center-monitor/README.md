@@ -9,6 +9,11 @@ coe_function: scale
 # Message Center Monitor
 
 > **Status:** Live
+>
+> **For AI agents and engineers** working in this solution: see [`AGENTS.md`](AGENTS.md)
+> for current operational state, cross-machine resume runbook, and
+> solution-specific conventions. (Customers deploying this solution can ignore
+> that file — start with the [POC Quickstart](docs/poc-quickstart.md) below.)
 
 Monitor Microsoft 365 Message Center for platform changes that could impact AI agent deployments (Copilot Studio, Agent Builder).
 

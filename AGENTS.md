@@ -17,7 +17,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
 | action-confirmation-auditor | v1.2.0 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
-| agent-intake | v0.2.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express path MVP) — FSI risk-tiered request workflow with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff to agent-registry-automation |
+| agent-intake | v0.2.1-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express path MVP) — FSI risk-tiered request workflow with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff to agent-registry-automation |
 | agent-365-lifecycle-governance | v1.1.4 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.1.1 | 3.8 | Automated detection of overly permissive agent access configurations |
 |  | 2.17 | Inter-agent communication restriction validation |
@@ -133,8 +133,24 @@ The single source of truth for column names is each solution's `create_*_dataver
 ## Before Making Changes
 
 1. **Read the solution's README** for prerequisites and architecture
-2. **Check Related Controls** — ensure control mappings match the catalog above
-3. **Check session ownership** — see Multi-Agent Coordination below
+2. **Read the solution's `AGENTS.md` if one exists** — solutions with active work
+   (in-progress dry-runs, customer POCs, contentious refactors) ship a
+   per-solution `AGENTS.md` that **adds to this file**. It carries the
+   current operational state and solution-specific conventions. Loading order:
+   this root file → `.github/instructions/*` → `<solution>/AGENTS.md` →
+   `<solution>/.ralph-config.json`. Solution-specific guidance wins only on
+   solution-specific topics; cross-cutting rules here always apply.
+3. **Check Related Controls** — ensure control mappings match the catalog above
+4. **Check session ownership** — see Multi-Agent Coordination below
+
+### Solutions with a per-solution AGENTS.md
+
+The convention is **opt-in per solution**, applied when there is non-trivial
+in-flight work to hand off. Backfilling stable solutions is not required.
+
+| Solution | Why it has one |
+|---|---|
+| `message-center-monitor` | Active POC dry-run on `feature/message-center-monitor-poc-ready` (PR #141); 16 dry-run bugs fixed; needs cross-machine resume runbook. |
 
 ## Multi-Agent Coordination
 
