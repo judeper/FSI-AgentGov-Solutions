@@ -226,7 +226,9 @@ while ($pageUrl) {
     if ($response.value) {
         $allRecords.AddRange($response.value)
     }
-    $pageUrl = $response.'@odata.nextLink'
+    # StrictMode Latest throws on missing property dot-access; Dataverse omits
+    # @odata.nextLink on the final page. Probe via PSObject.Properties first.
+    $pageUrl = if ($response.PSObject.Properties['@odata.nextLink']) { $response.'@odata.nextLink' } else { $null }
 }
 
 if (-not $Quiet) {
@@ -285,13 +287,13 @@ $messagesReadable = $allRecords | ForEach-Object {
 }
 
 # Compute summary statistics
-$totalMessages = $allRecords.Count
-$notAssessedCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000000 }).Count
-$reviewedCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000001 }).Count
-$impactsCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000002 }).Count
-$noImpactCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000003 }).Count
-$highSeverityCount = ($allRecords | Where-Object { $_.fsi_severity -eq 100000000 }).Count
-$criticalCount = ($allRecords | Where-Object { $_.fsi_severity -eq 100000002 }).Count
+$totalMessages = @($allRecords).Count
+$notAssessedCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000000 }).Count
+$reviewedCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000001 }).Count
+$impactsCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000002 }).Count
+$noImpactCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000003 }).Count
+$highSeverityCount = @($allRecords | Where-Object { $_.fsi_severity -eq 100000000 }).Count
+$criticalCount = @($allRecords | Where-Object { $_.fsi_severity -eq 100000002 }).Count
 
 $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 

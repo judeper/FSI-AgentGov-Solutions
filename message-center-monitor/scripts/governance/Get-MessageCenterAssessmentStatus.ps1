@@ -227,7 +227,9 @@ while ($pageUrl) {
     if ($response.value) {
         $allRecords.AddRange($response.value)
     }
-    $pageUrl = $response.'@odata.nextLink'
+    # StrictMode Latest throws on missing property dot-access; Dataverse omits
+    # @odata.nextLink on the final page. Probe via PSObject.Properties first.
+    $pageUrl = if ($response.PSObject.Properties['@odata.nextLink']) { $response.'@odata.nextLink' } else { $null }
 }
 
 if (-not $Quiet) {
@@ -238,21 +240,23 @@ if (-not $Quiet) {
 
 #region Compute Summary
 
-$totalCount = $allRecords.Count
-$notAssessedCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000000 }).Count
-$reviewedCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000001 }).Count
-$impactsCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000002 }).Count
-$noImpactCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000003 }).Count
+$totalCount = @($allRecords).Count
+$notAssessedCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000000 }).Count
+$reviewedCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000001 }).Count
+$impactsCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000002 }).Count
+$noImpactCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000003 }).Count
 
 # Find messages with action-required deadlines approaching within 7 days
 $now = Get-Date
 $urgentThreshold = $now.AddDays(7)
-$urgentMessages = $allRecords | Where-Object {
+# @(...) forces array context so .Count works even when the filter returns 0
+# (and StrictMode would otherwise throw on $null.Count).
+$urgentMessages = @($allRecords | Where-Object {
     $_.fsi_actionrequiredbydatetime -and
     ([datetime]$_.fsi_actionrequiredbydatetime -le $urgentThreshold) -and
     ([datetime]$_.fsi_actionrequiredbydatetime -ge $now) -and
     ($_.fsi_assessmentstatus -eq 100000000)
-}
+})
 
 #endregion
 
