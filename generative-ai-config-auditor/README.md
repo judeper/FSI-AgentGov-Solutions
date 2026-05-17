@@ -7,16 +7,11 @@ coe_function: govern
 ---
 # Generative AI Config Auditor
 
+> **Version:** v1.2.0
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
+
 Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Work IQ / semantic search) for Copilot Studio agents against zone-specific governance policies.
-
-## Status
-
-| Property | Value |
-|----------|-------|
-| Status | In Development |
-| Version | 1.1.1 |
-| Primary Control | [2.24 -- Agent Feature Enablement Governance](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.24-agent-feature-enablement-governance/) |
-| Regulatory Context | FINRA Rule 3110, GLBA Section 501(b), SOX Section 404 |
 
 ## Overview
 

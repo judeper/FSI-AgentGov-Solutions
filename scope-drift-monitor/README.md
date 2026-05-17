@@ -8,7 +8,9 @@ coe_function: optimize
 ---
 # Scope Drift Monitor
 
-> **Status:** Completed (v1.2.1)
+> **Version:** v1.2.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
 

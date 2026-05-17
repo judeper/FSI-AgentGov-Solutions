@@ -9,7 +9,10 @@ coe_function: enable
 ---
 # Agent 365 Lifecycle Governance
 
-> **Status:** v1.1.4 — GA (Microsoft Agent 365 generally available for Commercial segment as of May 1, 2026)
+> **Version:** v1.1.4
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
+> **Upstream Microsoft dependency:** Mixed — Microsoft Agent 365 is generally available for commercial tenants, but Agent Registry and package-management APIs remain preview and should be validated before the feature flag is enabled.
 
 Automated lifecycle governance for AI agents using Microsoft Agent 365, Entra ID Governance, and Power Platform. Covers the full lifecycle loop: sponsor assignment, access reviews, inactivity detection, deactivation workflows, and deletion holds with zone-based policy enforcement.
 

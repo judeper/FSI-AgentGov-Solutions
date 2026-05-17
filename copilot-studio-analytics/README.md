@@ -9,7 +9,8 @@ coe_function: optimize
 # Copilot Studio Analytics
 
 > **Version:** v2.0.1
-> **Status:** Active
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Business impact analytics for Copilot Studio agents -- session outcomes, CSAT, Agent Assisted Hours, and ROI calculations. Provides a customizable, partial alternative to Microsoft Viva Insights for organizations without Viva Insights licenses or that need zone-based governance and regulatory-reporting integration. Not a full Viva replacement -- see [docs/viva-insights-parity-matrix.md](docs/viva-insights-parity-matrix.md).
 

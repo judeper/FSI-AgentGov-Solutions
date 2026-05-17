@@ -8,7 +8,9 @@ coe_function: enable
 ---
 # Pipeline Governance Cleanup
 
-> **Status:** Completed
+> **Version:** v1.2.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Discover, notify, and clean up personal Power Platform pipelines before enforcing centralized ALM governance.
 

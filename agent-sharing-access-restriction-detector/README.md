@@ -9,7 +9,8 @@ coe_function: govern
 # Agent Sharing Access Restriction Detector
 
 > **Version:** v2.0.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 

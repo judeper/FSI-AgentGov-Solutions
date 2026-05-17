@@ -10,6 +10,7 @@ coe_function: optimize
 
 > **Version:** v2.0.1
 > **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management.
 

@@ -9,7 +9,9 @@ coe_function: enable
 ---
 # Agent Registry Automation
 
-> **Status:** Production Ready (v2.1.0)
+> **Version:** v2.1.0
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform environments, supporting FSI agent inventory and record-keeping requirements.
 

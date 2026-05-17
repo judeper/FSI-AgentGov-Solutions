@@ -8,7 +8,9 @@ coe_function: enable
 ---
 # Environment Lifecycle Management
 
-> **Status:** Completed
+> **Version:** v1.2.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated Power Platform environment provisioning with zone-based governance classification.
 

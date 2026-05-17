@@ -9,7 +9,8 @@ coe_function: govern
 # Cross-Tenant and External Sharing Governance
 
 > **Version:** v1.0.3
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments.
 

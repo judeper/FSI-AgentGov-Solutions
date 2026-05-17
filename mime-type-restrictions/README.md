@@ -9,7 +9,8 @@ coe_function: govern
 # MIME Type Restrictions for File Uploads
 
 > **Version:** v1.2.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Dataverse plugin, connector-classification reference, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios.
 

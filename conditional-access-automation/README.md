@@ -8,7 +8,9 @@ coe_function: govern
 ---
 # Conditional Access Automation
 
-> **Status:** Completed | **Version:** v2.0.1
+> **Version:** v2.0.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
 

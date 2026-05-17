@@ -9,7 +9,9 @@ coe_function: govern
 ---
 # FINRA Supervision Workflow
 
-> **Status:** Preview (v1.1.0)
+> **Version:** v1.1.0
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated **retrospective** supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, append-only Dataverse audit logging, and WORM-ready evidence export fed by Microsoft Purview Communication Compliance.
 
@@ -311,7 +313,6 @@ Reference Microsoft Learn guidance: [Azure Blob immutable storage](https://learn
 ### FINRA 3120 Testing Evidence
 
 Quarterly testing reports per FINRA Rule 3120:
-
 
 > **Planned — not yet implemented.** A `generate_3120_report.py` script for automated quarterly report generation is planned for a future release. In the interim, use the weekly supervision evidence exports to compile quarterly testing evidence manually.
 

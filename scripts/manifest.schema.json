@@ -108,6 +108,22 @@
       "type": "string",
       "description": "Optional retention guidance for any evidence/output the solution produces (e.g., '7 years per SEC 17a-4')."
     },
+    "upstreamDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "note"],
+      "description": "Optional Microsoft platform dependency maturity note rendered in the README header.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["preview", "ga", "mixed"]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "extras": {
       "type": "object",
       "description": "Free-form additive fields preserved across regeneration. NOT projected into solutions.json."

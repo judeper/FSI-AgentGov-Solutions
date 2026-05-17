@@ -7,7 +7,10 @@ coe_function: govern
 ---
 # Conflict of Interest Testing
 
-> **Status:** Scaffold (Preview) — scenario library and persistence pipeline are
+> **Version:** v1.1.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
+
 > implemented; the agent-interaction layer that drives a Copilot Studio agent
 > via Direct Line is not yet implemented. Scenarios currently report `SKIPPED`
 > until the integration is added. See *Implementation Status* below.

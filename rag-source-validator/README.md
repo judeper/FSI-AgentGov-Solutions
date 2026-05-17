@@ -8,7 +8,9 @@ coe_function: govern
 ---
 # RAG Source Validator
 
-> **Status:** Completed (v1.3.0)
+> **Version:** v1.3.0
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 

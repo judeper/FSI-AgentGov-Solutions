@@ -9,7 +9,9 @@ coe_function: govern
 # HITL Workflow Governance
 
 > **Version:** v1.1.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
+> **Upstream Microsoft dependency:** Preview — The Request for Information and Run a Multistage Approval actions remain preview in Microsoft Learn and should be reviewed against preview terms before regulated-data use.
 
 Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `shared_advancedapprovals` connector.
 

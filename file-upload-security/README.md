@@ -8,9 +8,11 @@ coe_function: govern
 ---
 # File Upload Security Configurator
 
-Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 (Data Minimization and Agent Scope Control) by detecting agents with file uploads enabled in zones where uploads should be restricted or disabled.
+> **Version:** v1.1.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
-> **Status:** Completed
+Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 (Data Minimization and Agent Scope Control) by detecting agents with file uploads enabled in zones where uploads should be restricted or disabled.
 
 ## Solution Overview
 

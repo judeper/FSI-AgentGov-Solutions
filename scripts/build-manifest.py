@@ -28,6 +28,11 @@ Validation runs on every invocation:
 * Every `controls[]` entry MUST exist in the framework `controls.json`
   (path resolved from FRAMEWORK_CONTROLS env var, defaulting to a sibling
   `fsi-agentgov` checkout).
+* Every top-level solution `README.md` MUST expose a parseable metadata header
+  near the H1 that matches the manifest-driven version/status contract:
+  `Version`, `Status`, `Validated against framework version`, and an optional
+  `Upstream Microsoft dependency` line when `manifest.yaml.upstreamDependency`
+  is present.
 
 Usage:
 
@@ -143,6 +148,30 @@ ZONE_ROADMAP_BEGIN = "<!-- BEGIN:ZONE_ROADMAP -->"
 ZONE_ROADMAP_END = "<!-- END:ZONE_ROADMAP -->"
 
 DEPLOYMENT_GUIDE = ROOT / "DEPLOYMENT-GUIDE.md"
+
+README_HEADER_FIELD_LABELS = {
+    "version": "Version",
+    "status": "Status",
+    "validated against framework version": "Validated against framework version",
+    "upstream microsoft dependency": "Upstream Microsoft dependency",
+}
+README_STATUS_SECTION_RE = re.compile(
+    r"^## Status\s*$\n(?:\n|\r\n)(?P<body>\|.*(?:\n|\r\n))+?(?=^## |\Z)",
+    re.MULTILINE,
+)
+README_STATUS_ROW_RE = re.compile(
+    r"^\|\s*(?P<prop>[^|]+?)\s*\|\s*(?P<value>[^|]+?)\s*\|$",
+    re.MULTILINE,
+)
+README_VERSION_TOKEN_RE = re.compile(r"v?(\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)")
+README_CAPE_VERSION_RE = re.compile(
+    r"^#\s*(v\d+\.\d+\.\d+)\s+CAPE alignment metadata$", re.MULTILINE
+)
+UPSTREAM_DEPENDENCY_STATUS_LABELS = {
+    "preview": "Preview",
+    "ga": "GA",
+    "mixed": "Mixed",
+}
 
 CHANGELOG_PATTERNS = {"acv-changelog.md", "alca-changelog.md"}
 
@@ -292,6 +321,146 @@ def validate_manifests(
                     f"{slug}/manifest.yaml: dependency {dep!r} is not a known solution"
                 )
 
+    return errors
+
+
+def extract_cape_framework_version(readme_text: str) -> str | None:
+    """Return the CAPE-alignment framework version embedded in README frontmatter."""
+    match = README_CAPE_VERSION_RE.search(readme_text[:500])
+    return match.group(1) if match else None
+
+
+def render_readme_status(status: str) -> str:
+    """Render the manifest enum for human-facing README headers."""
+    return status.capitalize()
+
+
+def render_upstream_dependency(dependency: dict[str, str]) -> str:
+    """Render the optional upstream Microsoft dependency header value."""
+    status = UPSTREAM_DEPENDENCY_STATUS_LABELS[dependency["status"]]
+    note = dependency["note"].strip()
+    return f"{status} — {note}" if note else status
+
+
+def build_expected_readme_header(readme_text: str, manifest: dict) -> dict[str, str]:
+    """Return the expected README header fields for one solution."""
+    header = {
+        "version": f"v{manifest['version']}",
+        "status": render_readme_status(manifest.get("status", "live")),
+    }
+    framework_version = extract_cape_framework_version(readme_text)
+    if framework_version:
+        header["validated against framework version"] = framework_version
+    dependency = manifest.get("upstreamDependency")
+    if dependency:
+        header["upstream microsoft dependency"] = render_upstream_dependency(dependency)
+    return header
+
+
+def parse_readme_header_fields(readme_text: str) -> dict[str, str]:
+    """Parse the top-of-file README metadata header into a normalized mapping."""
+    top = "\n".join(readme_text.splitlines()[:80])
+    fields: dict[str, str] = {}
+    for key, label in README_HEADER_FIELD_LABELS.items():
+        match = re.search(rf"\*\*{re.escape(label)}:\*\*\s*(?P<value>[^\n]+)", top)
+        if match:
+            fields[key] = match.group("value").strip()
+
+    if "version" not in fields or "status" not in fields:
+        section = README_STATUS_SECTION_RE.search(top)
+        if section:
+            for row in README_STATUS_ROW_RE.finditer(section.group("body")):
+                prop = row.group("prop").strip().lower()
+                value = row.group("value").strip()
+                if prop == "version" and "version" not in fields:
+                    fields["version"] = value
+                elif prop == "status" and "status" not in fields:
+                    fields["status"] = value
+    return fields
+
+
+def parse_version_claim(value: str | None) -> str | None:
+    """Extract a semver token from a README metadata value."""
+    if not value:
+        return None
+    match = README_VERSION_TOKEN_RE.search(value)
+    return match.group(1) if match else None
+
+
+def normalize_status_claim(value: str | None) -> str | None:
+    """Map legacy README labels to the manifest status enum."""
+    if not value:
+        return None
+    lowered = value.lower()
+    patterns = (
+        (r"\b(public\s+)?preview\b", "preview"),
+        (r"\bscaffold\b", "preview"),
+        (r"\bin development\b", "preview"),
+        (r"\blive\b", "live"),
+        (r"\bproduction ready\b", "live"),
+        (r"\bcompleted\b", "live"),
+        (r"\bvalidated\b", "live"),
+        (r"\bactive\b", "live"),
+        (r"\breleased\b", "live"),
+        (r"\bcomplete\b", "live"),
+        (r"\bga\b", "live"),
+    )
+    for pattern, normalized in patterns:
+        if re.search(pattern, lowered):
+            return normalized
+    return None
+
+
+def validate_solution_readme_headers(manifests: dict[str, dict]) -> list[str]:
+    """Validate that each solution README header agrees with manifest metadata."""
+    errors: list[str] = []
+    for slug, manifest in manifests.items():
+        path = ROOT / slug / "README.md"
+        if not path.is_file():
+            errors.append(f"{slug}/README.md: missing top-level solution README")
+            continue
+
+        readme_text = path.read_text(encoding="utf-8")
+        header_fields = parse_readme_header_fields(readme_text)
+        expected_header = build_expected_readme_header(readme_text, manifest)
+
+        claimed_version = parse_version_claim(
+            header_fields.get("version") or header_fields.get("status")
+        )
+        if claimed_version is None:
+            errors.append(f"{slug}/README.md: missing parseable Version header")
+        elif claimed_version != manifest["version"]:
+            errors.append(
+                f"{slug}/README.md: Version header claims v{claimed_version}, "
+                f"expected v{manifest['version']} from manifest.yaml"
+            )
+
+        claimed_status = normalize_status_claim(header_fields.get("status"))
+        expected_status = manifest.get("status", "live")
+        if claimed_status is None:
+            errors.append(f"{slug}/README.md: missing parseable Status header")
+        elif claimed_status != expected_status:
+            errors.append(
+                f"{slug}/README.md: Status header claims {header_fields.get('status')!r}, "
+                f"expected {render_readme_status(expected_status)!r}"
+            )
+
+        for key in (
+            "validated against framework version",
+            "upstream microsoft dependency",
+        ):
+            expected_value = expected_header.get(key)
+            claimed_value = header_fields.get(key)
+            if expected_value and claimed_value != expected_value:
+                errors.append(
+                    f"{slug}/README.md: {README_HEADER_FIELD_LABELS[key]!r} should be "
+                    f"{expected_value!r}, got {claimed_value!r}"
+                )
+            if not expected_value and claimed_value:
+                errors.append(
+                    f"{slug}/README.md: unexpected {README_HEADER_FIELD_LABELS[key]!r} "
+                    f"header {claimed_value!r}; declare it in manifest.yaml first"
+                )
     return errors
 
 
@@ -971,6 +1140,7 @@ def run(check: bool) -> int:
     log.info("  manifests loaded: %d", len(manifests))
 
     errors = validate_manifests(manifests, framework_pillars)
+    errors.extend(validate_solution_readme_headers(manifests))
     if errors:
         for e in errors:
             log.error(e)

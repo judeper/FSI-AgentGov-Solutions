@@ -8,7 +8,9 @@ coe_function: govern
 ---
 # Segregation of Duties Detector
 
-> **Status:** Validated
+> **Version:** v1.2.0
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated role conflict detection that supports Maker/Checker controls in AI agent deployment pipelines, helping address SOX Section 404 IT General Controls.
 

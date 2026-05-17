@@ -8,7 +8,9 @@ coe_function: govern
 ---
 # Session Security Configurator
 
-> **Status:** v1.1.1 — Complete
+> **Version:** v1.2.0
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Automated session security baseline management for Microsoft 365 AI agent administration, supporting compliance with FINRA, SEC, and GLBA session control requirements.
 
