@@ -69,13 +69,27 @@ pwsh -Command '$PSVersionTable.PSVersion; python --version; Get-Module MSAL.PS, 
 
 Expected output: PowerShell `7.2.x` or later, Python `3.10.x` or later, both modules listed with versions.
 
+### Step 0b (optional) — Auto-provision a sandbox env via PAYG billing policy
+
+If your tenant prepaid Dataverse pool is exhausted (common in busy non-prod tenants) **and** you have a Power Platform Pay-As-You-Go billing policy already wired to an Azure subscription (PPAC → Licensing → Pay-as-you-go plans), you can create a dedicated, fresh sandbox env with one command — no admin-center clicks. The script combines `billingPolicy.id` + `databaseType=CommonDataService` + `linkedEnvironmentMetadata` in a single BAP API call so the prepaid pool capacity gate is bypassed.
+
+```powershell
+# Fill in tenant.tenantId, azure.subscriptionId, nonProd.acknowledgement first
+cd message-center-monitor/lab
+pwsh ./00b_New-PaygEnvironment.ps1
+```
+
+The script is idempotent: re-runs detect an existing env with the same `displayName` and only update `lab-config.json`. To tear down later: `pwsh ./99_Remove-LabDeployment.ps1 -RemoveEnvironment`.
+
+Required Azure prerequisite: an existing `Microsoft.PowerPlatform/accounts` resource fronting a billing policy whose Power Platform products list includes Dataverse (or Power Apps + Power Automate; selected during the PPAC "Azure subscription" PAYG flow). The script auto-selects the first `Enabled` policy; specify `-BillingPolicyId <guid>` to pin a particular one.
+
 ---
 
 ## Prerequisites checklist
 
 Your tenant must have:
 
-- [ ] A Power Platform environment with Dataverse provisioned, in a region consistent with your data residency policy
+- [ ] A Power Platform environment with Dataverse provisioned, in a region consistent with your data residency policy *(if your tenant has a Power Platform PAYG billing policy backed by an Azure subscription, you can auto-provision a fresh sandbox env at zero baseline cost using `lab/00b_New-PaygEnvironment.ps1` — see Phase 0 below)*
 - [ ] An Azure subscription with permission to create or use an Azure Key Vault
 - [ ] A Microsoft Teams team and channel where you can create a Workflows incoming webhook
 - [ ] Sign-in credentials for an Entra Global Admin or Application Administrator account (required for the app-registration and admin-consent steps)

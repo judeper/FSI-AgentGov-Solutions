@@ -25,6 +25,12 @@
 .PARAMETER KeepKeyVault
     Skip Key Vault deletion. Recommended for shared lab Key Vaults.
 
+.PARAMETER RemoveEnvironment
+    Also delete the Power Platform environment recorded in
+    lab-config.json (powerPlatform.environmentId). Off by default to protect
+    shared lab envs. Only the env created by lab/00b_New-PaygEnvironment.ps1
+    should be deleted with this flag.
+
 .NOTES
     Lab dry-run step 99 of 99. Solution: message-center-monitor v2.5.0+
 #>
@@ -34,6 +40,7 @@ param(
     [Parameter()] [switch] $DryRun,
     [Parameter()] [switch] $ForceExternalResource,
     [Parameter()] [switch] $KeepKeyVault,
+    [Parameter()] [switch] $RemoveEnvironment,
     [Parameter()] [switch] $AllowProduction
 )
 
@@ -178,6 +185,27 @@ if (-not $KeepKeyVault -and ($state.keyVault -or $ForceExternalResource)) {
 if (-not $DryRun -and (Test-Path -LiteralPath $statePath)) {
     Move-Item -LiteralPath $statePath -Destination "$statePath.deleted-$((Get-Date -AsUTC).ToString('yyyyMMddTHHmmssZ'))"
     Write-LabLog -Level Info -Message "Renamed lab-state.json to a .deleted-<ts> suffix; remove manually when satisfied."
+}
+
+# --- Phase 5: Power Platform environment (opt-in) ----------------------------
+# Tears down the env created by lab/00b_New-PaygEnvironment.ps1. Off by default
+# so a forgotten -RemoveEnvironment flag never blasts a shared environment.
+if ($RemoveEnvironment) {
+    $envIdToDelete = $cfg.powerPlatform.environmentId
+    if (-not $envIdToDelete -or $envIdToDelete -eq '') {
+        Write-LabLog -Level Warn -Message "No powerPlatform.environmentId in lab-config.json. Nothing to delete."
+    } else {
+        Write-LabLog -Level Info -Message "Deleting Power Platform env $envIdToDelete..."
+        Try-Action {
+            $bapTok = az account get-access-token --resource 'https://api.bap.microsoft.com' --query accessToken -o tsv 2>$null
+            if (-not $bapTok) { throw "az CLI not authenticated. Run: az login --tenant $($cfg.tenant.tenantId)" }
+            $hdr = @{ Authorization = "Bearer $bapTok"; 'Content-Type' = 'application/json' }
+            $body = '{"code":"User","message":"lab/99_Remove-LabDeployment teardown"}'
+            Invoke-WebRequest -Method DELETE `
+                -Uri "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/$envIdToDelete`?api-version=2023-06-01" `
+                -Headers $hdr -Body $body -ErrorAction Stop | Out-Null
+        } "Delete Power Platform environment $envIdToDelete"
+    }
 }
 
 Write-LabLog -Level Info -Message "Teardown complete."

@@ -17,7 +17,11 @@
   "powerPlatform": {
     "environmentUrl": "https://orgxxxxxxxx.crm.dynamics.com",
     "environmentId": "",
-    "_environmentIdHelp": "Leave empty to auto-resolve from environmentUrl. Get with: pac admin list"
+    "displayName": "FSI-MCM-PocDryRun",
+    "billingPolicyId": "",
+    "_environmentIdHelp": "Leave empty to auto-resolve from environmentUrl. Get with: pac admin list. If using lab/00b_New-PaygEnvironment.ps1, this is auto-populated.",
+    "_displayNameHelp": "Used by lab/00b_New-PaygEnvironment.ps1 to find or create the env idempotently.",
+    "_billingPolicyIdHelp": "GUID of the Power Platform PAYG billing policy. Leave empty to auto-select the first Enabled policy. Get with: az account get-access-token --resource https://api.powerplatform.com --query accessToken -o tsv | (then GET /licensing/billingPolicies)."
   },
 
   "keyVault": {
