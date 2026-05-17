@@ -8,7 +8,9 @@ coe_function: optimize
 ---
 # Deny Event Correlation Report
 
-> **Status:** Validated
+> **Version:** v2.0.3
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Daily operational reporting solution for correlating "deny/no content returned" events across Microsoft Copilot and Copilot Studio agents.
 

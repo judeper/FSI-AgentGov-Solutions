@@ -8,7 +8,9 @@ coe_function: optimize
 ---
 # Compliance Dashboard
 
-> **Status:** Completed
+> **Version:** v1.0.4
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the control records loaded into Dataverse with zone-based filtering. The included sample dataset contains 62 controls; organizations should load the validated 78-control framework baseline before describing the dashboard as full-framework coverage.
 

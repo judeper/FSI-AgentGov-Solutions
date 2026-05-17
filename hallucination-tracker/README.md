@@ -9,7 +9,9 @@ coe_function: optimize
 ---
 # Hallucination Feedback Tracker
 
-> **Version:** 1.2.0 — This solution provides Dataverse schema deployment scripts, Python pattern analysis, PowerShell governance scripts, environment variables, and connection references for feedback aggregation and hallucination pattern review.
+> **Version:** v1.2.0
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs.
 

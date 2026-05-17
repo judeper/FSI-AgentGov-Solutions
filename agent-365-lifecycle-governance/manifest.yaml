@@ -19,6 +19,9 @@ prerequisites:
   security-admin: Microsoft Entra ID Governance or Microsoft Entra Suite, AgentInstance Graph permissions, security groups, and admin consent.
   power-platform-admin: Managed Dataverse environment, Power Automate Premium, and LTR-enabled schema deployment.
 verification: Confirm Test-LifecycleCompliance.ps1 completes and writes a lifecycle compliance event row.
+upstreamDependency:
+  status: mixed
+  note: Microsoft Agent 365 is generally available for commercial tenants, but Agent Registry and package-management APIs remain preview and should be validated before the feature flag is enabled.
 
 # zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
 #   Agent 365 + Entra ID Governance; tenant-wide enterprise capability

@@ -8,10 +8,11 @@ coe_function: optimize
 ---
 # Agent Access Governance Monitor
 
-Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
-
 > **Version:** v1.1.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
+
+Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 

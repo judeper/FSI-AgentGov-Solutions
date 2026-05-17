@@ -8,7 +8,9 @@ coe_function: scale
 ---
 # Message Center Monitor
 
+> **Version:** v2.5.1
 > **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Monitor Microsoft 365 Message Center for platform changes that could impact AI agent deployments (Copilot Studio, Agent Builder).
 

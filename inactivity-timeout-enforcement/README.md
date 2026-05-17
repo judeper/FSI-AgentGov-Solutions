@@ -9,7 +9,8 @@ coe_function: govern
 # Inactivity Timeout Enforcement
 
 > **Version:** v1.1.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
 

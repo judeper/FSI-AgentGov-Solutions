@@ -8,17 +8,17 @@ coe_function: optimize
 ---
 # Content Moderation Monitor
 
-Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.
+> **Version:** v1.1.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
-> **Status:** Completed
+Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.
 
 ## Overview
 
 The Content Moderation Monitor detects when Copilot Studio agents have insufficient content moderation settings for their governance zone. Unlike environment-level solutions, this monitor performs **per-agent validation** — examining each bot deployed across your Power Platform environments.
 
 It supports Control 1.27 (AI Agent Content Moderation Enforcement) by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements, and contributes complementary evidence to Control 1.8 (Runtime Protection and External Threat Detection). See [Scope and Limitations](#scope-and-limitations) below.
-
-**Version:** 1.1.1
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 

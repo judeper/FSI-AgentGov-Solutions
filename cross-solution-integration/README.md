@@ -8,9 +8,11 @@ coe_function: scale
 ---
 # Cross-Solution Integration
 
-Integration layer that connects the 6 Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.
+> **Version:** v2.0.2
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
-> **Status:** Completed
+Integration layer that connects the 6 Tier 2 governance solutions into the Compliance Dashboard and Environment Lifecycle Management workflow.
 
 ## Overview
 

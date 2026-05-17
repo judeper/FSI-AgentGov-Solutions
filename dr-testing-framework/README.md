@@ -8,7 +8,9 @@ coe_function: govern
 ---
 # DR Readiness Validation Framework (DR-Testing-Framework)
 
-> **Version:** 2.0.1 | **Controls:** 2.4, 2.1, 1.9
+> **Version:** v2.0.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Scheduled validation that the post-recovery state of an AI agent environment in Microsoft Power Platform is observable, reachable, and correctly configured — packaging structured evidence for FFIEC BCP, FINRA Rule 4370, OCC Heightened Standards, and SEC Rule 17a-4(f) supervisory review.
 

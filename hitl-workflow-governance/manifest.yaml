@@ -14,6 +14,9 @@ prerequisites:
   power-platform-admin: "Power Platform admin tenant role or Dataverse environment administration for Copilot Studio scanning and schema deployment."
   security-admin: "Entra Global Admin or Application Administrator permissions for app registration, consent, and service principal setup."
 verification: "Run a scan and confirm new rows in fsi_HitlScanRun and fsi_HitlCheckpointResult, then verify the target Copilot Studio bot is listed in the maker portal."
+upstreamDependency:
+  status: preview
+  note: The Request for Information and Run a Multistage Approval actions remain preview in Microsoft Learn and should be reviewed against preview terms before regulated-data use.
 
 # zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
 #   per-agent HITL checkpoint governance applies wherever the agent has flows
