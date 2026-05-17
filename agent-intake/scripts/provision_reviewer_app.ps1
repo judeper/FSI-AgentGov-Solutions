@@ -348,11 +348,13 @@ function Get-ChoiceValue {
 function Get-PrivilegeDepthValue {
     param([Parameter(Mandatory = $true)][string]$DepthName)
 
+    # Microsoft.Dynamics.CRM.PrivilegeDepth is an EDM enum — Dataverse Web API
+    # requires the enum NAME as a quoted JSON string, not the numeric value.
     switch ($DepthName) {
-        'Basic'  { return 0 }
-        'Local'  { return 1 }
-        'Deep'   { return 2 }
-        'Global' { return 3 }
+        'Basic'  { return 'Basic' }
+        'Local'  { return 'Local' }
+        'Deep'   { return 'Deep' }
+        'Global' { return 'Global' }
         default  { throw "Unsupported privilege depth '$DepthName'." }
     }
 }
@@ -609,12 +611,16 @@ function New-AppRecord {
 function Add-TableToSolution {
     param([Parameter(Mandatory = $true)][hashtable]$TableSpec, [Parameter(Mandatory = $true)][hashtable]$Spec)
 
+    # PAC CLI 'add-solution-component --componentType 1' requires the entity
+    # logical name (all-lowercase). Passing the schema name (PascalCase) makes
+    # the command fail with "Failed to resolve entity metadata" but still exit 0,
+    # which would silently skip the binding.
     Invoke-PacCommand -Arguments @(
         'solution',
         'add-solution-component',
         '--environment', $EnvironmentUrl,
         '--solutionUniqueName', $Spec.solutionName,
-        '--component', $TableSpec.schemaName,
+        '--component', $TableSpec.logicalName,
         '--componentType', '1',
         '--AddRequiredComponents'
     ) -Description "Add $($TableSpec.logicalName) to solution"
@@ -886,9 +892,9 @@ function Add-RolePrivileges {
             }
 
             $missing.Add(@{
-                PrivilegeId   = $resolvedPrivilege.privilegeid
-                PrivilegeName = $resolvedPrivilege.name
-                Depth         = (Get-PrivilegeDepthValue -DepthName $tablePrivilege.depth)
+                PrivilegeId    = $resolvedPrivilege.privilegeid
+                PrivilegeName  = $resolvedPrivilege.name
+                Depth          = (Get-PrivilegeDepthValue -DepthName $tablePrivilege.depth)
                 BusinessUnitId = $BusinessUnitId
             }) | Out-Null
         }
@@ -899,7 +905,19 @@ function Add-RolePrivileges {
         return
     }
 
-    Invoke-DataverseRequest -Method POST -Token $Token -RelativeUri ("roles({0})/Microsoft.Dynamics.CRM.AddPrivilegesRole" -f $RoleRecord.roleid) -Body @{ Privileges = @($missing) } -SolutionUniqueName $Spec.solutionName | Out-Null
+    # Build a clean payload for AddPrivilegesRole — only PrivilegeId/Depth/BusinessUnitId
+    # are valid Microsoft.Dynamics.CRM.RolePrivilege properties. PrivilegeName is kept
+    # locally for log messages but stripped from the wire payload.
+    $payloadPrivileges = New-Object System.Collections.Generic.List[hashtable]
+    foreach ($entry in $missing) {
+        $payloadPrivileges.Add(@{
+            PrivilegeId    = $entry.PrivilegeId
+            Depth          = $entry.Depth
+            BusinessUnitId = $entry.BusinessUnitId
+        }) | Out-Null
+    }
+
+    Invoke-DataverseRequest -Method POST -Token $Token -RelativeUri ("roles({0})/Microsoft.Dynamics.CRM.AddPrivilegesRole" -f $RoleRecord.roleid) -Body @{ Privileges = @($payloadPrivileges) } -SolutionUniqueName $Spec.solutionName | Out-Null
     Write-Info "Added $($missing.Count) privilege(s) to '$($RoleSpec.name)'."
 }
 
