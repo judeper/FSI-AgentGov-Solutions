@@ -420,7 +420,7 @@ class PatternAnalyzer:
         total = len(feedback)
         critical = sum(1 for f in feedback if f.get("fsi_severity") == 100000003)
 
-        report = f"""
+        report = """
 ========================================
   Hallucination Pattern Analysis Report
 ========================================
@@ -519,7 +519,7 @@ def main() -> None:
         re.IGNORECASE,
     )
     if not dataverse_pattern.match(parsed.netloc):
-        print(f"Error: --environment host must be a Dataverse domain (*.crm[N].dynamics.com, *.microsoftdynamics.us, *.appsplatform.us, *.dynamics.cn, *.dynamics.de)")
+        print("Error: --environment host must be a Dataverse domain (*.crm[N].dynamics.com, *.microsoftdynamics.us, *.appsplatform.us, *.dynamics.cn, *.dynamics.de)")
         print(f"  Got: {parsed.netloc}")
         sys.exit(1)
 

@@ -87,6 +87,14 @@ python scripts/import_product_feedback_csv.py \
 
 Imported rows land in `fsi_hallucinationreports` with `fsi_source = 100000004`; `analyze_patterns.py` reads them directly for source, topic, channel, and day-level analysis.
 
+The importer now pre-populates the clustering fields the analyzer expects:
+
+- `fsi_topicname` carries the human-readable app/workload scope, enriched with `Feature Area` or `App module` when available.
+- `fsi_topicid` carries a deterministic `m365pf-*` cluster key for per-cluster aggregation and export review.
+- `fsi_channelid` is always present because the importer normalizes `Channel` and defaults missing values to `m365copilot`.
+- `fsi_feedbackcomment` is always populated from `Comments`, `Survey Responses`, or `Feedback Type` fallback text.
+- Blank comment/survey rows fall back to a per-record `fsi_topicid` ending in `record-<hash>` so ingestion remains deterministic without collapsing unrelated feedback into the same cluster.
+
 ### Live Mode
 
 ```bash

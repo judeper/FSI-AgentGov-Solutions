@@ -107,6 +107,14 @@ Set `fsi_source` to `100000004` (Microsoft 365 Copilot) for records imported fro
 - Required: `App` (the importer also accepts legacy `Product`), `Comments`, `Date Submitted`, `Feedback Type`
 - Optional: `Sentiment`, `User Id`, `User Email`, `Language or Comment Language`, `Channel`, `Feature Area`, `App Build`, `App Language`, `Attachments`, `TenantId`, `App module`, `Survey Questions`, `Survey Responses`, `Feedback Id`, and, after privacy review, `Prompt` / `Generated Response`
 
+**Ingestion-time clustering enrichment:**
+
+- `fsi_topicname` = `App / Feature Area` or `App / App module` when the export provides that scope.
+- `fsi_topicid` = deterministic `m365pf-*` cluster key derived from app, feature/module, channel, category, and normalized comment or survey text.
+- `fsi_channelid` = normalized `Channel`; when the export omits it, the importer defaults to `m365copilot` so channel clustering still works.
+- `fsi_feedbackcomment` = `Comments`, or `Survey Responses`, or `Feedback Type` as a final fallback.
+- `fsi_conversationid` = raw `Feedback Id` for traceability; if both `Comments` and `Survey Responses` are blank, the importer falls back to a per-record `fsi_topicid` keyed from that identifier instead of over-grouping unrelated rows.
+
 **Dry run / preview:**
 
 ```bash

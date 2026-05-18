@@ -7,6 +7,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
@@ -26,6 +27,20 @@ SEVERITY_LOW = 100000000
 SEVERITY_MEDIUM = 100000001
 SEVERITY_HIGH = 100000002
 SEVERITY_CRITICAL = 100000003
+
+CATEGORY_LABELS = {
+    CATEGORY_FACTUAL_ERROR: "factual-error",
+    CATEGORY_FABRICATED_DATA: "fabricated-data",
+    CATEGORY_CITATION_MISSING: "citation-missing",
+    CATEGORY_OUTDATED_INFO: "outdated-info",
+    CATEGORY_CONFIDENCE_OVERSTATEMENT: "confidence-overstatement",
+}
+DEFAULT_CHANNEL_ID = "m365copilot"
+MAX_TOPIC_NAME_LENGTH = 200
+MAX_TOPIC_ID_LENGTH = 200
+MAX_CHANNEL_ID_LENGTH = 100
+MAX_CONVERSATION_ID_LENGTH = 200
+MAX_CLUSTER_COMPONENT_LENGTH = 32
 
 REQUIRED_HEADERS = ("App", "Comments", "Date Submitted", "Feedback Type")
 CONTENT_SAMPLE_HEADERS = ("Prompt", "Generated Response")
@@ -254,6 +269,110 @@ def get_value(row: dict[str, str], *headers: str) -> str:
     return ""
 
 
+def limit_length(value: str, max_length: int) -> str:
+    return value if len(value) <= max_length else value[:max_length]
+
+
+def normalize_cluster_text(value: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
+
+
+def slugify_identifier(
+    value: str,
+    *,
+    fallback: str,
+    max_length: int = MAX_CLUSTER_COMPONENT_LENGTH,
+) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
+    if not slug:
+        slug = fallback
+    return limit_length(slug, max_length)
+
+
+def build_feedback_comment(row: dict[str, str]) -> str:
+    for header in ("Comments", "Survey Responses", "Feedback Type"):
+        value = get_value(row, header)
+        if value:
+            return value
+    return ""
+
+
+def build_topic_name(row: dict[str, str]) -> str:
+    app = get_value(row, "App")
+    app_key = normalize_cluster_text(app)
+    qualifiers: list[str] = []
+    for header in ("Feature Area", "App module"):
+        value = get_value(row, header)
+        if not value:
+            continue
+        if normalize_cluster_text(value) == app_key or value in qualifiers:
+            continue
+        qualifiers.append(value)
+    if qualifiers:
+        return limit_length(f"{app} / {' / '.join(qualifiers)}", MAX_TOPIC_NAME_LENGTH)
+    return limit_length(app, MAX_TOPIC_NAME_LENGTH)
+
+
+def build_channel_id(row: dict[str, str]) -> str:
+    raw_channel = get_value(row, "Channel")
+    if not raw_channel:
+        return DEFAULT_CHANNEL_ID
+    return slugify_identifier(
+        raw_channel,
+        fallback=DEFAULT_CHANNEL_ID,
+        max_length=MAX_CHANNEL_ID_LENGTH,
+    )
+
+
+def build_cluster_signal(row: dict[str, str]) -> str:
+    parts = [
+        normalize_cluster_text(get_value(row, header))
+        for header in ("Comments", "Survey Responses")
+        if get_value(row, header)
+    ]
+    return " ".join(part for part in parts if part)
+
+
+def build_cluster_topic_id(
+    row: dict[str, str],
+    *,
+    reportname: str,
+    category: int,
+    channel_id: str,
+) -> str:
+    app_key = slugify_identifier(get_value(row, "App"), fallback="app")
+    feature_key = slugify_identifier(
+        get_value(row, "Feature Area", "App module"),
+        fallback="general",
+    )
+    channel_key = slugify_identifier(channel_id, fallback=DEFAULT_CHANNEL_ID)
+    category_key = CATEGORY_LABELS.get(category, "uncategorized")
+    signal = build_cluster_signal(row)
+    if signal:
+        signal_key = slugify_identifier(
+            " ".join(signal.split()[:6]),
+            fallback="signal",
+            max_length=48,
+        )
+        digest_basis = "|".join((app_key, feature_key, channel_key, category_key, signal))
+        digest = hashlib.sha256(digest_basis.encode("utf-8")).hexdigest()[:12]
+        cluster_id = (
+            f"m365pf-{app_key}-{feature_key}-{channel_key}-"
+            f"{category_key}-{signal_key}-{digest}"
+        )
+    else:
+        fallback_source = get_value(row, "Feedback Id") or reportname
+        digest_basis = "|".join(
+            (app_key, feature_key, channel_key, category_key, fallback_source)
+        )
+        digest = hashlib.sha256(digest_basis.encode("utf-8")).hexdigest()[:12]
+        cluster_id = (
+            f"m365pf-{app_key}-{feature_key}-{channel_key}-"
+            f"{category_key}-record-{digest}"
+        )
+    return limit_length(cluster_id, MAX_TOPIC_ID_LENGTH)
+
+
 def parse_submitted_at(value: str) -> Optional[str]:
     if not value:
         return None
@@ -421,18 +540,28 @@ def normalize_feedback_row(
     content_sample_present = any(get_value(row, header) for header in CONTENT_SAMPLE_HEADERS)
     category = classify_category(row)
     severity = classify_severity(row, category)
+    reportname = build_reportname(row, reported_at)
+    channel_id = build_channel_id(row)
     record: dict[str, Any] = {
-        "fsi_reportname": build_reportname(row, reported_at),
+        "fsi_reportname": reportname,
         "fsi_category": category,
         "fsi_severity": severity,
         "fsi_source": SOURCE_MICROSOFT_365_COPILOT,
-        "fsi_topicname": app,
+        "fsi_topicname": build_topic_name(row),
+        "fsi_topicid": build_cluster_topic_id(
+            row,
+            reportname=reportname,
+            category=category,
+            channel_id=channel_id,
+        ),
+        "fsi_channelid": channel_id,
+        "fsi_feedbackcomment": build_feedback_comment(row),
         "fsi_reportedat": reported_at,
+        "fsi_conversationid": limit_length(
+            get_value(row, "Feedback Id") or reportname,
+            MAX_CONVERSATION_ID_LENGTH,
+        ),
     }
-
-    comment = get_value(row, "Comments")
-    if comment:
-        record["fsi_feedbackcomment"] = comment
 
     description = build_description(row)
     if description:
@@ -441,18 +570,6 @@ def normalize_feedback_row(
     reported_by = get_value(row, "User Email", "User Id")
     if reported_by:
         record["fsi_reportedby"] = reported_by
-
-    topic_id = get_value(row, "Feature Area", "App module", "Feedback Id")
-    if topic_id:
-        record["fsi_topicid"] = topic_id
-
-    channel = get_value(row, "Channel")
-    if channel:
-        record["fsi_channelid"] = channel
-
-    conversation_id = get_value(row, "Feedback Id")
-    if conversation_id:
-        record["fsi_conversationid"] = conversation_id
 
     agent_id = get_value(row, "Agent ID")
     if agent_id:

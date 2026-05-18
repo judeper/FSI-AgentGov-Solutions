@@ -93,6 +93,21 @@ Error: Missing required CSV columns: App, Comments, Date Submitted, Feedback Typ
 3. Positive or non-actionable feedback is skipped intentionally so the tracker stays focused on hallucination investigations.
 4. Duplicate and `already_exists` skips are expected on reruns because the importer uses deterministic `fsi_reportname` values for idempotence.
 
+### Product Feedback rows land in single-record clusters
+
+**Symptom:** Imported rows have `fsi_topicid` values ending with `record-<hash>` and do not group with other Product Feedback rows.
+
+**Possible causes:**
+
+1. The export omitted usable `Comments` and `Survey Responses`, so the importer had no shared text signal to normalize.
+2. `Feature Area`, `App module`, or `Channel` differed between rows even though the app name looked similar.
+
+**Solution:**
+
+1. Re-export Product Feedback with comment text when tenant policy allows it.
+2. Compare `fsi_topicname`, `fsi_channelid`, and `fsi_conversationid` to confirm whether the rows should share a cluster.
+3. Use `fsi_topicname`, `fsi_channelid`, and `fsi_reportedat` for broader app/feature/day triage when per-record fallback clustering is expected.
+
 ### Required packages not installed
 
 **Error:**
