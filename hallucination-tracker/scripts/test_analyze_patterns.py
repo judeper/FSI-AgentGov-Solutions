@@ -8,7 +8,7 @@ import unittest
 # Add scripts directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
-from analyze_patterns import PatternAnalyzer, CATEGORIES, SEVERITY_LABELS, SEVERITY_WEIGHTS, SOURCES, main
+from analyze_patterns import PatternAnalyzer, main
 
 
 # Sample feedback matching the dry-run data structure

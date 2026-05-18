@@ -237,16 +237,27 @@ Source the CSV from **Microsoft 365 admin center > Health > Product Feedback**. 
 
 | CSV column | Required | Dataverse mapping | Notes |
 |------------|----------|-------------------|-------|
-| `App` (`Product` alias accepted) | Yes | `fsi_topicname` | Microsoft 365 Copilot app or workload area |
+| `App` (`Product` alias accepted) | Yes | `fsi_topicname` | Base display scope for clustering; combined with `Feature Area` / `App module` when present |
 | `Date Submitted` | Yes | `fsi_reportedat` | Normalized to UTC ISO 8601 |
-| `Feedback Type` | Yes | `fsi_description` | Preserved in the record metadata |
-| `Comments` | Yes | `fsi_feedbackcomment` | Used for category and severity heuristics |
+| `Feedback Type` | Yes | `fsi_description` / `fsi_feedbackcomment` fallback | Preserved in metadata and used as fallback comment text when `Comments` is blank |
+| `Comments` | Yes | `fsi_feedbackcomment` / `fsi_topicid` | Primary clustering signal; normalized into the deterministic cluster key |
 | `User Id` / `User Email` | No | `fsi_reportedby` | Imported when the export includes user identity |
-| `Channel` | No | `fsi_channelid` | Used for clustering when present |
-| `Feature Area` / `App module` / `Feedback Id` | No | `fsi_topicid` / `fsi_conversationid` | Preserved for clustering and traceability |
+| `Channel` | No | `fsi_channelid` | Normalized when present; defaults to `m365copilot` for Product Feedback rows |
+| `Feature Area` / `App module` | No | `fsi_topicname` / `fsi_topicid` | Refines the human-readable scope and structured cluster key |
+| `Feedback Id` | No | `fsi_conversationid` | Preserved for traceability and used for per-record fallback clusters when comment text is absent |
 | `Prompt` / `Generated Response` | No | `fsi_userquery` / `fsi_agentresponse` | Imported only with `--include-content-samples` after tenant privacy review |
 
 Additional metadata columns such as `Language or Comment Language`, `App Build`, `App Language`, `Attachments`, `TenantId`, `Survey Questions`, and `Survey Responses` are preserved in `fsi_description`.
+
+### Clustering enrichment during ingestion
+
+The Product Feedback importer pre-populates the clustering inputs that `scripts/analyze_patterns.py` expects:
+
+- `fsi_topicname` becomes `App / Feature Area` (or `App / App module`) when the export provides that scope.
+- `fsi_topicid` stores a deterministic `m365pf-*` cluster label derived from app, feature/module, channel, category, and normalized feedback text.
+- `fsi_channelid` is always populated; when the CSV omits `Channel`, the importer defaults to `m365copilot`.
+- `fsi_feedbackcomment` uses `Comments` first, then falls back to `Survey Responses` or `Feedback Type` so each imported row has analyzer-ready text context.
+- Rows without usable comment or survey text fall back to a per-record `fsi_topicid` ending in `record-<hash>` rather than crashing or over-grouping unrelated feedback.
 
 ### Import commands
 
@@ -336,7 +347,7 @@ Hallucination metrics contribute to Control 3.10 status in Compliance Dashboard.
 | **Sharing Restrictions** | Not implemented | No security role definitions or row-level security |
 | **Audit Logging** | Partial | Dataverse table auditing is enabled in schema; environment-level audit configuration remains an admin responsibility |
 | **Power BI Dashboard** | Not implemented | Template planned for future release |
-| **Import Connectors** | Partial | Microsoft 365 Product Feedback CSV importer is implemented; Copilot Studio transcript import remains a documented pattern only |
+| **Import Connectors** | Partial | Microsoft 365 Product Feedback CSV importer is implemented with ingestion-time clustering enrichment; Copilot Studio transcript import remains a documented pattern only |
 
 > These controls are required for production use in regulated environments. The regulatory alignment
 > claims below describe the *intended* coverage once the solution is fully implemented and configured.
