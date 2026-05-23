@@ -36,7 +36,7 @@ Common issues and resolutions for the Content Moderation Governance Monitor solu
 | No agents found | Environment has no Copilot Studio bots, or bots are all drafts | Verify bots exist; use `-IncludeDrafts` to scan unpublished agents |
 | Unknown moderation level | Bot `configuration` JSON does not contain content moderation settings | Agent may not have generative AI enabled; Unknown agents receive Warning severity |
 | **All** agents show Unknown level | The `bot.configuration` JSON key for content moderation may have changed (Microsoft undocumented internal schema) | Verify at least one agent returns a known level (Lowest/Low/Medium/High/Highest). If none do, contact Microsoft support or check Copilot Studio release notes for schema changes. The script emits a warning when this occurs. |
-| Zone lookup failure | ELM `fsi_environmentlifecycles` table not deployed or empty | Verify ELM deployment; falls back to naming convention matching (`-Z1-`, `-Z2-`, `-Z3-` in environment name) |
+| Zone lookup failure | ELM `fsi_environmentrequests` table not deployed or empty | Verify ELM deployment; falls back to naming convention matching (`-Z1-`, `-Z2-`, `-Z3-` in environment name) |
 | Bot metadata query error | Environment Dataverse not provisioned | Skip environments without Dataverse; these cannot host Copilot Studio bots |
 | Sandbox environments included | `fsi_CMM_IncludeSandbox` set to true | Set environment variable to `false` or use `-ExcludeSandbox` parameter |
 | Moderation level shows "strict", "lowest", or "highest" | Copilot Studio and prompt-level surfaces can use related labels | `Get-BotModerationLevel` normalizes "lowest" → "Low", "highest"/"strict" → "High", "standard"/"moderate" → "Medium" |

@@ -2,7 +2,7 @@
 
 All notable changes to the Deny Event Correlation Report are documented here.
 
-## [Unreleased] — v2.0.4
+## [2.0.4] — 2026-05-23
 
 ### Fixed
 
