@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.4] — 2026-05-23
+
+### Fixed
+
+- **Critical**: Flow 2 step 3.7 Change Frequency Score used a nonexistent lookup `_fsi_validationcycle_lookup_value` on `fsi_mrmcomplianceevent`; corrected to `_fsi_modelinventory_lookup_value eq @{model.id}` per the schema (only `fsi_ModelInventory_Lookup` exists on that table). `docs/flow-configuration.md` ~line 355. (council review C-1)
+- **Critical**: Troubleshooting diagnostic queries "List Open Validation Cycles" and "Recent Compliance Events" referenced nonexistent `fsi_modelid` on `fsi_validationcycle` / `fsi_mrmcomplianceevent`; replaced with the actual lookup column `_fsi_modelinventory_lookup_value`. `docs/troubleshooting.md` lines 206-207, 213-214. (council review C-2)
+- **Major**: `create_mrm_dataverse_schema.py` `create_alternate_keys()` bypassed the client abstraction by calling `client.session.get/post()` and constructing raw EntityDefinitions URLs; replaced with `client.ensure_entity_key()` from the shared client. (council review M-4)
+- **Major**: Flow 2 steps 3.4 (Model Complexity) and 3.5 (Explainability) compared `fsi_modelprovider` / `fsi_decisionoutputtype` picklist columns against string labels; added the same "Use OptionSet integer values for comparison in production" note that step 3.1 already carries, including the integer mapping table. `docs/flow-configuration.md`. (council review M-5)
+
+### Changed
+
+- **Major**: `mrm_client.py` (534 lines) is now a deprecation stub that raises `ImportError`; all four internal callers (`create_mrm_dataverse_schema.py`, `create_mrm_environment_variables.py`, `create_mrm_connection_references.py`, `deploy.py`) now import the shared `DataverseClient` from `scripts/shared/dataverse_client.py`. Eliminates ~400 lines of duplicated MSAL/retry/metadata-CRUD logic and inherits the shared client's `_raise_for_status()`, `update_record()`, `delete_record()`, `ensure_entity_key()` helpers and future improvements. (council review M-1)
+- **Major**: Option-set lookup is now case-insensitive (`name.lower()` normalization) via the shared `DataverseClient.get_global_optionset()`; prevents latent `SchemaNameisNotUnique` errors if any caller ever passes mixed-case names. (council review M-2)
+- Added `_build_optionset_metadata`, `_build_table_metadata`, `_build_column_metadata` module-level helpers to `create_mrm_dataverse_schema.py` mirroring the CTSG template; gives a stable contract layer for future shared-client work.
+- Constructed `DataverseClient` in live mode (no `dry_run=` passed to constructor) following the Wave 1 CTSG lesson (`migrate_ctsg_optionsets_v1_1_0.py:238-267`); reads execute live so existence checks remain meaningful in `--dry-run`, while every write is gated locally with explicit `if dry_run:` branches.
+
+### Notes
+
+- M-3 (rename `fsi_mrm_sr117pillar` option set to `fsi_mrm_sr262pillar`) is **deferred to MRM v1.0.5** as a `[BREAKING DEPLOY]` minor bump with a dedicated migration script, following the Wave 1 CTSG precedent (scope-discipline: defer breaking-deploy work out of patch bumps).
+- Schema column names, regulatory references, and the deprecated `mrm_client.py` are unchanged on disk other than the stub conversion; no tenant-side re-keying is required for this release. Operators upgrading from v1.0.3 should re-run `pip install -r scripts/requirements.txt` so the shared client's `azure-identity` is available where it was not previously.
+
+---
+
 ## [1.0.3] — 2026-05-05
 
 ### Fixed

@@ -204,13 +204,13 @@ GET {org}.crm.dynamics.com/api/data/v9.2/fsi_modelinventories?$filter=fsi_curren
 ### List Open Validation Cycles
 
 ```
-GET {org}.crm.dynamics.com/api/data/v9.2/fsi_validationcycles?$filter=fsi_cyclestatus ne 100000006 and fsi_cyclestatus ne 100000007&$select=fsi_cycleid,fsi_modelid,fsi_cyclestatus,fsi_submitteddate
+GET {org}.crm.dynamics.com/api/data/v9.2/fsi_validationcycles?$filter=fsi_cyclestatus ne 100000006 and fsi_cyclestatus ne 100000007&$select=fsi_cycleid,_fsi_modelinventory_lookup_value,fsi_cyclestatus,fsi_submitteddate
 ```
 
 ### Recent Compliance Events
 
 ```
-GET {org}.crm.dynamics.com/api/data/v9.2/fsi_mrmcomplianceevents?$orderby=fsi_eventtimestamp desc&$top=20&$select=fsi_eventtype,fsi_modelid,fsi_eventdetails,fsi_eventtimestamp
+GET {org}.crm.dynamics.com/api/data/v9.2/fsi_mrmcomplianceevents?$orderby=fsi_eventtimestamp desc&$top=20&$select=fsi_eventtype,_fsi_modelinventory_lookup_value,fsi_eventdetails,fsi_eventtimestamp
 ```
 
 ## Getting Help

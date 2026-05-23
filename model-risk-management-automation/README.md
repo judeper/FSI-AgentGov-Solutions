@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Model Risk Management Automation
 
-> **Version:** v1.0.3
+> **Version:** v1.0.4
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -330,8 +330,9 @@ Loan Officer Assist,cr8a5_loanOfficerAssist,b2c3d4e5-f6a7-8901-bcde-f12345678901
 |---------|------|---------|
 | 1.0.0 | March 2026 | Initial release |
 | 1.0.1 | April 2026 | Option set defaults + PowerShell verb rename |
-| 1.0.3 | May 2026 | Microsoft Learn 2026-Q2 refresh — managed-identity-first Python auth, Agent 365 registry API alignment, MRM governance-zone mapping fix, configurable scoring thresholds, and Agent Card evidence updates |
 | 1.0.2 | April 2026 | AI Council technical-accuracy review — column-drift fixes (lookup columns, picklist integers), regulatory language softening (FINRA 25-07 framing, examiner-facing wording), control mapping corrections (3.1 title + pillar paths), Agent Card schema alignment, deployment script auth parameters |
+| 1.0.3 | May 2026 | Microsoft Learn 2026-Q2 refresh — managed-identity-first Python auth, Agent 365 registry API alignment, MRM governance-zone mapping fix, configurable scoring thresholds, and Agent Card evidence updates |
+| 1.0.4 | May 2026 | Council review remediation — shared `DataverseClient` adoption (`mrm_client.py` is now a deprecation stub); flow doc and troubleshooting lookup-column fixes; integer OptionSet notes for Flow 2 steps 3.4/3.5; `create_alternate_keys()` uses `ensure_entity_key()` instead of raw session access |
 
 ## Support
 
@@ -343,4 +344,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Model Risk Management Automation v1.0.3*
+*FSI Agent Governance Framework — Model Risk Management Automation v1.0.4*

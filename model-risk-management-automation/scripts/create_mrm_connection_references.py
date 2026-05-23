@@ -25,7 +25,11 @@ import argparse
 import os
 import sys
 
-from mrm_client import MRMClient
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"),
+)
+from dataverse_client import DataverseClient  # noqa: E402
 
 
 # =============================================================================
@@ -102,14 +106,14 @@ CONNECTION_REF_DEFINITIONS = [
 
 
 def create_connection_reference(
-    client: MRMClient, definition: dict, dry_run: bool = False,
+    client: DataverseClient, definition: dict, dry_run: bool = False,
 ) -> None:
     """Create a single connection reference in Dataverse.
 
     Checks for existence first -- skips if already present.
 
     Args:
-        client: MRMClient instance
+        client: DataverseClient instance
         definition: Dict with logical_name, display_name, connector_id,
                      description
         dry_run: Preview mode flag
@@ -119,12 +123,14 @@ def create_connection_reference(
     connector_id = definition["connector_id"]
     description = definition["description"]
 
-    # Idempotent check — skip if already exists
+    # Idempotent check — skip if already exists.
+    # The shared DataverseClient.query() returns a list directly (no
+    # {"value": [...]} wrapper) and uses filter_expr= as the kwarg name.
     existing = client.query(
         "connectionreferences",
-        filter=f"connectionreferencelogicalname eq '{logical_name}'",
+        filter_expr=f"connectionreferencelogicalname eq '{logical_name}'",
     )
-    if existing["value"]:
+    if existing:
         print(f"  {logical_name}: already exists, skipping")
         return
 
@@ -136,12 +142,16 @@ def create_connection_reference(
         "description": description,
     }
 
+    if dry_run:
+        print(f"  {logical_name}: [DRY-RUN] Would create ({connector_id})")
+        return
+
     client.create_record("connectionreferences", ref_data)
     print(f"  {logical_name}: created ({connector_id})")
 
 
 def create_connection_references(
-    client: MRMClient, dry_run: bool = False,
+    client: DataverseClient, dry_run: bool = False,
 ) -> None:
     """Deploy all MRM connection references to Dataverse.
 
@@ -150,7 +160,7 @@ def create_connection_references(
     operations are idempotent -- safe to re-run.
 
     Args:
-        client: MRMClient instance
+        client: DataverseClient instance
         dry_run: Preview mode flag
     """
     print("=" * 60)
@@ -240,9 +250,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Validate required arguments. Hosted identity is preferred: when neither
-    # --interactive nor --client-secret is supplied, MRMClient uses Azure
-    # Identity DefaultAzureCredential (managed identity/workload identity).
+    # Validate required arguments. Managed identity is preferred: when
+    # neither --interactive nor --client-secret is supplied, the shared
+    # DataverseClient defaults to managed-identity auth.
     if not args.environment_url:
         print("ERROR: --environment-url or MRM_ENVIRONMENT_URL required")
         sys.exit(1)
@@ -253,14 +263,25 @@ def main() -> None:
         )
         sys.exit(1)
 
+    if args.interactive:
+        auth_mode = "interactive"
+    elif args.client_secret:
+        auth_mode = "client-secret"
+    else:
+        auth_mode = "managed-identity"
+
     try:
-        client = MRMClient(
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the
+        # shared client short-circuits reads in dry-run mode, which would
+        # defeat the idempotent "skip if exists" check. Writes are gated
+        # locally inside create_connection_reference via the dry_run arg.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
+            auth_mode=auth_mode,
         )
 
         create_connection_references(client, dry_run=args.dry_run)

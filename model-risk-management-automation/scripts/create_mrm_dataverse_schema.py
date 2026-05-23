@@ -14,7 +14,12 @@ import sys
 from typing import Optional
 
 import requests
-from mrm_client import MRMClient
+
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"),
+)
+from dataverse_client import DataverseClient  # noqa: E402
 
 PUBLISHER_PREFIX = "fsi"
 
@@ -1028,7 +1033,42 @@ def generate_schema_docs() -> str:
 # ---------------------------------------------------------------------------
 
 
-def create_optionsets(client: MRMClient, dry_run: bool) -> dict:
+def _build_optionset_metadata(os_def: dict) -> dict:
+    """Build a Dataverse global OptionSetMetadata payload from an MRM def.
+
+    The MRM SHARED_OPTIONSETS and OPTIONSETS dicts already use the raw
+    Dataverse Web API shape (Name, DisplayName, Options as LocalizedLabels).
+    This helper ensures the @odata.type annotation is present so the shared
+    DataverseClient.create_global_optionset POST has an unambiguous payload
+    and returns the dict otherwise unchanged.
+    """
+    metadata = dict(os_def)
+    metadata.setdefault(
+        "@odata.type", "#Microsoft.Dynamics.CRM.OptionSetMetadata"
+    )
+    return metadata
+
+
+def _build_table_metadata(table_def: dict) -> dict:
+    """Pass-through helper for MRM TABLES entries.
+
+    Mirrors the CTSG _build_table_metadata template so future shared-client
+    refactors have a stable contract layer.
+    """
+    return dict(table_def)
+
+
+def _build_column_metadata(col_def: dict) -> dict:
+    """Pass-through helper for MRM column definitions.
+
+    The _string_col / _picklist_col / _bool_col helpers above already emit
+    Dataverse-shaped payloads; this thin wrapper exists so all metadata
+    handed to the shared DataverseClient flows through a single seam.
+    """
+    return dict(col_def)
+
+
+def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
     """Create global option sets (shared and MRM-specific)."""
     print("\n=== Creating Option Sets ===")
     created = 0
@@ -1040,8 +1080,11 @@ def create_optionsets(client: MRMClient, dry_run: bool) -> dict:
             print(f"  {name}: Already exists (reusing)")
             skipped += 1
         else:
-            print(f"  {name}: Creating")
-            client.create_global_optionset(metadata)
+            if dry_run:
+                print(f"  {name}: [DRY-RUN] Would create")
+            else:
+                print(f"  {name}: Creating")
+                client.create_global_optionset(_build_optionset_metadata(metadata))
             created += 1
 
     print("\nMRM-specific option sets:")
@@ -1050,14 +1093,17 @@ def create_optionsets(client: MRMClient, dry_run: bool) -> dict:
             print(f"  {name}: Already exists")
             skipped += 1
         else:
-            print(f"  {name}: Creating")
-            client.create_global_optionset(metadata)
+            if dry_run:
+                print(f"  {name}: [DRY-RUN] Would create")
+            else:
+                print(f"  {name}: Creating")
+                client.create_global_optionset(_build_optionset_metadata(metadata))
             created += 1
 
     return {"created": created, "skipped": skipped}
 
 
-def create_tables(client: MRMClient, dry_run: bool) -> dict:
+def create_tables(client: DataverseClient, dry_run: bool) -> dict:
     """Create tables."""
     print("\n=== Creating Tables ===")
     created = 0
@@ -1068,13 +1114,16 @@ def create_tables(client: MRMClient, dry_run: bool) -> dict:
             print(f"  {table_name}: Already exists")
             skipped += 1
         else:
-            print(f"  {table_name}: Creating")
-            client.create_entity(metadata)
+            if dry_run:
+                print(f"  {table_name}: [DRY-RUN] Would create")
+            else:
+                print(f"  {table_name}: Creating")
+                client.create_entity(_build_table_metadata(metadata))
             created += 1
     return {"created": created, "skipped": skipped}
 
 
-def create_columns(client: MRMClient, dry_run: bool) -> None:
+def create_columns(client: DataverseClient, dry_run: bool) -> None:
     """Create columns on tables."""
     print("\n=== Creating Columns ===")
     for table_logical_name, columns in COLUMNS.items():
@@ -1085,12 +1134,23 @@ def create_columns(client: MRMClient, dry_run: bool) -> None:
             if client.get_attribute_metadata(table_logical_name, col_logical_name):
                 print(f"  {schema_name}: Already exists")
             else:
-                print(f"  {schema_name}: Creating")
-                client.create_attribute(table_logical_name, column_metadata)
+                if dry_run:
+                    print(f"  {schema_name}: [DRY-RUN] Would create")
+                else:
+                    print(f"  {schema_name}: Creating")
+                    client.create_attribute(
+                        table_logical_name, _build_column_metadata(column_metadata)
+                    )
 
 
-def create_alternate_keys(client: MRMClient, dry_run: bool) -> dict:
-    """Create alternate keys on tables."""
+def create_alternate_keys(client: DataverseClient, dry_run: bool) -> dict:
+    """Create alternate keys on tables.
+
+    Uses the shared DataverseClient.ensure_entity_key() helper (idempotent)
+    instead of constructing raw EntityDefinitions(...)/Keys URLs against
+    client._session — that direct API access pattern coupled MRM tightly
+    to per-solution client internals (council review M-4).
+    """
     print("\n=== Creating Alternate Keys ===")
     created = 0
     skipped = 0
@@ -1102,39 +1162,27 @@ def create_alternate_keys(client: MRMClient, dry_run: bool) -> dict:
             print(f"    [DRY-RUN] Would create alternate key {schema_name}")
             created += 1
             continue
-        # Build the key creation payload
-        payload = {
+
+        key_metadata = {
             "SchemaName": schema_name,
             "DisplayName": key_def["DisplayName"],
             "KeyAttributes": key_def["KeyAttributes"],
         }
         try:
-            url = (
-                f"{client.base_url}/EntityDefinitions"
-                f"(LogicalName='{entity}')/Keys"
-            )
-            resp = client.session.get(url, headers=client._get_headers())
-            resp.raise_for_status()
-            existing_keys = resp.json().get("value", [])
-            if any(k.get("SchemaName", "").lower() == schema_name.lower() for k in existing_keys):
+            result = client.ensure_entity_key(entity, key_metadata)
+            if result is None:
                 print(f"    Already exists")
                 skipped += 1
-                continue
-        except Exception:
-            pass  # If check fails, attempt creation anyway
-
-        try:
-            resp = client.session.post(url, headers=client._get_headers(), json=payload)
-            resp.raise_for_status()
-            print(f"    Created")
-            created += 1
+            else:
+                print(f"    Created")
+                created += 1
         except requests.HTTPError as e:
             print(f"    Error: {e}")
             skipped += 1
     return {"created": created, "skipped": skipped}
 
 
-def create_schema(client: MRMClient, dry_run: bool) -> dict:
+def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     """Create complete schema (orchestrator)."""
     option_set_results = create_optionsets(client, dry_run)
     table_results = create_tables(client, dry_run)
@@ -1201,14 +1249,28 @@ def main() -> None:
 
     client_secret = args.client_secret
 
+    # Determine auth mode: interactive > client-secret > managed-identity.
+    if args.interactive:
+        auth_mode = "interactive"
+    elif client_secret:
+        auth_mode = "client-secret"
+    else:
+        auth_mode = "managed-identity"
+
     try:
-        client = MRMClient(
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the
+        # shared client short-circuits *reads* in dry-run mode, which would
+        # defeat a meaningful preview. Reads are executed live; writes are
+        # gated locally inside create_optionsets/create_tables/create_columns/
+        # create_alternate_keys via the dry_run argument. Pattern lesson from
+        # Wave 1 CTSG; see migrate_ctsg_optionsets_v1_1_0.py:238-267.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
+            auth_mode=auth_mode,
         )
 
         if args.dry_run:
