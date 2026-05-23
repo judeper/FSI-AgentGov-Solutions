@@ -254,7 +254,7 @@
     "audit-compliance-manager": {
       "id": "audit-compliance-manager",
       "name": "Audit Compliance Manager",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",

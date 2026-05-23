@@ -72,6 +72,12 @@ class ACVClient:
         self._token: Optional[dict] = None
 
         # Setup retry strategy
+        # NOTE: allowed_methods intentionally omits PUT. ACV never performs PUT
+        # operations — upserts in this client use POST/PATCH against the
+        # AuditValidationHistory append-only table. The companion ALCAClient
+        # (alca_client.py) includes PUT because ALCA uses alternate-key upserts
+        # via PUT against AuditEnvironmentCompliance. Do not add PUT here unless
+        # an ACV write path is added that actually uses it.
         self._session = requests.Session()
         retry_strategy = Retry(
             total=3,

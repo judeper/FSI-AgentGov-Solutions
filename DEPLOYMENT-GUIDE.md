@@ -74,7 +74,7 @@ These solutions operate independently but can be wired into the Compliance Dashb
 | Solution | Version | Controls |
 |----------|---------|----------|
 | [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.2 | 3.8 |
-| [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.4 | 1.7 |
+| [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.5 | 1.7 |
 | [Conditional Access Automation](./conditional-access-automation/) | v2.0.2 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.2 | 1.27, 1.8 |
 | [File Upload Security](./file-upload-security/) | v1.1.1 | 1.14, 1.8, 1.4 |

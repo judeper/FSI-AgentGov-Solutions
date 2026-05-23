@@ -1,7 +1,7 @@
 # Automating Audit Logging Compliance for AI Agent Environments
 ## Audit Compliance Manager (ACM) — ALCA + ACV
 
-**Version:** 1.0.2
+**Version:** 1.0.5
 **Solution Type:** Automated Detection and Remediation
 **Platform:** Azure Automation + Power Platform with Dataverse
 
@@ -312,8 +312,8 @@ ALCA operates as two Azure Automation runbooks (detection and remediation) with 
 | `fsi_compliancestatus` | Choice | Compliance status (Compliant/Non-Compliant/Remediation Pending/Error) |
 | `fsi_lastchecked` | DateTime (UTC) | Timestamp of last compliance check |
 | `fsi_remediationdate` | DateTime (UTC) | Timestamp when remediation was applied |
-| `fsi_remediatedby` | Single Line Text (100) | Identity that performed remediation (e.g., "Azure Automation MI") |
-| `fsi_errormessage` | Multi-line Text (2000) | Error details if compliance check or remediation failed |
+| `fsi_remediatedby` | Single Line Text (200) | Identity that performed remediation (e.g., "Azure Automation MI") |
+| `fsi_errormessage` | Multi-line Text (4000) | Error details if compliance check or remediation failed |
 | `fsi_lasteventcaptured` | DateTime (UTC) | Timestamp of most recent audit event observed during optional audit search validation |
 
 **Choice Field:** `fsi_alca_compliancestatus`
@@ -415,8 +415,8 @@ python create_audit_compliance_schema.py \
 | Compliance Status | `fsi_compliancestatus` | Choice | - | Yes | Compliance status (see choice values below) |
 | Last Checked | `fsi_lastchecked` | DateTime | - | No | Timestamp of last compliance check (UTC) |
 | Remediation Date | `fsi_remediationdate` | DateTime | - | No | Timestamp when remediation was applied (UTC) |
-| Remediated By | `fsi_remediatedby` | Text | 100 | No | Identity that performed remediation |
-| Error Message | `fsi_errormessage` | Memo | 2000 | No | Error details if check/remediation failed |
+| Remediated By | `fsi_remediatedby` | Text | 200 | No | Identity that performed remediation |
+| Error Message | `fsi_errormessage` | Memo | 4000 | No | Error details if check/remediation failed |
 | Last Event Captured | `fsi_lasteventcaptured` | DateTime | - | No | Timestamp of most recent audit event |
 
 **Compliance Status Choice Values:**
@@ -1112,7 +1112,8 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 - **v1.0.1 (March 2026):** Issue-fix wave — see CHANGELOG
 - **v1.0.2 (April 2026):** Token-cache and OData filter bug fixes
 - **v1.0.3 (April 2026):** AI Council technical-accuracy pass (Opus 4.7 + Goldeneye + GPT-5.4)
-- **v1.0.4 (Unreleased):** Microsoft Learn 2026-Q2 refresh for Purview Audit retention, managed-identity-first authentication, and Power Platform/Dataverse audit terminology
+- **v1.0.4 (May 2026):** Microsoft Learn 2026-Q2 refresh for Purview Audit retention, managed-identity-first authentication, and Power Platform/Dataverse audit terminology
+- **v1.0.5 (Unreleased):** Documentation drift cleanup (column MaxLength, choice option labels, version-string sync) and MSAL.PS deprecation notice (council review remediation)
 
 ---
 

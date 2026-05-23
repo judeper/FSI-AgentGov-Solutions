@@ -19,6 +19,19 @@
     - Adds AlertRequired flag for Power Automate flow routing
     - No Write-Host (uses Write-Verbose for diagnostics)
 
+    Auth-mode asymmetry vs. Start-EnvironmentValidationRunbook.ps1 (intentional):
+    This tenant runbook requires certificate-based service-principal authentication
+    only. It does NOT provide a client-secret fallback. The companion environment
+    runbook accepts a -ClientSecret parameter as a "legacy dev-only" fallback per
+    the AGENTS.md managed-identity-first auth standard. The asymmetry is
+    deliberate: tenant-level operations (Unified Audit Log enable/disable,
+    Exchange Online Set-AdminAuditLogConfig) impact every workload in the tenant
+    and warrant the stronger credential. Environment-level operations are
+    scoped to a single Power Platform environment and operators may legitimately
+    need a client-secret path during early proof-of-concept testing before a
+    certificate is in place. Production deployments for both runbooks must use
+    certificate or Managed Identity authentication.
+
     Output structure enables Power Automate HTTP webhook actions to parse validation
     results and route alerts based on severity and drift status.
 

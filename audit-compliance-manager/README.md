@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Audit Compliance Manager (ACM)
 
-> **Version:** v1.0.4
+> **Version:** v1.0.5
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -56,6 +56,15 @@ pip install -r scripts/requirements.txt
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ |
 | ExchangeOnlineManagement | 3.0+ |
 | Azure Automation Runtime | 7.2 (for ALCA remediation runbooks) |
+| MSAL.PS | 4.37.0 (pinned — see deprecation note below) |
+
+> **MSAL.PS deprecation notice:** Microsoft has archived the `MSAL.PS` PowerShell
+> module. It still works for current Dataverse token acquisition but is no longer
+> receiving updates or security patches. Pin to the known-good version `4.37.0`
+> for now; track migration to `Az.Accounts` (`Get-AzAccessToken`) or
+> `Microsoft.Identity.Client` for a future minor release. Where Managed Identity
+> is available (Azure Automation runbooks), the `AuditComplianceHelpers.psm1`
+> Managed Identity path already bypasses MSAL.PS.
 
 ## What This Solution Does
 

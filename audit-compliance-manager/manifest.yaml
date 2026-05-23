@@ -1,7 +1,7 @@
 id: audit-compliance-manager
 name: Audit Compliance Manager
 description: Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the ACV and ALCA capabilities into one solution that validates audit configurations, detects gaps, and remediates non-compliant environments.
-version: 1.0.4
+version: 1.0.5
 status: live
 domain: compliance-audit
 tier: '2'

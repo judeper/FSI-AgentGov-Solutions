@@ -260,7 +260,7 @@ python scripts/create_audit_compliance_schema.py \
     --interactive
 ```
 
-This creates the `fsi_auditenvironmentcompliance` table, columns, and the `fsi_compliancestatus` choice column (Compliant / Non-Compliant / Unknown / Error). The ACV tables (`fsi_auditvalidationhistory`, `fsi_environmentregistry`) are created separately by `scripts/deploy.py` (see [README Step 1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/audit-compliance-manager/README.md)).
+This creates the `fsi_auditenvironmentcompliance` table, columns, and the `fsi_compliancestatus` choice column (Compliant / Non-Compliant / Remediation Pending / Error). The ACV tables (`fsi_auditvalidationhistory`, `fsi_environmentregistry`) are created separately by `scripts/deploy.py` (see [README Step 1](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/audit-compliance-manager/README.md)).
 
 ### 5.0.1 Pre-requisite: Helper scripts uploaded with the runbook
 

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-05-23
+
+### Changed
+
+- **Major**: Documented intentional auth-mode asymmetry between `Start-TenantValidationRunbook.ps1` (certificate-only) and `Start-EnvironmentValidationRunbook.ps1` (certificate + legacy client-secret fallback) in the tenant runbook NOTES block. Tenant-level operations warrant the stronger credential; environment-level POC scenarios may need the secret path before a certificate is in place. `scripts/Start-TenantValidationRunbook.ps1`. (council review M6)
+- **Major**: Added MSAL.PS deprecation notice and pinned `4.37.0` known-good version in README runtime requirements and `docs/evidence-export-guide.md` install instructions. Track migration to `Az.Accounts` / `Microsoft.Identity.Client` for a future minor release. (council review M5)
+- **Minor**: Added explanatory comment in `scripts/acv_client.py` clarifying that PUT is intentionally excluded from the retry strategy (ACV uses POST/PATCH only; ALCA uses PUT for alternate-key upserts). (council review m4)
+
+### Fixed
+
+- **Major**: Corrected `fsi_errormessage` MaxLength in `SOLUTION-DOCUMENTATION.md` data model tables from 2000 to 4000 to match `scripts/create_audit_compliance_schema.py:341`. (council review M2)
+- **Major**: Corrected `fsi_remediatedby` MaxLength in `SOLUTION-DOCUMENTATION.md` data model tables from 100 to 200 to match `scripts/create_audit_compliance_schema.py:320`. (council review M3)
+- **Major**: Corrected `fsi_alca_compliancestatus` choice options in `docs/deployment-guide.md` Phase 5 from "Compliant / Non-Compliant / Unknown / Error" to "Compliant / Non-Compliant / Remediation Pending / Error" to match the schema definition. (council review M4)
+- **Minor**: Bumped stale v1.0.2 version strings in `SOLUTION-DOCUMENTATION.md` header, `DELIVERY-CHECKLIST.md` (ZIP filename, folder, validation row, package footer, email subject and body), and `docs/flow-setup.md` footer to v1.0.5. (council review m1, m2, m3)
+
+### Notes
+
+- **DEFERRED**: M1 (managed-identity / certificate / workload-identity auth in `acv_client.py` and `alca_client.py`) — adding three auth modes to two clients plus argparse plumbing, docs, and tests would exceed the patch-bump scope guard. Tracked for a future minor release. The runbooks already use Managed Identity through `AuditComplianceHelpers.psm1`, so Python-client auth gap is limited to operators who run `scripts/deploy.py` and the schema scripts from CI/CD pipelines without an existing token source.
+- **NO ACTION**: m5 (Adaptive Card schema 1.4) — council report explicitly states "No action required; note for future maintenance only."
+- **NOT BUMPED**: `scripts/AuditComplianceHelpers.psd1` ModuleVersion remains `1.0.2` per council note that the module version is intentionally separate from the solution version.
+
 ## [1.0.4] - 2026-05-17
 
 ### Changed
