@@ -35,7 +35,7 @@ git rev-parse --show-toplevel
 
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
-| [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.1.0 |
+| [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.2.1 |
 | [agent-intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | PowerShell/Python/Docs | v1.0.0-preview |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.0 |

@@ -1,7 +1,7 @@
 id: action-confirmation-auditor
 name: Action Confirmation Auditor
 description: Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
-version: 1.2.0
+version: 1.2.1
 status: live
 domain: agent-config
 tier: '2'

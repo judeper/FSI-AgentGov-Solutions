@@ -44,7 +44,7 @@ Downstream consumers should treat `solutions.json` (top-level `counts` plus each
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Action Confirmation Auditor](./action-confirmation-auditor/) | Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance. | v1.2.0 | live | personal, team, enterprise | 2.12, 1.10 |
+| [Action Confirmation Auditor](./action-confirmation-auditor/) | Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance. | v1.2.1 | live | personal, team, enterprise | 2.12, 1.10 |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds. | v1.1.5 | live | enterprise | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
 | [Agent Access Governance Monitor](./agent-access-monitor/) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.2 | live | team, enterprise | 3.8 |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration. | v1.2.1 | live | team, enterprise | 2.17 |

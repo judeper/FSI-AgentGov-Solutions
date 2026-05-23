@@ -109,7 +109,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.1.0
+    Version: 1.2.1
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Requires:
@@ -481,7 +481,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Action Confirmation Auditor"
-    solutionVersion = "1.1.0"
+    solutionVersion = "1.2.1"
     control         = "2.12"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
