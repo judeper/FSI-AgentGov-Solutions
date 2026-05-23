@@ -4,6 +4,14 @@ All notable changes to the Segregation of Duties Detector.
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
+
+---
+
 ## [1.2.1] - 2026-05-23
 
 ### Fixed

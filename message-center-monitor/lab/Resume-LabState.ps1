@@ -170,18 +170,18 @@ $bapTok = Get-AccessTokenForResource -Resource 'https://api.bap.microsoft.com'
 $bapHdr = @{ Authorization = "Bearer $bapTok"; Accept = 'application/json' }
 $bapList = Invoke-RestMethod -Uri "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2023-06-01" -Headers $bapHdr -Method Get -ErrorAction Stop
 $envUrlNorm = $cfg.powerPlatform.environmentUrl.TrimEnd('/')
-$matches = @($bapList.value | Where-Object {
+$matchingEnvironments = @($bapList.value | Where-Object {
     $linked = $_.properties.linkedEnvironmentMetadata
     $linked -and $linked.instanceUrl -and ($linked.instanceUrl.TrimEnd('/') -eq $envUrlNorm)
 })
-if ($matches.Count -eq 0) {
+if ($matchingEnvironments.Count -eq 0) {
     Write-LabLog -Level Error -Message "No Power Platform environment found with Dataverse URL '$envUrlNorm'. Run lab/00b_New-PaygEnvironment.ps1, or update lab-config.json.powerPlatform.environmentUrl." -Throw
 }
-if ($matches.Count -gt 1) {
-    $ids = ($matches | ForEach-Object { $_.name }) -join ', '
-    Write-LabLog -Level Error -Message "Found $($matches.Count) environments with that Dataverse URL ($ids). This should be impossible; check tenant state manually." -Throw
+if ($matchingEnvironments.Count -gt 1) {
+    $ids = ($matchingEnvironments | ForEach-Object { $_.name }) -join ', '
+    Write-LabLog -Level Error -Message "Found $($matchingEnvironments.Count) environments with that Dataverse URL ($ids). This should be impossible; check tenant state manually." -Throw
 }
-$envObj = $matches[0]
+$envObj = $matchingEnvironments[0]
 $environmentId = $envObj.name
 Write-LabLog -Level Info -Message "  environmentId = $environmentId"
 

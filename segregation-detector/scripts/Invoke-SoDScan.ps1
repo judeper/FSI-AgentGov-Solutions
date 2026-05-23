@@ -345,6 +345,7 @@ function Get-ExistingViolations {
 }
 
 function New-Violation {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [string]$Environment,
         [string]$Token,
@@ -360,6 +361,11 @@ function New-Violation {
 
     $uri = "$Environment/api/data/v9.2/fsi_sodviolations"
     $body = $Violation | ConvertTo-Json -Depth 5
+    $target = if ($Violation.fsi_name) { $Violation.fsi_name } else { 'fsi_sodviolations' }
+
+    if (-not $PSCmdlet.ShouldProcess($target, 'Create SoD violation record')) {
+        return $null
+    }
 
     $response = Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body }
     return $response

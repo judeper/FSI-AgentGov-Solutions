@@ -193,6 +193,7 @@ function Invoke-DataverseQuery {
 }
 
 function New-DataverseRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [hashtable]$Connection,
         [string]$EntitySet,
@@ -202,6 +203,10 @@ function New-DataverseRecord {
     $url = "$($Connection.BaseUrl)/$EntitySet"
     $body = $Record | ConvertTo-Json -Depth 10
     Write-Verbose "POST $url"
+
+    if (-not $PSCmdlet.ShouldProcess($EntitySet, 'Create Dataverse record')) {
+        return $null
+    }
 
     $maxRetries = 3
     $retryCount = 0
@@ -224,6 +229,7 @@ function New-DataverseRecord {
 }
 
 function Update-DataverseRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [hashtable]$Connection,
         [string]$EntitySet,
@@ -234,6 +240,10 @@ function Update-DataverseRecord {
     $url = "$($Connection.BaseUrl)/$EntitySet($RecordId)"
     $body = $Record | ConvertTo-Json -Depth 10
     Write-Verbose "PATCH $url"
+
+    if (-not $PSCmdlet.ShouldProcess("$EntitySet/$RecordId", 'Update Dataverse record')) {
+        return
+    }
 
     $maxRetries = 3
     $retryCount = 0

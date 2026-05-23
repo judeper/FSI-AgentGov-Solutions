@@ -162,13 +162,13 @@ function Test-AgentAuthMethod {
 
             # Check for client secrets (password credentials)
             if ($sp.PasswordCredentials) {
-                foreach ($pwd in $sp.PasswordCredentials) {
-                    $isExpired = $pwd.EndDateTime -lt (Get-Date)
+                foreach ($passwordCredential in $sp.PasswordCredentials) {
+                    $isExpired = $passwordCredential.EndDateTime -lt (Get-Date)
                     $authMethods.Add([PSCustomObject]@{
                         Type       = 'ClientSecret'
-                        KeyId      = $pwd.KeyId
-                        StartDate  = $pwd.StartDateTime
-                        EndDate    = $pwd.EndDateTime
+                        KeyId      = $passwordCredential.KeyId
+                        StartDate  = $passwordCredential.StartDateTime
+                        EndDate    = $passwordCredential.EndDateTime
                         IsExpired  = $isExpired
                     })
                     if ($primaryMethod -eq 'Unknown') {

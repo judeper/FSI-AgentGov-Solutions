@@ -189,12 +189,15 @@ function Set-LabHandoffSecret {
         secret to 02 across pwsh process boundaries when Key Vault does not
         yet exist.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory)] [string] $SecretValue
     )
     $labRoot = Split-Path -Parent $PSScriptRoot
     $path    = Join-Path $labRoot '.secret-handoff'
+    if (-not $PSCmdlet.ShouldProcess($path, 'Write lab handoff secret')) {
+        return
+    }
     Set-Content -LiteralPath $path -Value $SecretValue -Encoding utf8NoBOM -NoNewline
     if ($IsWindows -or $env:OS -eq 'Windows_NT') {
         # Restrict ACL: owner full control, no inherited perms.

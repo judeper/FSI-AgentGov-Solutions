@@ -2,6 +2,13 @@
 
 All notable changes to this solution will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
+
+---
 
 ## [Unreleased]
 

@@ -372,7 +372,7 @@ function Resolve-AccessToken {
     return $null
 }
 
-function Update-DataverseToken {
+function Get-RefreshedDataverseToken {
     param([Parameter(Mandatory = $true)][string]$ResolvedEnvironmentUrl)
 
     $az = Get-Command az -ErrorAction SilentlyContinue
@@ -441,7 +441,7 @@ function Invoke-DataverseRequest {
     $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
     if ($response.StatusCode -eq 401) {
         Write-Info "Dataverse token rejected (HTTP 401); refreshing via Azure CLI and retrying $Method $RelativeUri."
-        $refreshed = Update-DataverseToken -ResolvedEnvironmentUrl $EnvironmentUrl
+        $refreshed = Get-RefreshedDataverseToken -ResolvedEnvironmentUrl $EnvironmentUrl
         if ($refreshed) {
             $headers = Get-DataverseHeaders -Token $refreshed
             $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
@@ -487,6 +487,7 @@ function Get-ExistingPublisher {
 }
 
 function New-PublisherRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param([Parameter(Mandatory = $true)][string]$Token)
 
     $body = @{
@@ -500,6 +501,16 @@ function New-PublisherRecord {
 
     if ($DryRun) {
         Write-Info "[DRY RUN] Would create publisher '$PublisherName'."
+        return @{
+            publisherid                    = '00000000-0000-0000-0000-000000000001'
+            friendlyname                   = $PublisherName
+            uniquename                     = $PublisherName
+            customizationprefix            = $PublisherPrefix
+            customizationoptionvalueprefix = $PublisherOptionValuePrefix
+        }
+    }
+
+    if (-not $PSCmdlet.ShouldProcess($PublisherName, 'Create Dataverse publisher')) {
         return @{
             publisherid                    = '00000000-0000-0000-0000-000000000001'
             friendlyname                   = $PublisherName
@@ -558,6 +569,7 @@ function Get-ExistingSolution {
 }
 
 function New-SolutionRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $true)][string]$Token,
         [Parameter(Mandatory = $true)][string]$PublisherId
@@ -573,6 +585,15 @@ function New-SolutionRecord {
 
     if ($DryRun) {
         Write-Info "[DRY RUN] Would create solution '$SolutionName'."
+        return @{
+            solutionid   = '00000000-0000-0000-0000-000000000002'
+            friendlyname = $SolutionDisplayName
+            uniquename   = $SolutionName
+            version      = $SolutionVersion
+        }
+    }
+
+    if (-not $PSCmdlet.ShouldProcess($SolutionName, 'Create Dataverse solution')) {
         return @{
             solutionid   = '00000000-0000-0000-0000-000000000002'
             friendlyname = $SolutionDisplayName

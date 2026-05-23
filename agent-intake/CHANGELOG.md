@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
+- **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
 - **Medium**: Added a code comment to `scripts/create_fsi_intake_dataverse_schema.py` `fsi_intake_auditeventtype` definition clarifying that the option set is an intentional reference catalog and is NOT deployed by `deploy.ps1` because the backing `fsi_eventtype` column is a String (not Picklist) to permit customer extension. (council review M-1)
 - **Medium**: Added a `_comment` field to `scripts/seed-test-data/request-cross-border-deny.json` `expectedClassification` documenting that `pathUsed = Standard` depends on the default `audience_to_zone` mapping in `templates/policy-lookup-tables.yaml`; if a customer remaps `My team` to Zone 1, the classifier routes the fixture to Full instead. (council review M-5)
 - **Minor**: Added a code comment to `tests/validators/validate_question_catalogs.py` `EXPECTED_QUESTION_COUNTS` documenting the derivation (one entry per `| <ID>` row in the corresponding `docs/intake-questions-<path>.md`) and the maintenance contract. (council review L-4)

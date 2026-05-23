@@ -464,8 +464,8 @@ function Get-AccessedResources {
         APIs       = @()
     }
 
-    foreach ($event in $Events) {
-        $eventData = Get-CopilotEventData -Event $event
+    foreach ($auditEvent in $Events) {
+        $eventData = Get-CopilotEventData -Event $auditEvent
 
         # Extract connectors from AISystemPlugin array
         if ($eventData.AISystemPlugin) {
@@ -524,7 +524,7 @@ function Get-AccessedResources {
     return $resources
 }
 
-function New-ScopeFromHistory {
+function Get-ScopeFromHistory {
     <#
     .SYNOPSIS
         Aggregates unique resources from analysis window into scope definition.
@@ -571,6 +571,7 @@ function New-ScopeFromHistory {
 }
 
 function New-ScopeDefinition {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Environment,
@@ -591,6 +592,11 @@ function New-ScopeDefinition {
 
     $uri = "$Environment/api/data/v9.2/fsi_agentscopes"
     $body = $Scope | ConvertTo-Json -Depth 5
+    $target = if ($Scope.fsi_agentid) { $Scope.fsi_agentid } else { 'fsi_agentscopes' }
+
+    if (-not $PSCmdlet.ShouldProcess($target, 'Create agent scope definition')) {
+        return $null
+    }
 
     try {
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
@@ -662,7 +668,7 @@ Write-Host "  External APIs: $($resources.APIs.Count) unique"
 # Build scope definition
 Write-Host ""
 Write-Host "Building scope definition..." -ForegroundColor Gray
-$scopeDefinition = New-ScopeFromHistory -Resources $resources -AgentId $AgentId -EnvironmentId $EnvironmentId -OwnerId $OwnerId -Zone $Zone
+$scopeDefinition = Get-ScopeFromHistory -Resources $resources -AgentId $AgentId -EnvironmentId $EnvironmentId -OwnerId $OwnerId -Zone $Zone
 
 if ($events.Count -eq 0) {
     Write-Host "  No audit events found - creating empty baseline" -ForegroundColor Yellow
