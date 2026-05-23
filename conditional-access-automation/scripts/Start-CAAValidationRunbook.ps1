@@ -107,6 +107,10 @@
     'PSReviewUnusedParameter', '',
     Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
 )]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'h',
+    Justification = 'Variable is initialized in ForEach-Object -Begin and read in -Process/-End at line 354; PSSA static analysis misses child scriptblock reads.'
+)]
 param(
     [Parameter(Mandatory)]
     [string]$TenantId,

@@ -13,6 +13,16 @@
     Run with: Invoke-Pester -Path .\AuditComplianceHelpers.Tests.ps1 -Output Detailed
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'originalEndpoint',
+    Justification = 'Variable is restored in the AfterEach child scriptblock at line 278; PSSA static analysis misses Pester cross-scope reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'originalHeader',
+    Justification = 'Variable is restored in the AfterEach child scriptblock at line 279; PSSA static analysis misses Pester cross-scope reads.'
+)]
+param()
+
 BeforeAll {
     # Import the module under test
     $modulePath = Join-Path $PSScriptRoot 'AuditComplianceHelpers.psm1'

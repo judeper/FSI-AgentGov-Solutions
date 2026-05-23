@@ -328,9 +328,7 @@ try {
     $environmentNameList = ($scanResult | Select-Object -Property EnvironmentDisplayName -Unique |
         ForEach-Object { $_.EnvironmentDisplayName }) -join ', '
     $violationResults = @($scanResult | Where-Object { -not $_.IsCompliant })
-    $compliantResults = @($scanResult | Where-Object { $_.IsCompliant })
     $violationCount = $violationResults.Count
-    $compliantCount = $compliantResults.Count
 
     # Determine overall status from violations
     $criticalCount = @($violationResults | Where-Object { $_.Severity -eq 'Critical' }).Count

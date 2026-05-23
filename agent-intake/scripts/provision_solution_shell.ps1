@@ -295,7 +295,7 @@ function Test-PacAuthentication {
         return
     }
 
-    $raw = & pac auth who --json 2>&1
+    $null = & pac auth who --json 2>&1
     if ($LASTEXITCODE -eq 0) {
         return
     }

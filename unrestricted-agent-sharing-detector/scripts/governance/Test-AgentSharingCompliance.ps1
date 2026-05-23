@@ -990,16 +990,7 @@ function Test-AgentSharingCompliance {
                 @{Label='Sharing'; Expression={$_.SharingScope}; Width=15},
                 @{
                     Label='Severity'
-                    Expression={
-                        $sev = $_.Severity
-                        $color = switch ($sev) {
-                            'Critical' { 'Red' }
-                            'High'     { 'DarkYellow' }
-                            'Medium'   { 'Yellow' }
-                            default    { 'White' }
-                        }
-                        $sev
-                    }
+                    Expression={$_.Severity}
                     Width=10
                 },
                 @{Label='Remediated'; Expression={if ($_.RemediatedAt) { 'Yes' } else { 'No' }}; Width=10}

@@ -193,13 +193,8 @@ if (-not $ClientSecret) { throw "ClientSecret is required. Provide -ClientSecret
 
 Write-Host "  Resolving environment Dataverse URL..." -ForegroundColor Cyan
 
-$ppToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId `
-    -ClientSecret $ClientSecret -Resource $cloudConfig.PowerPlatform
-
-$ppHeaders = @{
-    "Authorization" = "Bearer $ppToken"
-    "Content-Type"  = "application/json"
-}
+Get-AccessToken -TenantId $TenantId -ClientId $ClientId `
+    -ClientSecret $ClientSecret -Resource $cloudConfig.PowerPlatform | Out-Null
 
 # Authenticate the Power Apps Administration module so Get-AdminPowerAppEnvironment
 # resolves under unattended (service principal) execution.

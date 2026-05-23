@@ -340,7 +340,7 @@ Write-Host ""
 
 # Connect to Microsoft Graph
 try {
-    $graphContext = Connect-GraphSession @authParams
+    Connect-GraphSession @authParams | Out-Null
 }
 catch {
     Write-Error "Failed to connect to Microsoft Graph: $($_.Exception.Message)"

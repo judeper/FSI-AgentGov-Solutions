@@ -133,7 +133,7 @@ try {
     $graphTokenResult = Get-AzAccessToken -ResourceUrl 'https://graph.microsoft.com'
     $dvTokenResult    = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/')
     $graphToken = ConvertFrom-AzAccessTokenValue -TokenValue $graphTokenResult.Token
-    $dvToken    = ConvertFrom-AzAccessTokenValue -TokenValue $dvTokenResult.Token
+    ConvertFrom-AzAccessTokenValue -TokenValue $dvTokenResult.Token | Out-Null
 } catch {
     $errorOutput = @{
         Status   = 'Error'

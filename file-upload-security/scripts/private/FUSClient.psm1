@@ -528,6 +528,10 @@ function Save-FUSBaseline {
     .SYNOPSIS
         Saves a file upload baseline record to Dataverse.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', 'RawJson',
+        Justification = 'Parameter is retained for backward-compatible callers; the current Dataverse baseline schema does not persist raw JSON.'
+    )]
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
@@ -590,7 +594,6 @@ function Save-FUSBaseline {
         # Create new active baseline
         $timestamp = (Get-Date).ToUniversalTime().ToString('o')
         $capturedByValue = if ($CapturedBy) { $CapturedBy } else { "System" }
-        $rawJsonValue = if ($RawJson) { $RawJson } else { "" }
 
         $record = @{
             fsi_name                  = "$AgentName-$Zone-$timestamp"

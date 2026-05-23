@@ -198,7 +198,6 @@ function ConvertTo-CopilotDlpEvent {
                 $policyNames = ($auditData.PolicyDetails | ForEach-Object { $_.PolicyName }) -join "; "
                 $ruleNames = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.RuleName }) -join "; "
                 $actions = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Actions } | Select-Object -Unique) -join "; "
-                $severities = ($auditData.PolicyDetails.Rules | ForEach-Object { $_.Severity } | Select-Object -Unique) -join "; "
 
                 # Extract sensitive information types
                 $sitMatches = ($auditData.SensitiveInfoTypeData | ForEach-Object {

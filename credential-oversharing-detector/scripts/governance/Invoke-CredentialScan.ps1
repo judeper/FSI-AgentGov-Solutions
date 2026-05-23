@@ -238,13 +238,8 @@ if (-not (Test-Path $policyScriptPath)) {
 
 Write-Host "`n  Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
 
-$ppToken = Get-AccessToken -TenantId $TenantId -ClientId $ClientId `
-    -ClientSecret $ClientSecret -Resource $cloudConfig.PowerPlatform
-
-$ppHeaders = @{
-    "Authorization" = "Bearer $ppToken"
-    "Content-Type"  = "application/json"
-}
+Get-AccessToken -TenantId $TenantId -ClientId $ClientId `
+    -ClientSecret $ClientSecret -Resource $cloudConfig.PowerPlatform | Out-Null
 
 # Authenticate the Power Apps Administration module so Get-AdminPowerAppEnvironment
 # works in unattended (service principal) mode. Without this the cmdlet falls back

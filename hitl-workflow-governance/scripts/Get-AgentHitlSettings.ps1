@@ -268,7 +268,7 @@ function Get-AgentHitlSettings {
                     $contentStr = $component.content
 
                     try {
-                        $componentJson = $contentStr | ConvertFrom-Json -ErrorAction Stop
+                        $contentStr | ConvertFrom-Json -ErrorAction Stop | Out-Null
                     } catch {
                         Write-Verbose "Failed to parse botcomponent content for '$flowName' in bot '$($Bot.name)'"
                         continue

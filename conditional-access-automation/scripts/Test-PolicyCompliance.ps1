@@ -303,7 +303,6 @@ foreach ($policy in $fsiPolicies) {
 
     $isEnabled = $policy.State -eq "enabled"
     $isReportOnly = $policy.State -eq "enabledForReportingButNotEnforced"
-    $isDisabled = $policy.State -eq "disabled"
 
     if ($isEnabled -or ($IncludeReportOnly -and $isReportOnly)) {
         $complianceResults.checksPassed++
