@@ -32,7 +32,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | content-moderation-monitor | v1.1.2 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
 | copilot-studio-analytics | v2.0.1 | 3.2 | Business impact analytics for Copilot Studio agents |
 | credential-oversharing-detector | v2.1.0 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
-| cross-solution-integration | v2.0.2 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14, 1.18 | Wires Tier 2 solutions into Compliance Dashboard |
+| cross-solution-integration | v2.0.3 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14, 1.18 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.1.0 | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.3 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
 | dr-testing-framework | v2.0.1 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |

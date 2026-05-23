@@ -8,7 +8,7 @@ coe_function: scale
 ---
 # Cross-Solution Integration
 
-> **Version:** v2.0.2
+> **Version:** v2.0.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -61,13 +61,13 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 
 | Document | Purpose |
 |----------|---------|
-| `SCHEMA_CONTRACT.md` | Canonical option set values and cross-solution data contract |
-| `STATUS_MAPPING.md` | Per-solution status → CD assessment translation logic |
-| `CONFIGURATION.md` | Setup and configuration guide |
-| `ELM_INTEGRATION.md` | ELM provisioning hook integration guide |
-| `EVIDENCE_EXPORT.md` | Evidence export and regulatory packaging guide |
-| `SCORE_CALCULATOR_UPDATE.md` | Score calculation update procedures |
-| `TROUBLESHOOTING.md` | Common issues and resolution |
+| [`docs/schema-contract.md`](docs/schema-contract.md) | Canonical option set values and cross-solution data contract |
+| [`docs/status-mapping.md`](docs/status-mapping.md) | Per-solution status → CD assessment translation logic |
+| [`docs/configuration.md`](docs/configuration.md) | Setup and configuration guide |
+| [`docs/elm-integration.md`](docs/elm-integration.md) | ELM provisioning hook integration guide |
+| [`docs/evidence-export.md`](docs/evidence-export.md) | Evidence export and regulatory packaging guide |
+| [`docs/score-calculator-update.md`](docs/score-calculator-update.md) | Score calculation update procedures |
+| [`docs/troubleshooting.md`](docs/troubleshooting.md) | Common issues and resolution |
 
 ## Quick Start
 
@@ -76,6 +76,7 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 - All 6 Tier 2 solutions deployed (ACV, SSC, AAM, CMM, FUS, CAA)
 - Compliance Dashboard deployed with `fsi_controlmaster` table populated
 - Environment Lifecycle Management deployed (for provisioning hooks)
+- Agent Observability Foundation deployed (centralized telemetry consumed by integration sync runs; declared in `manifest.yaml` `dependencies`)
 - PowerShell 7.x with Microsoft.PowerApps.Administration.PowerShell module
 - Managed identity for Azure-hosted automation; MSAL.PS only for interactive or legacy dev-only service principal authentication
 
@@ -89,4 +90,4 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 
 ## Version
 
-v2.0.2 — May 2026
+v2.0.3 — May 2026

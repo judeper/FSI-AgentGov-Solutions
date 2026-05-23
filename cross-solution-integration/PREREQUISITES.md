@@ -14,6 +14,7 @@ All of the following solutions must be deployed before enabling integration:
 | Conditional Access Automation (CAA) | v1.1.0 | Dashboard feed for Controls 1.11, 1.23, 1.18 |
 | Compliance Dashboard (CD) | v1.0.0 | Assessment target |
 | Environment Lifecycle Management (ELM) | v1.1.2 | Provisioning hook source (optional) |
+| Agent Observability Foundation | v1.2.0 | Centralized telemetry, log analytics workspace, and shared Application Insights workbooks consumed by integration sync runs |
 
 ## Environment Requirements
 

@@ -3,6 +3,29 @@
 All notable changes to this solution will be documented in this file.
 
 
+## [2.0.3] — 2026-05-22 — Council review remediation
+
+### Fixed
+
+- **Minor**: Aligned `Test-UnifiedEvidenceIntegrity.ps1` `.NOTES` block from `Version: 2.0.0` to match the rest of the solution. `scripts/powershell/Test-UnifiedEvidenceIntegrity.ps1:23`. (council review m-01)
+- **Minor**: Removed the obsolete `fsi_er_zone` reference from `Register-ProvisionedEnvironment.ps1` `.PARAMETER Zone` help text. `fsi_acv_zone` is the only governance-zone option set used by the ELM-to-ACV registration path. `scripts/powershell/Register-ProvisionedEnvironment.ps1:26`. (council review m-02)
+
+### Changed
+
+- **Major**: Documented the `agent-observability-foundation` dependency declared in `manifest.yaml` in both `PREREQUISITES.md` and the README Prerequisites section so operators do not miss the foundational telemetry dependency at deploy time. (council review M-02)
+- **Major**: Fixed the README Documentation table to reference actual lowercase filenames (`docs/schema-contract.md`, `docs/status-mapping.md`, etc.) as relative links instead of the legacy uppercase display names (`SCHEMA_CONTRACT.md`, `STATUS_MAPPING.md`, etc.). The uppercase forms would not resolve on case-sensitive filesystems. `README.md:62-70`. (council review M-03)
+- Version strings bumped from 2.0.2 to 2.0.3 across `manifest.yaml`, README, `IntegrationConfig.psd1`/`psm1`, and the `.NOTES` blocks of `Sync-SolutionAssessments.ps1`, `Export-UnifiedComplianceEvidence.ps1`, `Register-ProvisionedEnvironment.ps1`, and `Test-UnifiedEvidenceIntegrity.ps1`, plus the `moduleVersion` field inside the export manifest emitted by `Export-UnifiedComplianceEvidence.ps1`.
+
+### Notes
+
+- **Council finding C-01 (`fsi_summaryjson` removal) investigated and recorded as FALSE POSITIVE.** The column is defined on every history table the export script references: AAM `fsi_accessvalidationhistory` (`agent-access-monitor/scripts/create_dataverse_schema.py:351`, `SchemaName: fsi_SummaryJson`), CMM `fsi_moderationvalidationhistory` (`content-moderation-monitor/scripts/create_dataverse_schema.py:238`), and FUS `fsi_fileuploadvalidationhistory` (`file-upload-security/scripts/create_dataverse_schema.py:157`). The v2.0.2 CHANGELOG entry that claimed this field was removed was inaccurate — the script was always correct. No change to `scripts/powershell/Export-UnifiedComplianceEvidence.ps1` field arrays.
+- **Council finding C-02 (`fsi_validationtype` removal) investigated and recorded as FALSE POSITIVE.** The column is defined on both history tables the export script references: ACV `fsi_auditvalidationhistory` (`audit-compliance-manager/scripts/create_dataverse_schema.py:224`, in `HISTORY_TABLE_COLUMNS`) and SSC `fsi_validationhistory` (`session-security-configurator/scripts/create_dataverse_schema.py:282`, in the `fsi_validationhistory` columns array). The v2.0.0 CHANGELOG note that claimed `fsi_validationtype` does not exist on ACV/SSC history tables was inaccurate — the script was always correct. No change to `scripts/powershell/Export-UnifiedComplianceEvidence.ps1` field arrays.
+- **Council finding M-01 (CLAUDE.md root table missing 1.18)** is fixed in `CLAUDE.md` outside this CHANGELOG (manifest already declared all seven controls in v2.0.2).
+- **Council finding m-04 (`fsi_severity` may not exist on AAM history)** investigated and recorded as FALSE POSITIVE. The column is defined on `fsi_accessvalidationhistory` in AAM's `HISTORY_TABLE_COLUMNS` (`agent-access-monitor/scripts/create_dataverse_schema.py:307`).
+- Council findings m-03 (helper-function deduplication) and m-05 (`.ralph-config.json` creation) deferred per the wave deferral rubric — both are standalone reorgs / new-artifact additions, not co-located one-line fixes.
+
+---
+
 ## [2.0.2] — 2026-05-05 — Microsoft Learn refresh (Issue #113)
 
 ### Fixed

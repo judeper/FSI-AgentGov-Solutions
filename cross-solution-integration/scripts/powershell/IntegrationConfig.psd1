@@ -1,6 +1,6 @@
 @{
     RootModule        = 'IntegrationConfig.psm1'
-    ModuleVersion     = '2.0.2'
+    ModuleVersion     = '2.0.3'
     GUID              = 'f8e3a1b2-c4d5-6e7f-8a9b-0c1d2e3f4a5b'
     Author            = 'FSI Agent Governance Framework'
     Description       = 'Shared integration constants, mappings, and translation functions for cross-solution governance integration.'

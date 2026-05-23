@@ -443,7 +443,7 @@
     "cross-solution-integration": {
       "id": "cross-solution-integration",
       "name": "Cross-Solution Integration",
-      "version": "2.0.2",
+      "version": "2.0.3",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",
