@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Agent Observability Foundation
 
-> **Version:** v1.2.1
+> **Version:** v1.2.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -262,12 +262,13 @@ This solution supports the following FSI-AgentGov framework controls:
 
 ## Version
 
-**v1.2.1** - 2026-Q2 Microsoft Learn refresh
+**v1.2.2** - Council-review remediation (2026-05-22)
 
-**What's New in v1.2.1:**
-- Added normalized `AppEvents` / legacy `customEvents` KQL compatibility across queries, workbooks, alerts, and telemetry verification
-- Updated workbook templates to the current `Microsoft.Insights/workbooks@2023-06-01` ARM resource type
-- Refreshed Copilot Studio telemetry setup, managed-identity-first authentication guidance, and retention notes against Microsoft Learn 2026-Q2 guidance
+**What's New in v1.2.2:**
+- Removed stale "ADLS Gen2" reference and Control 1.6 (DSPM for AI) mappings from `power-bi/kql-views/vw_dim_regulation_control.kql`
+- Fixed `flow-failure-correlation.kql` to project `operation_Id` through the `AgentEvents` materialized view (correlation joins now resolve)
+- Removed stale Control 1.6 reference from `architecture.md` RBAC Separation section
+- Synced version headers in `workbooks/README.md`, `alerts/README.md`, and `power-bi/README.md` to the solution version
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
