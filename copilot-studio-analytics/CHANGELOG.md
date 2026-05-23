@@ -4,9 +4,25 @@ All notable changes to this solution are documented in this file.
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-05-22
+
 ### Fixed
 
-- Target version v2.0.1 for the Microsoft Learn 2026-Q2 refresh.
+- **Major**: CSAT Trend Over Time visualisation in `workbooks/quality-metrics/workbook-template.json` projected `Date = timestamp` after `summarize ... by bin(SessionTime, 1d)`. The `timestamp` column does not survive the `summarize` operator, so the visualisation produced a runtime error or an empty Date column depending on the KQL engine version. Now projects `Date = SessionTime`. (council review M-1)
+- **Major**: `config/config.schema.json` `environment_url` pattern only matched `*.dynamics.com`, rejecting US Gov, Germany, and China sovereign-cloud Dataverse URLs that `sync_dataverse_sessions.py` already validates and accepts. Pattern now mirrors the Python regex (`dynamics.com|dynamics.us|crm.dynamics.us|microsoftdynamics.de|crm.dynamics.cn`); examples updated. (council review M-2)
+- **Minor**: Topic Trend (daily) and Completion Time Trend (P50/P95) visualisations in `workbooks/behavior-analysis/workbook-template.json` had the same `Date = timestamp` projection bug after `summarize ... by bin(SessionTime, 1d)`. Both now project `Date = SessionTime`. (council review m-2)
+- **Minor**: AAH/Cost Savings weekly trend in `workbooks/business-impact/workbook-template.json` projected `Week = timestamp` after `summarize ... by bin(SessionTime, 7d)` — same root cause as M-1 / m-2; not in the council report but found while fixing the others. Now projects `Week = SessionTime`.
+
+### Notes
+
+- m-1 (workbook AAH formula simplification vs standalone KQL weighting) deferred — recommendation is a doc-note add; the discrepancy is intentional and already documented in the standalone KQL files. Will land with a workbook README refresh in a future minor.
+- m-3 (`applicationinsights` Python SDK in maintenance mode) is informational; migration to `azure-monitor-opentelemetry` is already tracked in Known Limitations.
+- m-4 (`prerequisites.md` GenerativeAnswers checklist wording) deferred — standalone doc rewording, not co-located with the workbook/schema fixes.
+- m-5 (expand test coverage for watermark upsert, lock handling, classification) deferred — net-new test coverage is out of scope for this patch bump.
+
+## [2.0.1] - 2026-05-04
+
+### Fixed
 - Updated KQL and workbook queries to support both classic Application Insights (`customEvents`/`timestamp`/`customDimensions`) and workspace-based Log Analytics (`AppEvents`/`TimeGenerated`/`Properties`) event schemas.
 - Re-binned session analytics on `sessionClosedOn`/`sessionCreatedOn` with telemetry ingestion time as a fallback, and de-duplicated `CopilotSessionOutcome` rows by session ID to account for lookback-window re-emission.
 - Refreshed validation and setup guidance for connection strings, managed identity-first authentication, Microsoft Copilot Dashboard in Viva Insights, and Microsoft 365 admin center Copilot usage reports.

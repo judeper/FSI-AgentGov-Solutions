@@ -390,7 +390,7 @@
     "copilot-studio-analytics": {
       "id": "copilot-studio-analytics",
       "name": "Copilot Studio Analytics",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",
