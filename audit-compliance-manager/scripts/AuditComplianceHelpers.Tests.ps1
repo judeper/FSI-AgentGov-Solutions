@@ -16,7 +16,7 @@
 BeforeAll {
     # Import the module under test
     $modulePath = Join-Path $PSScriptRoot 'AuditComplianceHelpers.psm1'
-    Import-Module $modulePath -Force
+    Import-Module -Name $modulePath -Force
 }
 
 Describe "Invoke-WithRetry" {
@@ -34,6 +34,10 @@ Describe "Invoke-WithRetry" {
     }
 
     Context "Retry behavior for retryable errors" {
+        BeforeEach {
+            Mock Start-Sleep {} -ModuleName AuditComplianceHelpers
+        }
+
         It "Retries on HTTP 429 and eventually succeeds" {
             $script:callCount = 0
             $result = Invoke-WithRetry -ScriptBlock {
@@ -44,7 +48,7 @@ Describe "Invoke-WithRetry" {
                     throw $ex
                 }
                 "recovered"
-            } -MaxRetries 3 -InitialDelaySeconds 0 -OperationName "RetryTest"
+            } -MaxRetries 3 -InitialDelaySeconds 1 -OperationName "RetryTest"
 
             $result | Should -Be "recovered"
             $script:callCount | Should -Be 3
@@ -60,7 +64,7 @@ Describe "Invoke-WithRetry" {
                     throw $ex
                 }
                 "ok"
-            } -MaxRetries 3 -InitialDelaySeconds 0 -OperationName "503Test"
+            } -MaxRetries 3 -InitialDelaySeconds 1 -OperationName "503Test"
 
             $result | Should -Be "ok"
             $script:callCount | Should -Be 2
@@ -76,7 +80,7 @@ Describe "Invoke-WithRetry" {
                     throw $ex
                 }
                 "ok"
-            } -MaxRetries 3 -InitialDelaySeconds 0 -OperationName "504Test"
+            } -MaxRetries 3 -InitialDelaySeconds 1 -OperationName "504Test"
 
             $result | Should -Be "ok"
             $script:callCount | Should -Be 2
@@ -90,7 +94,7 @@ Describe "Invoke-WithRetry" {
                     $response = [System.Net.Http.HttpResponseMessage]::new([System.Net.HttpStatusCode]::TooManyRequests)
                     $ex = [Microsoft.PowerShell.Commands.HttpResponseException]::new("429 Too Many Requests", $response)
                     throw $ex
-                } -MaxRetries 2 -InitialDelaySeconds 0 -OperationName "ExhaustTest"
+                } -MaxRetries 2 -InitialDelaySeconds 1 -OperationName "ExhaustTest"
             } | Should -Throw
 
             # Should attempt initial + MaxRetries
@@ -253,8 +257,8 @@ Describe "Get-DataverseToken" {
             }
         }
         finally {
-            $env:IDENTITY_ENDPOINT = $script:originalEndpoint
-            $env:IDENTITY_HEADER = $script:originalHeader
+            $env:IDENTITY_ENDPOINT = $originalEndpoint
+            $env:IDENTITY_HEADER = $originalHeader
         }
     }
 }
@@ -280,7 +284,7 @@ Describe "Write-DataverseComplianceRecord" {
             $script:apiCalls = @()
 
             Mock Invoke-RestMethod {
-                $script:apiCalls += @{ Uri = $Uri; Method = $Method; Body = $Body }
+                $script:apiCalls = @($script:apiCalls) + [pscustomobject]@{ Uri = $Uri; Method = $Method; Body = $Body }
 
                 if ($Method -eq "PATCH") {
                     return @{ fsi_auditenvironmentcomplianceid = "new-guid-123" }
@@ -309,7 +313,7 @@ Describe "Write-DataverseComplianceRecord" {
             $script:apiCalls = @()
 
             Mock Invoke-RestMethod {
-                $script:apiCalls += @{ Uri = $Uri; Method = $Method; Body = $Body }
+                $script:apiCalls = @($script:apiCalls) + [pscustomobject]@{ Uri = $Uri; Method = $Method; Body = $Body }
 
                 if ($Method -eq "PATCH") {
                     return @{ fsi_auditenvironmentcomplianceid = "existing-guid-456" }
@@ -372,9 +376,11 @@ Describe "Send-ComplianceNotification" {
         }
 
         It "Includes attachment when file path provided" {
-            $tempFile = [System.IO.Path]::GetTempFileName()
+            $artifactDir = Join-Path $PSScriptRoot '.pester-artifacts'
+            $tempFile = Join-Path $artifactDir 'audit-compliance-report.csv'
             try {
-                "test,data`ncol1,col2" | Set-Content $tempFile -Encoding UTF8
+                New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+                "test,data`ncol1,col2" | Set-Content -LiteralPath $tempFile -Encoding UTF8
 
                 $script:capturedBody = $null
 
@@ -406,7 +412,8 @@ Describe "Send-ComplianceNotification" {
                 $payload.message.attachments[0].contentBytes | Should -Not -BeNullOrEmpty
             }
             finally {
-                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $artifactDir -Force -ErrorAction SilentlyContinue
             }
         }
     }
