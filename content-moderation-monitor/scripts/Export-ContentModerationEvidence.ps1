@@ -106,7 +106,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.2
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -279,10 +279,19 @@ if ($RunId) {
 }
 Write-Host ""
 
+# Map Export-script Zone values ('1','2','3') to Get-CMMValidationResults
+# ValidateSet ('Zone1','Zone2','Zone3','Unknown','All'). 'All' passes through.
+if ($Zone -eq 'All') {
+    $queryZone = 'All'
+}
+else {
+    $queryZone = "Zone$Zone"
+}
+
 $queryParams = @{
     DataverseUrl      = $DataverseUrl
     AccessToken       = $accessToken
-    Zone              = $Zone
+    Zone              = $queryZone
     FromDate          = $FromDate
     ToDate            = $ToDate
     IncludeViolations = $true

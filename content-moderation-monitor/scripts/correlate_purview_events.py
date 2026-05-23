@@ -196,28 +196,55 @@ def pull_moderation_events(
     environment_url: str,
     tenant_id: str,
     lookback_hours: int = 24,
+    auth_mode: str = "client-secret",
+    client_id: Optional[str] = None,
+    client_secret: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """Pull recent moderation violation records from Dataverse.
 
     Reads from the ``fsi_moderationviolations`` entity set. Falls back to
     an empty list if the Dataverse client is unavailable.
+
+    Authentication: prefer ``managed-identity`` or ``workload-identity`` in
+    production. ``client-secret`` is retained as a legacy dev fallback and
+    requires ``AZURE_CLIENT_ID`` / ``AZURE_CLIENT_SECRET`` to be set (either
+    via CLI arguments or environment variables).
     """
     if DataverseClient is None:
         logger.warning("DataverseClient not available — returning empty event list")
         return []
 
-    client = DataverseClient(tenant_id=tenant_id, environment_url=environment_url)
+    cid = client_id or os.environ.get("AZURE_CLIENT_ID")
+    csec = client_secret or os.environ.get("AZURE_CLIENT_SECRET")
+
+    client = DataverseClient(
+        tenant_id=tenant_id,
+        environment_url=environment_url,
+        auth_mode=auth_mode,
+        client_id=cid,
+        client_secret=csec,
+    )
     cutoff = (datetime.now(tz=timezone.utc) - timedelta(hours=lookback_hours)).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
 
     odata_filter = f"createdon ge {cutoff}"
-    select = "fsi_name,fsi_agentname,fsi_moderationlevel,fsi_zone,createdon,fsi_environmentid,ownerid"
+    # Column names per create_dataverse_schema.py VIOLATION_COLUMNS:
+    # fsi_actuallevel (Actual Level) and fsi_environmentguid (Environment GUID).
+    select_columns = [
+        "fsi_name",
+        "fsi_agentname",
+        "fsi_actuallevel",
+        "fsi_zone",
+        "createdon",
+        "fsi_environmentguid",
+        "ownerid",
+    ]
 
     try:
-        records = client.get_records(
+        records = client.query(
             "fsi_moderationviolations",
-            select=select,
+            select=select_columns,
             filter_expr=odata_filter,
             top=1000,
         )
@@ -366,10 +393,19 @@ def main() -> int:
         required=True,
         help="Dataverse environment URL (e.g., https://org.crm.dynamics.com)",
     )
-    parser.add_argument("--client-id", help="Application (client) ID for Graph auth")
+    parser.add_argument("--client-id", help="Application (client) ID for Graph/Dataverse auth")
     parser.add_argument(
         "--client-secret",
         help="Client secret (legacy dev fallback; prefer managed identity)",
+    )
+    parser.add_argument(
+        "--auth-mode",
+        default="client-secret",
+        choices=["managed-identity", "workload-identity", "client-secret", "certificate", "interactive"],
+        help=(
+            "Dataverse auth mode (default: client-secret). Production should use "
+            "managed-identity or workload-identity."
+        ),
     )
     parser.add_argument(
         "--lookback-hours",
@@ -400,7 +436,12 @@ def main() -> int:
     # 2. Pull moderation events from Dataverse
     logger.info("Pulling moderation events (lookback: %dh)", args.lookback_hours)
     moderation_events = pull_moderation_events(
-        args.environment_url, args.tenant_id, args.lookback_hours
+        args.environment_url,
+        args.tenant_id,
+        args.lookback_hours,
+        auth_mode=args.auth_mode,
+        client_id=args.client_id,
+        client_secret=args.client_secret,
     )
     logger.info("Found %d moderation events", len(moderation_events))
 
