@@ -8,11 +8,11 @@ coe_function: optimize
 ---
 # Compliance Dashboard
 
-> **Version:** v1.0.4
+> **Version:** v1.0.5
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
-Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the control records loaded into Dataverse with zone-based filtering. The included sample dataset contains 62 controls; organizations should load the validated 78-control framework baseline before describing the dashboard as full-framework coverage.
+Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the control records loaded into Dataverse with zone-based filtering. The included sample dataset contains the full 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4).
 
 ## Overview
 
@@ -25,7 +25,7 @@ The Compliance Dashboard aggregates compliance data from Dataverse tables (popul
 | **Executive Summary** | Overall compliance score with trend indicators |
 | **Pillar Breakdown** | Compliance status by pillar (Security, Management, Reporting, SharePoint) |
 | **Zone Filtering** | Filter by governance zone (Zone 1/2/3) |
-| **Control Drill-Down** | Detailed status for each control loaded into Dataverse (sample dataset ships 62 controls; load the validated 78-control baseline to enable full-framework coverage) |
+| **Control Drill-Down** | Detailed status for each control loaded into Dataverse (the shipped sample dataset contains the full 78-control framework baseline) |
 | **Trend Analysis** | Historical compliance tracking over time |
 | **Exception Tracking** | Open exceptions with remediation status |
 
@@ -97,9 +97,9 @@ The Compliance Dashboard aggregates compliance data from Dataverse tables (popul
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
-| Environment Lifecycle Management | v1.2.0+ | Zone classification data |
-| FINRA Supervision Workflow | v1.0.1+ | Supervision metrics (optional) |
-| Get-ExchangeComplianceData.ps1 | v1.0.4 | Exchange compliance signal collection (included) |
+| Environment Lifecycle Management | v1.2.1+ | Zone classification data |
+| FINRA Supervision Workflow | v1.1.0+ | Supervision metrics (optional) |
+| Get-ExchangeComplianceData.ps1 | v1.0.5 | Exchange compliance signal collection (included) |
 
 ## Quick Start
 
@@ -313,7 +313,7 @@ This section documents limitations and design decisions for the v1.0.x release.
 |------------|-------------|------------|
 | **Manual .pbit creation** | Power BI template must be created manually using Power BI Desktop following [Power BI Template Specification](docs/power-bi-template-spec.md) | The specification provides step-by-step page-by-page build instructions |
 | **Manual flow build** | Power Automate flows must be built manually following [Flow Configuration](docs/flow-configuration.md); no exported flow JSON ships in this solution per repository content policy | Use the manual build instructions; build once and optionally export to your own managed solution |
-| **Sample dataset is 62 controls** | The shipped `sample-data/control-master.json` contains 62 controls (24 Pillar 1 + 21 Pillar 2 + 10 Pillar 3 + 7 Pillar 4); the validated framework baseline contains 78 | Load the validated 78-control baseline into Dataverse before using the dashboard for full-framework reporting; extend `PillarDimension` in `docs/dax-measures.md` to your full control inventory |
+| **Sample dataset distribution** | The shipped `sample-data/control-master.json` contains the full 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4). | The `PillarDimension` DATATABLE in `docs/dax-measures.md` reflects these counts; update both if the framework baseline grows in a future release. |
 | **Evidence collector flow not yet shipped** | The third flow `CD-EvidenceCollector` is documented as planned in `docs/flow-configuration.md` but not implemented | Import Exchange and other evidence JSON manually via Power Apps or the Dataverse Web API until the flow ships |
 | **No automated validation** | Deployment validation uses manual checklist only, no automated testing scripts | Use [Deployment Checklist](docs/deployment-checklist.md) to verify each deployment step |
 | **RLS not pre-configured** | Row-Level Security roles must be created by customer to match organizational structure | See [Power BI Setup](docs/power-bi-setup.md) for example RLS DAX patterns |
@@ -373,6 +373,7 @@ See [Deployment Checklist - Rollback Procedure](docs/deployment-checklist.md#rol
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.5 | May 2026 | Council-review fixes: PillarDimension control counts; Score Change 30D DAX consistency; option-set deployment warning; sample-dataset doc reconciliation |
 | 1.0.4 | May 2026 | Microsoft Learn 2026-Q2 refresh; managed identity-first auth; Purview/Graph/Power BI/Dataverse guidance updates |
 | 1.0.2 | April 2026 | Removed stale ZIP import references; updated Exchange script version |
 | 1.0.1 | March 2026 | Removed exported Dataverse solution package per content policy |
@@ -387,4 +388,4 @@ For issues and feature requests, see the [FSI-AgentGov-Solutions](https://github
 
 ---
 
-*FSI Agent Governance Framework - Compliance Dashboard v1.0.4*
+*FSI Agent Governance Framework - Compliance Dashboard v1.0.5*

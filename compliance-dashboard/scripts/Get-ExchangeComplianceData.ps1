@@ -74,7 +74,7 @@
     ExternalDistributionListRisks, InactiveSharedMailboxes, Summary
 
 .NOTES
-    Version:    1.0.4
+    Version:    1.0.5
     Author:     FSI Agent Governance
     Requires:   PowerShell 7.0+
     Requires:   Microsoft.Graph.Authentication 2.0.0+
@@ -535,7 +535,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Compliance Dashboard — Exchange Compliance Collector    ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.0.4                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.0.5                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
@@ -582,7 +582,7 @@ try {
             generatedAt     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             lookbackDays    = $config.retentionDays
             graphBaseUrl    = $GraphBaseUrl
-            version         = "1.0.4"
+            version         = "1.0.5"
             framework       = "FSI Agent Governance"
             controlReference = "3.3, 3.1, 3.2, 3.4"
         }

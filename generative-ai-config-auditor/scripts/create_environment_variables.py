@@ -21,8 +21,13 @@ Variables for Teams alerting:
 import argparse
 import os
 import sys
+from pathlib import Path
 
-from gac_client import GACClient
+# Import the shared Dataverse client from scripts/shared.
+_SHARED_DIR = Path(__file__).resolve().parent.parent.parent / "scripts" / "shared"
+if str(_SHARED_DIR) not in sys.path:
+    sys.path.insert(0, str(_SHARED_DIR))
+from dataverse_client import DataverseClient  # noqa: E402
 
 
 # =============================================================================
@@ -127,7 +132,7 @@ ENV_VAR_DEFINITIONS = [
 
 
 def create_environment_variable(
-    client: GACClient, definition: dict, dry_run: bool = False,
+    client: DataverseClient, definition: dict, dry_run: bool = False,
 ) -> None:
     """Create a single environment variable definition and default value.
 
@@ -136,7 +141,7 @@ def create_environment_variable(
     is specified.
 
     Args:
-        client: GACClient instance
+        client: DataverseClient instance
         definition: Dict with schema_name, display_name, type, default_value,
                      description
         dry_run: Preview mode flag
@@ -147,13 +152,20 @@ def create_environment_variable(
     default_value = definition["default_value"]
     description = definition["description"]
 
-    # Idempotent check — skip if already exists
+    # Idempotent check — skip if already exists. Reads run live in both
+    # dry-run and live modes for accurate preview.
     existing = client.query(
         "environmentvariabledefinitions",
-        filter=f"schemaname eq '{schema_name}'",
+        filter_expr=f"schemaname eq '{schema_name}'",
     )
-    if existing["value"]:
+    if existing:
         print(f"  {schema_name}: already exists, skipping")
+        return
+
+    if dry_run:
+        print(f"  [DRY RUN] {schema_name}: would create (type={var_type})")
+        if default_value is not None and default_value != "":
+            print(f"    [DRY RUN] default value: {default_value}")
         return
 
     # Create definition record
@@ -182,7 +194,7 @@ def create_environment_variable(
 
 
 def create_environment_variables(
-    client: GACClient, dry_run: bool = False,
+    client: DataverseClient, dry_run: bool = False,
 ) -> None:
     """Deploy all GAC environment variables to Dataverse.
 
@@ -190,7 +202,7 @@ def create_environment_variables(
     values. All operations are idempotent — safe to re-run.
 
     Args:
-        client: GACClient instance
+        client: DataverseClient instance
         dry_run: Preview mode flag
     """
     print("=" * 60)
@@ -285,13 +297,15 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        client = GACClient(
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the
+        # shared client short-circuits reads in dry-run mode, which would
+        # defeat a meaningful preview. Writes are gated locally below.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         create_environment_variables(client, dry_run=args.dry_run)

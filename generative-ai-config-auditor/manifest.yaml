@@ -1,7 +1,7 @@
 id: generative-ai-config-auditor
 name: Generative AI Config Auditor
 description: Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Work IQ / semantic search) for Copilot Studio agents against zone-specific governance policies.
-version: 1.2.0
+version: 1.2.1
 status: live
 domain: agent-config
 tier: '2'

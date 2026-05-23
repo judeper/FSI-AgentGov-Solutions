@@ -217,13 +217,13 @@ This document complements the solution-level [governance-mapping.md](../governan
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [1.6 - DSPM for AI](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.6-microsoft-purview-dspm-for-ai.md) | Content safety monitoring | RAI policies |
+| [1.7 - Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Security event audit (RAI content filter telemetry capture) | GLBA 501(b) |
 
-**Supporting evidence for:**
+**Informational adjacency:**
 
-| Control | Requirement | Regulatory Alignment |
-|---------|-------------|---------------------|
-| [1.7 - Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Security event audit | GLBA 501(b) |
+| Control | Note |
+|---------|------|
+| [1.6 - DSPM for AI](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.6-microsoft-purview-dspm-for-ai.md) | DSPM for AI is delivered by Microsoft Purview, not by AOF. This query surfaces RAI events for visibility but is not primary or supporting evidence for Control 1.6. |
 
 **Sample Output:**
 
@@ -354,8 +354,7 @@ This document complements the solution-level [governance-mapping.md](../governan
 
 | Control | Primary Evidence | Supporting Evidence |
 |---------|------------------|---------------------|
-| **1.6 - DSPM for AI** | rai-content-filtering-detection.kql | - |
-| **1.7 - Audit Logging** | agent-decision-audit-trail.kql | completeness-assessment.kql, rai-content-filtering-detection.kql |
+| **1.7 - Audit Logging** | agent-decision-audit-trail.kql, rai-content-filtering-detection.kql | completeness-assessment.kql |
 | **2.6 - Model Risk** | output-monitoring.kql, drift-detection-baseline.kql, validation-test-results.kql | agent-decision-audit-trail.kql, generative-answers-telemetry.kql |
 | **2.9 - Performance** | latency-distribution.kql, generative-answers-telemetry.kql | agent-usage-analytics.kql, slow-query-detection.kql, flow-failure-correlation.kql |
 | **2.12 - FINRA 3110** | agent-decision-audit-trail.kql | completeness-assessment.kql |
@@ -497,9 +496,9 @@ SOX 302/404 compliance requires evidence of effective IT general controls. This 
 | usage-analytics/ | 2 | 3.2 |
 | error-categorization/ | 2 | 3.4 |
 | performance/ | 2 | 2.9 |
-| compliance/ | 5 | 1.6, 1.7, 2.12, 3.4 |
+| compliance/ | 5 | 1.7, 2.12, 3.4 |
 | sr11-7-model-risk/ | 3 | 2.6 |
-| **Total** | **14** | **7 controls** |
+| **Total** | **14** | **6 controls** |
 
 ---
 

@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-23
+
+### Fixed
+
+- **C-1:** Removed phantom `fsi_agentname` reference from the exception evidence JSON in `Export-HitlGovernanceEvidence.ps1`. The `fsi_HitlCheckpointException` table does not define an `fsi_AgentName` column; exporting it produced `$null` in every record and could mislead reviewers comparing evidence across exports.
+- **C-2:** Removed the "Update Violation Record" step from `docs/flow-configuration.md` that instructed administrators to set `fsi_alertsentat` on `fsi_HitlCheckpointResult`. No such column exists; flows following the instruction would fail at runtime. Replaced with documentation noting that alert-dispatch metadata is intentionally out-of-schema and lives in the maker's own audit sink.
+- **M-1:** Aligned Zone 2 `minimumInputs` in `templates/hitl-zone-policy.json` (was `1`, now `0`) so the JSON template matches the PowerShell policy evaluation in `Get-AgentHitlSettings.ps1` / `Test-HitlCheckpointConfiguration.ps1`. The previous mismatch caused a Zone 2 agent with a single input to be flagged in PowerShell but pass when JSON-driven tooling consumed the template directly.
+- **M-3:** Removed the orphaned `$script:ActionCategoryToInt` / `$script:IntToActionCategory` integer-mapping hashtables from `private/HWGClient.psm1`. `Get-ActionCategory` returns string labels and the integer maps were never read by any caller. The schema defines no `fsi_ActionCategory` picklist, so the hashtables had no production purpose and risked future contributors persisting non-existent columns.
+- **M-4:** Rewrote the Teams notification and approver troubleshooting sections in `docs/troubleshooting.md` to clarify that Teams group/channel IDs and the compliance approver address are **flow-level configuration** (Azure Automation variable assets, secure flow configuration, or flow parameters), not Dataverse environment variables. `create_hwg_environment_variables.py` never deployed `fsi_HWG_TeamsGroupId`, `fsi_HWG_TeamsChannelId`, or `fsi_HWG_ComplianceApproverEmail`.
+- **M-5:** Aligned the Copilot Studio `botcomponents` lookup attribute in `Get-BotHitlSettings` (`private/HWGClient.psm1`) from `_parentbotid_value` to `_botid_value` to match the production scanning scripts `Get-AgentHitlSettings.ps1` and `governance/Test-HitlCheckpointConfiguration.ps1`. Added a comment explaining the platform-version drift in this attribute name.
+- **m-1, m-4, m-5:** Bumped version headers from `1.0.0` to `1.1.2` in `Test-HitlWorkflowCompliance.ps1`, `private/HWGClient.psm1`, and `Get-AgentHitlSettings.ps1` so on-disk version metadata matches the solution release.
+- **m-2:** Updated module docstring in `create_hwg_environment_variables.py` from "six environment variables" to "eight" — the module already defined eight (`fsi_HWG_IncludeSandbox` and `fsi_HWG_IncludeDrafts` were added previously without updating the count).
+- **m-6:** Migrated `Export-HitlGovernanceEvidence.ps1` authentication from MSAL.PS to Az.Accounts via `private/Connect-EnvironmentDataverse.ps1`, aligning with the rest of the solution and removing the last MSAL.PS dependency. Bumped the script `.NOTES` Version from `1.0.0` to `1.1.2` and replaced the MSAL.PS requirement with Az.Accounts >= 2.17.0.
+
+### Changed
+
+- **M-2:** Replaced the local 590-line `hwg_client.py` with a 27-line deprecation stub that raises `ImportError` on use, following the UASD migration pattern. All schema/deployment scripts (`create_hwg_dataverse_schema.py`, `create_hwg_environment_variables.py`, `create_hwg_connection_references.py`, `deploy.py`) now import the shared `DataverseClient` from `scripts/shared/dataverse_client.py`. Per the canonical pattern in `cross-tenant-external-sharing-governance/scripts/migrate_ctsg_optionsets_v1_1_0.py:238-267`, `dry_run` is **not** passed to the shared client constructor — writes are gated locally inside each `create_*` helper so that existence-check reads stay live and `--dry-run` previews remain meaningful. Fixed two latent shared-client API bugs uncovered during the migration: `client.query(...)` returns a list directly (callers had been treating it as `{"value": [...]}`) and the keyword is `filter_expr`, not `filter`. Regenerated `docs/dataverse-schema.md` from the refactored script.
+- Bumped solution metadata to v1.1.2 to reflect the council-review remediation set above.
+
+### Deferred
+
+- **m-3 (cosmetic naming inconsistency):** Left in place pending a broader cross-solution naming convention pass; no functional impact.
+
 ## [1.1.1] - 2026-05-17
 
 ### Added

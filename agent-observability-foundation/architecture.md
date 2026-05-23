@@ -123,7 +123,7 @@ The architecture establishes two distinct access paths to support separation of 
 | Operational | Monitoring Reader | Resource Group | Log Analytics queries | Real-time monitoring, troubleshooting |
 | Compliance | Storage Blob Data Reader | Storage Account | Blob storage access | Audit evidence retrieval, regulatory examination |
 
-**Framework Control Reference:** Supports Control 1.6 (DSPM for AI) separation of duties by isolating operational monitoring from compliance audit access. Also supports Control 2.8 (Access Control and Segregation of Duties) by enforcing distinct roles for different data access patterns.
+**Framework Control Reference:** Supports Control 2.8 (Access Control and Segregation of Duties) by enforcing distinct roles for different data access patterns, isolating operational monitoring from compliance audit access.
 
 ## Separation of Duties
 
