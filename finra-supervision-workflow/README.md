@@ -9,7 +9,7 @@ coe_function: govern
 ---
 # FINRA Supervision Workflow
 
-> **Version:** v1.1.0
+> **Version:** v1.1.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -374,6 +374,7 @@ Implementation guidance in FSI-AgentGov:
 
 ## Version
 
+1.1.1 - Council review remediation (M3/M4/minor-1/minor-5; M1/M2 deferred)
 1.1.0 - Microsoft Learn 2026-Q2 refresh
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.

@@ -336,6 +336,10 @@ def deploy_default_configs(client: DataverseClient, dry_run: bool = False) -> in
             "fsi_active": True,
         }
 
+        # Note: "fsi_supervisionconfigs" is the default Dataverse pluralized
+        # EntitySetName for the fsi_supervisionconfig table. For tables with
+        # non-default pluralization, query EntityDefinitions.EntitySetName at
+        # deploy time and substitute here.
         result = client.create_record("fsi_supervisionconfigs", record)
         if result:
             print(f"  Created config: {config['name']}")
@@ -372,6 +376,17 @@ def main() -> None:
     if not args.environment_url.startswith("https://"):
         print("Error: --environment-url must start with 'https://' (e.g., https://org.crm.dynamics.com)")
         sys.exit(1)
+    # Warn if URL does not match a known Dataverse host suffix; not fatal because
+    # private clouds and proxies may use other valid suffixes.
+    dataverse_host_pattern = re.compile(
+        r'^https://[A-Za-z0-9-]+\.crm[0-9]*\.(dynamics\.com|microsoftdynamics\.(us|de))/?$'
+    )
+    if not dataverse_host_pattern.match(args.environment_url):
+        print(
+            "Warning: --environment-url does not match a standard Dataverse host pattern "
+            "(*.crm*.dynamics.com or *.crm.microsoftdynamics.{us,de}). "
+            "Verify the URL if you encounter authentication errors."
+        )
     guid_pattern = re.compile(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
     if not guid_pattern.match(args.tenant_id):
         print("Error: --tenant-id must be a valid GUID (e.g., 12345678-1234-1234-1234-123456789abc)")
