@@ -2,7 +2,20 @@
 
 All notable changes to the Deny Event Correlation Report are documented here.
 
-## [Unreleased] — v2.0.3
+## [Unreleased] — v2.0.4
+
+### Fixed
+
+- **Major**: Replaced placeholder `contoso.onmicrosoft.com` with RFC 2606 `example.onmicrosoft.com` in `scripts/Connect-ExchangeOnlineHelper.ps1:24`, completing the domain sweep started in v2.0.2. (council review MAJ-1)
+
+### Changed
+
+- **Minor**: Updated stale framework footer `v1.2 - January 2026` to `v1.6.0` in `docs/architecture.md:286`, `docs/prerequisites.md:250`, and `docs/troubleshooting.md:276` to match the README front matter. (council review MIN-1)
+- **Minor**: Added inline comment in `scripts/Invoke-DailyDenyReport.ps1` Defender invocation block explaining why `$exchangeAuthArgs` is not splatted (Defender uses Microsoft Graph, not Exchange Online). (council review MIN-2)
+- **Minor**: Added `.NOTES` clarification in `scripts/Export-RaiTelemetry.ps1` documenting that the script targets the classic Application Insights Logs API endpoint and that workspace-based App Insights resources require the Azure Monitor Logs API. Version header bumped to 1.4. (council review MIN-3)
+- **Housekeeping**: Replaced non-ASCII em-dash (U+2014) characters with ASCII hyphens in `scripts/Connect-ExchangeOnlineHelper.ps1`, `scripts/Export-RaiTelemetry.ps1`, and `scripts/Invoke-DailyDenyReport.ps1` for PS 5.1 + PS 7 source-file portability.
+
+## [2.0.3] — 2026-05-15
 
 ### Fixed
 
