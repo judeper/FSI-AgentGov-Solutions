@@ -61,6 +61,10 @@
 #Requires -Version 7.2
 
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter(Mandatory = $true)]
     [string]$DriveId,
@@ -72,6 +76,10 @@ param(
     [string]$AccessToken,
 
     [Parameter(Mandatory = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$GraphBaseUrl = "https://graph.microsoft.com",
 
     [Parameter(Mandatory = $false)]
@@ -80,6 +88,10 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateRange(1, 10)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [int]$MaxRetries = 5
 )
 

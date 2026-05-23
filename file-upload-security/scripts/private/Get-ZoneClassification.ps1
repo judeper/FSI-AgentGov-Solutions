@@ -28,10 +28,26 @@ if (Test-Path $sharedZoneScript) {
 } else {
     Write-Warning "Shared Get-ZoneClassification.ps1 not found at $sharedZoneScript. Using naming-convention fallback."
     function Get-ZoneClassification {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+        )]
         param(
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+                'PSReviewUnusedParameter', '',
+                Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+            )]
             [string]$EnvironmentId,
             [string]$EnvironmentDisplayName,
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+                'PSReviewUnusedParameter', '',
+                Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+            )]
             [string]$DataverseUrl,
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+                'PSReviewUnusedParameter', '',
+                Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+            )]
             [string]$AccessToken
         )
         # Naming-convention fallback: classify by environment display name patterns

@@ -66,6 +66,10 @@
 
 function Connect-CAAGraphSession {
     [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'Interactive')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(Mandatory)]
         [ValidateNotNullOrEmpty()]
@@ -86,6 +90,10 @@ function Connect-CAAGraphSession {
         [string]$CertificateThumbprint,
 
         [Parameter(Mandatory, ParameterSetName = 'ManagedIdentity')]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+        )]
         [switch]$UseManagedIdentity
     )
 

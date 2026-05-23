@@ -41,24 +41,52 @@
 #>
 
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Deprecated wrapper retains historical CLI parameters so existing callers receive the documented deprecation error; intentionally unused.'
+    )]
     [string]$HomeTenantId,
 
     [Parameter()]
     [ValidateSet("JSON", "CSV")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Deprecated wrapper retains historical CLI parameters so existing callers receive the documented deprecation error; intentionally unused.'
+    )]
     [string]$OutputFormat = "JSON",
 
     [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Deprecated wrapper retains historical CLI parameters so existing callers receive the documented deprecation error; intentionally unused.'
+    )]
     [string]$OutputPath = ".\uasd-sharing-audit.json",
 
     [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Deprecated wrapper retains historical CLI parameters so existing callers receive the documented deprecation error; intentionally unused.'
+    )]
     [switch]$IncludeEvidence,
 
     [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Deprecated wrapper retains historical CLI parameters so existing callers receive the documented deprecation error; intentionally unused.'
+    )]
     [int]$MaxIndividualShares = 5,
 
     [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Deprecated wrapper retains historical CLI parameters so existing callers receive the documented deprecation error; intentionally unused.'
+    )]
     [string]$ApprovedGroupsPath
 )
 

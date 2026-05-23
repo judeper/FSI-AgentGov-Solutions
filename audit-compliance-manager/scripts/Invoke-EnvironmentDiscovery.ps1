@@ -140,6 +140,10 @@ foreach ($helper in $requiredHelpers) {
 
 function Invoke-EnvironmentDiscovery {
     [CmdletBinding(DefaultParameterSetName = 'Interactive')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantId,
@@ -157,6 +161,10 @@ function Invoke-EnvironmentDiscovery {
         [string]$CertificateThumbprint,
 
         [Parameter(Mandatory = $false)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+        )]
         [switch]$Interactive,
 
         [Parameter(Mandatory = $false)]

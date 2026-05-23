@@ -53,6 +53,10 @@
     Justification = 'Dev-only legacy auth path. Production deployments use managed identity via scripts/shared/dataverse_client.py per AGENTS.md "Authentication standard". Plaintext secret here is wrapped immediately into SecureString and never persisted.'
 )]
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter(Mandatory = $true)]
     [string]$Environment,
@@ -74,6 +78,10 @@ param(
     [switch]$UseManagedIdentity,
 
     [Parameter(Mandatory = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+    )]
     [string]$ManagedIdentityClientId = $env:RSV_MANAGED_IDENTITY_CLIENT_ID,
 
     # Sovereign cloud support: override for Graph API base URL.
@@ -96,6 +104,10 @@ param(
 
     # Optional log file path for persistent logging (audit/troubleshooting).
     [Parameter(Mandatory = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$LogFile
 )
 

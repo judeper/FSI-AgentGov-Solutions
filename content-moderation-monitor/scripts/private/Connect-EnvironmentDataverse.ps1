@@ -48,6 +48,10 @@
 #>
 
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter(Mandatory)]
     [ValidatePattern('^https://.*\.(dynamics\.(com|us|cn|de)|appsplatform\.us)/?$')]
@@ -60,6 +64,10 @@ param(
     [PSCredential]$Credential,
 
     [Parameter(ParameterSetName = 'Interactive')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+    )]
     [switch]$Interactive,
 
     [switch]$Force

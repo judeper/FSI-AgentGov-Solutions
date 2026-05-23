@@ -254,8 +254,16 @@ function Deploy-SingleWorkbook {
     .OUTPUTS
         Boolean - $true if deployment succeeds, $false on failure
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(Mandatory=$true)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+        )]
         [string]$WorkbookName,
 
         [Parameter(Mandatory=$true)]

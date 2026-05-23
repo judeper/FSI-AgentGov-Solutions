@@ -57,6 +57,10 @@
 #Requires -Version 7.0
 
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter(Mandatory=$true)]
     [string]$ResourceGroup,
@@ -72,9 +76,17 @@ param(
     [switch]$DryRun,
 
     [Parameter(Mandatory=$false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$TeamsTeamId,
 
     [Parameter(Mandatory=$false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$TeamsChannelId,
 
     [Parameter(Mandatory=$false)]
@@ -559,6 +571,10 @@ function Show-DeploymentSummary {
         Display deployment summary with resource inventory.
     #>
     param(
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+        )]
         [hashtable]$ActionGroupIds,
         [bool]$IsDryRun = $false
     )

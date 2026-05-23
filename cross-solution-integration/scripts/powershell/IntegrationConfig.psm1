@@ -142,6 +142,10 @@ function Connect-DataverseApi {
         Hashtable with BaseUrl and Headers for Dataverse API calls.
     #>
     [CmdletBinding(DefaultParameterSetName = 'ManagedIdentity')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(Mandatory)]
         [string]$Url,
@@ -150,6 +154,10 @@ function Connect-DataverseApi {
         [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
         [string]$TenantId,
         [Parameter(ParameterSetName = 'ManagedIdentity', Mandatory)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+        )]
         [switch]$ManagedIdentity,
         [Parameter(ParameterSetName = 'ManagedIdentity')]
         [string]$ManagedIdentityClientId,
@@ -158,6 +166,10 @@ function Connect-DataverseApi {
         [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]
         [SecureString]$ClientSecret,
         [Parameter(ParameterSetName = 'Interactive', Mandatory)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+        )]
         [switch]$Interactive,
         [Parameter()]
         [ValidateSet('Public', 'USGov', 'USGovHigh', 'USGovDoD', 'China', 'Germany')]

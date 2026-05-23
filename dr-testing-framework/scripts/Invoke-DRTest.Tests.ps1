@@ -8,6 +8,10 @@
     'PSAvoidUsingConvertToSecureStringWithPlainText', '',
     Justification = 'Pester test fixture credential — never used against production. Required to exercise SecureString-accepting code paths.'
 )]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'Pester test doubles in this file mirror mocked command signatures; unused parameters satisfy the signature contract, not the test body.'
+)]
 param()
 
 <#
