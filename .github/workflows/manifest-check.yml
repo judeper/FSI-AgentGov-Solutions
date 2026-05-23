@@ -56,3 +56,8 @@ jobs:
         working-directory: solutions
         run: python scripts/lint-version-drift.py
         continue-on-error: true   # REPORT-ONLY initial mode (flip to --strict in follow-up PR after baseline)
+
+      - name: Lint Dataverse Picklist option-set value ranges
+        working-directory: solutions
+        run: python scripts/lint-optionset-values.py
+        continue-on-error: true   # REPORT-ONLY initial mode (flip to --strict in follow-up PR after baseline)
