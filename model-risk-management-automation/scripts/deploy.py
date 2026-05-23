@@ -16,7 +16,12 @@ import os
 import sys
 import time
 
-from mrm_client import MRMClient
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"),
+)
+from dataverse_client import DataverseClient  # noqa: E402
+
 from create_mrm_dataverse_schema import create_schema
 from create_mrm_environment_variables import create_environment_variables
 from create_mrm_connection_references import create_connection_references
@@ -74,7 +79,7 @@ Post-Deployment Steps
 
 
 def run_deployment(
-    client: MRMClient,
+    client: DataverseClient,
     dry_run: bool = False,
     tables_only: bool = False,
     vars_only: bool = False,
@@ -87,7 +92,7 @@ def run_deployment(
     When a selective flag is provided, only that step runs.
 
     Args:
-        client: Authenticated MRMClient instance
+        client: Authenticated DataverseClient instance
         dry_run: Preview mode flag
         tables_only: Deploy only Dataverse schema
         vars_only: Deploy only environment variables
@@ -262,9 +267,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Validate required arguments. Hosted identity is preferred: when neither
-    # --interactive nor --client-secret is supplied, MRMClient uses Azure
-    # Identity DefaultAzureCredential (managed identity/workload identity).
+    # Validate required arguments. Managed identity is preferred: when
+    # neither --interactive nor --client-secret is supplied, the shared
+    # DataverseClient defaults to managed-identity auth.
     if not args.environment_url:
         print("ERROR: --environment-url or MRM_ENVIRONMENT_URL required")
         sys.exit(1)
@@ -275,14 +280,25 @@ def main() -> None:
         )
         sys.exit(1)
 
+    if args.interactive:
+        auth_mode = "interactive"
+    elif args.client_secret:
+        auth_mode = "client-secret"
+    else:
+        auth_mode = "managed-identity"
+
     try:
-        client = MRMClient(
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the
+        # shared client short-circuits reads in dry-run mode, which would
+        # defeat downstream "skip if exists" idempotency checks. Writes are
+        # gated locally in each create_* helper via dry_run parameters.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
+            auth_mode=auth_mode,
         )
 
         run_deployment(

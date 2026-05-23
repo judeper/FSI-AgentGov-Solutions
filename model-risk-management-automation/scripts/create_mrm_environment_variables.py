@@ -43,7 +43,11 @@ import argparse
 import os
 import sys
 
-from mrm_client import MRMClient
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"),
+)
+from dataverse_client import DataverseClient  # noqa: E402
 
 
 # =============================================================================
@@ -385,7 +389,7 @@ ENV_VAR_DEFINITIONS = [
 
 
 def create_environment_variable(
-    client: MRMClient, definition: dict, dry_run: bool = False,
+    client: DataverseClient, definition: dict, dry_run: bool = False,
 ) -> None:
     """Create a single environment variable definition and default value.
 
@@ -394,7 +398,7 @@ def create_environment_variable(
     is specified.
 
     Args:
-        client: MRMClient instance
+        client: DataverseClient instance
         definition: Dict with schema_name, display_name, type, default_value,
                      description
         dry_run: Preview mode flag
@@ -405,12 +409,14 @@ def create_environment_variable(
     default_value = definition["default_value"]
     description = definition["description"]
 
-    # Idempotent check — skip if already exists
+    # Idempotent check — skip if already exists.
+    # The shared DataverseClient.query() returns a list directly (no
+    # {"value": [...]} wrapper) and uses filter_expr= as the kwarg name.
     existing = client.query(
         "environmentvariabledefinitions",
-        filter=f"schemaname eq '{schema_name}'",
+        filter_expr=f"schemaname eq '{schema_name}'",
     )
-    if existing["value"]:
+    if existing:
         print(f"  {schema_name}: already exists, skipping")
         return
 
@@ -422,6 +428,12 @@ def create_environment_variable(
         "defaultvalue": str(default_value),
         "description": description,
     }
+
+    if dry_run:
+        print(f"  {schema_name}: [DRY-RUN] Would create (type={var_type})")
+        if default_value is not None and default_value != "":
+            print(f"    [DRY-RUN] Would set default value: {default_value}")
+        return
 
     def_id = client.create_record("environmentvariabledefinitions", def_data)
     print(f"  {schema_name}: created (type={var_type})")
@@ -440,7 +452,7 @@ def create_environment_variable(
 
 
 def create_environment_variables(
-    client: MRMClient, dry_run: bool = False,
+    client: DataverseClient, dry_run: bool = False,
 ) -> None:
     """Deploy all MRM environment variables to Dataverse.
 
@@ -448,7 +460,7 @@ def create_environment_variables(
     values. All operations are idempotent — safe to re-run.
 
     Args:
-        client: MRMClient instance
+        client: DataverseClient instance
         dry_run: Preview mode flag
     """
     print("=" * 60)
@@ -538,9 +550,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Validate required arguments. Hosted identity is preferred: when neither
-    # --interactive nor --client-secret is supplied, MRMClient uses Azure
-    # Identity DefaultAzureCredential (managed identity/workload identity).
+    # Validate required arguments. Managed identity is preferred: when
+    # neither --interactive nor --client-secret is supplied, the shared
+    # DataverseClient defaults to managed-identity auth.
     if not args.environment_url:
         print("ERROR: --environment-url or MRM_ENVIRONMENT_URL required")
         sys.exit(1)
@@ -551,14 +563,25 @@ def main() -> None:
         )
         sys.exit(1)
 
+    if args.interactive:
+        auth_mode = "interactive"
+    elif args.client_secret:
+        auth_mode = "client-secret"
+    else:
+        auth_mode = "managed-identity"
+
     try:
-        client = MRMClient(
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the
+        # shared client short-circuits reads in dry-run mode, which would
+        # defeat the idempotent "skip if exists" check. Writes are gated
+        # locally inside create_environment_variable via the dry_run arg.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
+            auth_mode=auth_mode,
         )
 
         create_environment_variables(client, dry_run=args.dry_run)

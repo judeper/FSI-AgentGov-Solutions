@@ -339,11 +339,19 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
            not(contains(toLower(model.fsi_underlyingmodel), 'llm'))), 2,
          3))))}
 
+       Note: Use OptionSet integer values for comparison in production:
+       Microsoft = 100000000, Anthropic = 100000001, OpenAI = 100000002,
+       Custom = 100000003, Third-Party = 100000004
+
    3.5 Explainability Score (based on fsi_decisionoutputtype)
        @{if(equals(model.fsi_decisionoutputtype, 'Quantitative Estimate'), 5,
          if(equals(model.fsi_decisionoutputtype, 'Decision Support'), 4,
          if(equals(model.fsi_decisionoutputtype, 'Information Retrieval'), 2,
          1)))}
+
+       Note: Use OptionSet integer values for comparison in production:
+       Quantitative Estimate = 100000000, Decision Support = 100000001,
+       Information Retrieval = 100000002, Productivity = 100000003
 
    3.6 Regulatory Exposure Score (based on fsi_governancezone)
        @{if(equals(int(model.fsi_governancezone), 100000003), 5,
@@ -352,8 +360,8 @@ Applies a 7-factor automated risk scoring algorithm to a model inventory record,
 
    3.7 Change Frequency Score
        - List rows: fsi_mrmcomplianceevents
-         Filter: _fsi_validationcycle_lookup_value eq @{cycle.id}  // child tables use lookup column, not parent PK
-                 and fsi_eventtype in (Material Change Detected, Risk Rating Changed)
+         Filter: _fsi_modelinventory_lookup_value eq @{model.id}  // compliance events relate to fsi_modelinventory, not fsi_validationcycle (no such lookup exists on this table)
+                 and fsi_eventtype in (100000010, 100000003)  // Material Change Detected (100000010), Risk Rating Changed (100000003)
                  and fsi_eventtimestamp ge @{addDays(utcNow(), -90)}
        - Count results
        @{if(greater(changeCount, 4), 5,
