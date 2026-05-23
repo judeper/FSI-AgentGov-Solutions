@@ -103,7 +103,8 @@ Some solutions carry a per-solution `AGENTS.md` at their root (e.g., `agent-inta
 
 Active per-solution `AGENTS.md` files:
 
-- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · PR #142 open
+- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · merged via PR #142
+- [`message-center-monitor/AGENTS.md`](message-center-monitor/AGENTS.md) — v2.5.1 · POC dry-run in progress (PR #141)
 
 When you add a per-solution `AGENTS.md`, list it here and link to it from the solution's README.
 

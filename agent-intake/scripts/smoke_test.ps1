@@ -120,7 +120,21 @@ $script:ChoiceMap = @{
     'fsi_intake_risktier' = @{ 100000000 = 'Tier 1 (High)'; 100000001 = 'Tier 2 (Medium)'; 100000002 = 'Tier 3 (Low)' }
     'fsi_intake_mrmhandoffstatus' = @{ 100000000 = 'Pending'; 100000001 = 'Handed off'; 100000002 = 'NotApplicable'; 100000003 = 'Failed' }
     'fsi_intake_reviewdecision' = @{ 100000000 = 'Pending'; 100000001 = 'Approved'; 100000002 = 'Approved with conditions'; 100000003 = 'Denied'; 100000004 = 'Recused'; 100000005 = 'Timeout' }
-    'fsi_intake_status' = @{ 100000004 = 'Approved'; 100000005 = 'Denied' }
+    'fsi_intake_status' = @{
+        100000000 = 'Draft'
+        100000001 = 'Submitted'
+        100000002 = 'AwaitingSponsor'
+        100000003 = 'AwaitingReviewers'
+        100000004 = 'Approved'
+        100000005 = 'Denied'
+        100000006 = 'Withdrawn'
+        100000007 = 'Escalated'
+        100000008 = 'AutoApproved'
+        100000009 = 'DeferredOutOfScope'
+        100000010 = 'SponsorTimeout'
+        100000011 = 'InReview'
+        100000012 = 'LiveTracking'
+    }
 }
 $script:ScenarioScopeMap = @{
     'express-happy' = 'Express'

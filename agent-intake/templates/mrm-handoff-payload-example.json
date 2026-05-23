@@ -11,7 +11,7 @@
   },
   "agent": {
     "displayName": "Credit Adverse Action Review Copilot",
-    "agentType": "Copilot Studio",
+    "agentType": "Copilot Studio (classic)",
     "platformAgentId": "3c2fd0ea-78e0-4d42-9c28-2d2ff9ed9f8e",
     "environmentId": "f1f2d9be-8dc4-4d19-9bb0-4d4c5c1215be",
     "entraAgentId": "b9152d94-0d34-4c3e-8bb5-9aa38fcb4d7e",
