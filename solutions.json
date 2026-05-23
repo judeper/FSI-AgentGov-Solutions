@@ -89,7 +89,7 @@
     "agent-communication-restriction-detector": {
       "id": "agent-communication-restriction-detector",
       "name": "Agent Communication Restriction Detector",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -171,7 +171,7 @@
     "agent-observability-foundation": {
       "id": "agent-observability-foundation",
       "name": "Agent Observability Foundation",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "domain": "monitoring-analytics",
       "tier": "1",
       "status": "live",
@@ -306,7 +306,7 @@
     "compliance-dashboard": {
       "id": "compliance-dashboard",
       "name": "Compliance Dashboard",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",
@@ -365,7 +365,7 @@
     "content-moderation-monitor": {
       "id": "content-moderation-monitor",
       "name": "Content Moderation Monitor",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "domain": "content-data",
       "tier": "2",
       "status": "live",
@@ -477,7 +477,7 @@
     "cross-tenant-external-sharing-governance": {
       "id": "cross-tenant-external-sharing-governance",
       "name": "Cross-Tenant External Sharing Governance",
-      "version": "1.0.3",
+      "version": "1.1.0",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",
@@ -564,7 +564,7 @@
     "environment-lifecycle-management": {
       "id": "environment-lifecycle-management",
       "name": "Environment Lifecycle Management",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",
@@ -645,7 +645,7 @@
     "generative-ai-config-auditor": {
       "id": "generative-ai-config-auditor",
       "name": "Generative AI Config Auditor",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -696,7 +696,7 @@
     "hitl-workflow-governance": {
       "id": "hitl-workflow-governance",
       "name": "HITL Workflow Governance",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",

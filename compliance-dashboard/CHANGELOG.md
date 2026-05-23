@@ -6,6 +6,29 @@ All notable changes to the Compliance Dashboard solution.
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-05-23
+
+### Fixed
+
+- **Critical**: `PillarDimension` DATATABLE in `docs/dax-measures.md` (lines 519-522) hardcoded stale control counts (24/21/10/7 = 62) that did not match the shipped `sample-data/control-master.json` (29/26/14/9 = 78). Updated `PillarDimension` to the correct 78-control distribution. (council review C-1)
+- **Major**: `Score Change 30D` DAX measure in `docs/power-bi-setup.md` (lines 222-234) used `DATEADD(DateTable[Date], -30, DAY)` while the canonical definition in `docs/dax-measures.md` and `docs/power-bi-template-spec.md` uses `DATESINPERIOD`. Aligned `power-bi-setup.md` to the canonical `DATESINPERIOD` form. (council review M-2)
+- **Minor**: Sample-dataset overclaim — README, `docs/deployment-checklist.md`, `docs/troubleshooting.md`, and `docs/power-bi-template-spec.md` repeatedly stated the shipped sample contained "62 controls" while the actual `sample-data/control-master.json` ships the full 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4). All references reconciled to the actual shipped distribution. (council review C-1 / m-5 doc fallout)
+- **Minor**: Stale dependency version pins. README listed `Environment Lifecycle Management v1.2.0+` and `FINRA Supervision Workflow v1.0.1+`; `docs/prerequisites.md` listed `Environment Lifecycle Management v1.1.3` and `Deny Event Correlation Report v2.0.1`. Bumped to current shipped versions (`environment-lifecycle-management v1.2.1+`, `finra-supervision-workflow v1.1.0+`, `deny-event-correlation-report v2.0.3`). (council review recommendation #4)
+
+### Changed
+
+- **Major (RESOLVED-via-documentation)**: `fsi_cd_evidencetype` option-set values (1-6) are NOT migrated to the Dataverse-standard 100000000+ range. `cross-solution-integration/scripts/powershell/IntegrationConfig.psm1` hardcodes `$script:EvidenceTypeTestResult = 5`, which would break if `fsi_cd_evidencetype` were renumbered. Migration is deferred to a coordinated minor-bump cycle with `cross-solution-integration`. Documented the dependency and the explicit-integer deployment requirement in:
+  - `scripts/create_cd_dataverse_schema.py` — emits a global option-set deployment warning in the auto-generated `docs/dataverse-schema.md` plus a fsi_cd_evidencetype-specific migration-deferred note.
+  - `docs/deployment-checklist.md` — adds a CRITICAL checklist item under "Create Dataverse Schema" stating explicit integer values MUST be set (not the maker-portal 100000000+ default).
+  (council review M-1)
+- **Minor**: Solution metadata version bumped to v1.0.5 across `manifest.yaml`, README, all `docs/*.md` footers, `templates/exchange-config.sample.json`, `scripts/Get-ExchangeComplianceData.ps1` (3 strings), and `scripts/load_sample_data.py` docstring header.
+
+### Migration notes
+
+No tenant-side migration required. This is a documentation, DAX, and deployment-warning patch. Operators who already deployed v1.0.4 with the explicit integer option-set values (1-6) do not need to take any action. Operators who deployed v1.0.4 by accepting Power Apps maker portal default 100000000+ values for the 8 CD option sets MUST either (a) recreate the option sets with explicit integer values, or (b) update every DAX measure in `docs/dax-measures.md`, every sample-data JSON in `sample-data/`, and every flow filter in `docs/flow-configuration.md` to use their 100000000-based equivalents.
+
+---
+
 ## [1.0.4] - 2026-05-17
 
 ### Changed

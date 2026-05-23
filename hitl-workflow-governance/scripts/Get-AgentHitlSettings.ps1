@@ -21,7 +21,7 @@
 
 .NOTES
     File: Get-AgentHitlSettings.ps1
-    Version: 1.0.0
+    Version: 1.1.2
     Solution: HITL Workflow Governance (HWG)
     Controls: 2.12 (Supervision/FINRA Rule 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
 #>

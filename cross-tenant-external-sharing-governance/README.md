@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Cross-Tenant and External Sharing Governance
 
-> **Version:** v1.0.3
+> **Version:** v1.1.0
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -188,7 +188,7 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 
 ## Version
 
-- **Current:** v1.0.3
+- **Current:** v1.1.0
 - **Framework:** FSI-AgentGov v1.1
 
 ## License

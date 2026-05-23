@@ -34,8 +34,8 @@ let AgentEvents = materialize(
 //   Prompt (string) - Triggering input (if available)
 //
 // Supports:
-//   Control 1.6 (Primary) - DSPM for AI
-//   Control 1.7 (Supporting) - Security event audit
+//   Control 1.7 (Primary) - Security event audit (RAI content filter telemetry capture)
+//   Control 1.6 (Informational adjacency) - DSPM for AI is delivered by Microsoft Purview, not by AOF; this query surfaces RAI events for visibility but is not primary evidence for 1.6
 //
 // Regulatory Mapping:
 //   RAI policies - Content safety compliance

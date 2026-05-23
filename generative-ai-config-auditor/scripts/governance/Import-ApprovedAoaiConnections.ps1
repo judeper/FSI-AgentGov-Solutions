@@ -52,12 +52,18 @@
     Previews the import without making changes.
 
 .NOTES
+    Version: 1.2.1
+
     CSV Format:
         ConnectionId,ConnectionName,Zone,ResourceGroup,AoaiEndpoint,Notes
         abc-123,prod-openai-eastus,Zone3,rg-ai-prod,https://prod-openai.openai.azure.com/,Production AOAI
 
     Valid Zone values: Zone1, Zone2, Zone3
     The ConnectionId is used as the idempotency key.
+
+    Retry/backoff for transient Dataverse errors (429/5xx) is delegated to the
+    Invoke-DataverseRequest helper in GACClient.psm1 — single source of truth
+    for retry policy.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -82,6 +88,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Import shared Dataverse request helper (retry/backoff for 429/5xx).
+# Source of truth: scripts/private/GACClient.psm1 — do NOT duplicate the
+# Invoke-DataverseRequest function in this script.
+Import-Module (Join-Path $PSScriptRoot '..' 'private' 'GACClient.psm1') -Force
+
 # --- Constants ---
 $TableName = 'fsi_gacapprovedconnections'
 $ApiVersion = 'v9.2'
@@ -93,6 +104,23 @@ $ZoneOptionSetMap = @{
 }
 
 # --- Functions ---
+
+function Get-DataverseRequestHeaders {
+    <#
+    .SYNOPSIS
+        Builds standard Dataverse Web API headers for a bearer token.
+    #>
+    param([Parameter(Mandatory)][string]$Token)
+
+    return @{
+        'Authorization'    = "Bearer $Token"
+        'Content-Type'     = 'application/json'
+        'OData-MaxVersion' = '4.0'
+        'OData-Version'    = '4.0'
+        'Accept'           = 'application/json'
+        'Prefer'           = 'return=representation'
+    }
+}
 
 function Get-DataverseToken {
     <#
@@ -123,65 +151,10 @@ function Get-DataverseToken {
         throw "Failed to acquire Dataverse access token for $resource"
     }
 
+    if ($tokenResult.Token -is [System.Security.SecureString]) {
+        return [System.Net.NetworkCredential]::new('', $tokenResult.Token).Password
+    }
     return $tokenResult.Token
-}
-
-function Invoke-DataverseRequest {
-    <#
-    .SYNOPSIS
-        Sends an HTTP request to the Dataverse Web API with retry logic.
-    #>
-    param(
-        [string]$Method,
-        [string]$Uri,
-        [string]$Token,
-        [hashtable]$Body,
-        [int]$MaxRetries = 3
-    )
-
-    $headers = @{
-        'Authorization' = "Bearer $Token"
-        'Content-Type'  = 'application/json'
-        'OData-MaxVersion' = '4.0'
-        'OData-Version' = '4.0'
-        'Accept' = 'application/json'
-        'Prefer' = 'return=representation'
-    }
-
-    $params = @{
-        Method  = $Method
-        Uri     = $Uri
-        Headers = $headers
-    }
-
-    if ($Body) {
-        $params['Body'] = ($Body | ConvertTo-Json -Depth 10)
-    }
-
-    $attempt = 0
-    while ($attempt -lt $MaxRetries) {
-        $attempt++
-        try {
-            $response = Invoke-RestMethod @params -ErrorAction Stop
-            return $response
-        }
-        catch {
-            $statusCode = $_.Exception.Response.StatusCode.value__
-            if ($statusCode -eq 429 -and $attempt -lt $MaxRetries) {
-                $retryAfter = 5 * $attempt
-                Write-Warning "Rate limited (429). Retrying in $retryAfter seconds (attempt $attempt/$MaxRetries)..."
-                Start-Sleep -Seconds $retryAfter
-            }
-            elseif ($statusCode -ge 500 -and $attempt -lt $MaxRetries) {
-                $retryAfter = 3 * $attempt
-                Write-Warning "Server error ($statusCode). Retrying in $retryAfter seconds (attempt $attempt/$MaxRetries)..."
-                Start-Sleep -Seconds $retryAfter
-            }
-            else {
-                throw
-            }
-        }
-    }
 }
 
 function Find-ExistingConnection {
@@ -203,7 +176,8 @@ function Find-ExistingConnection {
     $select = "`$select=fsi_gacapprovedconnectionid,fsi_connectionid,fsi_connectionname,fsi_zone,fsi_isactive"
     $uri = "$BaseUrl/api/data/$ApiVersion/${TableName}?${filter}&${select}"
 
-    $result = Invoke-DataverseRequest -Method 'GET' -Uri $uri -Token $Token
+    $headers = Get-DataverseRequestHeaders -Token $Token
+    $result = Invoke-DataverseRequest -Uri $uri -Method 'GET' -Headers $headers
     if ($result.value -and $result.value.Count -gt 0) {
         return $result.value[0]
     }
@@ -323,7 +297,9 @@ foreach ($row in $csvData) {
             $uri = "$BaseUrl/api/data/$ApiVersion/$TableName($recordId)"
 
             if ($PSCmdlet.ShouldProcess("$connectionName ($connectionId)", "Update existing approved connection")) {
-                Invoke-DataverseRequest -Method 'PATCH' -Uri $uri -Token $DataverseToken -Body $record | Out-Null
+                $headers = Get-DataverseRequestHeaders -Token $DataverseToken
+                $bodyJson = $record | ConvertTo-Json -Depth 10
+                Invoke-DataverseRequest -Uri $uri -Method 'PATCH' -Headers $headers -Body $bodyJson | Out-Null
                 Write-Host "  UPDATED: $connectionName ($connectionId) - Zone: $zone" -ForegroundColor Yellow
                 $updated++
             }
@@ -333,7 +309,9 @@ foreach ($row in $csvData) {
             $uri = "$BaseUrl/api/data/$ApiVersion/$TableName"
 
             if ($PSCmdlet.ShouldProcess("$connectionName ($connectionId)", "Create new approved connection")) {
-                Invoke-DataverseRequest -Method 'POST' -Uri $uri -Token $DataverseToken -Body $record | Out-Null
+                $headers = Get-DataverseRequestHeaders -Token $DataverseToken
+                $bodyJson = $record | ConvertTo-Json -Depth 10
+                Invoke-DataverseRequest -Uri $uri -Method 'POST' -Headers $headers -Body $bodyJson | Out-Null
                 Write-Host "  CREATED: $connectionName ($connectionId) - Zone: $zone" -ForegroundColor Green
                 $created++
             }

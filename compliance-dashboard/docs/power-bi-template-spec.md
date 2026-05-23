@@ -794,9 +794,9 @@ Provide these instructions in the template:
 2. Dialog appears: "Create Power BI Template"
 3. Enter description:
    ```
-   Compliance Dashboard for FSI Agent Governance Framework v1.0.4
+   Compliance Dashboard for FSI Agent Governance Framework v1.0.5
 
-   Provides aggregated compliance reporting across the controls loaded into Dataverse, with zone-based filtering. The shipped sample dataset contains 62 controls; load the validated 78-control framework baseline before describing the dashboard as full-framework coverage.
+   Provides aggregated compliance reporting across the controls loaded into Dataverse, with zone-based filtering. The shipped sample dataset contains the full 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4).
 
    Required parameters:
    - DataverseEnvironmentUrl: Your Dataverse environment URL
@@ -878,7 +878,7 @@ Update the .pbit template when:
 ### Version Control
 
 - Store `.pbix` working files and `.pbit` templates in an organization-controlled artifact store, not in this repository
-- Tag template releases: `compliance-dashboard-v1.0.4`
+- Tag template releases: `compliance-dashboard-v1.0.5`
 - Document template changes in CHANGELOG.md
 
 ---
@@ -892,4 +892,4 @@ Update the .pbit template when:
 
 ---
 
-*Compliance Dashboard v1.0.4 - Power BI Template Specification*
+*Compliance Dashboard v1.0.5 - Power BI Template Specification*

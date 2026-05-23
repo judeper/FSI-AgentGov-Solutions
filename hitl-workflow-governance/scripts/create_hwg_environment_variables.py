@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Create Dataverse environment variables for HITL Workflow Governance.
 
-Deploys six environment variables with fsi_HWG_* prefix that control
-scan behavior, grace periods, review SLA, zone sample rates, and
-alerting configuration. All operations are idempotent.
+Deploys eight environment variables with fsi_HWG_* prefix that control
+scan behavior, grace periods, review SLA, zone sample rates, alerting
+configuration, and scan-scope toggles for Sandbox and draft flows. All
+operations are idempotent.
 
 Variables consumed by HWG validation runbook (via HWGClient):
   - fsi_HWG_GracePeriodHours: Hours before new agents must have HITL configured
@@ -14,13 +15,20 @@ Variables for zone-based sampling and alerting:
   - fsi_HWG_Zone3SampleRate: Percentage of Zone 3 actions requiring pre-approval
   - fsi_HWG_Zone2SampleRate: Percentage for Zone 2 sampled review
   - fsi_HWG_NotificationWebhookUrl: Teams webhook URL for alerts
+
+Variables for scan scope:
+  - fsi_HWG_IncludeSandbox: Whether to include Sandbox environments in scans
+  - fsi_HWG_IncludeDrafts: Whether to include draft flows in scans
 """
 
 import argparse
 import os
 import sys
 
-from hwg_client import HWGClient
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
+)
+from dataverse_client import DataverseClient  # noqa: E402
 
 
 # =============================================================================
@@ -124,7 +132,7 @@ ENV_VAR_DEFINITIONS = [
 
 
 def create_environment_variable(
-    client: HWGClient, definition: dict, dry_run: bool = False,
+    client: DataverseClient, definition: dict, dry_run: bool = False,
 ) -> None:
     """Create a single environment variable definition and default value.
 
@@ -132,8 +140,11 @@ def create_environment_variable(
     definition record, then a default value record if a non-empty default
     is specified.
 
+    NOTE: ``dry_run`` is **not** passed to the shared DataverseClient
+    constructor; writes are gated locally so that existence reads stay live.
+
     Args:
-        client: HWGClient instance
+        client: shared DataverseClient instance
         definition: Dict with schema_name, display_name, type, default_value,
                      description
         dry_run: Preview mode flag
@@ -144,12 +155,13 @@ def create_environment_variable(
     default_value = definition["default_value"]
     description = definition["description"]
 
-    # Idempotent check — skip if already exists
+    # Idempotent check — shared client returns a list directly (not a dict
+    # with a "value" key), and the keyword is filter_expr, not filter.
     existing = client.query(
         "environmentvariabledefinitions",
-        filter=f"schemaname eq '{schema_name}'",
+        filter_expr=f"schemaname eq '{schema_name}'",
     )
-    if existing["value"]:
+    if existing:
         print(f"  {schema_name}: already exists, skipping")
         return
 
@@ -161,6 +173,12 @@ def create_environment_variable(
         "defaultvalue": str(default_value),
         "description": description,
     }
+
+    if dry_run:
+        print(f"  [DRY RUN] Would create environment variable: {schema_name} (type={var_type})")
+        if default_value is not None and default_value != "":
+            print(f"    [DRY RUN] Would create default value: {default_value}")
+        return
 
     def_id = client.create_record("environmentvariabledefinitions", def_data)
     print(f"  {schema_name}: created (type={var_type})")
@@ -179,15 +197,15 @@ def create_environment_variable(
 
 
 def create_environment_variables(
-    client: HWGClient, dry_run: bool = False,
+    client: DataverseClient, dry_run: bool = False,
 ) -> None:
     """Deploy all HWG environment variables to Dataverse.
 
-    Creates six fsi_HWG_* environment variables with their default
+    Creates eight fsi_HWG_* environment variables with their default
     values. All operations are idempotent -- safe to re-run.
 
     Args:
-        client: HWGClient instance
+        client: shared DataverseClient instance
         dry_run: Preview mode flag
     """
     print("=" * 60)
@@ -282,13 +300,19 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        client = HWGClient(
+        # NOTE: dry_run is deliberately NOT passed to the shared
+        # DataverseClient (canonical reference:
+        # cross-tenant-external-sharing-governance/scripts/
+        #   migrate_ctsg_optionsets_v1_1_0.py lines 238-267). Doing so would
+        # short-circuit READS (the schemaname existence query above), making
+        # the preview report every variable as "would create" regardless of
+        # state. Writes are gated locally inside create_environment_variable.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         create_environment_variables(client, dry_run=args.dry_run)

@@ -324,6 +324,19 @@ python scripts/verify_role_privileges.py \
 
 Query for modification attempts on ProvisioningLog:
 
+> **Important:** The Dataverse `audit` table stores `objecttypecode` as the
+> entity's numeric `ObjectTypeCode` metadata property, **not** the string
+> logical name. You must resolve the numeric value at runtime before
+> running the FetchXML below. The shipped `scripts/validate_immutability.py`
+> script does this automatically; for ad-hoc FetchXML queries, fetch the
+> code first:
+>
+> ```
+> GET /api/data/v9.2/EntityDefinitions(LogicalName='fsi_provisioninglog')?$select=ObjectTypeCode
+> ```
+>
+> Replace `NNNN` below with the returned integer.
+
 ```xml
 <fetch>
   <entity name="audit">
@@ -331,7 +344,10 @@ Query for modification attempts on ProvisioningLog:
     <attribute name="userid"/>
     <attribute name="operation"/>
     <filter type="and">
-      <condition attribute="objecttypecode" operator="eq" value="fsi_provisioninglog"/>
+      <!-- Replace NNNN with the numeric ObjectTypeCode for fsi_provisioninglog
+           (resolved from EntityDefinitions(LogicalName='fsi_provisioninglog')?$select=ObjectTypeCode).
+           A string value (e.g., "fsi_provisioninglog") will return zero results. -->
+      <condition attribute="objecttypecode" operator="eq" value="NNNN"/>
       <condition attribute="operation" operator="in">
         <value>2</value><!-- Update -->
         <value>3</value><!-- Delete -->

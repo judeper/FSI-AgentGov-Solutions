@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 <#
 .SYNOPSIS
@@ -99,13 +100,13 @@ function Get-PlatformAccessToken {
     switch ($AuthMode) {
         'ManagedIdentity' {
             Write-Verbose 'Acquiring token via system-assigned managed identity'
-            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource
-            return $tokenResponse.Token
+            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource -AsSecureString
+            return (ConvertFrom-SecureString -SecureString $tokenResponse.Token -AsPlainText)
         }
         'Interactive' {
             Write-Verbose 'Acquiring token via interactive authentication'
-            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource -TenantId $TenantId
-            return $tokenResponse.Token
+            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource -TenantId $TenantId -AsSecureString
+            return (ConvertFrom-SecureString -SecureString $tokenResponse.Token -AsPlainText)
         }
         'ClientSecret' {
             # legacy: dev-only — replace with managed identity in production

@@ -359,4 +359,4 @@ The `Condition_Send_Daily_Summary` action evaluates `formatDateTime(utcNow(), 'H
 
 ---
 
-*Compliance Dashboard v1.0.4*
+*Compliance Dashboard v1.0.5*

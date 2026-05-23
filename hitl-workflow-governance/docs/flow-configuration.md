@@ -201,10 +201,8 @@ This guide provides step-by-step instructions for manually building the HITL Wor
    - Due date by zone: Zone 3 = `addHours(utcNow(), 4)`, Zone 2 = `addHours(utcNow(), 24)`, Zone 1 = `addHours(utcNow(), 72)`
    - Assigned to: compliance team owner
 
-7. **Update Violation Record**
-   - Action: **Update a row** (Dataverse)
-   - Table: `fsi_HitlCheckpointResult`
-   - Set `fsi_alertsentat` to `utcNow()`
+7. **(Optional) Audit Alert Dispatch**
+   - Record the Teams post and Planner task identifiers in your own audit log (e.g., Application Insights, the Automation account variable assets, or your incident ticketing system). The `fsi_HitlCheckpointResult` row is not updated by this flow; alert dispatch metadata lives outside the result table because the schema does not define an alert-sent-at column. If you want this metadata persisted in Dataverse, add a column via a future schema bump first.
 
 ---
 

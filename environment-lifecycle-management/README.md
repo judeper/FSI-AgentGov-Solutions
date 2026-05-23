@@ -8,7 +8,7 @@ coe_function: enable
 ---
 # Environment Lifecycle Management
 
-> **Version:** v1.2.1
+> **Version:** v1.2.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -455,6 +455,7 @@ Full implementation guidance available in FSI-AgentGov:
 
 ## Version
 
+1.2.2 - Council review remediation (deploy.py ImportError fix; option-set example correction; audit FetchXML clarification)
 1.2.1 - Microsoft Learn 2026-Q2 refresh (see CHANGELOG)
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.

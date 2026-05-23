@@ -11,6 +11,15 @@ Tables:
   - fsi_AgentSkillRegistration (OrganizationOwned): Point-in-time skill config snapshots
   - fsi_CommException (UserOwned): Approved exceptions
   - fsi_CommScanRun (OrganizationOwned): Scan execution audit trail
+
+Version: 1.2.1
+
+Migrated in v1.2.1 from the solution-local `acrd_client.py` to the shared
+`scripts/shared/dataverse_client.py`. The shared client supports the full
+managed-identity-first authentication ladder (system-assigned MI, user-assigned
+MI, workload identity federation, certificate, interactive, client-secret),
+whereas the legacy ACRD client only supported interactive and client-secret.
+(council review M-1)
 """
 
 import argparse
@@ -19,7 +28,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from acrd_client import ACRDClient
+# Import shared DataverseClient (the local acrd_client.py was retired in v1.2.1;
+# see acrd_client.py for the deprecation stub).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
+)
+from dataverse_client import DataverseClient
 
 # Publisher prefix for custom entities
 PUBLISHER_PREFIX = "fsi"
@@ -27,6 +41,14 @@ PUBLISHER_PREFIX = "fsi"
 # =============================================================================
 # Shared Option Sets (reuse existing ACV option sets — existence check first)
 # =============================================================================
+#
+# Style-decisions §9 specifies that new Dataverse global option sets start at
+# value 100000000. `fsi_acv_zone` (0–3) and `fsi_acv_severity` (1–5) are
+# allowlisted exceptions — they predate the convention and are shared across
+# ACV, ACRD, CTSG, and other solutions. Re-keying them now would be a breaking
+# cross-solution change that requires a coordinated migration. ACRD's
+# solution-specific option sets (`fsi_ACRD_*`) below correctly use 100000000+.
+# (council review M-6)
 
 SHARED_OPTIONSETS = {
     "fsi_acv_zone": {
@@ -569,7 +591,88 @@ def generate_docs(output_path: str) -> None:
 # =============================================================================
 
 
-def create_shared_optionsets(client: ACRDClient, dry_run: bool = False) -> None:
+def _build_optionset_metadata(os_def: dict) -> dict:
+    """Construct a Dataverse global OptionSetMetadata payload from an ACRD def.
+
+    Mirrors the helper pattern in
+    `cross-tenant-external-sharing-governance/scripts/create_ctsg_dataverse_schema.py`
+    so that the schema script keeps a high-level option-set definition shape
+    while still feeding the raw metadata dicts that the shared
+    `DataverseClient.create_option_set()` expects. (council review M-1)
+    """
+    name = os_def["name"]
+    options = os_def["options"]
+    display_label = os_def.get("display") or " ".join(
+        word.capitalize() for word in name.split("_")[1:]
+    ) or name
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
+        "Name": name,
+        "DisplayName": _label(display_label),
+        "Description": _label(os_def.get("description", display_label)),
+        "OptionSetType": "Picklist",
+        "IsGlobal": True,
+        "IsCustomOptionSet": True,
+        "Options": [
+            {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
+                "Value": value,
+                "Label": _label(label),
+            }
+            for (label, value) in options
+        ],
+    }
+
+
+def _build_table_metadata(table_def: dict) -> dict:
+    """Construct a Dataverse EntityMetadata payload for a table.
+
+    Builds the raw dict that the shared `DataverseClient.create_entity()`
+    expects, including the required primary-name attribute. (council review M-1)
+    """
+    definition = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
+        "SchemaName": table_def["schema_name"],
+        "DisplayName": _label(table_def["display"]),
+        "DisplayCollectionName": _label(table_def["plural"]),
+        "Description": _label(table_def["description"]),
+        "OwnershipType": table_def["ownership"],
+        "IsActivity": False,
+        "HasActivities": False,
+        "HasNotes": False,
+        "IsAuditEnabled": {"Value": True, "CanBeChanged": True},
+        "PrimaryNameAttribute": "fsi_name",
+        "Attributes": [
+            {
+                "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                "SchemaName": "fsi_Name",
+                "DisplayName": _label(f"{table_def['display']} ID"),
+                "Description": _label("Primary name attribute"),
+                "RequiredLevel": {"Value": "ApplicationRequired"},
+                "MaxLength": 200,
+                "FormatName": {"Value": "Text"},
+            },
+        ],
+    }
+    if table_def.get("entity_set_name"):
+        definition["EntitySetName"] = table_def["entity_set_name"]
+    return definition
+
+
+def _build_column_metadata(col: dict) -> dict:
+    """Pass-through helper for column metadata.
+
+    ACRD's `_string_col`/`_memo_col`/`_integer_col`/`_boolean_col`/
+    `_datetime_col`/`_picklist_col` builders already produce raw dicts that the
+    shared `DataverseClient.create_column()` accepts unchanged. This helper
+    exists for symmetry with `_build_table_metadata()` and
+    `_build_optionset_metadata()` so future column-shape adjustments have a
+    single place to land. (council review M-1)
+    """
+    return col
+
+
+def create_shared_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
     """Create or verify shared global option sets.
 
     These option sets are shared with ACV and other solutions.
@@ -578,10 +681,10 @@ def create_shared_optionsets(client: ACRDClient, dry_run: bool = False) -> None:
     print("\n[Creating/Verifying Shared Option Sets]")
 
     for os_name, os_def in SHARED_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        client.create_option_set(_build_optionset_metadata(os_def))
 
 
-def create_acrd_optionsets(client: ACRDClient, dry_run: bool = False) -> None:
+def create_acrd_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
     """Create ACRD-specific global option sets.
 
     These option sets are unique to the Agent Communication Restriction Detector.
@@ -590,11 +693,11 @@ def create_acrd_optionsets(client: ACRDClient, dry_run: bool = False) -> None:
     print("\n[Creating ACRD-Specific Option Sets]")
 
     for os_name, os_def in ACRD_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        client.create_option_set(_build_optionset_metadata(os_def))
 
 
 def create_table_with_columns(
-    client: ACRDClient,
+    client: DataverseClient,
     table_name: str,
     table_def: dict,
     columns: list[dict],
@@ -603,7 +706,7 @@ def create_table_with_columns(
     """Create a table and its columns (idempotent).
 
     Args:
-        client: ACRDClient instance
+        client: Shared DataverseClient instance
         table_name: Logical table name
         table_def: Table definition dict
         columns: List of column definitions
@@ -615,52 +718,16 @@ def create_table_with_columns(
     if client.check_table_exists(logical_name):
         print(f"  {logical_name}: already exists, skipping table creation")
     else:
-        # Build entity definition
-        definition = {
-            "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
-            "SchemaName": table_def["schema_name"],
-            "DisplayName": _label(table_def["display"]),
-            "DisplayCollectionName": _label(table_def["plural"]),
-            "Description": _label(table_def["description"]),
-            "OwnershipType": table_def["ownership"],
-            "IsActivity": False,
-            "HasActivities": False,
-            "HasNotes": False,
-            "IsAuditEnabled": {"Value": True, "CanBeChanged": True},
-            "PrimaryNameAttribute": "fsi_name",
-            "Attributes": [
-                {
-                    "@odata.type": (
-                        "#Microsoft.Dynamics.CRM.StringAttributeMetadata"
-                    ),
-                    "SchemaName": "fsi_Name",
-                    "DisplayName": _label(
-                        f"{table_def['display']} ID"
-                    ),
-                    "Description": _label("Primary name attribute"),
-                    "RequiredLevel": {"Value": "ApplicationRequired"},
-                    "MaxLength": 200,
-                    "FormatName": {"Value": "Text"},
-                },
-            ],
-        }
-
-        # Set explicit EntitySetName if specified
-        if table_def.get("entity_set_name"):
-            definition["EntitySetName"] = table_def["entity_set_name"]
-
-        client.create_entity(definition)
+        client.create_entity(_build_table_metadata(table_def))
         print(f"  {logical_name}: created")
 
     # Create columns
     print(f"  {logical_name} columns:")
     for col in columns:
-        col_schema = col["SchemaName"]
-        col_type = col.get("@odata.type", "Unknown").split(".")[-1]
-        client.create_column(logical_name, col_schema, col_type, col)
+        client.create_column(logical_name, _build_column_metadata(col))
 
 
-def create_schema(client: ACRDClient, dry_run: bool = False) -> None:
+def create_schema(client: DataverseClient, dry_run: bool = False) -> None:
     """Orchestrate full schema deployment.
 
     Order: shared option sets -> ACRD option sets -> tables -> columns.
@@ -735,17 +802,58 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ACRD_CLIENT_ID"),
-        help="Service principal app ID (or set ACRD_CLIENT_ID env var)",
+        help="Application (client) ID (or set ACRD_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ACRD_CLIENT_SECRET"),
-        help="Service principal secret (or set ACRD_CLIENT_SECRET env var)",
+        # legacy: dev-only — replace with managed identity in production
+        help=(
+            "Service principal secret (or set ACRD_CLIENT_SECRET env var). "
+            "Dev-only fallback; prefer managed identity or workload identity "
+            "federation in production. See AGENTS.md authentication standard."
+        ),
     )
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ACRD_ENVIRONMENT_URL"),
         help="Dataverse environment URL (or set ACRD_ENVIRONMENT_URL env var)",
+    )
+    parser.add_argument(
+        "--auth-mode",
+        default=os.environ.get("ACRD_AUTH_MODE"),
+        choices=[
+            "interactive",
+            "managed-identity",
+            "workload-identity",
+            "certificate",
+            "client-secret",
+        ],
+        help=(
+            "Authentication mode for the shared DataverseClient. Managed identity "
+            "and workload identity require azure-identity (install via "
+            "requirements.txt extras). Default: interactive when --interactive is "
+            "set, otherwise client-secret."
+        ),
+    )
+    parser.add_argument(
+        "--certificate-path",
+        default=os.environ.get("ACRD_CERTIFICATE_PATH"),
+        help="Path to PEM/PFX certificate for --auth-mode certificate.",
+    )
+    parser.add_argument(
+        "--certificate-password",
+        default=os.environ.get("ACRD_CERTIFICATE_PASSWORD"),
+        help="Optional certificate password for --auth-mode certificate.",
+    )
+    parser.add_argument(
+        "--access-token",
+        default=os.environ.get("ACRD_ACCESS_TOKEN"),
+        help=(
+            "Externally-acquired Dataverse bearer token (e.g. from a parent "
+            "managed-identity or workload-identity process). Takes precedence "
+            "over all other auth modes."
+        ),
     )
     parser.add_argument(
         "--interactive",
@@ -774,21 +882,34 @@ def main() -> None:
         sys.exit(0)
 
     # Validate required arguments for deployment
-    if not args.tenant_id:
-        print("ERROR: --tenant-id or ACRD_TENANT_ID required")
-        sys.exit(1)
     if not args.environment_url:
         print("ERROR: --environment-url or ACRD_ENVIRONMENT_URL required")
         sys.exit(1)
+    # tenant-id is optional for managed-identity and when an external access
+    # token is supplied (the shared client tolerates both cases).
+    if (
+        not args.tenant_id
+        and not args.access_token
+        and args.auth_mode not in ("managed-identity", "workload-identity")
+    ):
+        print(
+            "ERROR: --tenant-id or ACRD_TENANT_ID required "
+            "(not needed for managed-identity / workload-identity / --access-token)"
+        )
+        sys.exit(1)
 
     try:
-        client = ACRDClient(
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            auth_mode=args.auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=args.certificate_password,
         )
 
         create_schema(client, dry_run=args.dry_run)

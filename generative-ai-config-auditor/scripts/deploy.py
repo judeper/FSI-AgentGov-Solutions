@@ -15,8 +15,14 @@ import argparse
 import os
 import sys
 import time
+from pathlib import Path
 
-from gac_client import GACClient
+# Import the shared Dataverse client from scripts/shared.
+_SHARED_DIR = Path(__file__).resolve().parent.parent.parent / "scripts" / "shared"
+if str(_SHARED_DIR) not in sys.path:
+    sys.path.insert(0, str(_SHARED_DIR))
+from dataverse_client import DataverseClient  # noqa: E402
+
 from create_dataverse_schema import create_schema
 from create_environment_variables import create_environment_variables
 from create_connection_references import create_connection_references
@@ -58,7 +64,7 @@ Post-Deployment Steps
 
 
 def run_deployment(
-    client: GACClient,
+    client: DataverseClient,
     dry_run: bool = False,
     tables_only: bool = False,
     vars_only: bool = False,
@@ -71,7 +77,7 @@ def run_deployment(
     When a selective flag is provided, only that step runs.
 
     Args:
-        client: Authenticated GACClient instance
+        client: Authenticated DataverseClient instance
         dry_run: Preview mode flag
         tables_only: Deploy only Dataverse schema
         vars_only: Deploy only environment variables
@@ -260,13 +266,17 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        client = GACClient(
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the
+        # shared client short-circuits reads in dry-run mode, which would
+        # defeat a meaningful preview. Writes are gated locally in each
+        # create_* function. The client itself is constructed live for both
+        # --dry-run and live executions.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         run_deployment(

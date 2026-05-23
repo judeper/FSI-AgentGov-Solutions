@@ -495,16 +495,22 @@ try {
             $driftEntry.BaselineOrchestration = $baseline.OrchestrationMode
             $driftEntry.BaselineGenAnswers = $baseline.GenerativeAnswersNodeCount
 
-            # Build comparison objects
+            # Build comparison objects (include all five fields tracked by
+            # Get-GenAIConfigDriftDirection so Rules 5/6 — Allow ungrounded
+            # responses and Work IQ — actually surface in runbook drift).
             $baselineObj = [PSCustomObject]@{
                 AzureOpenAIEnabled         = $baseline.AzureOpenAIEnabled
                 OrchestrationMode          = $baseline.OrchestrationMode
                 GenerativeAnswersNodeCount = $baseline.GenerativeAnswersNodeCount
+                ModelKnowledgeEnabled      = $baseline.ModelKnowledgeEnabled
+                SemanticSearchEnabled      = $baseline.SemanticSearchEnabled
             }
             $currentObj = [PSCustomObject]@{
                 AzureOpenAIEnabled         = $agent.AzureOpenAIEnabled
                 OrchestrationMode          = $agent.OrchestrationMode
                 GenerativeAnswersNodeCount = $agent.GenerativeAnswersNodeCount
+                ModelKnowledgeEnabled      = $agent.ModelKnowledgeEnabled
+                SemanticSearchEnabled      = $agent.SemanticSearchEnabled
             }
 
             $driftResult = Get-GenAIConfigDriftDirection -Baseline $baselineObj -Current $currentObj
@@ -638,7 +644,7 @@ try {
     $output = [PSCustomObject]@{
         RunType            = "GenAIConfigValidation"
         RunId              = $runId
-        Timestamp          = (Get-Date -AsUTC -Format "o")
+        Timestamp          = ((Get-Date).ToUniversalTime().ToString("o"))
         TotalAgents        = $totalAgents
         TotalEnvironments  = $uniqueEnvs
         EnvironmentNames   = $environmentNameList
@@ -674,7 +680,7 @@ try {
 
     $errorOutput = [PSCustomObject]@{
         RunType           = "GenAIConfigValidation"
-        Timestamp         = (Get-Date -AsUTC -Format "o")
+        Timestamp         = ((Get-Date).ToUniversalTime().ToString("o"))
         TotalAgents       = 0
         TotalEnvironments = 0
         OverallStatus     = "Error"

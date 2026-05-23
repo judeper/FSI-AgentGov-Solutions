@@ -2,6 +2,25 @@
 
 All notable changes to the Agent Observability Foundation are documented here.
 
+## [1.2.2] - 2026-05-22
+
+### Fixed
+
+- **Critical**: Removed stale "ADLS Gen2" terminology from `power-bi/kql-views/vw_dim_regulation_control.kql:113`; replaced with `BLOB-STORAGEV2` / `Azure Blob Storage (StorageV2, HNS disabled)` to match the actual storage type and the v1.1.1 terminology cleanup. (council review C-01)
+- **Critical**: Removed Control 1.6 (DSPM for AI) mappings from `power-bi/kql-views/vw_dim_regulation_control.kql` (previously on GLBA-501b, RBAC-SEP, and PII-SANIT rows). AOF maps formally to controls 1.7, 2.8, 2.9, 3.2 per `.ralph-config.json` and `governance-mapping.md`; DSPM for AI is delivered by Microsoft Purview. (council review C-02)
+- **Major**: Added `operation_Id` to the `AgentEvents` materialized view projection in `queries/compliance/flow-failure-correlation.kql` so the CorrelationId fallback at line 86 and the ConversationContext join at line 96 resolve against a real column instead of silently producing nulls. (council review M-01, m-02)
+- **Major**: Added `operation_Id` to the embedded copy of the same `AgentEvents` block inside `workbooks/error-diagnostics/workbook-template.json` (Root Cause Analysis group, query-flow-failures tile). Without this fix the workbook tile would fail with a Kusto semantic error (`'operation_Id' could not be resolved`) on render. The other 10 embedded `AgentEvents` blocks in the same workbook do not consume `operation_Id` downstream and are intentionally left unchanged. (code-review SHIP-BLOCKER follow-up to council M-01)
+- **Major**: Removed stale `{"GLBA-501b", "1.6"}` bridge row from `power-bi/semantic-model/tables/ControlRegulation.tmdl:52`. The TMDL bridge is a hard-coded parallel copy of the regulation→control mapping consumed by the `Regulatory Gaps` DAX measure (`power-bi/semantic-model/measures/CoreMetrics.tmdl:122-139`). Without this fix the Power BI report would continue to claim AOF delivers evidence for Control 1.6 even after the matching KQL fix in C-02. (code-review SHIP-BLOCKER follow-up to council C-02)
+- **Major**: Removed stale Control 1.6 reference from `architecture.md:126` RBAC Separation section; the section now references only Control 2.8 (Access Control and Segregation of Duties). (council review M-02)
+- **Major**: Bumped version strings in `workbooks/README.md` and `alerts/README.md` from 1.0.0 to 1.2.2 to match the solution version. (council review M-03)
+
+### Changed
+
+- **Minor**: Relabeled Control 1.6 in `queries/compliance/rai-content-filtering-detection.kql` header and `queries/governance-queries.md` cross-reference as an "informational adjacency" rather than primary/supporting evidence, to match the governance-mapping.md convention and the .ralph-config.json scope. Also dropped `1.6` from the Query Library Summary table at `queries/governance-queries.md:499` (compliance/ row) to align with the relabel earlier in the file. (council review m-01, code-review follow-up)
+- **Minor**: Reverted `RBAC-SEP` / Control 2.8 evidence-type from "Primary" back to "Supporting" in `power-bi/kql-views/vw_dim_regulation_control.kql:115`. The Supporting→Primary change was applied alongside the disclosed C-02 1.6-row removal but was not itself part of the council recommendation; preserving the prior evidence-strength claim avoids an undisclosed audit-sensitive semantic change. (code-review follow-up)
+- **Minor**: Refined four internal code comments in `scripts/provision.py` and `scripts/verify_worm.py` that referenced "ADLS Gen2" to instead describe StorageV2 with hierarchical namespace enabled, per .ralph-config.json terminology guidance. (council review m-04)
+- **Minor**: Bumped Power BI README version footer from 1.2.0 to 1.2.2 to match the parent solution version. (council review m-07)
+
 ## [1.2.1] — 2026-Q2 Microsoft Learn refresh
 
 ### Fixed

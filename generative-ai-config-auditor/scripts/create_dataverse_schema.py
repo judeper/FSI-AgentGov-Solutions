@@ -19,7 +19,11 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from gac_client import GACClient
+# Import the shared Dataverse client from scripts/shared.
+_SHARED_DIR = Path(__file__).resolve().parent.parent.parent / "scripts" / "shared"
+if str(_SHARED_DIR) not in sys.path:
+    sys.path.insert(0, str(_SHARED_DIR))
+from dataverse_client import DataverseClient  # noqa: E402
 
 # Publisher prefix for custom entities
 PUBLISHER_PREFIX = "fsi"
@@ -453,6 +457,66 @@ TABLES = {
 
 
 # =============================================================================
+# Metadata Builders for Shared DataverseClient
+# =============================================================================
+#
+# The shared DataverseClient takes raw Dataverse metadata dicts (matching the
+# Web API EntityMetadata / OptionSetMetadata payloads). These helpers translate
+# the higher-level GAC schema definitions above into the dicts the API expects.
+
+def _build_optionset_metadata(os_def: dict) -> dict:
+    """Build OptionSetMetadata dict for a global option set."""
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
+        "Name": os_def["name"],
+        "DisplayName": _label(os_def["name"]),
+        "IsGlobal": True,
+        "OptionSetType": "Picklist",
+        "Options": [
+            {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
+                "Value": value,
+                "Label": _label(label),
+            }
+            for label, value in os_def["options"]
+        ],
+    }
+
+
+def _build_table_metadata(table_def: dict) -> dict:
+    """Build EntityMetadata dict (table + primary name attribute) for create_table."""
+    definition = {
+        "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
+        "SchemaName": table_def["schema_name"],
+        "DisplayName": _label(table_def["display"]),
+        "DisplayCollectionName": _label(table_def["plural"]),
+        "Description": _label(table_def["description"]),
+        "OwnershipType": table_def["ownership"],
+        "IsActivity": False,
+        "HasActivities": False,
+        "HasNotes": False,
+        "IsAuditEnabled": {"Value": True, "CanBeChanged": True},
+        "PrimaryNameAttribute": "fsi_name",
+        "Attributes": [
+            {
+                "@odata.type": (
+                    "#Microsoft.Dynamics.CRM.StringAttributeMetadata"
+                ),
+                "SchemaName": "fsi_name",
+                "DisplayName": _label(f"{table_def['display']} ID"),
+                "Description": _label("Primary name attribute"),
+                "RequiredLevel": {"Value": "ApplicationRequired"},
+                "MaxLength": 200,
+                "FormatName": {"Value": "Text"},
+            },
+        ],
+    }
+    if table_def.get("entity_set_name"):
+        definition["EntitySetName"] = table_def["entity_set_name"]
+    return definition
+
+
+# =============================================================================
 # Documentation Generator
 # =============================================================================
 
@@ -564,7 +628,7 @@ def generate_docs(output_path: str) -> None:
 # =============================================================================
 
 
-def create_shared_optionsets(client: GACClient, dry_run: bool = False) -> None:
+def create_shared_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
     """Create or verify shared global option sets.
 
     These option sets are shared with ACV and other solutions.
@@ -573,10 +637,21 @@ def create_shared_optionsets(client: GACClient, dry_run: bool = False) -> None:
     print("\n[Creating/Verifying Shared Option Sets]")
 
     for os_name, os_def in SHARED_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        if dry_run:
+            existing = client.get_global_optionset(os_name)
+            if existing:
+                print(f"  {os_name}: exists, would skip")
+            else:
+                print(f"  [DRY RUN] {os_name}: would create")
+            continue
+        result = client.create_option_set(_build_optionset_metadata(os_def))
+        if result is None:
+            print(f"  {os_name}: already exists, skipping")
+        else:
+            print(f"  {os_name}: created")
 
 
-def create_gac_optionsets(client: GACClient, dry_run: bool = False) -> None:
+def create_gac_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
     """Create GAC-specific global option sets.
 
     These option sets are unique to the Generative AI Config Auditor.
@@ -585,11 +660,22 @@ def create_gac_optionsets(client: GACClient, dry_run: bool = False) -> None:
     print("\n[Creating GAC-Specific Option Sets]")
 
     for os_name, os_def in GAC_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        if dry_run:
+            existing = client.get_global_optionset(os_name)
+            if existing:
+                print(f"  {os_name}: exists, would skip")
+            else:
+                print(f"  [DRY RUN] {os_name}: would create")
+            continue
+        result = client.create_option_set(_build_optionset_metadata(os_def))
+        if result is None:
+            print(f"  {os_name}: already exists, skipping")
+        else:
+            print(f"  {os_name}: created")
 
 
 def create_table_with_columns(
-    client: GACClient,
+    client: DataverseClient,
     table_name: str,
     table_def: dict,
     columns: list[dict],
@@ -598,7 +684,7 @@ def create_table_with_columns(
     """Create a table and its columns (idempotent).
 
     Args:
-        client: GACClient instance
+        client: DataverseClient instance
         table_name: Logical table name
         table_def: Table definition dict
         columns: List of column definitions
@@ -606,56 +692,40 @@ def create_table_with_columns(
     """
     logical_name = table_name.lower()
 
-    # Check if table already exists
-    if client.check_table_exists(logical_name):
+    # Check if table already exists (read goes against live tenant even in
+    # dry-run for accurate preview)
+    table_exists = client.check_table_exists(logical_name)
+    if table_exists:
         print(f"  {logical_name}: already exists, skipping table creation")
     else:
-        # Build entity definition
-        definition = {
-            "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
-            "SchemaName": table_def["schema_name"],
-            "DisplayName": _label(table_def["display"]),
-            "DisplayCollectionName": _label(table_def["plural"]),
-            "Description": _label(table_def["description"]),
-            "OwnershipType": table_def["ownership"],
-            "IsActivity": False,
-            "HasActivities": False,
-            "HasNotes": False,
-            "IsAuditEnabled": {"Value": True, "CanBeChanged": True},
-            "PrimaryNameAttribute": "fsi_name",
-            "Attributes": [
-                {
-                    "@odata.type": (
-                        "#Microsoft.Dynamics.CRM.StringAttributeMetadata"
-                    ),
-                    "SchemaName": "fsi_name",
-                    "DisplayName": _label(
-                        f"{table_def['display']} ID"
-                    ),
-                    "Description": _label("Primary name attribute"),
-                    "RequiredLevel": {"Value": "ApplicationRequired"},
-                    "MaxLength": 200,
-                    "FormatName": {"Value": "Text"},
-                },
-            ],
-        }
-
-        # Set explicit EntitySetName if specified
-        if table_def.get("entity_set_name"):
-            definition["EntitySetName"] = table_def["entity_set_name"]
-
-        client.create_entity(definition)
-        print(f"  {logical_name}: created")
+        if dry_run:
+            print(f"  [DRY RUN] {logical_name}: would create table")
+        else:
+            client.create_table(_build_table_metadata(table_def))
+            print(f"  {logical_name}: created")
 
     # Create columns
     print(f"  {logical_name} columns:")
     for col in columns:
         col_schema = col["SchemaName"]
-        col_type = col.get("@odata.type", "Unknown").split(".")[-1]
-        client.create_column(logical_name, col_schema, col_type, col)
+        col_logical = col_schema.lower()
+
+        if not table_exists and dry_run:
+            # Table doesn't exist yet and we're previewing — all columns are new
+            print(f"    [DRY RUN] {col_logical}: would create (new table)")
+            continue
+
+        existing_col = client.get_attribute_metadata(logical_name, col_logical)
+        if existing_col:
+            print(f"    {col_logical}: already exists, skipping")
+        elif dry_run:
+            print(f"    [DRY RUN] {col_logical}: would create")
+        else:
+            client.create_column(logical_name, col)
+            print(f"    {col_logical}: created")
 
 
-def create_schema(client: GACClient, dry_run: bool = False) -> None:
+def create_schema(client: DataverseClient, dry_run: bool = False) -> None:
     """Orchestrate full schema deployment.
 
     Order: shared option sets → GAC option sets → tables → columns.
@@ -684,7 +754,6 @@ def create_schema(client: GACClient, dry_run: bool = False) -> None:
         )
 
     # Summary
-    all_optionsets = {**SHARED_OPTIONSETS, **GAC_OPTIONSETS}
     print("\n" + "=" * 60)
     if dry_run:
         print("DRY RUN COMPLETE - Review output above")
@@ -778,13 +847,17 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        client = GACClient(
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the
+        # shared client short-circuits reads in dry-run mode, which would
+        # defeat a meaningful preview. Instead, we gate all writes locally
+        # in create_schema(). The client itself is constructed live for both
+        # --dry-run and live executions.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         create_schema(client, dry_run=args.dry_run)

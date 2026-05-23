@@ -6,6 +6,168 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-23 [BREAKING DEPLOY]
+
+### Changed (BREAKING)
+
+- **CTSG-specific option-set values migrated from 0-based to 100000000-based.**
+  All 14 `fsi_ctsg_*` global option sets now use the Dataverse default integer
+  encoding (100000000+) instead of the legacy 0-based encoding deployed by
+  v1.0.x. Existing deployments **must** run
+  `scripts/migrate_ctsg_optionsets_v1_1_0.py` after re-publishing the schema
+  and **before** re-publishing the flows.
+
+  Migration value mapping (delta = +100000000 for every legacy value):
+
+  | Option Set | Label | v1.0.x | v1.1.0 |
+  |---|---|--:|--:|
+  | `fsi_ctsg_relationshiptype` | Subsidiary | 0 | 100000000 |
+  | `fsi_ctsg_relationshiptype` | Partner | 1 | 100000001 |
+  | `fsi_ctsg_relationshiptype` | Vendor | 2 | 100000002 |
+  | `fsi_ctsg_relationshiptype` | Regulator | 3 | 100000003 |
+  | `fsi_ctsg_relationshiptype` | Auditor | 4 | 100000004 |
+  | `fsi_ctsg_relationshiptype` | Other | 5 | 100000005 |
+  | `fsi_ctsg_approvalstatus` | Pending → Revoked | 0 → 4 | 100000000 → 100000004 |
+  | `fsi_ctsg_risktier` | Low → Critical | 0 → 3 | 100000000 → 100000003 |
+  | `fsi_ctsg_ppisolationdirection` | Inbound → None | 0 → 3 | 100000000 → 100000003 |
+  | `fsi_ctsg_findingtype` | Unapproved Tenant Isolation Exception → Approved Tenant - Review Required | 0 → 4 | 100000000 → 100000004 |
+  | `fsi_ctsg_findingstatus` | Open → False Positive | 0 → 4 | 100000000 → 100000004 |
+  | `fsi_ctsg_severity` | Critical → Low | 0 → 3 | 100000000 → 100000003 |
+  | `fsi_ctsg_governancelayer` | Layer 1 → Layer 3 | 0 → 2 | 100000000 → 100000002 |
+  | `fsi_ctsg_remediationstatus` | Pending → Deferred | 0 → 3 | 100000000 → 100000003 |
+  | `fsi_ctsg_guestdetectionmethod` | EXT# Parsing → Unresolved | 0 → 4 | 100000000 → 100000004 |
+  | `fsi_ctsg_isolationcompliancestatus` | Compliant → Non-Compliant - Unapproved Entries | 0 → 2 | 100000000 → 100000002 |
+  | `fsi_ctsg_ctacompliancestatus` | Compliant → Non-Compliant - Unapproved Partners | 0 → 2 | 100000000 → 100000002 |
+  | `fsi_ctsg_complianceimpact` | None → Critical | 0 → 4 | 100000000 → 100000004 |
+  | `fsi_ctsg_eventtype` | Tenant Isolation Validated → Critical Finding Manual Remediation Required | 0 → 20 | 100000000 → 100000020 |
+
+  **Not migrated (intentional cross-solution exception):** the shared
+  `fsi_acv_zone` option set retains 0-based values
+  (Unclassified=0, Zone 1=1, Zone 2=2, Zone 3=3) because it is co-owned with
+  six or more sibling solutions (ACRD, ASARD, ALG, ARA, ACV, etc.). Migrating
+  it in isolation would create cross-solution inconsistency. The schema script
+  `SHARED_OPTIONSETS` block documents this carve-out and references
+  `style-decisions.md §9` for the allowlist.
+
+### Migration Steps (BREAKING DEPLOY)
+
+For environments with existing v1.0.x rows:
+
+1. **Take a Dataverse backup** of every CTSG table (`fsi_approvedexternaltenant`,
+   `fsi_externalsharefinding`, `fsi_tenantisolationrecord`,
+   `fsi_entractarecord`, `fsi_crosstenantcomplianceevent`) before any other
+   step. A symmetric automated rollback is **not** provided — rollback requires
+   restoring from this backup.
+2. **Pause all CTSG flows** (Flows 1–6) in the Power Automate portal to prevent
+   new rows being created against the in-flight schema.
+3. **Re-publish schema:**
+   `python scripts/create_ctsg_dataverse_schema.py --tenant-id <…> --environment-url <…>`
+   This updates the option-set metadata to the 100000000-based values.
+4. **Re-key existing rows:**
+   `python scripts/migrate_ctsg_optionsets_v1_1_0.py --tenant-id <…> --environment-url <…> --dry-run`
+   first to preview, then re-run without `--dry-run` to apply.
+5. **Re-publish flows** (Flows 1–6). The shipped `docs/flow-configuration.md`
+   already uses post-migration integer values; if you maintain customizations,
+   re-key every `fsi_ctsg_*` integer literal per the mapping table above.
+6. **Sample re-key Web API calls (representative — actual re-keying is done by
+   the migration script in step 4; these PATCH bodies are what the script
+   sends, shown here for audit-trail / manual-fallback reference):**
+   ```http
+   # fsi_approvedexternaltenant — re-key picklists for one row
+   PATCH /api/data/v9.2/fsi_approvedexternaltenants(<recordId>)
+   Content-Type: application/json
+   If-Match: *
+   { "fsi_relationshiptype": 100000001,
+     "fsi_approvalstatus":   100000001,
+     "fsi_risktier":         100000002,
+     "fsi_ppisolationdirection": 100000000 }
+
+   # fsi_externalsharefinding — re-key picklists for one row
+   PATCH /api/data/v9.2/fsi_externalsharefindings(<recordId>)
+   { "fsi_findingtype":        100000002,
+     "fsi_findingstatus":      100000000,
+     "fsi_severity":           100000001,
+     "fsi_governancelayer":    100000001,
+     "fsi_remediationstatus":  100000000,
+     "fsi_guestdetectionmethod": 100000003 }
+
+   # fsi_tenantisolationrecord — re-key picklist for one row
+   PATCH /api/data/v9.2/fsi_tenantisolationrecords(<recordId>)
+   { "fsi_compliancestatus": 100000001 }
+
+   # fsi_entractarecord — re-key picklist for one row
+   PATCH /api/data/v9.2/fsi_entractarecords(<recordId>)
+   { "fsi_compliancestatus": 100000001 }
+
+   # fsi_crosstenantcomplianceevent — re-key picklists for one row
+   PATCH /api/data/v9.2/fsi_crosstenantcomplianceevents(<recordId>)
+   { "fsi_eventtype":         100000017,
+     "fsi_complianceimpact":  100000003 }
+   ```
+   Verification query (run after migration; should return 0):
+   ```sql
+   -- Verify no legacy rows remain (should return 0)
+   SELECT COUNT(*) FROM fsi_externalsharefinding
+   WHERE fsi_findingstatus < 100000000 OR fsi_severity < 100000000;
+   ```
+7. **Resume CTSG flows.**
+
+### Fixed (council review)
+
+- **C-1 — Option-set integer encoding** (this release's primary deliverable;
+  see Changed → BREAKING above).
+- **M-2 — `Get-AzAccessToken` SecureString handling in `Scan-ManagedEnvBotSharingBaseline.ps1`:**
+  Added `#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }`
+  and switched both ManagedIdentity and Interactive auth branches to
+  `Get-AzAccessToken -AsSecureString` followed by
+  `ConvertFrom-SecureString -AsPlainText`. Matches the pattern already used by
+  `Deploy-CrossTenantBaseline.ps1` and `Test-CrossTenantCompliance.ps1`.
+- **M-3 — Flow doc integer-vs-label clarification:** Every
+  `docs/flow-configuration.md` reference to `fsi_eventtype`, `fsi_findingtype`,
+  `fsi_findingstatus`, `fsi_severity`, `fsi_governancelayer`,
+  `fsi_remediationstatus`, `fsi_approvalstatus`, `fsi_guestdetectionmethod`,
+  and `fsi_ppisolationdirection` now uses an integer literal with the label
+  in parentheses (e.g., `fsi_eventtype` = `100000017` (Feature Flag Skip))
+  instead of bare string labels. Eliminates the ambiguity that previously made
+  Power Automate flow builders insert string labels into integer picklist
+  fields.
+- **m-2 — Schema doc drift:** Regenerated `docs/dataverse-schema.md` via
+  `create_ctsg_dataverse_schema.py --output-docs`. The doc now includes the
+  previously missing `fsi_AutomaticUserConsentSettings` and `fsi_InboundTrust`
+  columns on `fsi_EntraCTARecord` and reflects all 100000000-based option-set
+  values.
+- **m-4 — "Feature Flag Skip" integer:** Promoted to integer literal
+  `100000017` in the feature-flag-gate guidance.
+- **m-5 — Adaptive-card language softening:** Changed
+  `templates/adaptive-card-templates.json` line 333 from "Failure to complete
+  the review by the due date will result in automatic suspension." to "may
+  result in suspension of access pending governance committee review." per
+  FSI compliance-language guidelines.
+
+### Deferred to a later release
+
+- **M-1 — `fsi_acv_zone` migration:** Tracked as a cross-solution-coordinated
+  change; not part of CTSG v1.1.0. The known inconsistency between schema
+  scripts (0-based) and
+  `cross-solution-integration/scripts/powershell/IntegrationConfig.psm1`
+  (100000000-based hardcoded) is documented in
+  `create_ctsg_dataverse_schema.py` SHARED_OPTIONSETS and will be resolved via
+  a dedicated cross-solution PR.
+
+### Consumers updated for the new encoding
+
+- `docs/flow-configuration.md` — reference table at top + every Layer 1/2/3
+  finding-creation block + every compliance-event log + every onboarding-flow
+  status transition + every annual-review reminder.
+- `docs/troubleshooting.md` — finding-status / option-set troubleshooting
+  guidance.
+- `docs/power-apps-configuration.md` — alert-banner `Filter()` expressions on
+  `fsi_approvalstatus`.
+- `DELIVERY-CHECKLIST.md` — option-set value table.
+- `templates/approved-tenant-sample.json` — sample record integer values.
+- `scripts/governance/Test-CrossTenantCompliance.ps1` — `.PARAMETER`
+  documentation + parameter defaults for the 8 picklist-value tuning knobs.
+
 ## [1.0.3] - 2026-05-17
 
 ### Fixed

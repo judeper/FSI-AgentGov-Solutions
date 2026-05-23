@@ -84,7 +84,12 @@ class ELMClient:
             total=3,
             backoff_factor=1,
             status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET", "POST", "PATCH", "DELETE"],
+            # DELETE intentionally excluded — the ProvisioningLog immutability
+            # model treats deletion as a forbidden operation, and retrying a
+            # DELETE that returned a transient 5xx would mask the rare case
+            # where a privileged caller managed to issue one. EnvironmentRequest
+            # deletes are admin-only and rare enough that one-shot is fine.
+            allowed_methods=["GET", "POST", "PATCH"],
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)

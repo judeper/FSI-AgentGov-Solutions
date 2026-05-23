@@ -516,10 +516,10 @@ DATATABLE(
     "PillarName", STRING,
     "ControlCount", INTEGER,
     {
-        {1, "Security", 24},
-        {2, "Management", 21},
-        {3, "Reporting", 10},
-        {4, "SharePoint", 7}
+        {1, "Security", 29},
+        {2, "Management", 26},
+        {3, "Reporting", 14},
+        {4, "SharePoint", 9}
     }
 )
 ```
@@ -535,4 +535,4 @@ DATATABLE(
 
 ---
 
-*Compliance Dashboard v1.0.4*
+*Compliance Dashboard v1.0.5*
