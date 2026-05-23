@@ -121,6 +121,10 @@
     - 1  One or more FAIL
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Dev-only preflight fallback. Production deployments use managed identity via scripts/shared/dataverse_client.py per AGENTS.md "Authentication standard". Plaintext secret is read from Key Vault, wrapped immediately into SecureString, and not logged.'
+)]
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)] [string]$TenantId = $env:AZURE_TENANT_ID,

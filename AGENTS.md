@@ -369,6 +369,9 @@ All scripts that authenticate to Microsoft Graph, Power Platform, or Dataverse M
 
 `scripts/shared/dataverse_client.py` is the canonical example: it accepts an MSAL token from any source, so callers can pick the strongest auth method available in their environment without changing the client.
 
+**Suppressing `PSAvoidUsingConvertToSecureStringWithPlainText`:**
+When a code path legitimately requires `ConvertTo-SecureString ... -AsPlainText -Force` (dev-only legacy auth helpers, lab provisioning scripts, Pester test fixtures), suppress the warning at the function or script level with `[Diagnostics.CodeAnalysis.SuppressMessageAttribute(...)]` and include a `Justification` explaining why the dev-only path is acceptable. Production code paths must use managed identity — never accept a plaintext secret. Wave 6 P3 (PR #211) suppressed 27 such occurrences.
+
 ### PowerShell Scripts
 - Use `#Requires -Modules` for dependencies
 - Include `.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE` in comment-based help

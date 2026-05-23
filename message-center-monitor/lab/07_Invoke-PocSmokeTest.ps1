@@ -74,6 +74,10 @@
     the same URL prefix via dotnet's cross-platform HttpListener
     implementation.
 #>
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Lab provisioning script run interactively by tenant admin. Operator pastes a temporary secret for one-time setup; not invoked in production.'
+)]
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter()] [string] $ConfigPath,

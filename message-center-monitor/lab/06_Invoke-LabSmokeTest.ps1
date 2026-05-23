@@ -46,6 +46,10 @@
       H2 -> Steps 3+4 (real network; retry exercised under throttling)
       Schema alt-key -> Step 3 (sync uses the alt-key URL)
 #>
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Lab provisioning script run interactively by tenant admin. Operator pastes a temporary secret for one-time setup; not invoked in production.'
+)]
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter()] [string] $ConfigPath,

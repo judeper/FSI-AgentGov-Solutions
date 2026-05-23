@@ -9,6 +9,12 @@
     error handling logic.
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Pester test fixture credential — never used against production. Required to exercise SecureString-accepting code paths.'
+)]
+param()
+
 BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
     $scriptContent = Get-Content -Path $scriptPath -Raw

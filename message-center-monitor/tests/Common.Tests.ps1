@@ -21,6 +21,12 @@
     Run with: Invoke-Pester -Path .\Common.Tests.ps1 -Output Detailed
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Pester test fixture credential — never used against production. Required to exercise SecureString-accepting code paths.'
+)]
+param()
+
 BeforeAll {
     . (Join-Path $PSScriptRoot '..' 'scripts' 'governance' '_Common.ps1')
 
