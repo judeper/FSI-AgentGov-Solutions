@@ -6,12 +6,12 @@ All notable changes to the Scope Drift Monitor.
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-05-23
+
 ### Fixed
 
-- Updated `Invoke-DriftScan.ps1` and `New-AgentBaseline.ps1` to parse the current Copilot audit payload shape (`CopilotEventData`, `AccessedResources`, `AISystemPlugin`, and agent identity variants) while retaining compatibility with legacy `EventData` records.
-- Added managed identity-first token acquisition for Office 365 Management API and Dataverse calls; client-secret authentication is retained only as a legacy development fallback.
-- Refreshed prerequisites and flow documentation for Microsoft Purview Power Platform activity logging, Copilot Studio audit-event behavior, and Microsoft Graph Audit Search API v1.0 status.
-- Updated Microsoft Entra branding outside historical changelog entries.
+- **Critical**: `Invoke-DriftScan.ps1` `Write-AuditLog` used `Get-Date -AsUTC` which is unavailable on Windows PowerShell 5.1, causing the script to throw on its first log call. Replaced with `(Get-Date).ToUniversalTime().ToString(...)` for dual 5.1/7 compatibility. `scripts/Invoke-DriftScan.ps1:91`. (sweep: §10 PS 5.1)
+- **Minor**: Replaced non-ASCII em-dashes (U+2014) in PowerShell comments and `Write-AuditLog` strings with ASCII `--` to keep source PS 5.1-safe across non-UTF-8 file modes. `scripts/Invoke-DriftScan.ps1:189,753,834,870,919`, `scripts/New-AgentBaseline.ps1:187,698`. (sweep: §17 non-ASCII punctuation)
 
 ---
 
@@ -138,4 +138,4 @@ All flow logic remains fully documented in [Flow Configuration](docs/flow-config
 
 ---
 
-*Scope Drift Monitor v1.2.1 - FSI Agent Governance Framework*
+*Scope Drift Monitor v1.2.2 - FSI Agent Governance Framework*
