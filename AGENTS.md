@@ -18,7 +18,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 |----------|---------|-----------------|-------------|
 | action-confirmation-auditor | v1.2.0 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
 | agent-intake | v1.0.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
-| agent-365-lifecycle-governance | v1.1.4 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
+| agent-365-lifecycle-governance | v1.1.5 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.1.1 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.2.1 | 2.17 | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
 | agent-knowledge-source-scanner | v1.1.2 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |

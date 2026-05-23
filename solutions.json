@@ -35,7 +35,7 @@
     "agent-365-lifecycle-governance": {
       "id": "agent-365-lifecycle-governance",
       "name": "Agent 365 Lifecycle Governance",
-      "version": "1.1.4",
+      "version": "1.1.5",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",

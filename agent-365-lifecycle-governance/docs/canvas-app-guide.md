@@ -143,4 +143,4 @@ ClearCollect(colExport, Filter(fsi_lifecyclecomplianceevents, ...));
 
 ---
 
-*Agent 365 Lifecycle Governance v1.1.4*
+*Agent 365 Lifecycle Governance v1.1.5*
