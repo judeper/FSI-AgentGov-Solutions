@@ -26,3 +26,10 @@ jobs:
         # Strict mode enabled in v2.0.0 (Issue #36) — CAA schema renamed
         # from underscored snake_case to single-word PascalCase per the
         # team convention. Baseline is now clean.
+
+      # TODO(post-baseline): flip to `python scripts/lint-odata-existence.py --strict`
+      # after false-positive findings are triaged and the baseline is clean.
+      # --cross-solution-ok accepts column tokens declared in any solution's
+      # schema (intentional cross-solution couplings like ARA → all agents, CAA → ELM).
+      - run: python scripts/lint-odata-existence.py --cross-solution-ok
+        continue-on-error: true
