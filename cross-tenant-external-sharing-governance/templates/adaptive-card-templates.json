@@ -330,7 +330,7 @@
       },
       {
         "type": "TextBlock",
-        "text": "The following approved external tenant requires annual review. Failure to complete the review by the due date will result in automatic suspension.",
+        "text": "The following approved external tenant requires annual review. Failure to complete the review by the due date may result in suspension of access pending governance committee review.",
         "wrap": true,
         "spacing": "Small"
       },

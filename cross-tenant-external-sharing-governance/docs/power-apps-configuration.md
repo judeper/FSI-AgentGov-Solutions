@@ -20,9 +20,9 @@
 
 ### Alert Banners
 
-1. **Overdue annual reviews:** `Filter(fsi_approvedexternaltenants, fsi_annualreviewdue < Today() && fsi_approvalstatus = 1)`
-2. **Expiring within 30 days:** `Filter(fsi_approvedexternaltenants, fsi_annualreviewdue <= Today() + 30 && fsi_annualreviewdue > Today() && fsi_approvalstatus = 1)`
-3. **Expired onboarding requests:** `Filter(fsi_approvedexternaltenants, fsi_approvalstatus = 2)` — governance team can review and decide to resubmit or close
+1. **Overdue annual reviews:** `Filter(fsi_approvedexternaltenants, fsi_annualreviewdue < Today() && fsi_approvalstatus = 100000001)`
+2. **Expiring within 30 days:** `Filter(fsi_approvedexternaltenants, fsi_annualreviewdue <= Today() + 30 && fsi_annualreviewdue > Today() && fsi_approvalstatus = 100000001)`
+3. **Expired onboarding requests:** `Filter(fsi_approvedexternaltenants, fsi_approvalstatus = 100000002)` — governance team can review and decide to resubmit or close
 
 ### Detail View
 
