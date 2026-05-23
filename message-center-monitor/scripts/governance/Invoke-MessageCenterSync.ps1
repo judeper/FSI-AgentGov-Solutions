@@ -47,6 +47,25 @@
     Output format for the sync summary. Table, JSON, or Object.
     Default: Table.
 
+.PARAMETER TeamsWebhookUrl
+    Optional Microsoft Teams Workflows incoming webhook URL. When supplied
+    (or set via $env:MCM_TEAMS_WEBHOOK_URL), high/critical messages (or
+    whatever -NotifySeverities specifies) are posted to the configured Teams
+    channel as adaptive cards. Empty / unset disables Teams notification.
+
+    Phase 1 notification path. MUTUALLY EXCLUSIVE with the Phase 3 Power
+    Automate flow; run Test-McmPrerequisites.ps1 first to confirm only one
+    path is active.
+
+.PARAMETER ModelDrivenAppId
+    Optional model-driven app id (GUID) used to construct the "Assess Record"
+    deep-link in the Teams adaptive card. When omitted, the deep-link button
+    will be malformed but the alert still posts.
+
+.PARAMETER DryRun
+    Skip all Dataverse mutations and Teams notifications. Useful for
+    validating auth + Graph reachability without side effects.
+
 .EXAMPLE
     .\Invoke-MessageCenterSync.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
@@ -119,6 +138,12 @@ param(
     [Parameter(Mandatory = $false)]
     [ValidateSet('Table', 'JSON', 'Object')]
     [string]$OutputFormat = 'Table',
+
+    [Parameter(Mandatory = $false)]
+    [string]$TeamsWebhookUrl = $env:MCM_TEAMS_WEBHOOK_URL,
+
+    [Parameter(Mandatory = $false)]
+    [string]$ModelDrivenAppId = $env:MCM_MODEL_DRIVEN_APP_ID,
 
     [Parameter(Mandatory = $false)]
     [switch]$DryRun,
@@ -226,7 +251,10 @@ while ($pageUrl) {
     if ($response.value) {
         $allMessages.AddRange($response.value)
     }
-    $pageUrl = $response.'@odata.nextLink'
+    # StrictMode (Version Latest) throws on a missing property access via dot
+    # syntax. Graph returns @odata.nextLink only when there's another page;
+    # use PSObject.Properties to probe-then-read.
+    $pageUrl = if ($response.PSObject.Properties['@odata.nextLink']) { $response.'@odata.nextLink' } else { $null }
     if ($pageUrl) {
         Write-Verbose "Fetching next page ($($allMessages.Count) messages so far)..."
     }
@@ -264,6 +292,27 @@ $updatedCount = 0
 $failedCount = 0
 $failedIds = [System.Collections.Generic.List[string]]::new()
 $highCriticalCount = 0
+$notifiedCount = 0
+$notifySkippedCount = 0
+$notifyFailedCount = 0
+$notifyWriteBackFailedCount = 0
+
+# Resolve the shared adaptive card template. The same template is rendered
+# here (Phase 1) and by the Power Automate flow (Phase 3); the two paths
+# are mutually exclusive at runtime - see Test-McmPrerequisites.ps1.
+$cardTemplatePath = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'templates/teams-notification-card.json'
+
+# Parse the Dataverse hostname's first label for use in the card's
+# "Assess Record" deep-link (e.g. https://contoso.crm.dynamics.com -> 'contoso').
+# Sovereign-cloud regions with a non-public-cloud URL pattern will produce
+# a broken deep-link; the alert payload itself still delivers correctly.
+$environmentLabel = ''
+try {
+    $hostLabel = ([uri]$DataverseUrl).Host
+    if ($hostLabel) { $environmentLabel = ($hostLabel -split '\.')[0] }
+} catch {
+    Write-Verbose "Could not parse DataverseUrl hostname for environment label: $($_.Exception.Message)"
+}
 
 # Dataverse Memo column upper bound for fsi_body — keep one byte of headroom
 # for the truncation marker so very long Message Center HTML bodies can still
@@ -359,6 +408,84 @@ foreach ($msg in $allMessages) {
         Write-Warning $_.Exception.Message
         $failedCount++
         [void]$failedIds.Add($messageId)
+        continue
+    }
+
+    # ---------- Phase 1 Teams notification ----------------------------------
+    # Posts a Teams adaptive card when (a) a webhook URL is configured,
+    # (b) the message severity matches -NotifySeverities, and (c) the row
+    # has not already been notified (idempotency via fsi_notifiedon).
+    #
+    # On successful POST, writes fsi_notifiedon via a DIRECT PATCH using
+    # Invoke-McmRest with a single-field body. This bypasses
+    # Invoke-McmDvUpsertMessage on purpose: that helper's contract forbids
+    # admin-owned columns (the C1 invariant) and is enforced by static checks
+    # in tests/Sync.Tests.ps1.
+    #
+    # Phase 1 ↔ Phase 3 are MUTUALLY EXCLUSIVE; Test-McmPrerequisites.ps1
+    # FAILs the preflight if both webhook env-var AND flow env-var are
+    # deployed at the same time. fsi_notifiedon provides per-row idempotency
+    # within ONE path only, not cross-path dedup.
+    if ($TeamsWebhookUrl -and ($msg.severity -in $NotifySeverities)) {
+        $alreadyNotified = $false
+        $existingNotifiedOn = $null
+        if ($result.ResponseBody -and ($result.ResponseBody.PSObject.Properties.Name -contains 'fsi_notifiedon')) {
+            $existingNotifiedOn = $result.ResponseBody.fsi_notifiedon
+        }
+        if ($existingNotifiedOn -and ([string]$existingNotifiedOn).Trim()) {
+            $alreadyNotified = $true
+        }
+
+        if ($alreadyNotified) {
+            Write-Verbose "Notify skipped (already notified): $messageId"
+            $notifySkippedCount++
+        }
+        elseif (-not $result.EntityId) {
+            Write-Verbose "Notify skipped (no EntityId from upsert response - Prefer header may be missing): $messageId"
+            $notifySkippedCount++
+        }
+        else {
+            $cardTokens = @{
+                severity                 = if ($msg.severity)                 { [string]$msg.severity }                 else { 'normal' }
+                title                    = if ($msg.title)                    { [string]$msg.title }                    else { '(no title)' }
+                category                 = if ($msg.category)                 { [string]$msg.category }                 else { 'stayInformed' }
+                services                 = if ($servicesStr)                  { $servicesStr }                          else { '' }
+                startDateTime            = if ($msg.startDateTime)            { [string]$msg.startDateTime }            else { '' }
+                actionRequiredByDateTime = if ($msg.actionRequiredByDateTime) { [string]$msg.actionRequiredByDateTime } else { 'None' }
+                id                       = $messageId
+                environment              = $environmentLabel
+                appId                    = if ($ModelDrivenAppId)             { $ModelDrivenAppId }                    else { '' }
+                publisherPrefix          = 'fsi'
+                recordId                 = $result.EntityId
+            }
+
+            try {
+                $notifyResult = Send-McmTeamsWebhook -WebhookUrl $TeamsWebhookUrl `
+                    -CardTokens $cardTokens `
+                    -AdaptiveCardTemplatePath $cardTemplatePath
+            } catch {
+                $notifyResult = [pscustomobject]@{ Success = $false; Error = $_.Exception.Message }
+            }
+
+            if ($notifyResult.Success) {
+                # Direct PATCH for the single admin-owned column fsi_notifiedon.
+                # Does NOT route through Invoke-McmDvUpsertMessage (C1 contract).
+                $escapedId = Format-McmODataLiteral $messageId
+                $patchUrl = "$dvBaseUrl/fsi_messagecenterlogs(fsi_messagecenterid='$escapedId')"
+                $patchBody = @{ fsi_notifiedon = (Get-Date).ToUniversalTime().ToString('o') } | ConvertTo-Json -Compress
+                try {
+                    $null = Invoke-McmRest -Uri $patchUrl -Headers $dvHeaders -Method Patch -Body $patchBody
+                    $notifiedCount++
+                    Write-Verbose "Notified + write-back complete: $messageId"
+                } catch {
+                    Write-Warning "Teams notification POSTED for ${messageId} but fsi_notifiedon write-back FAILED: $($_.Exception.Message)"
+                    $notifyWriteBackFailedCount++
+                }
+            } else {
+                Write-Warning "Teams notification failed for ${messageId}: $($notifyResult.Error)"
+                $notifyFailedCount++
+            }
+        }
     }
 }
 
@@ -369,14 +496,18 @@ foreach ($msg in $allMessages) {
 $syncTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 $summary = [PSCustomObject]@{
-    TotalSynced       = $allMessages.Count
-    NewRecords        = $newCount
-    UpdatedRecords    = $updatedCount
-    FailedRecords     = $failedCount
-    FailedMessageIds  = $failedIds.ToArray()
-    HighSeverityCount = ($allMessages | Where-Object { $_.severity -eq 'high' }).Count
-    CriticalCount     = ($allMessages | Where-Object { $_.severity -eq 'critical' }).Count
-    SyncTimestamp     = $syncTimestamp
+    TotalSynced                = $allMessages.Count
+    NewRecords                 = $newCount
+    UpdatedRecords             = $updatedCount
+    FailedRecords              = $failedCount
+    FailedMessageIds           = $failedIds.ToArray()
+    HighSeverityCount          = ($allMessages | Where-Object { $_.severity -eq 'high' }).Count
+    CriticalCount              = ($allMessages | Where-Object { $_.severity -eq 'critical' }).Count
+    NotifiedCount              = $notifiedCount
+    NotifySkippedCount         = $notifySkippedCount
+    NotifyFailedCount          = $notifyFailedCount
+    NotifyWriteBackFailedCount = $notifyWriteBackFailedCount
+    SyncTimestamp              = $syncTimestamp
 }
 
 Write-Host "╔══════════════════════════════════════════════════╗" -ForegroundColor Cyan
@@ -388,6 +519,16 @@ Write-Host ("║ Updated Records:  {0,-31}║" -f $summary.UpdatedRecords) -Fore
 Write-Host ("║ Failed Records:   {0,-31}║" -f $summary.FailedRecords) -ForegroundColor $(if ($failedCount -gt 0) { 'Red' } else { 'Cyan' })
 Write-Host ("║ High Severity:    {0,-31}║" -f $summary.HighSeverityCount) -ForegroundColor Cyan
 Write-Host ("║ Critical:         {0,-31}║" -f $summary.CriticalCount) -ForegroundColor Cyan
+if ($TeamsWebhookUrl) {
+    Write-Host ("║ Notified (Teams): {0,-31}║" -f $summary.NotifiedCount) -ForegroundColor Cyan
+    if ($summary.NotifySkippedCount -gt 0) {
+        Write-Host ("║ Notify Skipped:   {0,-31}║" -f $summary.NotifySkippedCount) -ForegroundColor Cyan
+    }
+    if ($summary.NotifyFailedCount -gt 0 -or $summary.NotifyWriteBackFailedCount -gt 0) {
+        $notifyFailedDisplay = "$($summary.NotifyFailedCount) (writeback: $($summary.NotifyWriteBackFailedCount))"
+        Write-Host ("║ Notify Failed:    {0,-31}║" -f $notifyFailedDisplay) -ForegroundColor Yellow
+    }
+}
 Write-Host ("║ Synced At:        {0,-31}║" -f $summary.SyncTimestamp) -ForegroundColor Cyan
 Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
@@ -408,15 +549,25 @@ switch ($OutputFormat) {
         $summary | ConvertTo-Json -Depth 5
     }
     'Object' {
-        # Object output is returned to the pipeline; callers can still
-        # inspect $LASTEXITCODE for partial-failure detection.
-        if ($failedCount -gt 0) { $global:LASTEXITCODE = 1 }
-        return $summary
+        # Emit the summary to the pipeline so -OutputFormat Object callers
+        # still receive the structured result. Do NOT 'return' here: the
+        # unified exit-code logic below must run for all formats so
+        # scheduled callers (pwsh -File ...) see process exit = 1 on
+        # partial failure. Setting $global:LASTEXITCODE = 1 is NOT
+        # sufficient - $LASTEXITCODE only reflects the last native-command
+        # exit and does NOT set the host process exit code; that requires
+        # an explicit 'exit N' statement.
+        $summary
     }
 }
 
 # Surface partial-failure as a non-zero exit code so scheduled runs
 # (Azure Automation, Logic Apps, GitHub Actions) can alert on it.
-if ($failedCount -gt 0) { exit 1 }
+# Notification failures count as terminal failures: a silent webhook
+# regression is the same severity as a silent Dataverse regression for
+# the customer's POC, and on a write-back failure the NEXT run will
+# re-post the same Teams alert because fsi_notifiedon was never written.
+$terminalFailures = $failedCount + $notifyFailedCount + $notifyWriteBackFailedCount
+if ($terminalFailures -gt 0) { exit 1 }
 
 #endregion

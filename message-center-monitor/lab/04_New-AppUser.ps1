@@ -65,18 +65,61 @@ if ([string]::IsNullOrEmpty($envId)) {
     Write-LabLog -Level Info -Message "  environmentId=$envId"
 }
 
-# --- 2. Create Application User ---------------------------------------------
-Write-LabLog -Level Info -Message "Creating Dataverse Application User for appId=$($state.appRegistration.applicationId)..."
-Import-Module Microsoft.PowerApps.Administration.PowerShell -ErrorAction Stop
-if ($PSCmdlet.ShouldProcess("env=$envId / appId=$($state.appRegistration.applicationId)", 'New-AdminPowerAppCdsDatabaseApplicationUser')) {
-    try {
-        New-AdminPowerAppCdsDatabaseApplicationUser -EnvironmentName $envId -ApplicationId $state.appRegistration.applicationId -ErrorAction Stop | Out-Null
-        Write-LabLog -Level Info -Message "  Application User created."
-    } catch {
-        # The cmdlet returns 409/duplicate when the user already exists; treat that as success.
-        if ($_.Exception.Message -match 'already exists|409|duplicate') {
-            Write-LabLog -Level Info -Message "  Application User already exists; reusing."
-        } else { throw }
+# --- 2. Create Application User (via Dataverse Web API) ---------------------
+# `New-AdminPowerAppCdsDatabaseApplicationUser` was removed from
+# Microsoft.PowerApps.Administration.PowerShell (not present in v2.0.217).
+# Create the application user directly via Dataverse Web API:
+#   POST /systemusers with applicationid + businessunitid@odata.bind.
+# Idempotent: if a systemuser already exists with this applicationid, skip.
+Write-LabLog -Level Info -Message "Creating Dataverse Application User for appId=$($state.appRegistration.applicationId) (via Web API)..."
+$appIdLit = $state.appRegistration.applicationId
+
+# Get an admin Dataverse token (the SP can't create its own systemuser row).
+# Use az CLI rather than Get-AzAccessToken — the latter can mint tokens with
+# the wrong audience claim depending on Az.Accounts version/cache state.
+$adminTokForCreate = az account get-access-token --resource $resource --tenant $cfg.tenant.tenantId --query accessToken -o tsv 2>$null
+if (-not $adminTokForCreate) {
+    Write-LabLog -Level Error -Message "Failed to mint admin Dataverse token via az CLI. Run: az login --tenant $($cfg.tenant.tenantId)" -Throw
+}
+$adminHdrForCreate = @{
+    Authorization      = "Bearer $adminTokForCreate"
+    'OData-MaxVersion' = '4.0'
+    'OData-Version'    = '4.0'
+    Accept             = 'application/json'
+    'Content-Type'     = 'application/json'
+}
+$apiBaseCreate = "$resource/api/data/v9.2"
+
+# Idempotency probe
+$existing = Invoke-RestMethod -Uri "$apiBaseCreate/systemusers?`$filter=applicationid eq $appIdLit&`$select=systemuserid" -Headers $adminHdrForCreate -Method Get -ErrorAction Stop
+if ($existing.value -and $existing.value.Count -gt 0) {
+    Write-LabLog -Level Info -Message "  Application User already exists; reusing."
+} else {
+    # Resolve the root business unit (the env's default BU; appears as the only
+    # BU with parentbusinessunitid null).
+    $buResp = Invoke-RestMethod -Uri "$apiBaseCreate/businessunits?`$filter=_parentbusinessunitid_value eq null&`$select=businessunitid,name" -Headers $adminHdrForCreate -Method Get -ErrorAction Stop
+    if (-not $buResp.value -or $buResp.value.Count -eq 0) {
+        Write-LabLog -Level Error -Message "Could not resolve root business unit in $resource." -Throw
+    }
+    $rootBuId = $buResp.value[0].businessunitid
+
+    $createBody = @{
+        applicationid = $state.appRegistration.applicationId
+        'businessunitid@odata.bind' = "/businessunits($rootBuId)"
+    } | ConvertTo-Json
+    if ($PSCmdlet.ShouldProcess("appId=$($state.appRegistration.applicationId) in env=$resource", 'POST /systemusers')) {
+        try {
+            Invoke-RestMethod -Uri "$apiBaseCreate/systemusers" -Headers $adminHdrForCreate -Method Post -Body $createBody -ErrorAction Stop | Out-Null
+            Write-LabLog -Level Info -Message "  Application User created."
+        } catch {
+            $msg = $_.Exception.Message
+            $body = if ($_.ErrorDetails) { $_.ErrorDetails.Message } else { '' }
+            if ($msg -match '409|duplicate|already' -or $body -match 'duplicate|already') {
+                Write-LabLog -Level Info -Message "  Application User already exists (race with idempotency probe); reusing."
+            } else {
+                Write-LabLog -Level Error -Message "Failed to create application user: $msg. Body: $body" -Throw
+            }
+        }
     }
 }
 
@@ -90,9 +133,13 @@ $tok = Get-MsalToken -ClientId $state.appRegistration.applicationId `
                      -Scopes "$resource/.default" -ErrorAction Stop
 
 # We need an interactive admin token to write the role association (the SP cannot
-# assign roles to itself before it has any). Reuse the engineer's existing Az login
-# to get a Dataverse token via Get-AzAccessToken.
-$adminTok = (Get-AzAccessToken -ResourceUrl $resource -ErrorAction Stop).Token
+# assign roles to itself before it has any). Reuse the engineer's existing Az
+# login to get a Dataverse token via az CLI (Get-AzAccessToken can return a
+# token with the wrong audience depending on Az.Accounts version/cache).
+$adminTok = az account get-access-token --resource $resource --tenant $cfg.tenant.tenantId --query accessToken -o tsv 2>$null
+if (-not $adminTok) {
+    Write-LabLog -Level Error -Message "Failed to mint admin Dataverse token via az CLI. Run: az login --tenant $($cfg.tenant.tenantId)" -Throw
+}
 $adminHdr = @{
     Authorization      = "Bearer $adminTok"
     'OData-MaxVersion' = '4.0'

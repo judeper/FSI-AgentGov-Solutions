@@ -163,6 +163,24 @@ When you add a per-solution `AGENTS.md`, list it here and link to it from the so
 
 **Note:** The nested hooks in `pipeline-governance-cleanup/scripts/hooks/` are intentionally different from root hooks. They allow all commands when that solution is used standalone.
 
+## Per-solution AGENTS.md (opt-in convention)
+
+Solutions with active in-flight work ship a `<solution>/AGENTS.md` that **adds
+to this root file**. Loading order for any agent working in a solution folder:
+
+1. This `CLAUDE.md` (and `AGENTS.md`, `.github/copilot-instructions.md`) — cross-cutting rules
+2. `.github/instructions/*.md` — auto-included rules by file path
+3. `<solution>/AGENTS.md` — solution-specific context + current operational state
+4. `<solution>/.ralph-config.json` — machine-readable domain facts (column names, option-set values)
+
+Solution-specific guidance wins only on solution-specific topics; cross-cutting
+rules (FSI language, Dataverse naming, lab guards, commit conventions) always
+apply. **Backfilling stable solutions with their own AGENTS.md is not
+required** — the convention is opt-in when there's non-trivial state to hand off
+across machines / sessions / agents.
+
+Currently shipped: `message-center-monitor/AGENTS.md` (POC dry-run in progress).
+
 ## Dataverse Column Naming (CRITICAL)
 
 Dataverse uses two names for every column:

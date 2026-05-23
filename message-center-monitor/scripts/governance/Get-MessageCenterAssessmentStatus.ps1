@@ -184,9 +184,10 @@ if (-not $Quiet) { Write-Information "Authentication successful." -InformationAc
 #region Build Query
 
 $cutoffDate = Format-McmODataDate ((Get-Date).AddDays(-$DaysBack))
-# fsi_assessedby is a Lookup; reference its raw value and request FormattedValue
-# annotations (set in Authentication header) to surface the display name.
-$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_assessmentstatus,fsi_startdatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,_fsi_assessedby_value,fsi_assesseddate,fsi_ismajorchange"
+# fsi_assessedby is a String column (StringAttributeMetadata, MaxLength 200) — NOT a Lookup.
+# Never use _fsi_assessedby_value OData syntax on it; that returns 400 Bad Request.
+# See message-center-monitor/.ralph-config.json for the column-type contract.
+$selectFields = "fsi_messagecenterid,fsi_title,fsi_category,fsi_severity,fsi_assessmentstatus,fsi_startdatetime,fsi_lastmodifieddatetime,fsi_actionrequiredbydatetime,fsi_assessedby,fsi_assesseddate,fsi_ismajorchange"
 
 $filterParts = @("fsi_startdatetime ge $cutoffDate")
 
@@ -226,7 +227,9 @@ while ($pageUrl) {
     if ($response.value) {
         $allRecords.AddRange($response.value)
     }
-    $pageUrl = $response.'@odata.nextLink'
+    # StrictMode Latest throws on missing property dot-access; Dataverse omits
+    # @odata.nextLink on the final page. Probe via PSObject.Properties first.
+    $pageUrl = if ($response.PSObject.Properties['@odata.nextLink']) { $response.'@odata.nextLink' } else { $null }
 }
 
 if (-not $Quiet) {
@@ -237,21 +240,23 @@ if (-not $Quiet) {
 
 #region Compute Summary
 
-$totalCount = $allRecords.Count
-$notAssessedCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000000 }).Count
-$reviewedCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000001 }).Count
-$impactsCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000002 }).Count
-$noImpactCount = ($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000003 }).Count
+$totalCount = @($allRecords).Count
+$notAssessedCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000000 }).Count
+$reviewedCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000001 }).Count
+$impactsCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000002 }).Count
+$noImpactCount = @($allRecords | Where-Object { $_.fsi_assessmentstatus -eq 100000003 }).Count
 
 # Find messages with action-required deadlines approaching within 7 days
 $now = Get-Date
 $urgentThreshold = $now.AddDays(7)
-$urgentMessages = $allRecords | Where-Object {
+# @(...) forces array context so .Count works even when the filter returns 0
+# (and StrictMode would otherwise throw on $null.Count).
+$urgentMessages = @($allRecords | Where-Object {
     $_.fsi_actionrequiredbydatetime -and
     ([datetime]$_.fsi_actionrequiredbydatetime -le $urgentThreshold) -and
     ([datetime]$_.fsi_actionrequiredbydatetime -ge $now) -and
     ($_.fsi_assessmentstatus -eq 100000000)
-}
+})
 
 #endregion
 

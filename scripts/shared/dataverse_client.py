@@ -331,8 +331,15 @@ class DataverseClient:
         if self.dry_run:
             print(f"  [DRY RUN] Would check option set: {name}")
             return None
+        # Dataverse normalises the OptionSet Name to lowercase (matching the
+        # logical-name convention). The lookup-by-Name is case-sensitive, so
+        # querying with the SchemaName casing (e.g. "fsi_MCM_messagecategory")
+        # 404s even when the option set exists, then the subsequent create
+        # POST returns 400 SchemaNameisNotUnique. Always lowercase the name
+        # for the existence probe.
+        lookup_name = name.lower()
         try:
-            response = self._session.get(urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{name}')"), headers=self._get_headers())
+            response = self._session.get(urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{lookup_name}')"), headers=self._get_headers())
             if response.status_code == 404: return None
             response.raise_for_status()
             return response.json()

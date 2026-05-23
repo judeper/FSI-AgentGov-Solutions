@@ -16,13 +16,25 @@
 .PARAMETER ConfigPath
     Path to lab-config.json.
 
+.PARAMETER PocOnly
+    Skip the env-var + connection-reference Python scripts. Only run
+    create_mcm_dataverse_schema.py (and wait for alternate-key
+    activation). This is the Phase 1 ("POC bar") deployment path used by
+    lab/07_Invoke-PocSmokeTest.ps1 and by customers following the POC
+    Quickstart runbook in docs/poc-quickstart.md.
+
+    The skipped scripts (environment variables and connection references)
+    are only needed by the Phase 3 Power Automate flow, not by the
+    Phase 1 PowerShell sync.
+
 .NOTES
     Lab dry-run step 3 of 7. Solution: message-center-monitor v2.5.0+
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter()] [string] $ConfigPath,
-    [Parameter()] [switch] $AllowProduction
+    [Parameter()] [switch] $AllowProduction,
+    [Parameter()] [switch] $PocOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,16 +61,48 @@ $envBackup = @{
     MCM_CLIENT_ID         = $env:MCM_CLIENT_ID
     MCM_CLIENT_SECRET     = $env:MCM_CLIENT_SECRET
     MCM_DATAVERSE_URL     = $env:MCM_DATAVERSE_URL
+    MCM_ENVIRONMENT_URL   = $env:MCM_ENVIRONMENT_URL
+    MCM_ACCESS_TOKEN      = $env:MCM_ACCESS_TOKEN
 }
-$env:MCM_TENANT_ID     = $cfg.tenant.tenantId
-$env:MCM_CLIENT_ID     = $state.appRegistration.applicationId
-$env:MCM_CLIENT_SECRET = $kvSecret
-$env:MCM_DATAVERSE_URL = $cfg.powerPlatform.environmentUrl
+$env:MCM_TENANT_ID       = $cfg.tenant.tenantId
+$env:MCM_CLIENT_ID       = $state.appRegistration.applicationId
+$env:MCM_CLIENT_SECRET   = $kvSecret
+# Set BOTH env-var names: Phase 1 governance scripts read MCM_DATAVERSE_URL,
+# the Python schema/env-var/connection-ref scripts read MCM_ENVIRONMENT_URL.
+$env:MCM_DATAVERSE_URL   = $cfg.powerPlatform.environmentUrl
+$env:MCM_ENVIRONMENT_URL = $cfg.powerPlatform.environmentUrl
+
+# Schema deployment chicken-and-egg: the SP has no Dataverse role until lab/04
+# runs, and lab/04 needs the schema (and the FSI Message Center Sync role it
+# creates). Resolve this by using the LAB RUNNER's admin token for the schema
+# deploy step. The runner is the env's creator (env was provisioned by them
+# via lab/00b) so they implicitly have System Administrator in Dataverse.
+# The Python schema script picks up MCM_ACCESS_TOKEN ahead of client_secret.
+$adminDvToken = $null
+try {
+    $adminDvToken = az account get-access-token --resource $cfg.powerPlatform.environmentUrl.TrimEnd('/') --tenant $cfg.tenant.tenantId --query accessToken -o tsv 2>$null
+} catch {}
+if ($adminDvToken) {
+    Write-LabLog -Level Info -Message "Using admin Dataverse token for schema deploy (SP has no role yet)."
+    $env:MCM_ACCESS_TOKEN = $adminDvToken
+} else {
+    Write-LabLog -Level Warn -Message "Could not mint admin Dataverse token via az. Falling back to SP client-credentials flow (will fail if SP is not yet an application user with schema-write role)."
+}
 
 try {
     $pyScriptsDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts'
 
-    foreach ($script in 'create_mcm_dataverse_schema.py', 'create_mcm_environment_variables.py', 'create_mcm_connection_references.py') {
+    # In -PocOnly mode, skip env-vars + connection-references scripts
+    # (those exist only for the Phase 3 Power Automate flow path).
+    $allScripts = @('create_mcm_dataverse_schema.py', 'create_mcm_environment_variables.py', 'create_mcm_connection_references.py')
+    if ($PocOnly) {
+        $scriptsToRun = @('create_mcm_dataverse_schema.py')
+        Write-LabLog -Level Info -Message "PocOnly mode: skipping create_mcm_environment_variables.py and create_mcm_connection_references.py"
+    } else {
+        $scriptsToRun = $allScripts
+    }
+
+    foreach ($script in $scriptsToRun) {
         $path = Join-Path $pyScriptsDir $script
         Write-LabLog -Level Info -Message "Running $script..."
         if ($PSCmdlet.ShouldProcess($script, 'python')) {
@@ -78,20 +122,28 @@ try {
 
     Write-LabLog -Level Info -Message "Polling alternate-key fsi_MessageCenterIdKey for Active status (max $maxSec s)..."
 
-    # Get an MSAL token for Dataverse so we can query EntityDefinitions.
-    Import-Module MSAL.PS -ErrorAction Stop
-    $resource  = ($cfg.powerPlatform.environmentUrl.TrimEnd('/'))
-    $authority = "https://login.microsoftonline.com/$($cfg.tenant.tenantId)"
-    $secStr    = ConvertTo-SecureString $kvSecret -AsPlainText -Force
-    $tok = Get-MsalToken -ClientId $state.appRegistration.applicationId `
-                         -ClientSecret $secStr `
-                         -TenantId $cfg.tenant.tenantId `
-                         -Authority $authority `
-                         -Scopes "$resource/.default" -ErrorAction Stop
+    # Get a Dataverse token for the alt-key poll. Prefer the admin token we
+    # already minted for the schema deploy (the SP still has no Dataverse role
+    # until lab/04 runs, so an SP-minted token would 401 on EntityDefinitions).
+    if ($adminDvToken) {
+        $accessTokenForPoll = $adminDvToken
+    } else {
+        Import-Module MSAL.PS -ErrorAction Stop
+        $resource  = ($cfg.powerPlatform.environmentUrl.TrimEnd('/'))
+        $authority = "https://login.microsoftonline.com/$($cfg.tenant.tenantId)"
+        $secStr    = ConvertTo-SecureString $kvSecret -AsPlainText -Force
+        $tok = Get-MsalToken -ClientId $state.appRegistration.applicationId `
+                             -ClientSecret $secStr `
+                             -TenantId $cfg.tenant.tenantId `
+                             -Authority $authority `
+                             -Scopes "$resource/.default" -ErrorAction Stop
+        $accessTokenForPoll = $tok.AccessToken
+    }
+    $resource = $cfg.powerPlatform.environmentUrl.TrimEnd('/')
 
     $url = "$resource/api/data/v9.2/EntityDefinitions(LogicalName='fsi_messagecenterlog')/Keys"
     $headers = @{
-        Authorization      = "Bearer $($tok.AccessToken)"
+        Authorization      = "Bearer $accessTokenForPoll"
         Accept             = 'application/json'
         'OData-MaxVersion' = '4.0'
         'OData-Version'    = '4.0'
@@ -107,13 +159,16 @@ try {
             if (-not $key) {
                 Write-LabLog -Level Warn -Message "  attempt ${attempt}: alt key not yet visible in EntityDefinitions"
             } else {
-                # EntityKeyIndexStatus: 0=Pending, 1=InProgress, 2=Active, 3=Failed
-                $status = switch ($key.EntityKeyIndexStatus) {
-                    0 { 'Pending' }
-                    1 { 'InProgress' }
-                    2 { 'Active' }
-                    3 { 'Failed' }
-                    default { "Unknown($($key.EntityKeyIndexStatus))" }
+                # EntityKeyIndexStatus: 0=Pending, 1=InProgress, 2=Active, 3=Failed.
+                # Dataverse may return this as either an integer or a string
+                # depending on API version / response shape; normalise both.
+                $raw = $key.EntityKeyIndexStatus
+                $status = switch -Regex ("$raw") {
+                    '^(0|Pending)$'    { 'Pending'; break }
+                    '^(1|InProgress)$' { 'InProgress'; break }
+                    '^(2|Active)$'     { 'Active'; break }
+                    '^(3|Failed)$'     { 'Failed'; break }
+                    default            { "Unknown($raw)" }
                 }
                 Write-LabLog -Level Info -Message "  attempt ${attempt}: status=$status"
                 if ($status -eq 'Active')  { break }

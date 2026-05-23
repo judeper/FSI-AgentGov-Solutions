@@ -154,6 +154,80 @@ function Get-McmDvHeaders {
     return $headers
 }
 
+function Format-McmSafeUri {
+    <#
+    .SYNOPSIS
+        Returns a log-safe representation of a URI, redacting bearer-credential paths and queries.
+
+    .DESCRIPTION
+        Teams Workflows incoming webhook URLs, Logic Apps shared-access signature URLs, and
+        any URL with a `sig=` or `code=` query parameter carry the *credential* in the URL
+        itself. If Invoke-McmRest logs or throws the raw URI on failure, a transient
+        4xx/5xx response will leak the webhook bearer secret into console output, scheduled-
+        run logs, and any Application Insights / Log Analytics pipeline downstream.
+
+        This helper rewrites such URIs as `<scheme>://<host>/<redacted>` BEFORE they reach
+        any log sink. Dataverse and Microsoft Graph URLs are returned unchanged so legitimate
+        troubleshooting (which entity set, which $filter) is not impaired.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [AllowEmptyString()] [string]$Uri)
+
+    if ([string]::IsNullOrEmpty($Uri)) { return '' }
+
+    try {
+        $u = [uri]$Uri
+        # Relative URIs accept any string via cast but throw on .Host / .Scheme
+        # property access. Treat them as unparseable for safe-logging purposes.
+        if (-not $u.IsAbsoluteUri) { return '<unparseable-uri>' }
+    } catch {
+        return '<unparseable-uri>'
+    }
+
+    $hostLc = $u.Host.ToLowerInvariant()
+    $isBearerUrl = (
+        $hostLc -like '*.logic.azure.com' -or
+        $hostLc -like '*.azure-apim.net' -or
+        $hostLc -like '*.webhook.office.com' -or
+        $hostLc -eq  'webhook.office.com' -or
+        $u.Query -match '[?&]sig='   -or
+        $u.Query -match '[?&]code='
+    )
+
+    if ($isBearerUrl) {
+        return ('{0}://{1}/<redacted>' -f $u.Scheme, $u.Host)
+    }
+
+    return $Uri
+}
+
+function Format-McmSafeErrorBody {
+    <#
+    .SYNOPSIS
+        Returns a log-safe representation of an HTTP error response body, scrubbing
+        bearer-credential query parameters.
+
+    .DESCRIPTION
+        Even after Invoke-McmRest's URI argument is redacted via Format-McmSafeUri,
+        some APIs echo the original request URL inside the error response body
+        (e.g. "Request to https://prod-XX.westus.logic.azure.com/.../triggers/.../paths/invoke?sig=ABC123 failed").
+        Logging the raw body would re-leak the bearer credential the URI redaction
+        was meant to suppress.
+
+        This helper performs a defense-in-depth scrub: it rewrites any sig=...
+        and code=... query parameter value to <redacted>, regardless of the URL
+        host. This preserves all other diagnostic value (status code, error
+        message text, field-level validation errors) while preventing credential
+        leak through this alternate path.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [AllowEmptyString()] [AllowNull()] [string]$Body)
+
+    if ([string]::IsNullOrEmpty($Body)) { return '' }
+
+    return ($Body -replace '(?i)(sig|code)=[^&\s"''>]+', '$1=<redacted>')
+}
+
 function Invoke-McmRest {
     <#
     .SYNOPSIS
@@ -221,8 +295,8 @@ function Invoke-McmRest {
                     $body = $_.ErrorDetails.Message
                 }
             } catch {}
-            $msg = "Invoke-McmRest failed: status=$status method=$Method uri=$Uri error=$($_.Exception.Message)"
-            if ($body) { $msg += " body=$body" }
+            $msg = "Invoke-McmRest failed: status=$status method=$Method uri=$(Format-McmSafeUri $Uri) error=$($_.Exception.Message)"
+            if ($body) { $msg += " body=$(Format-McmSafeErrorBody $body)" }
             throw $msg
         }
     }
@@ -270,7 +344,18 @@ function Invoke-McmDvUpsertMessage {
         this function stays free of solution-specific constants.
 
     .OUTPUTS
-        [pscustomobject] @{ Action = 'Created' | 'Updated'; MessageId = <string> }
+        [pscustomobject] with properties:
+          - Action       : 'Created' or 'Updated'
+          - MessageId    : the Message Center post id (string, as supplied)
+          - EntityId     : the Dataverse row primary-key GUID (string, or
+                           $null if the caller did not set
+                           Prefer: return=representation in $DataverseHeaders,
+                           or the response did not include
+                           fsi_messagecenterlogid)
+          - ResponseBody : the parsed Dataverse response body (or $null when
+                           Prefer: return=representation is absent); callers
+                           can read additional columns such as fsi_notifiedon
+                           for idempotent notification logic
 
     .NOTES
         On terminal failure throws a descriptive message; caller catches and
@@ -300,14 +385,73 @@ function Invoke-McmDvUpsertMessage {
 
     $existed = $false
     try {
-        Invoke-McmRest -Uri $upsertUrl -Headers $createHeaders -Method Patch `
-            -Body ($createPayload | ConvertTo-Json -Depth 5) | Out-Null
-        return [pscustomobject]@{ Action = 'Created'; MessageId = $MessageId }
+        # Capture the response body. Callers that set the Prefer:
+        # return=representation header on $DataverseHeaders (the sync script
+        # does) receive the full Dataverse row back, including the row's
+        # fsi_messagecenterlogid primary-key GUID and any admin-owned
+        # columns (e.g. fsi_notifiedon) that already exist on the row.
+        # Callers without that Prefer header (or mocks) receive $null —
+        # ResponseBody is then $null and EntityId resolves to $null.
+        $resp = Invoke-McmRest -Uri $upsertUrl -Headers $createHeaders -Method Patch `
+            -Body ($createPayload | ConvertTo-Json -Depth 5)
+        $entityId = $null
+        if ($resp -and ($resp.PSObject.Properties.Name -contains 'fsi_messagecenterlogid')) {
+            $entityId = [string]$resp.fsi_messagecenterlogid
+        }
+        return [pscustomobject]@{
+            Action       = 'Created'
+            MessageId    = $MessageId
+            EntityId     = $entityId
+            ResponseBody = $resp
+        }
     }
     catch {
         $errMsg = $_.Exception.Message
         if ($errMsg -match 'status=412' -or $errMsg -match 'PreconditionFailed') {
             $existed = $true
+        }
+        elseif ($errMsg -match 'A record with the specified key values does not exist') {
+            # Dataverse quirk: PATCH on alt-key URL with If-None-Match=*
+            # returns 404 "record does not exist" instead of the documented
+            # 201 Created when the row truly doesn't exist by alt-key. Fall
+            # back to POST on the entity set (create-only). This branch is
+            # specifically for the "row missing" 404, NOT the "alt-key not
+            # provisioned" 404 — those have different message text.
+            try {
+                $postHeaders = @{}
+                foreach ($k in $DataverseHeaders.Keys) { $postHeaders[$k] = $DataverseHeaders[$k] }
+                # Remove If-* headers that would interfere with POST.
+                $postHeaders.Remove('If-None-Match') | Out-Null
+                $postHeaders.Remove('If-Match') | Out-Null
+                $postUrl = "$DataverseBaseUrl/fsi_messagecenterlogs"
+                $postPayload = $createPayload.Clone()
+                # Ensure the alt-key column value is in the body (it may have
+                # been omitted because the URL carried it).
+                if (-not $postPayload.ContainsKey('fsi_messagecenterid')) {
+                    $postPayload['fsi_messagecenterid'] = $MessageId
+                }
+                $resp = Invoke-McmRest -Uri $postUrl -Headers $postHeaders -Method Post `
+                    -Body ($postPayload | ConvertTo-Json -Depth 5)
+                $entityId = $null
+                if ($resp -and ($resp.PSObject.Properties.Name -contains 'fsi_messagecenterlogid')) {
+                    $entityId = [string]$resp.fsi_messagecenterlogid
+                }
+                return [pscustomobject]@{
+                    Action       = 'Created'
+                    MessageId    = $MessageId
+                    EntityId     = $entityId
+                    ResponseBody = $resp
+                }
+            } catch {
+                $postErr = $_.Exception.Message
+                if ($postErr -match 'status=412' -or $postErr -match 'duplicate' -or $postErr -match 'PreconditionFailed' -or $postErr -match 'already exists') {
+                    # Race: another caller created the row between PATCH and POST.
+                    # Continue to the update branch.
+                    $existed = $true
+                } else {
+                    throw "Create failed for ${MessageId} on POST fallback: $postErr"
+                }
+            }
         }
         elseif ($errMsg -match 'status=404' -or $errMsg -match 'Resource not found for the segment') {
             throw "Upsert failed for ${MessageId}: Alternate key fsi_MessageCenterIdKey not found - re-run create_mcm_dataverse_schema.py to provision it."
@@ -321,12 +465,192 @@ function Invoke-McmDvUpsertMessage {
         try {
             # Update path: $Record (NOT $createPayload) is sent. By contract it
             # excludes admin-owned columns, so PATCH cannot overwrite them.
-            Invoke-McmRest -Uri $upsertUrl -Headers $DataverseHeaders -Method Patch `
-                -Body ($Record | ConvertTo-Json -Depth 5) | Out-Null
-            return [pscustomobject]@{ Action = 'Updated'; MessageId = $MessageId }
+            $resp = Invoke-McmRest -Uri $upsertUrl -Headers $DataverseHeaders -Method Patch `
+                -Body ($Record | ConvertTo-Json -Depth 5)
+            $entityId = $null
+            if ($resp -and ($resp.PSObject.Properties.Name -contains 'fsi_messagecenterlogid')) {
+                $entityId = [string]$resp.fsi_messagecenterlogid
+            }
+            return [pscustomobject]@{
+                Action       = 'Updated'
+                MessageId    = $MessageId
+                EntityId     = $entityId
+                ResponseBody = $resp
+            }
         }
         catch {
             throw "Update failed for ${MessageId}: $($_.Exception.Message)"
+        }
+    }
+}
+
+function Expand-McmCardTokens {
+    <#
+    .SYNOPSIS
+        Recursively substitutes {token} placeholders in a parsed adaptive card tree.
+
+    .DESCRIPTION
+        Walks a tree of hashtables, arrays, and strings produced by
+        ConvertFrom-Json -AsHashtable, replacing every occurrence of {tokenName}
+        inside string values with the corresponding value from $Tokens.
+
+        Substitution happens at the OBJECT level (parsed JSON tree), so quote,
+        newline, backslash, and other special characters in token values are
+        correctly JSON-escaped when the result is re-serialized with
+        ConvertTo-Json. This prevents JSON-injection from message titles that
+        contain quotes or control characters - the brittleness of naive
+        string.Replace() on raw template text is avoided entirely.
+
+        Missing tokens are left as the literal placeholder (e.g. "{missing}").
+        Null token values are substituted as empty strings.
+
+    .PARAMETER Node
+        Current node in the tree. Initial call passes the parsed root.
+
+    .PARAMETER Tokens
+        Hashtable of token names -> string values.
+
+    .OUTPUTS
+        The same shape as the input (hashtable, array, string, or scalar) with
+        substitutions applied.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [AllowNull()] $Node,
+        [Parameter(Mandatory)] [hashtable]$Tokens
+    )
+
+    if ($null -eq $Node) { return $null }
+
+    if ($Node -is [string]) {
+        $captured = $Tokens
+        $evaluator = [System.Text.RegularExpressions.MatchEvaluator] {
+            param($match)
+            $name = $match.Groups[1].Value
+            if ($captured.ContainsKey($name)) {
+                $val = $captured[$name]
+                if ($null -eq $val) { return '' }
+                return [string]$val
+            }
+            return $match.Value
+        }.GetNewClosure()
+        return [System.Text.RegularExpressions.Regex]::Replace($Node, '\{(\w+)\}', $evaluator)
+    }
+
+    if ($Node -is [System.Collections.IDictionary]) {
+        $out = [ordered]@{}
+        foreach ($k in @($Node.Keys)) {
+            $out[$k] = Expand-McmCardTokens -Node $Node[$k] -Tokens $Tokens
+        }
+        return $out
+    }
+
+    if ($Node -is [System.Collections.IEnumerable] -and -not ($Node -is [string])) {
+        $list = New-Object System.Collections.ArrayList
+        foreach ($item in $Node) {
+            $null = $list.Add((Expand-McmCardTokens -Node $item -Tokens $Tokens))
+        }
+        return ,$list.ToArray()
+    }
+
+    return $Node
+}
+
+function Send-McmTeamsWebhook {
+    <#
+    .SYNOPSIS
+        Posts an adaptive card to a Microsoft Teams Workflows incoming webhook.
+
+    .DESCRIPTION
+        Loads the shared adaptive card template, performs object-level token
+        substitution (safe against JSON injection from quotes/newlines/specials
+        in token values), wraps the result in the Teams Workflows message
+        envelope (type='message' + attachments[] with contentType
+        application/vnd.microsoft.card.adaptive), and POSTs via Invoke-McmRest.
+
+        On 2xx: returns a result object with Success=$true.
+        On 4xx/5xx after retries: returns Success=$false with the error
+        message. This function does NOT throw on HTTP failure - callers (the
+        sync loop) want to continue processing remaining messages and surface
+        the failure as a warning. Other terminal failures (template missing,
+        JSON parse error) throw.
+
+    .PARAMETER WebhookUrl
+        The Teams Workflows incoming webhook URL (HTTPS, from the Workflows
+        app's "When a Teams webhook request is received" trigger).
+
+    .PARAMETER CardTokens
+        Hashtable of token names -> string values to substitute into the card
+        template. Token names match the {tokenName} placeholders in the
+        template (e.g. severity, title, category, services, startDateTime,
+        actionRequiredByDateTime, id, environment, appId, publisherPrefix,
+        recordId).
+
+    .PARAMETER AdaptiveCardTemplatePath
+        Filesystem path to the adaptive card template JSON. Default is
+        ../../templates/teams-notification-card.json relative to this script.
+
+    .PARAMETER MaxRetries
+        Forwarded to Invoke-McmRest. Default: 3.
+
+    .OUTPUTS
+        [pscustomobject] @{ Success = $true|$false; Error = $null|<string> }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string]$WebhookUrl,
+        [Parameter(Mandatory)] [hashtable]$CardTokens,
+        [Parameter(Mandatory)] [string]$AdaptiveCardTemplatePath,
+        [int]$MaxRetries = 3
+    )
+
+    if (-not (Test-Path -LiteralPath $AdaptiveCardTemplatePath)) {
+        throw "Adaptive card template not found: $AdaptiveCardTemplatePath"
+    }
+
+    $templateRaw = Get-Content -LiteralPath $AdaptiveCardTemplatePath -Raw
+    try {
+        $card = $templateRaw | ConvertFrom-Json -AsHashtable -Depth 50
+    } catch {
+        throw "Failed to parse adaptive card template ${AdaptiveCardTemplatePath}: $($_.Exception.Message)"
+    }
+
+    # Strip the author-only _comment field; it is not part of the Adaptive
+    # Cards schema and adds noise to the wire payload.
+    if ($card -is [System.Collections.IDictionary] -and $card.Contains('_comment')) {
+        $null = $card.Remove('_comment')
+    }
+
+    $renderedCard = Expand-McmCardTokens -Node $card -Tokens $CardTokens
+
+    $envelope = [ordered]@{
+        type        = 'message'
+        attachments = @(
+            [ordered]@{
+                contentType = 'application/vnd.microsoft.card.adaptive'
+                contentUrl  = $null
+                content     = $renderedCard
+            }
+        )
+    }
+
+    $body = $envelope | ConvertTo-Json -Depth 20 -Compress
+    $headers = @{ 'Content-Type' = 'application/json' }
+
+    try {
+        # Workflows incoming webhook typically responds 202 Accepted.
+        # Invoke-McmRest handles 429/5xx retry with Retry-After honoring.
+        $null = Invoke-McmRest -Uri $WebhookUrl -Headers $headers -Method Post `
+            -Body $body -MaxRetries $MaxRetries
+        return [pscustomobject]@{
+            Success = $true
+            Error   = $null
+        }
+    }
+    catch {
+        return [pscustomobject]@{
+            Success = $false
+            Error   = $_.Exception.Message
         }
     }
 }

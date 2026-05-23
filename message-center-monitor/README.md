@@ -11,8 +11,23 @@ coe_function: scale
 > **Version:** v2.5.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+>
+> **For AI agents and engineers** working in this solution: see [`AGENTS.md`](AGENTS.md)
+> for current operational state, cross-machine resume runbook, and
+> solution-specific conventions. (Customers deploying this solution can ignore
+> that file — start with the [POC Quickstart](docs/poc-quickstart.md) below.)
 
 Monitor Microsoft 365 Message Center for platform changes that could impact AI agent deployments (Copilot Studio, Agent Builder).
+
+## Choose your deployment path
+
+| Path | When to use | Where to start |
+|------|-------------|----------------|
+| **POC Quickstart (Phase 1)** | Stand up the solution on a non-prod tenant in 30-60 minutes. PowerShell sync + Teams Workflows webhook only. No Power Automate flow build. | **[docs/poc-quickstart.md](docs/poc-quickstart.md)** |
+| **Operationalize (Phase 2)** | After Phase 1: layer in the assessment workflow and evidence export for FINRA-style review records. | [Phase 2 section in poc-quickstart.md](docs/poc-quickstart.md#phase-2--operationalize-assessment--evidence) |
+| **Power Automate flow (Phase 3 — optional)** | When a central operations team manages cloud flows, or you do not have a host for running PowerShell on a schedule. **Mutually exclusive with the Phase 1 webhook** — disable one before enabling the other. | [docs/flow-configuration.md](docs/flow-configuration.md) |
+
+The remainder of this README documents the prerequisites and reference material that all three paths share. New deployments should start with the POC Quickstart and refer back here only when needed.
 
 ## What This Solution Does
 

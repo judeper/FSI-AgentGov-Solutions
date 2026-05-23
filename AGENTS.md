@@ -143,8 +143,24 @@ The single source of truth for column names is each solution's `create_*_dataver
 ## Before Making Changes
 
 1. **Read the solution's README** for prerequisites and architecture
-2. **Check Related Controls** — ensure control mappings match the catalog above
-3. **Check session ownership** — see Multi-Agent Coordination below
+2. **Read the solution's `AGENTS.md` if one exists** — solutions with active work
+   (in-progress dry-runs, customer POCs, contentious refactors) ship a
+   per-solution `AGENTS.md` that **adds to this file**. It carries the
+   current operational state and solution-specific conventions. Loading order:
+   this root file → `.github/instructions/*` → `<solution>/AGENTS.md` →
+   `<solution>/.ralph-config.json`. Solution-specific guidance wins only on
+   solution-specific topics; cross-cutting rules here always apply.
+3. **Check Related Controls** — ensure control mappings match the catalog above
+4. **Check session ownership** — see Multi-Agent Coordination below
+
+### Solutions with a per-solution AGENTS.md
+
+The convention is **opt-in per solution**, applied when there is non-trivial
+in-flight work to hand off. Backfilling stable solutions is not required.
+
+| Solution | Why it has one |
+|---|---|
+| `message-center-monitor` | Active POC dry-run on `feature/message-center-monitor-poc-ready` (PR #141); 16 dry-run bugs fixed; needs cross-machine resume runbook. |
 
 ## Multi-Agent Coordination
 
