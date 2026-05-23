@@ -59,7 +59,6 @@ $ErrorActionPreference = 'Stop'
 
 $pagesReference = 'https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/pages'
 $authReference = 'https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/auth'
-$powerPagesCliOverview = 'https://learn.microsoft.com/en-us/power-pages/configure/power-platform-cli'
 $solutionRoot = Split-Path $PSScriptRoot -Parent
 $portalDocPath = Join-Path $solutionRoot 'docs\portal-configuration.md'
 $progressiveDocPath = Join-Path $solutionRoot 'docs\maker-form-progressive-disclosure.md'

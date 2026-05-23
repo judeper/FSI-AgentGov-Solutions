@@ -270,7 +270,7 @@ function Get-AgentActionSettings {
                     $contentStr = $component.content
 
                     try {
-                        $componentJson = $contentStr | ConvertFrom-Json -ErrorAction Stop
+                        $contentStr | ConvertFrom-Json -ErrorAction Stop | Out-Null
                     } catch {
                         Write-Verbose "Failed to parse botcomponent content for '$topicName' in bot '$($Bot.name)'"
                         continue
@@ -351,8 +351,6 @@ function Get-AgentActionSettings {
                         }
 
                         # Check for confirmation/approval patterns BEFORE the action node
-                        $precedingText = $contentStr.Substring(0, $actionNode.Position)
-
                         # Look for confirmation patterns in the preceding 2000 characters
                         $lookbackStart = [Math]::Max(0, $actionNode.Position - 2000)
                         $precedingWindow = $contentStr.Substring($lookbackStart, $actionNode.Position - $lookbackStart)

@@ -266,9 +266,7 @@ try {
     $totalAgents = $scanResult.Count
     $uniqueEnvs = ($scanResult | Select-Object -Property EnvironmentId -Unique).Count
     $violationResults = @($scanResult | Where-Object { -not $_.IsCompliant })
-    $compliantResults = @($scanResult | Where-Object { $_.IsCompliant })
     $violationCount = $violationResults.Count
-    $compliantCount = $compliantResults.Count
 
     # Determine overall status from violations
     $criticalCount = @($violationResults | Where-Object { $_.Severity -eq 'Critical' }).Count
@@ -378,7 +376,6 @@ try {
 
     $driftedAgents = @($driftDetails | Where-Object { $_.HasDrift })
     $hasDrift = $driftedAgents.Count -gt 0
-    $hasAnyFirstRun = @($driftDetails | Where-Object { $_.IsFirstRun }).Count -gt 0
 
     Write-Verbose "Drift detection complete. Agents with drift: $($driftedAgents.Count)"
 

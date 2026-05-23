@@ -14,6 +14,36 @@
     Run with: Invoke-Pester -Path .\Validators.Tests.ps1 -Output Detailed
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'validatorFiles',
+    Justification = 'Variable feeds Pester -ForEach discovery at line 65; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'environmentRetentionValidator',
+    Justification = 'Variable feeds Pester -ForEach discovery at line 82; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'unifiedAuditLogValidator',
+    Justification = 'Variable feeds Pester -ForEach discovery at line 91; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'purviewRetentionValidator',
+    Justification = 'Variable feeds Pester -ForEach discovery at line 100; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'mailboxAuditValidator',
+    Justification = 'Variable feeds Pester -ForEach discovery at line 109; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'tenantValidators',
+    Justification = 'Variable feeds Pester -ForEach discovery at line 120; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'privateScripts',
+    Justification = 'Variable feeds Pester -ForEach discovery at line 129; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+param()
+
 BeforeDiscovery {
     $validatorRoot = $PSScriptRoot
 

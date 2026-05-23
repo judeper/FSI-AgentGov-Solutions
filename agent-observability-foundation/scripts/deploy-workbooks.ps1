@@ -80,7 +80,6 @@ $ErrorActionPreference = "Stop"
 $SCRIPT_VERSION = "1.0.0"
 
 # ANSI color codes for terminal output
-$COLOR_CYAN = "`e[36m"
 $COLOR_GREEN = "`e[32m"
 $COLOR_RED = "`e[31m"
 $COLOR_YELLOW = "`e[33m"
@@ -195,7 +194,7 @@ function Test-Prerequisites {
     # Check 4: Resource group exists
     Write-Host "  Checking resource group..." -ForegroundColor White
     try {
-        $rg = az group show --name $ResourceGroup 2>$null | ConvertFrom-Json
+        az group show --name $ResourceGroup 2>$null | ConvertFrom-Json | Out-Null
         if ($LASTEXITCODE -ne 0) {
             Write-Host "    ${COLOR_RED}✗ Resource group '$ResourceGroup' not found${COLOR_RESET}"
             Write-Host "    Create: az group create --name $ResourceGroup --location <location>" -ForegroundColor Yellow
@@ -218,7 +217,7 @@ function Test-Prerequisites {
             $aiName = $Matches[3]
             $aiResourceGroup = $Matches[2]
 
-            $appInsights = az monitor app-insights component show --app $aiName --resource-group $aiResourceGroup 2>$null | ConvertFrom-Json
+            az monitor app-insights component show --app $aiName --resource-group $aiResourceGroup 2>$null | ConvertFrom-Json | Out-Null
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "    ${COLOR_RED}✗ Application Insights '$aiName' not found${COLOR_RESET}"
                 Write-Host "    Verify resource ID: $ApplicationInsightsId" -ForegroundColor Yellow

@@ -292,7 +292,6 @@ try {
 } catch { Add-Failure 'Step9' $_.Exception.Message }
 
 # ---------- Step 10: Manual cloud-flow gate ---------------------------------
-$manualOutcome = 'skipped'
 $manualBy      = $null
 if ($SkipManualGate) {
     Write-LabLog -Level Warn -Message "[Step 10/10] SKIPPED (-SkipManualGate). Production readiness REQUIRES this validation."
@@ -310,9 +309,9 @@ if ($SkipManualGate) {
     Write-Host ""
     $resp = Read-Host "Did the cloud flow pass all checks? (y/n/skip)"
     switch ($resp.ToLower()) {
-        'y' { $manualOutcome = 'pass'; $manualBy = $cfg.operator.runnerUpn; Write-LabLog -Level Info -Message "  Manual gate: PASS by $manualBy" }
-        'n' { $manualOutcome = 'fail'; $manualBy = $cfg.operator.runnerUpn; Add-Failure 'Step10' "Engineer reported cloud flow validation FAILED. Fix the flow per docs/flow-configuration.md before declaring lab dry-run complete." }
-        default { $manualOutcome = 'skipped'; Write-LabLog -Level Warn -Message "  Manual gate: SKIPPED" }
+        'y' { $manualBy = $cfg.operator.runnerUpn; Write-LabLog -Level Info -Message "  Manual gate: PASS by $manualBy" }
+        'n' { $manualBy = $cfg.operator.runnerUpn; Add-Failure 'Step10' "Engineer reported cloud flow validation FAILED. Fix the flow per docs/flow-configuration.md before declaring lab dry-run complete." }
+        default { Write-LabLog -Level Warn -Message "  Manual gate: SKIPPED" }
     }
 }
 

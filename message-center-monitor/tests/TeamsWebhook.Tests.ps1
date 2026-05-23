@@ -259,7 +259,7 @@ Describe 'Send-McmTeamsWebhook - payload shape' {
             -CardTokens (New-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath | Out-Null
 
-        $body = $script:capturedCalls[0].Body | ConvertFrom-Json
+        $script:capturedCalls[0].Body | ConvertFrom-Json | Out-Null
         # The serialized body string must contain the substituted concrete
         # values, and must NOT contain any unsubstituted {tokenName}
         # placeholders from the template's standard token vocabulary.

@@ -345,7 +345,7 @@ function Import-Rule {
     $body = $Rule | ConvertTo-Json -Depth 5
 
     try {
-        $response = Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body }
+        Invoke-WithRetry { Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body } | Out-Null
         return @{ Success = $true; Rule = $Rule.fsi_name }
     } catch {
         return @{ Success = $false; Rule = $Rule.fsi_name; Error = $_.Exception.Message }

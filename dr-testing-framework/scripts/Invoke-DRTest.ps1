@@ -448,7 +448,7 @@ function Test-EnvironmentReachability {
                 Write-AuditLog "Dataverse connectivity confirmed (Org: $orgId)"
                 $result.ValidationChecks += @{Check = "Environment Accessible"; Status = "PASS"; Detail = "Dataverse WhoAmI succeeded (OrgId: $orgId)"}
             } else {
-                $sdResp = Invoke-WebRequest -Uri "$Environment/api/data/v9.2/" -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
+                Invoke-WebRequest -Uri "$Environment/api/data/v9.2/" -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop | Out-Null
                 $result.ValidationChecks += @{Check = "Environment Accessible"; Status = "PASS"; Detail = "OData service document reachable (full check requires credentials)"}
             }
         } catch {
@@ -588,7 +588,7 @@ function Test-DataverseAccess {
             if ($dvHeaders) {
                 # Confirm the DR test results table is queryable
                 $dataUri = "$Environment/api/data/v9.2/fsi_drtestresults?`$select=fsi_drtestresultid&`$top=1"
-                $dataResp = Invoke-RestMethod -Uri $dataUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
+                Invoke-RestMethod -Uri $dataUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30 | Out-Null
                 $dataAvailMs = [math]::Round(((Get-Date) - $startTime).TotalMilliseconds, 0)
                 Write-AuditLog "Data table accessible in ${dataAvailMs}ms"
                 $result.ValidationChecks += @{Check = "Evidence Table Accessible"; Status = "PASS"; Detail = "DR results table accessible (${dataAvailMs}ms)"}

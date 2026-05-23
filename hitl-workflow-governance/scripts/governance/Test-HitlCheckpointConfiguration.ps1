@@ -629,7 +629,6 @@ function Test-HitlCheckpointConfiguration {
 
     $compliantAgents = @($results | Where-Object { $_.IsCompliant })
     $violationAgents = @($results | Where-Object { -not $_.IsCompliant })
-    $advisoryAgents = @($results | Where-Object { $_.IsCompliant -and $_.ViolationType -like 'Advisory*' })
 
     $criticalCount = @($violationAgents | Where-Object { $_.Severity -eq 'Critical' }).Count
     $highCount     = @($violationAgents | Where-Object { $_.Severity -eq 'High' }).Count

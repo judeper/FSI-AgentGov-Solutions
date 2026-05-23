@@ -225,13 +225,10 @@ try {
     $environmentNameList = ($scanResult | Select-Object -Property EnvironmentName -Unique |
         ForEach-Object { $_.EnvironmentName }) -join ', '
     $violationResults = @($scanResult | Where-Object { -not $_.IsCompliant })
-    $compliantResults = @($scanResult | Where-Object { $_.IsCompliant })
     $violationCount = $violationResults.Count
-    $compliantCount = $compliantResults.Count
 
     # Calculate flow totals
     $totalFlows = ($scanResult | Measure-Object -Property TotalFlows -Sum).Sum
-    $totalMissingHitl = ($scanResult | Measure-Object -Property FlowsMissingHitl -Sum).Sum
 
     # Determine overall status from violations
     $criticalCount = @($violationResults | Where-Object { $_.Severity -eq 'Critical' }).Count
@@ -261,7 +258,6 @@ try {
 
     $driftDetails = @()
     $globalIsFirstRun = $false
-    $previousScanFailed = $false
     $auditControlBypass = $false
 
     # Query the most recent scan run from Dataverse
@@ -315,7 +311,6 @@ try {
         # Fail closed on previous-scan query failure to surface AuditControlBypass
         # rather than silently skipping drift detection.
         Write-Warning "Previous scan query failed: $($_.Exception.Message). Marking run as Inconclusive (drift detection unavailable)."
-        $previousScanFailed = $true
         $globalIsFirstRun = $true
         $auditControlBypass = $true
     }

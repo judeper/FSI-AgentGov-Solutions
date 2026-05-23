@@ -548,8 +548,6 @@ foreach ($r in $results) {
         'Skipped' { 'DarkGray' }
     }
 
-    $line = $headerFormat -f $r.CheckId, $r.CheckName, '', $r.ViolationCount, $r.Duration
-    $statusStart = $line.IndexOf('        ') + 6
     Write-Host ("  {0,-4} {1,-50} " -f $r.CheckId, $r.CheckName) -NoNewline
     Write-Host ("{0,-8} " -f $rowStatus) -ForegroundColor $statusColor -NoNewline
     Write-Host ("{0,-12} {1,-10}" -f $r.ViolationCount, $r.Duration) -ForegroundColor Gray

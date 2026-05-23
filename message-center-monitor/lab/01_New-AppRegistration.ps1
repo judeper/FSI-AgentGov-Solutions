@@ -132,7 +132,6 @@ try {
     if ($existingApp) {
         $app = $existingApp | Select-Object -First 1
         Write-LabLog -Level Info -Message "App reg '$appName' already exists (objectId=$($app.Id), appId=$($app.AppId)). Reusing."
-        $appCreated = $false
     } else {
         Write-LabLog -Level Info -Message "Creating app reg '$appName'..."
         if ($PSCmdlet.ShouldProcess($appName, 'New-MgApplication')) {
@@ -151,7 +150,6 @@ try {
                 )
             }
             $app = New-MgApplication -BodyParameter $appBody -ErrorAction Stop
-            $appCreated = $true
         }
     }
 

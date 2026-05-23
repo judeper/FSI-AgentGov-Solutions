@@ -226,8 +226,6 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
-$dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-
 # Helper to unwrap a token that Az.Accounts >= 2.17 returns as a SecureString.
 # Concatenating a SecureString into a Bearer header produces literal
 # 'Bearer System.Security.SecureString' which Dataverse rejects with HTTP 401.

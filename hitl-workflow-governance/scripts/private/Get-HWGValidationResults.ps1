@@ -102,16 +102,6 @@ $intToCheckpointType = @{
     100000004 = 'NotApplicable'
 }
 
-$intToActionCategory = @{
-    100000000 = 'Write'
-    100000001 = 'Financial'
-    100000002 = 'ExternalSharing'
-    100000003 = 'PiiProcessing'
-    100000004 = 'CustomerFacing'
-    100000005 = 'InternalReadOnly'
-    100000006 = 'Unknown'
-}
-
 $baseUrl = $DataverseUrl.TrimEnd('/')
 
 $headers = @{

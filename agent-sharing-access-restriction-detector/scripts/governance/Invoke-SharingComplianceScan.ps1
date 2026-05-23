@@ -187,14 +187,13 @@ function Invoke-SharingComplianceScan {
         scope         = 'https://service.powerapps.com/.default'
     }
     try {
-        $tokenResponse = Invoke-RestMethod `
+        Invoke-RestMethod `
             -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
             -Method Post `
             -ContentType 'application/x-www-form-urlencoded' `
             -Body $tokenBody `
-            -ErrorAction Stop
+            -ErrorAction Stop | Out-Null
 
-        $accessToken = $tokenResponse.access_token
         Write-Host "  Authentication successful." -ForegroundColor Green
     }
     catch {

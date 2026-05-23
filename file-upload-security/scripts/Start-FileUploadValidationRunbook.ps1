@@ -244,7 +244,6 @@ try {
     $uniqueEnvs = ($scanResult | Select-Object -Property EnvironmentId -Unique).Count
     $fileUploadEnabledCount = @($scanResult | Where-Object { $_.FileUploadEnabled -eq $true }).Count
     $violationResults = @($scanResult | Where-Object { -not $_.IsCompliant })
-    $compliantResults = @($scanResult | Where-Object { $_.IsCompliant })
     $violationCount = $violationResults.Count
 
     # Determine overall status from violations

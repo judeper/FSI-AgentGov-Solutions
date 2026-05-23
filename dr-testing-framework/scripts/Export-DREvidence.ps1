@@ -233,11 +233,6 @@ if ($HasDataverseAuth) {
                 }
             })
 
-            # Test-type names accept both v1.x legacy values and v2.0.0 names
-            $allTestTypes = @(
-                "AgentReadinessCheck","EnvironmentReachabilityCheck","DataverseAccessCheck","FullValidation",
-                "AgentRestore","EnvironmentFailover","DataRecovery","FullDR"
-            )
             $executedTypes = @($testResults | ForEach-Object { $_.TestType } | Sort-Object -Unique)
             # Collapse legacy names to their v2 equivalents for "missing" detection
             $aliasMap = @{

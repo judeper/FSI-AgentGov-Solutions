@@ -303,8 +303,6 @@ Write-Host "`n  Building evidence package..." -ForegroundColor Cyan
 $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 # Compute summary statistics
-$severityLabels = @{ 100000000 = 'Critical'; 100000001 = 'High'; 100000002 = 'Medium'; 100000003 = 'Low'; 100000004 = 'Informational' }
-
 $totalViolations = $violations.Count
 $criticalCount = @($violations | Where-Object { $_.fsi_severity -eq 100000000 }).Count
 $highCount = @($violations | Where-Object { $_.fsi_severity -eq 100000001 }).Count

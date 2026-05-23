@@ -12,6 +12,10 @@
     'PSReviewUnusedParameter', '',
     Justification = 'Pester test doubles in this file mirror mocked command signatures; unused parameters satisfy the signature contract, not the test body.'
 )]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'scriptContent',
+    Justification = 'Variable is initialized in Pester BeforeAll and referenced by child It scriptblocks starting at line 441; PSSA static analysis misses Pester cross-scope reads.'
+)]
 param()
 
 <#
