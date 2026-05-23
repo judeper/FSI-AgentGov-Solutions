@@ -1169,8 +1169,10 @@ def create_alternate_keys(client: DataverseClient, dry_run: bool) -> dict:
             "KeyAttributes": key_def["KeyAttributes"],
         }
         try:
-            result = client.ensure_entity_key(entity, key_metadata)
-            if result is None:
+            key_logical_name = schema_name.lower()
+            existed_before = client.get_entity_key(entity, key_logical_name) is not None
+            client.ensure_entity_key(entity, key_metadata)
+            if existed_before:
                 print(f"    Already exists")
                 skipped += 1
             else:
