@@ -200,7 +200,7 @@
     "agent-registry-automation": {
       "id": "agent-registry-automation",
       "name": "Agent Registry Automation",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",
