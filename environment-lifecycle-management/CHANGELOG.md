@@ -4,6 +4,20 @@ All notable changes to the Environment Lifecycle Management solution.
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-05-23
+
+### Fixed
+
+- **Critical**: Restored `create_business_rules(client, dry_run)` callable so `deploy.py` Phase 3 no longer raises `ImportError`. The shim now prints the maker-portal authoring instructions (delegating to `_format_human(RULES)`) and returns `True` — the module remains a documentation generator (no Dataverse Web API calls). `scripts/create_business_rules.py:147-175`, `scripts/deploy.py:44,230`. (council review C-1)
+- **Major**: Corrected the ELMClient usage example in `scripts/README.md` to use canonical option-set values (`fsi_action=100000001` EnvironmentCreated, `fsi_actortype=100000003` System) instead of legacy `1`/`3`. Added inline comments mapping each value to its enum member. `scripts/README.md:265-275`. (council review M-1)
+- **Major**: Updated the ProvisioningLog audit FetchXML example in `docs/security-roles.md` to use the numeric `ObjectTypeCode` placeholder (`NNNN`) with explicit instructions on resolving the value via the `EntityDefinitions` Web API. The string logical name (`fsi_provisioninglog`) returns zero results from the `audit` table and would produce a false PASS in manual audits. `docs/security-roles.md:327-345`. (council review M-2)
+
+### Changed
+
+- **Minor**: Removed `DELETE` from `elm_client.py`'s urllib3 retry `allowed_methods` to align with the ProvisioningLog immutability model — automatic retries on DELETE could mask the rare case where a privileged caller managed to issue one. `GET`/`POST`/`PATCH` retain transient-failure retry as before. `scripts/elm_client.py:87`. (council review m-1)
+
+## [1.2.1] - 2026-04-22
+
 ### Fixed
 
 - Refreshed Power Platform environment lifecycle guidance against Microsoft Learn 2026-Q2 references, including Managed Environments, Environment Groups, default environment routing, and DLP policy caveats.
