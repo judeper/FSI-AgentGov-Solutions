@@ -65,7 +65,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 | Solution | Role | Version |
 |----------|------|---------|
 | [Agent Intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | v1.0.0-preview |
-| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.1 |
+| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.2 |
 
 ### Layer 2: Tier 2 Governance Solutions
 
@@ -76,7 +76,7 @@ These solutions operate independently but can be wired into the Compliance Dashb
 | [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.1 | 3.8 |
 | [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.4 | 1.7 |
 | [Conditional Access Automation](./conditional-access-automation/) | v2.0.1 | 1.11, 1.23, 1.18 |
-| [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.1 | 1.27, 1.8 |
+| [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.2 | 1.27, 1.8 |
 | [File Upload Security](./file-upload-security/) | v1.1.1 | 1.14, 1.8, 1.4 |
 | [Session Security Configurator](./session-security-configurator/) | v1.3.0 | 1.23, 1.11 |
 
@@ -93,18 +93,18 @@ All other solutions operate independently and can be deployed in any order based
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.1 | team, enterprise |
-| [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.4 | enterprise |
+| [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.5 | enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.1 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.2 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.1.0 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.3 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.1 | personal, team, enterprise |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.2 | personal, team, enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.0 | enterprise |
-| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.0 | team, enterprise |
+| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.1 | personal, team, enterprise |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.2 | personal, team, enterprise |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.1 | team, enterprise |
 | [Message Center Monitor](./message-center-monitor/) | 2 | v2.5.1 | enterprise |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.2.1 | personal, team, enterprise |

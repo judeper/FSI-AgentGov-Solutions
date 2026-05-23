@@ -95,7 +95,6 @@ let vw_dim_regulation_control = () {
 
         // GLBA 501(b) - Safeguards Rule
         "GLBA-501b", "GLBA 501(b)", "FTC", "1.3", "SharePoint Content Governance", "Primary",
-        "GLBA-501b", "GLBA 501(b)", "FTC", "1.6", "DSPM for AI", "Supporting",
         "GLBA-501b", "GLBA 501(b)", "FTC", "1.4", "Advanced Connector Policies", "Supporting",
 
         // CFTC 1.31 - Books and Records
@@ -110,14 +109,12 @@ let vw_dim_regulation_control = () {
         "LOG-ANALYTICS", "Log Analytics", "Technical", "1.7", "Comprehensive Audit Logging", "Primary",
         "LOG-ANALYTICS", "Log Analytics", "Technical", "3.2", "Usage Analytics and Activity Monitoring", "Primary",
 
-        "ADLS-GEN2", "ADLS Gen2", "Technical", "1.7", "Comprehensive Audit Logging", "Primary",
+        "BLOB-STORAGEV2", "Azure Blob Storage (StorageV2, HNS disabled)", "Technical", "1.7", "Comprehensive Audit Logging", "Primary",
 
-        "RBAC-SEP", "RBAC Separation", "Technical", "1.6", "DSPM for AI", "Primary",
         "RBAC-SEP", "RBAC Separation", "Technical", "1.4", "Advanced Connector Policies", "Supporting",
         "RBAC-SEP", "RBAC Separation", "Technical", "2.8", "Access Control and Segregation of Duties", "Supporting",
 
-        "PII-SANIT", "PII Sanitization", "Technical", "1.3", "SharePoint Content Governance", "Primary",
-        "PII-SANIT", "PII Sanitization", "Technical", "1.6", "DSPM for AI", "Supporting"
+        "PII-SANIT", "PII Sanitization", "Technical", "1.3", "SharePoint Content Governance", "Primary"
     ]
 };
 vw_dim_regulation_control()

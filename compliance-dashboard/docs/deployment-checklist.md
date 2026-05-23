@@ -37,6 +37,7 @@ This solution does not ship a packaged `.zip` file. Create all Dataverse tables,
 ### Create Dataverse Schema
 
 - [ ] Follow [Dataverse Schema](dataverse-schema.md) to create all 5 tables (`fsi_controlmaster`, `fsi_controlassessment`, `fsi_compliancescore`, `fsi_complianceexception`, `fsi_complianceevidence`) with columns and option sets
+- [ ] **CRITICAL — option-set integer values:** When creating the 8 option sets (`fsi_cd_pillar`, `fsi_cd_category`, `fsi_cd_status`, `fsi_cd_zone`, `fsi_cd_severity`, `fsi_cd_exceptionstatus`, `fsi_cd_slastatus`, `fsi_cd_evidencetype`), you **MUST** set the integer values explicitly to the values defined in [Dataverse Schema](dataverse-schema.md) (1, 2, 3, …). Accepting the Power Apps maker portal default (100000000+) will silently break every DAX measure in `docs/dax-measures.md`, every sample-data import via `scripts/load_sample_data.py`, and the flow pseudo-code filters in [Flow Configuration](flow-configuration.md). This requirement is intentional; see CLAUDE.md §9 for the cross-solution rationale.
 - [ ] Verify all relationships between tables are created
 - [ ] Create the 3 security roles (CD Viewer, CD Assessor, CD Admin) as documented in [Dataverse Schema](dataverse-schema.md)
 
@@ -121,7 +122,7 @@ $env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
 
 ### Run Sample Data Loader
 
-- [ ] Confirm the control master source matches your control inventory (the shipped sample contains 62; the validated baseline contains 78) before loading data
+- [ ] Confirm the control master source matches your control inventory (the shipped sample contains the full 78-control framework baseline) before loading data
 - [ ] Navigate to `scripts/` directory
 - [ ] Run: `python load_sample_data.py --environment "https://your-org.crm.dynamics.com"`
 - [ ] Verify output: "Loaded X control master records"
@@ -130,7 +131,7 @@ $env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
 ### Verify Sample Data
 
 - [ ] Navigate to **Power Apps** > **Tables** > **fsi_controlmaster**
-- [ ] Verify the expected number of control records exist (62 if loading the shipped sample; 78 if loading the validated baseline)
+- [ ] Verify the expected number of control records exist (78 if loading the shipped sample, which contains the full framework baseline)
 - [ ] Check sample controls: "1.1 - Identity and Access Management", "2.12 - Supervision and Oversight"
 - [ ] Navigate to **fsi_compliancescore** table
 - [ ] Verify 90 daily score snapshots exist (today going back 90 days)
@@ -204,7 +205,7 @@ $env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
 - [ ] Wait for refresh to complete (typically 30-60 seconds)
 - [ ] Verify no error messages
 - [ ] Check table row counts in **Model view**:
-  - [ ] ControlMaster: 62 rows (shipped sample) or 78 rows (validated baseline)
+  - [ ] ControlMaster: 78 rows (shipped sample contains the full framework baseline)
   - [ ] ComplianceScore: 90 rows (if sample data loaded)
   - [ ] ComplianceException: varies based on sample data
 
@@ -223,7 +224,7 @@ $env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
   - [ ] Pillar Trend line chart shows historical trends
   - [ ] Non-Compliant Controls table displays affected controls
 - [ ] **Page 3 - Control Details:**
-  - [ ] Control List table shows the expected number of controls (62 sample / 78 baseline)
+  - [ ] Control List table shows the expected number of controls (78 in the shipped sample)
   - [ ] Assessment History line chart displays (click control to populate)
   - [ ] Evidence List table shows linked evidence
   - [ ] Regulatory Tags slicer displays filter options
@@ -307,7 +308,7 @@ $env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
 
 ### Control Details Page
 
-- [ ] All expected controls display in table (62 sample / 78 baseline)
+- [ ] All expected controls display in table (78 in the shipped sample)
 - [ ] Filtering by pillar/zone/status works correctly
 - [ ] Click control in table populates assessment history chart
 - [ ] Evidence list shows linked evidence items
@@ -427,4 +428,4 @@ After successful deployment:
 
 ---
 
-*Compliance Dashboard v1.0.4 - Deployment Checklist*
+*Compliance Dashboard v1.0.5 - Deployment Checklist*

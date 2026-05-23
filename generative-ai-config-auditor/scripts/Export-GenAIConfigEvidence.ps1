@@ -114,11 +114,11 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.2.1
     Solution: Generative AI Config Auditor (GAC)
     Control: 2.24 (Agent Feature Enablement Governance)
     Requires:
-    - PowerShell 7.0 or later
+    - PowerShell 7.4 or later
     - MSAL.PS module for Dataverse authentication
     - GAC Dataverse schema deployed (fsi_gacvalidationhistory,
       fsi_gacviolations, fsi_gacbaselines, fsi_gacapprovedconnections tables)
@@ -493,7 +493,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Generative AI Config Auditor"
-    solutionVersion = "1.0.1"
+    solutionVersion = "1.2.1"
     control         = "2.24"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")

@@ -144,6 +144,35 @@ def _format_json(rules: Iterable[BusinessRule]) -> str:
     return json.dumps(payload, indent=2)
 
 
+def create_business_rules(client: object = None, dry_run: bool = False) -> bool:
+    """Deployment-phase shim invoked by ``deploy.py``.
+
+    Business rules (workflow category=2) are not created via the Dataverse
+    Web API in this solution — see this module's docstring. Instead, this
+    function prints the maker-portal authoring instructions so the deploy
+    orchestrator's Phase 3 surfaces actionable next steps to operators.
+
+    Args:
+        client: Unused; accepted for signature compatibility with the other
+            ``create_*`` deployment phase callables.
+        dry_run: Unused; accepted for signature compatibility.
+
+    Returns:
+        Always ``True``. This phase does not perform Dataverse writes, so
+        it cannot fail in the same way the other phases can.
+    """
+    del client, dry_run  # signature-only parameters
+    print(_format_human(RULES))
+    print()
+    print(
+        "NOTE: Business rules require manual authoring in the Power Platform "
+        "maker portal (see docs/business-rules.md). Run "
+        "`python create_business_rules.py --format human` standalone to "
+        "reprint these instructions."
+    )
+    return True
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Print ELM business-rule definitions for manual authoring.",

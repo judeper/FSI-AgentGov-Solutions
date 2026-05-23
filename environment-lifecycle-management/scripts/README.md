@@ -263,10 +263,20 @@ client = ELMClient(
 requests = client.query("fsi_environmentrequests", select=["fsi_requestnumber", "fsi_state"])
 
 # Create ProvisioningLog entry
+# Option-set values MUST match create_dataverse_schema.py (custom range 100000001+).
+# fsi_pl_action:    100000001=RequestCreated, 100000002=ZoneClassified,
+#                   100000003=ApprovalRequested, 100000004=Approved, 100000005=Rejected,
+#                   100000006=ProvisioningStarted, 100000007=EnvironmentCreated,
+#                   100000008=ManagedEnabled, 100000009=GroupAssigned,
+#                   100000010=SecurityGroupBound, 100000011=BaselineConfigApplied,
+#                   100000012=DLPAssigned, 100000013=ProvisioningCompleted,
+#                   100000014=ProvisioningFailed, 100000015=RollbackInitiated,
+#                   100000016=RollbackCompleted
+# fsi_pl_actortype: 100000001=User, 100000002=ServicePrincipal, 100000003=System
 client.create("fsi_provisioninglogs", {
-    "fsi_action": 1,
+    "fsi_action": 100000007,         # EnvironmentCreated (see create_dataverse_schema.py:125)
     "fsi_actor": "script",
-    "fsi_actortype": 3,
+    "fsi_actortype": 100000002,      # ServicePrincipal (see create_dataverse_schema.py:146)
     "fsi_success": True
 })
 

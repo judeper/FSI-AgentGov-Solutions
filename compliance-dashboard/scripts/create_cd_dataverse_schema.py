@@ -235,7 +235,20 @@ def generate_docs(output_path: str) -> None:
     ]
 
     # Option Sets
-    lines.extend(["## Option Sets", ""])
+    lines.extend([
+        "## Option Sets",
+        "",
+        "> **Deployment requirement — explicit integer values:**",
+        "> Every option set below uses small integer values (1-6) rather than the",
+        "> Dataverse default 100000000+ allocation. Sample data, DAX measures, flow",
+        "> pseudo-code, and `scripts/load_sample_data.py` all assume the values below.",
+        "> When you create these option sets, **you MUST set the integer values",
+        "> explicitly via the Web API or the Power Apps maker portal's advanced",
+        "> options** — accepting the default 100000000+ allocation will silently",
+        "> break every DAX measure and sample-data import.",
+        "> See `docs/dax-measures.md` for the same warning on the DAX side.",
+        "",
+    ])
     for os_name, os_def in OPTIONSETS.items():
         lines.extend([
             f"### {os_def['DisplayName']} (`{os_name}`)",
@@ -246,6 +259,20 @@ def generate_docs(output_path: str) -> None:
         for opt in os_def["Options"]:
             lines.append(f"| {opt['Value']} | {opt['Label']} |")
         lines.append("")
+        if os_name == "fsi_cd_evidencetype":
+            lines.extend([
+                "> **Migration note (option-set values 1-6 vs. Dataverse 100000000+):**",
+                "> Migration of `fsi_cd_evidencetype` to 100000000-based values is **deferred**.",
+                "> `cross-solution-integration/scripts/powershell/IntegrationConfig.psm1` hardcodes",
+                "> `$script:EvidenceTypeTestResult = 5` (mapping to `Test Result`). Renumbering this",
+                "> option set requires a coordinated minor-bump cycle with the",
+                "> `cross-solution-integration` solution. Until that coordinated change ships,",
+                "> create this option set with the explicit integer values listed above (1-6) when",
+                "> deploying via Web API; do not rely on the Power Apps maker portal's default",
+                "> 100000000+ allocation. See repo CLAUDE.md §9 (Option-set values) for the",
+                "> cross-solution policy.",
+                "",
+            ])
 
     # Tables
     lines.extend(["## Tables", ""])

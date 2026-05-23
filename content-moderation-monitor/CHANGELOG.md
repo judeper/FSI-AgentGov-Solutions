@@ -4,6 +4,20 @@ All notable changes to the Content Moderation Monitor.
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-22
+
+### Fixed
+
+- **Critical**: `correlate_purview_events.py` called the nonexistent `DataverseClient.get_records()` method. Now uses `client.query()` with a list-typed `select` parameter. (council review C-01)
+- **Critical**: `correlate_purview_events.py` referenced columns that do not exist on `fsi_moderationviolations`: `fsi_moderationlevel` (correct: `fsi_actuallevel`) and `fsi_environmentid` (correct: `fsi_environmentguid`). (council review C-02)
+- **Major**: `correlate_purview_events.py` instantiated `DataverseClient` without an `auth_mode`, causing a `ValueError` at runtime because the default `client-secret` path required `client_id`/`client_secret` not being supplied. Added `--auth-mode`/`--client-id`/`--client-secret` CLI wiring so managed identity, workload identity, and client-secret all work. (council review M-03)
+- **Major**: `Export-ContentModerationEvidence.ps1` passed `Zone` values (`'1'`, `'2'`, `'3'`) directly to `Get-CMMValidationResults` whose `ValidateSet` accepts only `'Zone1'`, `'Zone2'`, `'Zone3'`, `'Unknown'`, `'All'`. Zone-filtered exports now map `'N'` to `'ZoneN'` before invoking the query. (council review M-01)
+- **Major**: `Invoke-ModerationBaselineCapture.ps1` `.NOTES` block said "PowerShell 5.1 or later" while the `#Requires -Version 7.0` directive and `??` operator usage require PS 7.0+. Notes now match. (council review M-02)
+
+### Changed
+
+- **Minor**: Synced internal version strings from `1.0.0` to `1.1.2` in `Test-ContentModerationCompliance.ps1` (NOTES + verbose banner) and `Export-ContentModerationEvidence.ps1` (NOTES). (council review m-01, m-02)
+
 ## [1.1.1] - 2026-05-17
 
 ### Added
