@@ -23,7 +23,7 @@
     The Dataverse URL for the environment.
 
 .PARAMETER Zone
-    The governance zone as 1/2/3 or fsi_acv_zone/fsi_er_zone option-set value (100000001..100000003).
+    The governance zone as 1/2/3 or `fsi_acv_zone` option-set value (100000001..100000003).
 
 .PARAMETER EnvironmentType
     The environment type as legacy 1=Production, 2=Sandbox, 3=Developer, 4=Trial, 5=Default, ELM option-set value, or ACV option-set value when -EnvironmentTypeFormat Acv is specified. The script writes the corresponding ACV option-set value.
@@ -55,9 +55,9 @@
         -EnvironmentUrl "https://trading.crm.dynamics.com" -Zone 3 -EnvironmentType 1 -Interactive
 
 .NOTES
-    Version: 2.0.2
-    Date: 2026-05-05
-    Requires: IntegrationConfig.psm1 v2.0.2
+    Version: 2.0.3
+    Date: 2026-05-22
+    Requires: IntegrationConfig.psm1 v2.0.3
 #>
 
 #Requires -Version 7.0

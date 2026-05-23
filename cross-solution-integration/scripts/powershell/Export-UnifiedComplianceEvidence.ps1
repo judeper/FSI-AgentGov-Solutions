@@ -71,9 +71,9 @@
         -TenantId "guid" -Solutions ACV,SSC -StartDate "2026-01-01" -Interactive
 
 .NOTES
-    Version: 2.0.2
-    Date: 2026-05-05
-    Requires: IntegrationConfig.psm1 v2.0.2
+    Version: 2.0.3
+    Date: 2026-05-22
+    Requires: IntegrationConfig.psm1 v2.0.3
 #>
 
 #Requires -Version 7.0
@@ -328,7 +328,7 @@ $manifest = @{
     periodEnd     = $EndDate.ToUniversalTime().ToString('yyyy-MM-dd')
     framework     = 'FSI Agent Governance Framework'
     frameworkVersion = 'v1.4.0'
-    moduleVersion    = '2.0.2'
+    moduleVersion    = '2.0.3'
     solutions     = @{}
     fileHashes    = @{}
     masterHash    = $null
