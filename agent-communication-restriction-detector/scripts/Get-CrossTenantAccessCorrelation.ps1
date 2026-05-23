@@ -31,7 +31,7 @@
 
 .NOTES
     File: Get-CrossTenantAccessCorrelation.ps1
-    Version: 1.2.0
+    Version: 1.2.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Requires: Microsoft.Graph.Identity.SignIns module

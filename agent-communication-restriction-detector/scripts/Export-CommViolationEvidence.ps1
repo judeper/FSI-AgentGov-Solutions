@@ -261,7 +261,12 @@ if ($Interactive) {
             Connect-AzAccount @connectParams | Out-Null
         }
 
-        $tokenResult = Get-AzAccessToken -ResourceUrl $dataverseScope.TrimEnd('/.default').TrimEnd('/') -ErrorAction Stop
+        # Get-AzAccessToken -ResourceUrl wants the bare environment URL (no /.default suffix).
+        # Use the already-trimmed $DataverseUrl directly; do NOT TrimEnd('/.default') on
+        # $dataverseScope — String.TrimEnd(string) treats its argument as a character set,
+        # which strips trailing characters like '.de' from Germany sovereign cloud URLs
+        # (e, d, . are all in the set) and produces an invalid audience.
+        $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -ErrorAction Stop
         $accessToken = Unprotect-AzAccessToken -TokenResult $tokenResult
     }
     catch {
@@ -286,7 +291,8 @@ else {
             -CertificateThumbprint $CertificateThumbprint `
             -ErrorAction Stop | Out-Null
 
-        $tokenResult = Get-AzAccessToken -ResourceUrl $dataverseScope.TrimEnd('/.default').TrimEnd('/') -ErrorAction Stop
+        # See note above on $dataverseScope.TrimEnd('/.default'): use the source URL directly.
+        $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -ErrorAction Stop
         $accessToken = Unprotect-AzAccessToken -TokenResult $tokenResult
     }
     catch {
