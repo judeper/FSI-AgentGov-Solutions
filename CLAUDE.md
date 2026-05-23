@@ -47,7 +47,7 @@ git rev-parse --show-toplevel
 | [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.3 |
 | [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.1.2 |
 | [compliance-dashboard](./compliance-dashboard/) | Aggregated compliance reporting across 78 controls with Exchange coverage | Docs/Dataverse | v1.0.5 |
-| [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v1.2.2 |
+| [conditional-access-automation](./conditional-access-automation/) | CA policy deployment, compliance monitoring, and drift detection | PowerShell/Python | v2.0.2 |
 | [content-moderation-monitor](./content-moderation-monitor/) | Per-agent content moderation validation against zone requirements | PowerShell/Python | v1.1.2 |
 | [copilot-studio-analytics](./copilot-studio-analytics/) | Business impact analytics for Copilot Studio agents (Viva Insights alternative) | Python/KQL | v2.0.2 |
 | [credential-oversharing-detector](./credential-oversharing-detector/) | Configuration-time credential scope governance for agent connectors | PowerShell/Python | v2.0.0 |

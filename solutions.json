@@ -337,7 +337,7 @@
     "conditional-access-automation": {
       "id": "conditional-access-automation",
       "name": "Conditional Access Automation",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",
