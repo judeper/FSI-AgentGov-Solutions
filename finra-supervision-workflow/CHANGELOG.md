@@ -4,6 +4,26 @@ All notable changes to the FINRA Supervision Workflow solution are documented he
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-23
+
+### Changed
+
+- **Major**: Extracted state/outcome/zone magic numbers in `export_supervision_evidence.py` and `test_export_supervision_evidence.py` to named module-level constants (`STATE_PENDING`, `STATE_APPROVED`, `OUTCOME_APPROVED`, `ZONE_1`, etc.). Centralizes the option-set value contract and makes schema drift easier to spot. `scripts/export_supervision_evidence.py:138-186`. (council review M-3)
+- **Minor**: Added a host-pattern warning (non-fatal) for `--environment-url` in both `deploy.py` and `export_supervision_evidence.py`. Accepts commercial (`*.crm*.dynamics.com`) and US/DE sovereign Dataverse host suffixes; prints a warning for non-matching URLs so users catch typos before authentication fails. `scripts/deploy.py`, `scripts/export_supervision_evidence.py`. (council review minor-5)
+- **Minor**: Added an inline note in `deploy.py` clarifying that `fsi_supervisionconfigs` is the default Dataverse-pluralized `EntitySetName` for `fsi_supervisionconfig`. (council review minor-1)
+
+### Added
+
+- **Major**: Added `pytest>=7.0.0` to `scripts/requirements.txt` so the documented `python -m pytest test_export_supervision_evidence.py -v` command works after `pip install -r requirements.txt`. (council review M-4)
+
+### Deferred (tracked for follow-up PRs)
+
+- **M-1 — option-set value migration (0/1/2/3 -> 100000000+)**: deferred to a future `v1.2.0 [BREAKING DEPLOY]` per repo patch-scope policy. The current small-integer scheme is internally self-consistent across schema, deploy script, export script, Power BI DAX, and flow docs, and the README Step 1.5 instructs operators to use these values explicitly.
+- **M-2 — refactor `deploy.py` to import shared `DataverseClient`**: deferred. The local 70-line client is functionally adequate for the deploy script's three call sites (`get_entity_metadata`, `create_entity`, `create_record`); the refactor adds runtime risk without correcting a functional bug. Tracked for a coordinated cross-solution shared-client adoption pass.
+- **minor-2 (HTML sanitization note), minor-3 (DAX inline comment), minor-6 (auth-flow factoring), minor-7 (security-roles doc clarification), minor-8 (FINRA Notice 24-09 citation polish)**: doc-only / refactor-only findings deferred per minor-deferral rubric. minor-4 (CLAUDE.md v1.0.1) was investigated and is a **FALSE POSITIVE** — CLAUDE.md already lists v1.1.0.
+
+## [1.1.0] - 2026-05-04
+
 ### Changed
 
 - **Microsoft Learn 2026-Q2 refresh** — updated Power Automate Approvals, Teams Adaptive Cards, Outlook Actionable Messages, Purview Communication Compliance, eDiscovery, records-management, and WORM storage guidance.

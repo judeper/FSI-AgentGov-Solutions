@@ -36,6 +36,33 @@ if _script_dir not in sys.path:
 from auth import get_access_token
 
 
+# fsi_state option-set values (see docs/dataverse-schema.md)
+STATE_PENDING = 1
+STATE_INREVIEW = 2
+STATE_APPROVED = 3
+STATE_ESCALATED = 4
+STATE_REJECTED = 5
+
+# fsi_reviewoutcome option-set values (see docs/dataverse-schema.md)
+OUTCOME_APPROVED = 1
+OUTCOME_REJECTED = 2
+OUTCOME_ESCALATED = 3
+
+# fsi_zone option-set values (see docs/dataverse-schema.md)
+ZONE_1 = 1
+ZONE_2 = 2
+ZONE_3 = 3
+
+# Dataverse environment URL host suffix used to validate user input.
+# Commercial cloud: *.crm*.dynamics.com (e.g., crm.dynamics.com, crm4.dynamics.com).
+# Gov/sovereign clouds use different suffixes (e.g., crm.microsoftdynamics.us,
+# crm.microsoftdynamics.de); the regex below is permissive enough to accept
+# common variants while warning on obvious typos.
+_DATAVERSE_HOST_PATTERN = re.compile(
+    r'^https://[A-Za-z0-9-]+\.crm[0-9]*\.(dynamics\.com|microsoftdynamics\.(us|de))/?$'
+)
+
+
 def fetch_records(environment_url: str, access_token: str, entity_set: str,
                   filter_query: str = None, select_columns: list = None) -> tuple:
     """Fetch records from Dataverse with pagination."""
@@ -135,9 +162,9 @@ def generate_sla_metrics(queue_records: list) -> dict:
     if total == 0:
         return {"total": 0, "message": "No records in date range"}
 
-    completed = [r for r in queue_records if r.get("fsi_state") in [3, 5]]  # Approved or Rejected
-    pending = [r for r in queue_records if r.get("fsi_state") in [1, 2]]  # Pending or InReview
-    escalated = [r for r in queue_records if r.get("fsi_state") == 4]  # Escalated
+    completed = [r for r in queue_records if r.get("fsi_state") in (STATE_APPROVED, STATE_REJECTED)]
+    pending = [r for r in queue_records if r.get("fsi_state") in (STATE_PENDING, STATE_INREVIEW)]
+    escalated = [r for r in queue_records if r.get("fsi_state") == STATE_ESCALATED]
 
     # Calculate SLA breaches (items completed after SLA due)
     sla_breached = 0
@@ -176,14 +203,14 @@ def generate_sla_metrics(queue_records: list) -> dict:
         "sla_compliance_rate": round((len(completed) - sla_breached) / len(completed) * 100, 2) if completed else 0,
         "average_review_time_hours": round(avg_review_time, 2),
         "by_zone": {
-            "zone_1": len([r for r in queue_records if r.get("fsi_zone") == 1]),
-            "zone_2": len([r for r in queue_records if r.get("fsi_zone") == 2]),
-            "zone_3": len([r for r in queue_records if r.get("fsi_zone") == 3]),
+            "zone_1": len([r for r in queue_records if r.get("fsi_zone") == ZONE_1]),
+            "zone_2": len([r for r in queue_records if r.get("fsi_zone") == ZONE_2]),
+            "zone_3": len([r for r in queue_records if r.get("fsi_zone") == ZONE_3]),
         },
         "by_outcome": {
-            "approved": len([r for r in completed if r.get("fsi_reviewoutcome") == 1]),
-            "rejected": len([r for r in completed if r.get("fsi_reviewoutcome") == 2]),
-            "escalated": len([r for r in completed if r.get("fsi_reviewoutcome") == 3]),
+            "approved": len([r for r in completed if r.get("fsi_reviewoutcome") == OUTCOME_APPROVED]),
+            "rejected": len([r for r in completed if r.get("fsi_reviewoutcome") == OUTCOME_REJECTED]),
+            "escalated": len([r for r in completed if r.get("fsi_reviewoutcome") == OUTCOME_ESCALATED]),
         }
     }
 
@@ -219,6 +246,14 @@ def main() -> None:
     if not args.environment_url.startswith("https://"):
         print("Error: --environment-url must start with 'https://' (e.g., https://org.crm.dynamics.com)")
         sys.exit(1)
+    # Warn if URL does not match a known Dataverse host suffix; not fatal because
+    # private clouds and proxies may use other valid suffixes.
+    if not _DATAVERSE_HOST_PATTERN.match(args.environment_url):
+        print(
+            "Warning: --environment-url does not match a standard Dataverse host pattern "
+            "(*.crm*.dynamics.com or *.crm.microsoftdynamics.{us,de}). "
+            "Verify the URL if you encounter authentication errors."
+        )
 
     print("=" * 60)
     print("FINRA Supervision Workflow - Evidence Export")
@@ -290,7 +325,7 @@ def main() -> None:
             "start_date": args.start_date,
             "end_date": args.end_date,
             "exported_at": datetime.now(timezone.utc).isoformat(),
-            "exported_by": "export_supervision_evidence.py v1.1.0",
+            "exported_by": "export_supervision_evidence.py v1.1.1",
             "status": "complete"
         },
         "files": []
