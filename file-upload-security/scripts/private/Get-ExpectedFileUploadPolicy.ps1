@@ -25,7 +25,7 @@
 
 .NOTES
     File: Get-ExpectedFileUploadPolicy.ps1
-    Version: 1.0.0
+    Version: 1.1.2
     Solution: File Upload Security Configurator (v8)
 #>
 
@@ -117,7 +117,7 @@ if (-not $zoneKey -or -not ($baseline.zoneRequirements.PSObject.Properties.Name 
             ModerationCompliant     = $false
             Severity                = 'Medium'
             ViolationType           = 'Unknown_Zone_IndeterminateFileUpload'
-            RegulatoryContext       = 'FINRA 4511 — File upload status could not be determined for agent in unclassified environment; manual review required'
+            RegulatoryContext       = 'FINRA 4511 -- File upload status could not be determined for agent in unclassified environment; manual review required'
         }
     }
 
@@ -134,7 +134,7 @@ if (-not $zoneKey -or -not ($baseline.zoneRequirements.PSObject.Properties.Name 
             ModerationCompliant     = $false
             Severity                = 'Medium'
             ViolationType           = 'Unknown_Zone_FileUploadEnabled'
-            RegulatoryContext       = 'FINRA 4511 — File upload enabled on agent in unclassified environment; zone classification required for governance policy validation'
+            RegulatoryContext       = 'FINRA 4511 -- File upload enabled on agent in unclassified environment; zone classification required for governance policy validation'
         }
     }
 
@@ -155,7 +155,7 @@ if (-not $zoneKey -or -not ($baseline.zoneRequirements.PSObject.Properties.Name 
 
 $zonePolicy = $baseline.zoneRequirements.$zoneKey
 
-# Handle indeterminate file upload status — fail closed
+# Handle indeterminate file upload status -- fail closed
 if ($null -eq $FileUploadEnabled) {
     return [PSCustomObject]@{
         Zone                    = $Zone
@@ -168,7 +168,7 @@ if ($null -eq $FileUploadEnabled) {
         ModerationCompliant     = $false
         Severity                = 'High'
         ViolationType           = "${zoneKey}_IndeterminateFileUpload" -replace ' ', ''
-        RegulatoryContext       = "FINRA 4511 — File upload status could not be determined for agent in $zoneKey; configuration may be missing or unparseable. Manual review required."
+        RegulatoryContext       = "FINRA 4511 -- File upload status could not be determined for agent in $zoneKey; configuration may be missing or unparseable. Manual review required."
     }
 }
 
@@ -191,11 +191,11 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
         $moderationCompliant = $false
         $severity = 'Critical'
         $violationType = 'Zone3_FileUploadEnabled_InsufficientModeration'
-        $regulatoryContext = "FINRA 4511, SEC 17a-3, GLBA 501(b) — File upload enabled in $($zoneKey) (Enterprise Managed) without $($zonePolicy.minimumModerationLevel) content moderation; expands agent data intake beyond declared scope with insufficient content controls"
+        $regulatoryContext = "FINRA 4511, SEC 17a-3, GLBA 501(b) -- File upload enabled in $($zoneKey) (Enterprise Managed) without $($zonePolicy.minimumModerationLevel) content moderation; expands agent data intake beyond declared scope with insufficient content controls"
     } else {
         $severity = 'Critical'
         $violationType = 'Zone3_FileUploadEnabled_NoApproval'
-        $regulatoryContext = "FINRA Regulatory Notice 25-07, FINRA Rule 4511, SEC Rule 17a-3, GLBA 501(b), 12 CFR 30 App. B — File upload enabled in $($zoneKey) (Enterprise Managed) without documented governance approval; data minimization requirements indicate file upload should remain disabled unless explicitly authorized"
+        $regulatoryContext = "FINRA Regulatory Notice 25-07, FINRA Rule 4511, SEC Rule 17a-3, GLBA 501(b), 12 CFR 30 App. B -- File upload enabled in $($zoneKey) (Enterprise Managed) without documented governance approval; data minimization requirements indicate file upload should remain disabled unless explicitly authorized"
     }
 } elseif ($zonePolicy.fileUploadAllowed -and $zonePolicy.requiresApproval -and $isFileUploadEnabled) {
     # Zone 2: file upload allowed with restrictions
@@ -204,9 +204,9 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
         $moderationCompliant = $false
         $severity = 'High'
         $violationType = 'Zone2_FileUploadEnabled_InsufficientModeration'
-        $regulatoryContext = "FINRA 4511, SEC 17a-3 — File upload enabled in $($zoneKey) (Team Collaboration) without $($zonePolicy.minimumModerationLevel) content moderation minimum; user-uploaded content requires elevated content controls"
+        $regulatoryContext = "FINRA 4511, SEC 17a-3 -- File upload enabled in $($zoneKey) (Team Collaboration) without $($zonePolicy.minimumModerationLevel) content moderation minimum; user-uploaded content requires elevated content controls"
     }
-    # Note: approval status cannot be verified programmatically — flagged for governance review
+    # Note: approval status cannot be verified programmatically -- flagged for governance review
 } elseif ($isFileUploadEnabled -and $zoneKey -eq 'Zone 1') {
     # Zone 1: allowed, but check minimum moderation
     $moderationSufficient = Test-ModerationSufficient -Actual $ContentModerationLevel -Required $zonePolicy.minimumModerationLevel
@@ -214,7 +214,7 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
         $moderationCompliant = $false
         $severity = 'Warning'
         $violationType = 'Zone1_NoModeration'
-        $regulatoryContext = "FINRA Regulatory Notice 25-07 — File upload enabled in $($zoneKey) (Personal Productivity) without content moderation configured; recommended for defense-in-depth"
+        $regulatoryContext = "FINRA Regulatory Notice 25-07 -- File upload enabled in $($zoneKey) (Personal Productivity) without content moderation configured; recommended for defense-in-depth"
     }
 }
 

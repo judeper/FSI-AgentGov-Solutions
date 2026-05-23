@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 <#
 .SYNOPSIS
@@ -92,7 +93,7 @@
     Exports all zones with interactive auth for ad-hoc examination preparation.
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.1.2
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA Section 501(b), SOX Section 302/404, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12
@@ -242,7 +243,7 @@ else {
         }
     }
     else {
-        # legacy: dev-only — replace with managed identity in production
+        # legacy: dev-only -- replace with managed identity in production
         if (-not $ClientId -and -not $env:AZURE_CLIENT_ID) {
             throw "ClientId is required for legacy client-secret authentication. Use -Interactive or -UseManagedIdentity where possible."
         }
@@ -387,7 +388,7 @@ elseif ($totalRecords -eq 0) {
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Inactivity Timeout Enforcement'
-    solutionVersion = '1.1.1'
+    solutionVersion = '1.1.2'
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc
     zoneFilter      = $Zone
@@ -434,6 +435,7 @@ $errorsReadable = $errorLogs | ForEach-Object {
         environmentId   = $_.fsi_environmentid
         environmentName = $_.fsi_environmentname
         zone            = $_.fsi_zone
+        errorType       = $_.fsi_errortype
         errorMessage    = $_.fsi_errorraw
         errorTime       = $_.fsi_timestamp
         scanRunId       = $_.fsi_scanrunid

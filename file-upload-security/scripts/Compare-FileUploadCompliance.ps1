@@ -13,7 +13,7 @@
 
 .NOTES
     File: Compare-FileUploadCompliance.ps1
-    Version: 1.0.0
+    Version: 1.1.2
     Solution: File Upload Security Configurator (v8)
 #>
 
@@ -58,7 +58,7 @@ function Compare-FileUploadCompliance {
         Returns compliance status for all agents including compliant ones.
 
     .OUTPUTS
-        PSCustomObject[] — One object per agent with properties:
+        PSCustomObject[] -- One object per agent with properties:
         AgentId, AgentName, EnvironmentId, EnvironmentDisplayName, Zone,
         FileUploadEnabled, ExpectedFileUpload, ContentModerationLevel,
         ExpectedModerationLevel, IsCompliant, FileUploadCompliant,
@@ -197,7 +197,7 @@ function Compare-FileUploadCompliance {
 
         if ($violationCount -gt 0) {
             Write-Verbose "  Violations by severity:"
-            foreach ($sev in @('Critical', 'High', 'Medium', 'Warning')) {
+            foreach ($sev in @('Critical', 'High', 'Medium', 'Low', 'Warning', 'Info')) {
                 if ($severityCounts[$sev] -gt 0) {
                     Write-Verbose "    $($sev): $($severityCounts[$sev])"
                 }

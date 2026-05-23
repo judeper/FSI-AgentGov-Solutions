@@ -2,3 +2,8 @@
 requests>=2.28.0
 msal>=1.20.0
 azure-identity>=1.16.0
+
+# Test runner (used by test_export_supervision_evidence.py).
+# Install with the rest of requirements.txt; tests rely on stdlib unittest +
+# pytest's discovery only.
+pytest>=7.0.0

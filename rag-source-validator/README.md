@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # RAG Source Validator
 
-> **Version:** v1.3.0
+> **Version:** v1.3.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -271,7 +271,8 @@ For documents with references, validates all links are accessible.
 | [1.7 - Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Audit trail integration |
 | [2.13 - Documentation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.13-documentation-and-record-keeping.md) | Record integrity |
 | [2.16 - RAG Source Integrity Validation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.16-rag-source-integrity-validation.md) | Primary control for source validation |
-| [4.3 - Site and Document Retention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-4-sharepoint/4.3-site-and-document-retention-management.md) | Source access control |
+
+> **Note:** Control 4.3 (Site and Document Retention) is related context for SharePoint source access control but is not a primary control implementation of this solution. See `manifest.yaml` for the canonical control list.
 
 > **Note:** The current implementation logs validation results to Dataverse and stdout. It does not yet integrate DLP enforcement, sharing restrictions, or centralized audit logging beyond the validation result records. These governance controls are planned for a future release.
 
@@ -279,7 +280,8 @@ For documents with references, validates all links are accessible.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.3.0 | Unreleased | Microsoft Learn 2026-Q2 refresh; managed identity-first auth; expanded planned source types; Graph delta/eTag guidance |
+| 1.3.1 | May 2026 | Council review fixes: sovereign-cloud China endpoint alignment, evidence solutionVersion sync, managed-identity / workload-identity / certificate / access-token auth modes in Python deployment scripts |
+| 1.3.0 | May 2026 | Microsoft Learn 2026-Q2 refresh; managed identity-first auth; expanded planned source types; Graph delta/eTag guidance |
 | 1.2.0 | April 2026 | Sovereign-cloud parity and evidence export fixes |
 | 1.1.1 | April 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
 | 1.1.0 | March 2026 | Governance scripts (Export-ValidationEvidence, Get-SourceValidationSummary, Test-EvidenceIntegrity); sovereign cloud support |
@@ -345,4 +347,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - RAG Source Validator v1.3.0*
+*FSI Agent Governance Framework - RAG Source Validator v1.3.1*

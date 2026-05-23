@@ -21,7 +21,21 @@ _script_dir = os.path.dirname(os.path.abspath(__file__))
 if _script_dir not in sys.path:
     sys.path.insert(0, _script_dir)
 
-from export_supervision_evidence import calculate_sha256, export_to_json, generate_sla_metrics
+from export_supervision_evidence import (
+    OUTCOME_APPROVED,
+    OUTCOME_REJECTED,
+    STATE_APPROVED,
+    STATE_ESCALATED,
+    STATE_INREVIEW,
+    STATE_PENDING,
+    STATE_REJECTED,
+    ZONE_1,
+    ZONE_2,
+    ZONE_3,
+    calculate_sha256,
+    export_to_json,
+    generate_sla_metrics,
+)
 
 
 class TestCalculateSha256(unittest.TestCase):
@@ -115,20 +129,20 @@ class TestGenerateSlaMetrics(unittest.TestCase):
         """100% SLA compliance when all items reviewed before SLA due."""
         records = [
             {
-                "fsi_state": 3,  # Approved
+                "fsi_state": STATE_APPROVED,
                 "fsi_revieweddate": "2026-01-15T10:00:00Z",
                 "fsi_sladue": "2026-01-16T10:00:00Z",
                 "fsi_queueddate": "2026-01-14T10:00:00Z",
-                "fsi_zone": 1,
-                "fsi_reviewoutcome": 1,
+                "fsi_zone": ZONE_1,
+                "fsi_reviewoutcome": OUTCOME_APPROVED,
             },
             {
-                "fsi_state": 5,  # Rejected
+                "fsi_state": STATE_REJECTED,
                 "fsi_revieweddate": "2026-01-15T12:00:00Z",
                 "fsi_sladue": "2026-01-17T12:00:00Z",
                 "fsi_queueddate": "2026-01-14T12:00:00Z",
-                "fsi_zone": 2,
-                "fsi_reviewoutcome": 2,
+                "fsi_zone": ZONE_2,
+                "fsi_reviewoutcome": OUTCOME_REJECTED,
             },
         ]
         result = generate_sla_metrics(records)
@@ -141,12 +155,12 @@ class TestGenerateSlaMetrics(unittest.TestCase):
         """SLA breach counted when review date is after SLA due date."""
         records = [
             {
-                "fsi_state": 3,
+                "fsi_state": STATE_APPROVED,
                 "fsi_revieweddate": "2026-01-18T10:00:00Z",  # After SLA
                 "fsi_sladue": "2026-01-16T10:00:00Z",
                 "fsi_queueddate": "2026-01-14T10:00:00Z",
-                "fsi_zone": 1,
-                "fsi_reviewoutcome": 1,
+                "fsi_zone": ZONE_1,
+                "fsi_reviewoutcome": OUTCOME_APPROVED,
             },
         ]
         result = generate_sla_metrics(records)
@@ -157,20 +171,20 @@ class TestGenerateSlaMetrics(unittest.TestCase):
         """Average review time calculated correctly from queued-to-reviewed delta."""
         records = [
             {
-                "fsi_state": 3,
+                "fsi_state": STATE_APPROVED,
                 "fsi_revieweddate": "2026-01-15T10:00:00Z",
                 "fsi_sladue": "2026-01-20T10:00:00Z",
                 "fsi_queueddate": "2026-01-15T06:00:00Z",  # 4 hours
-                "fsi_zone": 1,
-                "fsi_reviewoutcome": 1,
+                "fsi_zone": ZONE_1,
+                "fsi_reviewoutcome": OUTCOME_APPROVED,
             },
             {
-                "fsi_state": 3,
+                "fsi_state": STATE_APPROVED,
                 "fsi_revieweddate": "2026-01-16T14:00:00Z",
                 "fsi_sladue": "2026-01-20T14:00:00Z",
                 "fsi_queueddate": "2026-01-16T08:00:00Z",  # 6 hours
-                "fsi_zone": 2,
-                "fsi_reviewoutcome": 1,
+                "fsi_zone": ZONE_2,
+                "fsi_reviewoutcome": OUTCOME_APPROVED,
             },
         ]
         result = generate_sla_metrics(records)
@@ -179,16 +193,16 @@ class TestGenerateSlaMetrics(unittest.TestCase):
     def test_pending_and_escalated_counts(self):
         """Pending and escalated items counted separately from completed."""
         records = [
-            {"fsi_state": 1, "fsi_zone": 1},  # Pending
-            {"fsi_state": 2, "fsi_zone": 1},  # InReview
-            {"fsi_state": 4, "fsi_zone": 2},  # Escalated
+            {"fsi_state": STATE_PENDING, "fsi_zone": ZONE_1},
+            {"fsi_state": STATE_INREVIEW, "fsi_zone": ZONE_1},
+            {"fsi_state": STATE_ESCALATED, "fsi_zone": ZONE_2},
             {
-                "fsi_state": 3,
+                "fsi_state": STATE_APPROVED,
                 "fsi_revieweddate": "2026-01-15T10:00:00Z",
                 "fsi_sladue": "2026-01-16T10:00:00Z",
                 "fsi_queueddate": "2026-01-14T10:00:00Z",
-                "fsi_zone": 1,
-                "fsi_reviewoutcome": 1,
+                "fsi_zone": ZONE_1,
+                "fsi_reviewoutcome": OUTCOME_APPROVED,
             },
         ]
         result = generate_sla_metrics(records)
@@ -200,10 +214,10 @@ class TestGenerateSlaMetrics(unittest.TestCase):
     def test_zone_breakdown(self):
         """Zone breakdown counts items per zone correctly."""
         records = [
-            {"fsi_state": 1, "fsi_zone": 1},
-            {"fsi_state": 1, "fsi_zone": 1},
-            {"fsi_state": 1, "fsi_zone": 2},
-            {"fsi_state": 1, "fsi_zone": 3},
+            {"fsi_state": STATE_PENDING, "fsi_zone": ZONE_1},
+            {"fsi_state": STATE_PENDING, "fsi_zone": ZONE_1},
+            {"fsi_state": STATE_PENDING, "fsi_zone": ZONE_2},
+            {"fsi_state": STATE_PENDING, "fsi_zone": ZONE_3},
         ]
         result = generate_sla_metrics(records)
         self.assertEqual(result["by_zone"]["zone_1"], 2)
