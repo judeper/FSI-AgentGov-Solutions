@@ -131,7 +131,7 @@
     AffectedUsers, RiskScore
 
 .NOTES
-    Version:    1.1.1
+    Version:    1.1.2
     Author:     FSI Agent Governance
     Requires:   PnP.PowerShell 2.5.0+ (3.x supported with -ClientId)
     Requires:   PowerShell 7.2+ (7.4+ for PnP.PowerShell 3.x)
@@ -597,6 +597,7 @@ function Get-ItemPermissionDetails {
                 $affectedUsers = $memberTitle
             }
             elseif ($memberLoginName -eq "c:0(.s|true") {
+                # SharePoint claims encoding for the built-in "Everyone except external users" group.
                 $permissionType = "EveryoneExceptExternal"
                 $affectedUsers = "Everyone except external users"
             }
@@ -715,7 +716,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Agent Knowledge Source — Item Permission Scanner       ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.1.1                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.1.2                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 
