@@ -234,7 +234,7 @@ function Test-AgentAuthMethod {
                     $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -AsSecureString -ErrorAction Stop
                     $dvAccessToken = $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
                 } catch {
-                    Write-Warning "Could not acquire Dataverse token for $DataverseUrl: $($_.Exception.Message). Skipping persistence."
+                    Write-Warning "Could not acquire Dataverse token for ${DataverseUrl}: $($_.Exception.Message). Skipping persistence."
                     $dvAccessToken = $null
                 }
             }
