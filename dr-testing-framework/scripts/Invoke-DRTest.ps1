@@ -5,7 +5,7 @@
 .DESCRIPTION
     Performs read-only checks (agent component count, statecode, connection references, WhoAmI security context, Dataverse-row hash snapshot) against an environment that has already been restored, and persists each check as an `fsi_drtestresult` row for FFIEC BCP / FINRA 4370 / SEC 17a-4(f) evidence.
 
-    This script does NOT initiate a Power Platform environment restore, fail traffic to a paired region, or compute regulator-grade RTO/RPO. Power Platform / Copilot Studio environments are tenant-bound metadata managed by Microsoft — restore is performed via the Power Platform admin center (PPAC) or solution re-deployment, not by this script. Validation runs are timed (`ProbeDurationHours`) but that is the duration of the read-only checks, not actual recovery time. See the README for what each scenario produces and what additional evidence the customer must gather independently.
+    This script does NOT initiate a Power Platform environment restore, fail traffic to a paired region, or compute regulator-grade RTO/RPO. Power Platform / Copilot Studio environments are tenant-bound metadata managed by Microsoft - restore is performed via the Power Platform admin center (PPAC) or solution re-deployment, not by this script. Validation runs are timed (`ProbeDurationHours`) but that is the duration of the read-only checks, not actual recovery time. See the README for what each scenario produces and what additional evidence the customer must gather independently.
 
 .PARAMETER TestType
     Validation scenario: AgentReadinessCheck, EnvironmentReachabilityCheck, DataverseAccessCheck, FullValidation.
@@ -79,7 +79,7 @@ if ($TestTypeAliases.ContainsKey($TestType)) {
     $TestType = $TestTypeAliases[$TestType]
 }
 
-# legacy: dev-only — replace with managed identity in production
+# legacy: dev-only - replace with managed identity in production
 # Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided.
 if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
     $ClientSecret = $env:AZURE_CLIENT_SECRET | ConvertTo-SecureString -AsPlainText -Force
@@ -121,7 +121,9 @@ function Write-AuditLog {
         [string]$Level = "INFO",
         [string]$CorrelationId = $script:CorrelationId
     )
-    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
+    # Use ToString format directly (works on both PS 5.1 and PS 7) to satisfy
+    # the dual-runtime sweep; the AsUtc parameterized switch is PS 7.1+ only.
+    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     $entry = "[$timestamp] [$Level] [$CorrelationId] $Message"
     Write-Information $entry -InformationAction Continue
     if ($script:AuditLogPath) {
@@ -144,7 +146,7 @@ try {
     Write-Warning "Could not create audit log directory: $($_.Exception.Message). Audit events will only be written to stdout."
 }
 
-# Probe-time and last-result targets in hours / minutes (NOT regulator-grade RTO/RPO — see README).
+# Probe-time and last-result targets in hours / minutes (NOT regulator-grade RTO/RPO - see README).
 # These are operator-facing thresholds for the validation cadence, not a recovery-time guarantee.
 $ProbeDurationTargetHours = @{
     "AgentReadinessCheck"          = 0.25  # validation should complete in 15 min
@@ -248,7 +250,7 @@ function Test-AgentReadiness {
             }
             Write-AuditLog "Authenticated to Dataverse for agent readiness validation"
         } catch {
-            Write-AuditLog "Could not authenticate — falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
+            Write-AuditLog "Could not authenticate - falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
         }
     }
 
@@ -269,7 +271,7 @@ function Test-AgentReadiness {
                 # Without auth: verify Dataverse endpoint is reachable
                 $null = Invoke-WebRequest -Uri "$Environment/api/data/v9.2/" -Method Head -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
                 $result.ValidationChecks += @{Check = "Agent Record Found"; Status = "PASS"; Detail = "Dataverse reachable (agent query requires credentials)"}
-                Write-AuditLog "Dataverse reachable but agent query skipped — no credentials" -Level "WARN"
+                Write-AuditLog "Dataverse reachable but agent query skipped - no credentials" -Level "WARN"
             }
         } catch {
             $result.ValidationChecks += @{Check = "Agent Record Found"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -288,13 +290,13 @@ function Test-AgentReadiness {
                 $compResp = Invoke-RestMethod -Uri $compUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 $compCount = ($compResp.value | Measure-Object).Count
                 if ($compCount -gt 0) {
-                    Write-AuditLog "Agent has $compCount component(s) — configuration intact"
+                    Write-AuditLog "Agent has $compCount component(s) - configuration intact"
                     $result.ValidationChecks += @{Check = "Component Inventory Verified"; Status = "PASS"; Detail = "$compCount component(s) verified"}
                 } else {
-                    throw "Agent $AgentId has no bot components — configuration may be incomplete"
+                    throw "Agent $AgentId has no bot components - configuration may be incomplete"
                 }
             } else {
-                $result.ValidationChecks += @{Check = "Component Inventory Verified"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Component Inventory Verified"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Component Inventory Verified"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -341,7 +343,7 @@ function Test-AgentReadiness {
                 Write-AuditLog "Found $crCount connection reference(s) in environment"
                 $result.ValidationChecks += @{Check = "Connection References Accessible"; Status = "PASS"; Detail = "$crCount connection reference(s) found"}
             } else {
-                $result.ValidationChecks += @{Check = "Connection References Accessible"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Connection References Accessible"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Connection References Accessible"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -359,10 +361,10 @@ function Test-AgentReadiness {
                 $whoUri = "$Environment/api/data/v9.2/WhoAmI"
                 $whoResp = Invoke-RestMethod -Uri $whoUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 $userId = $whoResp.UserId
-                Write-AuditLog "Authenticated as user $userId — Dataverse security context validated"
+                Write-AuditLog "Authenticated as user $userId - Dataverse security context validated"
                 $result.ValidationChecks += @{Check = "Dataverse Security Context"; Status = "PASS"; Detail = "Dataverse security context verified (UserId: $userId)"}
             } else {
-                $result.ValidationChecks += @{Check = "Dataverse Security Context"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Dataverse Security Context"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Dataverse Security Context"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -412,7 +414,7 @@ function Test-EnvironmentReachability {
             }
             Write-AuditLog "Authenticated to Dataverse for environment reachability validation"
         } catch {
-            Write-AuditLog "Could not authenticate — falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
+            Write-AuditLog "Could not authenticate - falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
         }
     }
 
@@ -462,13 +464,13 @@ function Test-EnvironmentReachability {
                 $orgResp = Invoke-RestMethod -Uri $orgUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 if ($orgResp.value -and $orgResp.value.Count -gt 0) {
                     $orgName = $orgResp.value[0].name
-                    Write-AuditLog "Organization metadata verified — organization: $orgName"
+                    Write-AuditLog "Organization metadata verified - organization: $orgName"
                     $result.ValidationChecks += @{Check = "Organization Metadata Accessible"; Status = "PASS"; Detail = "Organization '$orgName' data accessible"}
                 } else {
-                    throw "No organization records returned — organization metadata unavailable"
+                    throw "No organization records returned - organization metadata unavailable"
                 }
             } else {
-                $result.ValidationChecks += @{Check = "Organization Metadata Accessible"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Organization Metadata Accessible"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Organization Metadata Accessible"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -486,10 +488,10 @@ function Test-EnvironmentReachability {
                 $botUri = "$Environment/api/data/v9.2/bots?`$select=botid,name&`$top=5"
                 $botResp = Invoke-RestMethod -Uri $botUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 30
                 $botCount = ($botResp.value | Measure-Object).Count
-                Write-AuditLog "Agent catalog visible — $botCount bot(s) accessible"
+                Write-AuditLog "Agent catalog visible - $botCount bot(s) accessible"
                 $result.ValidationChecks += @{Check = "Agent Catalog Visible"; Status = "PASS"; Detail = "$botCount bot(s) accessible in environment"}
             } else {
-                $result.ValidationChecks += @{Check = "Agent Catalog Visible"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Agent Catalog Visible"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Agent Catalog Visible"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -541,7 +543,7 @@ function Test-DataverseAccess {
             }
             Write-AuditLog "Authenticated to Dataverse for Dataverse access validation"
         } catch {
-            Write-AuditLog "Could not authenticate — falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
+            Write-AuditLog "Could not authenticate - falling back to connectivity checks: $($_.Exception.Message)" -Level "WARN"
         }
     }
 
@@ -562,11 +564,11 @@ function Test-DataverseAccess {
                     $result.HoursSinceLastResult = $hoursSinceLastResult
                     $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "Latest record: $latestDate (gap: ${hoursSinceLastResult}h)"}
                 } else {
-                    Write-AuditLog "No existing DR test results — first run baseline" -Level "WARN"
-                    $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "No prior test records — first run baseline"}
+                    Write-AuditLog "No existing DR test results - first run baseline" -Level "WARN"
+                    $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "No prior test records - first run baseline"}
                 }
             } else {
-                $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Previous Validation Result Found"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -615,11 +617,11 @@ function Test-DataverseAccess {
                     Write-AuditLog "Data integrity hash (SHA-256): $hashHex over $($records.Count) record(s)"
                     $result.ValidationChecks += @{Check = "Data Integrity Verified"; Status = "PASS"; Detail = "SHA-256 over $($records.Count) record(s): $($hashHex.Substring(0,16))..."}
                 } else {
-                    Write-AuditLog "No records to verify — first run baseline" -Level "WARN"
-                    $result.ValidationChecks += @{Check = "Data Integrity Verified"; Status = "PASS"; Detail = "No records to hash — first run baseline"}
+                    Write-AuditLog "No records to verify - first run baseline" -Level "WARN"
+                    $result.ValidationChecks += @{Check = "Data Integrity Verified"; Status = "PASS"; Detail = "No records to hash - first run baseline"}
                 }
             } else {
-                $result.ValidationChecks += @{Check = "Data Integrity Verified"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Data Integrity Verified"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Data Integrity Verified"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -642,7 +644,7 @@ function Test-DataverseAccess {
                 Write-AuditLog "Record count: $totalCount DR validation result(s) (server-side @odata.count)"
                 $result.ValidationChecks += @{Check = "Records Complete"; Status = "PASS"; Detail = "$totalCount total record(s) in fsi_drtestresults (true count via @odata.count)"}
             } else {
-                $result.ValidationChecks += @{Check = "Records Complete"; Status = "PASS"; Detail = "Skipped — requires Dataverse credentials"}
+                $result.ValidationChecks += @{Check = "Records Complete"; Status = "PASS"; Detail = "Skipped - requires Dataverse credentials"}
             }
         } catch {
             $result.ValidationChecks += @{Check = "Records Complete"; Status = "FAIL"; Error = $_.Exception.Message}
@@ -773,6 +775,7 @@ $finalResult = @{
     ProbeDurationHours       = [math]::Round($probeDurationHours, 4)
     ProbeDurationTargetHours = $ProbeDurationTargetHours[$TestType]
     ProbeWithinBudget        = $probeWithinBudget
+    # Internal $testResult.HoursSinceLastResult holds hours; output field exposes minutes (×60).
     MinutesSinceLastResult   = if ($testResult.HoursSinceLastResult) { [math]::Round($testResult.HoursSinceLastResult * 60, 2) } else { $null }
     MaxMinutesSinceLastResult = $MaxMinutesSinceLastResultPerType[$TestType]
     LastResultWithinThreshold = if ($null -ne $testResult.HoursSinceLastResult) {
@@ -783,7 +786,7 @@ $finalResult = @{
     ValidationChecks         = $testResult.ValidationChecks
 }
 
-Write-AuditLog "Validation completed — Result: $(if ($finalResult.Success) {'PASS'} else {'FAIL'})"
+Write-AuditLog "Validation completed - Result: $(if ($finalResult.Success) {'PASS'} else {'FAIL'})"
 
 # Display results
 Write-Host ""
@@ -798,11 +801,11 @@ foreach ($check in $testResult.ValidationChecks) {
 }
 
 Write-Host ""
-Write-Host "Probe duration (read-only validation only — NOT RTO):"
+Write-Host "Probe duration (read-only validation only - NOT RTO):"
 Write-Host "  Target budget:  $($ProbeDurationTargetHours[$TestType]) hours"
 Write-Host "  Actual:         $([math]::Round($probeDurationHours * 60, 1)) minutes"
 $probeColor = if ($probeWithinBudget) { "Green" } else { "Yellow" }
-Write-Host "  Within budget:  $(if ($probeWithinBudget) {'YES'} else {'NO (exceeded validation budget — investigate slow API responses)'})" -ForegroundColor $probeColor
+Write-Host "  Within budget:  $(if ($probeWithinBudget) {'YES'} else {'NO (exceeded validation budget - investigate slow API responses)'})" -ForegroundColor $probeColor
 
 Write-Host ""
 $overallColor = if ($finalResult.Success) { "Green" } else { "Red" }
@@ -833,11 +836,11 @@ if (-not $DryRun -and $HasDataverseAuth) {
     } catch {
         $script:DataverseSaveFailed = $true
         Write-Warning "Dataverse authentication failed: $($_.Exception.Message). Test results were not saved."
-        Write-AuditLog "Dataverse save skipped — authentication error: $($_.Exception.Message)" -Level "WARN"
+        Write-AuditLog "Dataverse save skipped - authentication error: $($_.Exception.Message)" -Level "WARN"
     }
 } elseif (-not $DryRun) {
     Write-Warning "Dataverse authentication not provided (AccessToken or TenantId/ClientId/ClientSecret). Test results were not saved to Dataverse."
-    Write-AuditLog "Dataverse save skipped — credentials not configured" -Level "WARN"
+    Write-AuditLog "Dataverse save skipped - credentials not configured" -Level "WARN"
 }
 
 Write-Host ""

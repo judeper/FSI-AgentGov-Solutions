@@ -309,7 +309,7 @@ Describe 'FullValidation test type aggregation' {
         $combined.ValidationChecks.Count | Should -BeGreaterThan 0
     }
 
-    It 'ANDs Success flags — all pass yields $true' {
+    It 'ANDs Success flags - all pass yields $true' {
         Mock Start-Sleep {}
         Mock Write-Host {}
         Mock Write-Warning {}
@@ -324,7 +324,7 @@ Describe 'FullValidation test type aggregation' {
         $combined | Should -BeTrue
     }
 
-    It 'ANDs Success flags — one failure yields $false' {
+    It 'ANDs Success flags - one failure yields $false' {
         Mock Start-Sleep {}
         Mock Write-Host {}
         Mock Write-Warning {}

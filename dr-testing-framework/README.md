@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # DR Readiness Validation Framework (DR-Testing-Framework)
 
-> **Version:** v2.0.1
+> **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -406,6 +406,7 @@ RTO/RPO evidence must come from the operator's PPAC/Admin-module restore timesta
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0.2 | May 2026 | Council review remediations: M-1 secret-zeroize hardening in `Export-DREvidence.ps1`; M-2 swapped `@()`/`+=` to `[List[object]]` for performance; m-5 dry-run gating moved off `client.dry_run` to function `dry_run` parameter in v2.0.0 schema scripts; m-6 KQL `extract` regex tightened to capture entity-set name; bonus PS 5.1 `Get-Date -AsUTC` defensive fix; em-dash sweep across `.ps1` files |
 | 2.0.1 | April 2026 | Microsoft Learn 2026-Q2 refresh: aligned Power Platform backup/restore notes, evidence export semantics, generated schema wording, Application Insights telemetry examples, and managed-identity-first authentication guidance |
 | 2.0.0 | April 2026 | **BREAKING.** Renamed test scenarios to validation checks; relabeled `ActualRTO`→`ProbeDurationHours` and `ActualRPO`→`MinutesSinceLastResult` to stop misrepresenting the measurements; added `-AllowConnectivityOnly` for fail-closed auth; pagination via `@odata.nextLink`; switched record-count to `$count=true&$top=0`; bumped to PowerShell 7.1; dropped Azure Backup / Backup Operator from prereqs; corrected Decimal env-var type code; fixed `fsi_executedon` to `TimeZoneIndependent`; dropped Control 2.13 from Related Controls (catalog mismatch); aligned ELM dependency floor to v1.2.0 |
 | 1.2.1 | April 2026 | Save-TestResult fix: include required `fsi_name` primary attribute for Dataverse writes |
@@ -444,4 +445,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v2.0.1*
+*FSI Agent Governance Framework - DR Testing Framework v2.0.2*

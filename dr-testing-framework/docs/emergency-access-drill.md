@@ -8,7 +8,7 @@ This document covers how to test break-glass account access during disaster reco
 
 Emergency access accounts (break-glass accounts) are highly privileged Microsoft Entra ID accounts that bypass normal access controls (MFA, Conditional Access) to restore administrative access during outages. FSI organizations must periodically verify these accounts function correctly — a break-glass account that fails during an actual emergency is worse than not having one.
 
-This drill procedure supports compliance with OCC 2011-12 (operational resilience testing) and helps meet FFIEC BCP expectations for documented access continuity.
+This drill procedure supports compliance with OCC Heightened Standards (operational resilience testing) and helps meet FFIEC BCP expectations for documented access continuity.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ This drill procedure supports compliance with OCC 2011-12 (operational resilienc
 
 | Frequency | Activity | Regulatory Alignment |
 |-----------|----------|---------------------|
-| **Quarterly** (minimum) | Full break-glass drill — credential retrieval, sign-in, verification, re-seal | OCC 2011-12 (operational resilience), FFIEC BCP |
+| **Quarterly** (minimum) | Full break-glass drill — credential retrieval, sign-in, verification, re-seal | OCC Heightened Standards (operational resilience), FFIEC BCP |
 | **Annually** | Comprehensive DR exercise including break-glass as part of full business continuity test | FINRA Rule 4370, SEC 17a-4(f) |
 | **On change** | Re-test whenever Conditional Access policies, MFA providers, or Entra ID tenant configuration changes | Best practice |
 

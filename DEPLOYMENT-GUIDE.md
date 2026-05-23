@@ -99,7 +99,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.3 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.1.0 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.4 | team, enterprise |
-| [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
+| [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.2 | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.2 | personal, team, enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.1 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.1 | team, enterprise |

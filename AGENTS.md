@@ -35,7 +35,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | cross-solution-integration | v2.0.3 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14, 1.18 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.1.0 | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.4 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
-| dr-testing-framework | v2.0.1 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
+| dr-testing-framework | v2.0.2 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
 | environment-lifecycle-management | v1.2.2 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
 | file-upload-security | v1.1.2 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.1.1 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |

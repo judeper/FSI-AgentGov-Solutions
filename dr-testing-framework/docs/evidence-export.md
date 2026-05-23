@@ -6,7 +6,7 @@ Evidence export packages DR validation results and audit logs for examiner revie
 
 The export records **validation evidence** only. It does not prove that Power Platform backup, restore, or failover was executed end-to-end; pair the package with PPAC/Admin-module operation timestamps, Microsoft support records, and incident/runbook evidence.
 
-## Current Capabilities (v2.0.1)
+## Current Capabilities (v2.0.2)
 
 | Capability | Status |
 |---|---|

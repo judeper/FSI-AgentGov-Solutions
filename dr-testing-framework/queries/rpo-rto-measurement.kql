@@ -53,7 +53,7 @@ let LastWriteBeforeOutage =
         GapMinutes          = datetime_diff('minute', OutageStartUtc, timestamp),
         GapHours            = round(datetime_diff('second', OutageStartUtc, timestamp) / 3600.0, 2),
         OperationName       = name,
-        EntityName          = tostring(parse_url(url).Path);
+        EntityName          = tostring(extract(@"/api/data/v\d+\.\d+/(\w+)", 1, url));
 // ── RTO: first successful operation after recovery ──────────────────────────
 let FirstReadAfterRecovery =
     requests
@@ -69,7 +69,7 @@ let FirstReadAfterRecovery =
         GapMinutes          = datetime_diff('minute', timestamp, OutageEndUtc),
         GapHours            = round(datetime_diff('second', timestamp, OutageEndUtc) / 3600.0, 2),
         OperationName       = name,
-        EntityName          = tostring(parse_url(url).Path);
+        EntityName          = tostring(extract(@"/api/data/v\d+\.\d+/(\w+)", 1, url));
 // ── Combined output ─────────────────────────────────────────────────────────
 union LastWriteBeforeOutage, FirstReadAfterRecovery
 | order by MetricName asc

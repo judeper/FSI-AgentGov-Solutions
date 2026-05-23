@@ -54,7 +54,7 @@ param(
 
 #Requires -Version 7.1
 
-# legacy: dev-only — replace with managed identity in production
+# legacy: dev-only - replace with managed identity in production
 # Convert AZURE_CLIENT_SECRET env var to SecureString if parameter not provided.
 if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
     $ClientSecret = $env:AZURE_CLIENT_SECRET | ConvertTo-SecureString -AsPlainText -Force
@@ -76,6 +76,7 @@ function Get-EvidenceAuthEndpoint {
 function Get-EvidenceAccessToken {
     param([string]$TenantId, [string]$ClientId, [SecureString]$ClientSecret, [string]$Scope, [string]$AuthEndpoint)
     $plainSecret = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
+    $body = $null
     try {
         $tokenUrl = "$AuthEndpoint/$TenantId/oauth2/v2.0/token"
         $body = @{
@@ -90,7 +91,9 @@ function Get-EvidenceAccessToken {
         }
         return $response.access_token
     } finally {
+        # Clear plaintext secret from memory on all code paths
         $plainSecret = $null
+        if ($body) { $body['client_secret'] = $null }
     }
 }
 
@@ -161,16 +164,20 @@ if ($HasDataverseAuth) {
         if ($filter) { $queryUri += "&`$filter=$filter" }
 
         Write-Host "  Querying Dataverse for test results (paginated)..." -ForegroundColor Gray
-        $rawResults = @()
+        # Use List[object] (O(1) amortized Add) instead of += on an array (O(n^2) due to
+        # PowerShell re-allocating the array each iteration). Matters for >5000-row exports.
+        $rawResults = [System.Collections.Generic.List[object]]::new()
         $pageCount = 0
         $nextUri = $queryUri
         while ($nextUri) {
             $pageCount++
             $queryResp = Invoke-RestMethod -Uri $nextUri -Headers $dvHeaders -Method Get -ContentType "application/json" -TimeoutSec 60
-            if ($queryResp.value) { $rawResults += $queryResp.value }
+            if ($queryResp.value) {
+                foreach ($item in $queryResp.value) { $rawResults.Add($item) | Out-Null }
+            }
             $nextUri = $queryResp.'@odata.nextLink'
             if ($pageCount -gt 200) {
-                Write-Warning "Pagination exceeded 200 pages — aborting to avoid runaway. Narrow the query with -TestRunId."
+                Write-Warning "Pagination exceeded 200 pages - aborting to avoid runaway. Narrow the query with -TestRunId."
                 break
             }
         }
@@ -178,7 +185,7 @@ if ($HasDataverseAuth) {
 
         if ($rawResults -and $rawResults.Count -gt 0) {
             # Map results to evidence format. NOTE (v2.0.0): the Dataverse columns are reused but their semantics changed
-            # in v2.0.0 — fsi_actualrto now stores ProbeDurationHours (validation duration), fsi_targetrto stores
+            # in v2.0.0 - fsi_actualrto now stores ProbeDurationHours (validation duration), fsi_targetrto stores
             # ProbeDurationTargetHours (validation budget), and fsi_rtomet stores ProbeWithinBudget. See README and CHANGELOG.
             $testResults = @($rawResults | ForEach-Object {
                 @{
@@ -218,7 +225,7 @@ if ($HasDataverseAuth) {
                     ExecutedOn               = $_.ExecutedOn
                     ProbeDurationHours       = $_.ProbeDurationHours
                     ProbeDurationTargetHours = $_.ProbeDurationTargetHours
-                    Issue                    = "Validation failed — see audit log for details"
+                    Issue                    = "Validation failed - see audit log for details"
                 }
             })
 
@@ -239,7 +246,7 @@ if ($HasDataverseAuth) {
             foreach ($missing in $missingTypes) {
                 $gaps += @{
                     TestType = $missing
-                    Issue    = "Validation type never executed in this evidence window — required for FFIEC BCP / FINRA 4370 evidence"
+                    Issue    = "Validation type never executed in this evidence window - required for FFIEC BCP / FINRA 4370 evidence"
                 }
             }
 

@@ -57,7 +57,7 @@ def create_connection_references(
         logical_name = conn_ref["logical_name"]
         try:
             # Check if connection reference already exists
-            if not dry_run and not client.dry_run:
+            if not dry_run:
                 existing = client.query(
                     "connectionreferences",
                     filter_expr=(
@@ -68,11 +68,11 @@ def create_connection_references(
                     print(f"  {logical_name}: already exists, skipping")
                     results["skipped"] += 1
                     continue
-            elif dry_run or client.dry_run:
+            else:
                 print(f"  [DRY RUN] {logical_name}: would check if exists")
 
             # Create connection reference
-            if dry_run or client.dry_run:
+            if dry_run:
                 print(f"  [DRY RUN] {logical_name}: would create")
                 print(f"    Display name: {conn_ref['display_name']}")
                 print(f"    Connector: {conn_ref['connector']}")
@@ -188,6 +188,9 @@ Examples:
             client_secret = getpass.getpass("Client secret: ")
 
     try:
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient ctor -
+        # dry-run is gated downstream in create_connection_references() instead
+        # to avoid divergent dual flags (see council review m-5).
         client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
@@ -195,7 +198,6 @@ Examples:
             client_secret=client_secret,
             access_token=args.access_token,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         results = create_connection_references(client, dry_run=args.dry_run)
