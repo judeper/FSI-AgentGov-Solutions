@@ -306,7 +306,7 @@
     "compliance-dashboard": {
       "id": "compliance-dashboard",
       "name": "Compliance Dashboard",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",

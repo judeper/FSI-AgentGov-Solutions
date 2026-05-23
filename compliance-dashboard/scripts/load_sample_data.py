@@ -13,7 +13,7 @@ Authentication uses DefaultAzureCredential first (managed identity, workload
 identity federation, developer CLI credentials). AZURE_CLIENT_SECRET is a
 legacy dev-only fallback and should not be used for production automation.
 
-KNOWN LIMITATIONS (tracked in CHANGELOG v1.0.4):
+KNOWN LIMITATIONS (tracked in CHANGELOG v1.0.5):
 
 1. **Lookup binding for assessments/exceptions is not implemented.**
    The generators below emit a string field ``fsi_controlid`` on assessment and
