@@ -36,13 +36,10 @@ ENV_VARIABLES = [
         "type": "Decimal",
         "defaultvalue": "24",
     },
-    {
-        "schemaname": "fsi_ITE_DataverseUrl",
-        "displayname": "ITE - Dataverse URL",
-        "description": "Dataverse environment URL for API calls",
-        "type": "String",
-        "defaultvalue": "",
-    },
+    # Note: fsi_ITE_DataverseUrl was removed in v1.0.1 (the flow uses the
+    # Dataverse connection reference instead) and is intentionally NOT
+    # provisioned here. Do not re-add without first confirming the flow
+    # actually reads it.
 ]
 
 

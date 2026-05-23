@@ -4,6 +4,26 @@ All notable changes to Inactivity Timeout Enforcement are documented here.
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-23
+
+### Fixed
+- **Major**: Promoted the previously `[Unreleased]` v1.1.1 CHANGELOG content to a dated release section and bumped patch version so `manifest.yaml`, `README.md`, `docs/`, and governance script `.NOTES Version` strings stay synchronized. (council review MAJ-1)
+- **Minor**: Added `errorType = $_.fsi_errortype` to `$errorsReadable` projection in `Export-TimeoutComplianceEvidence.ps1` so evidence packages retain the error classification (MissingPolicy/Unauthorized/Forbidden/NotFound/Throttled/ParseError/DataverseError). `scripts/governance/Export-TimeoutComplianceEvidence.ps1:431-442`. (council review MIN-3)
+- **Minor**: Corrected `FINRA Rule 4511` -> `FINRA Rule 4511(a)` in `Get-ExpectedTimeoutPolicy.ps1` (Zone2, Zone3, Unknown regulatory context arrays) to match the established prose-citation convention in flow docs and CHANGELOG v1.1.0. `scripts/governance/Get-ExpectedTimeoutPolicy.ps1:87,99,113`. (council review MIN-2)
+
+### Changed
+- **Minor**: Removed vestigial `fsi_ITE_DataverseUrl` from `create_ite_environment_variables.py` (the flow has read the Dataverse URL from the connection reference since v1.0.1). A comment was retained in place of the entry to prevent re-introduction. `scripts/create_ite_environment_variables.py:39-48`. (council review MIN-1)
+- **Minor**: Documented the intentional ISO 8601 duration parser scope (PT-prefixed H/M only, no D/S/W) in `ConvertFrom-Iso8601Duration` so future readers do not assume forward-compatibility was overlooked. `scripts/governance/Invoke-TimeoutComplianceScan.ps1:161-205`. (council review MIN-4)
+- **Hardening**: Pinned `Az.Accounts` module requirement to `>= 2.17.0` via `#Requires -Modules` in `Invoke-TimeoutComplianceScan.ps1` and `Export-TimeoutComplianceEvidence.ps1` to prevent silent token-API regressions on older runners.
+- **Hardening**: Replaced non-ASCII em dashes (U+2014) with ASCII `--` in governance script comments and verbose messages to keep PS 5.1 + PS 7 console rendering predictable.
+
+### Deferred
+- **Minor (MIN-5)**: Duplicate `ConvertTo-PlainAccessToken` / `Get-IteManagedIdentityToken` helpers in `Invoke-TimeoutComplianceScan.ps1` and `Export-TimeoutComplianceEvidence.ps1` -- extraction to a shared `.ps1` is a doc/structure reorg; tracked separately.
+- **Minor (MIN-6)**: `Get-EnvironmentZone` naming-convention sandbox overlap warning is a cosmetic clarification; deferred.
+- **Minor (MIN-7)**: Adding a script-version-alignment step to `delivery-checklist.md` is net-new test coverage; deferred.
+
+## [1.1.1] - 2026-04-30
+
 ### Changed
 - Refreshed Microsoft Learn 2026-Q2 platform guidance for Power Platform inactivity/session timeout boundaries, Microsoft 365 idle timeout, Conditional Access session controls, and Continuous Access Evaluation.
 - Updated authentication guidance and setup scripts to prefer managed identity, workload identity federation, certificate, or externally acquired tokens before legacy client-secret development fallback.

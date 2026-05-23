@@ -1,7 +1,7 @@
 # Securing AI Agent Sessions with Inactivity Timeout Controls
 ## Inactivity Timeout Enforcement (ITE)
 
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Solution Type:** Automated Compliance Detection and Monitoring
 **Platform:** Microsoft Power Platform with Dataverse
 
@@ -256,7 +256,7 @@ Legal-Dev           |      | Unknown        | False    | 0       | 0       | No 
 
 Master registry of environment-to-zone mappings with required timeout policies.
 
-> **Implementation status (v1.1.1):** The Power Automate flow described in this document reads `fsi_environmentpolicies` to resolve the per-environment policy. The PowerShell scanner shipped in `scripts/governance/Get-ExpectedTimeoutPolicy.ps1` does **not** read Dataverse — it derives the zone from environment-name heuristics (`Default-` → Personal, `*-Sandbox*` → Team, all others → Enterprise) and applies the same hardcoded zone limits (Personal=120, Team=120, Enterprise=60). When zone classification needs to be data-driven, populate `fsi_environmentpolicies` and use the flow rather than the standalone scanner. A future release will reconcile the two paths.
+> **Implementation status (v1.1.2):** The Power Automate flow described in this document reads `fsi_environmentpolicies` to resolve the per-environment policy. The PowerShell scanner shipped in `scripts/governance/Get-ExpectedTimeoutPolicy.ps1` does **not** read Dataverse -- it derives the zone from environment-name heuristics (`Default-` -> Personal, `*-Sandbox*` -> Team, all others -> Enterprise) and applies the same hardcoded zone limits (Personal=120, Team=120, Enterprise=60). When zone classification needs to be data-driven, populate `fsi_environmentpolicies` and use the flow rather than the standalone scanner. A future release will reconcile the two paths.
 
 | Column Name | Type | Description |
 |-------------|------|-------------|
@@ -836,7 +836,7 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 
 ## Support and Maintenance
 
-**Solution Version:** 1.1.1
+**Solution Version:** 1.1.2
 **Release Date:** April 2026
 **License:** MIT License
 
@@ -847,7 +847,8 @@ The Inactivity Timeout Enforcement solution supports compliance with the followi
 - Coordinate timeout policy updates with user communication (advance notice recommended)
 
 **Version History:**
-- **v1.1.1 (Unreleased):** Microsoft Learn 2026-Q2 platform alignment, managed-identity-first setup guidance, and Dataverse option-set documentation corrections
+- **v1.1.2 (2026-05-23):** Council review remediation -- promoted previously unreleased v1.1.1 content to dated release, removed vestigial `fsi_ITE_DataverseUrl` from environment-variable provisioning, added `errorType` to evidence readable projection, corrected `FINRA Rule 4511` to `FINRA Rule 4511(a)` in `Get-ExpectedTimeoutPolicy.ps1`, documented intentional ISO 8601 duration parser scope, pinned `Az.Accounts` module version, and replaced non-ASCII punctuation in script comments
+- **v1.1.1 (2026-04-30):** Microsoft Learn 2026-Q2 platform alignment, managed-identity-first setup guidance, and Dataverse option-set documentation corrections
 - **v1.0.2 (March 2026):** Fix false-compliant classification when timeout enabled but duration null (indeterminate → Unknown); add pagination to all Dataverse ListRecords operations; update Map_Compliance_Status_Value to handle Unknown; document known limitations (API version, Condition_Has_Issues run-after, List_Environments pagination)
 - **v1.0.1 (February 2026):** Fix null `inactivityTimeoutEnabled` false-compliant bug; remove unused ConcurrencyLimit variable; HTML-escape environment names in emails; align Zone 2 timeout to ≤120min; version bump
 - **v1.0.0 (February 2026):** Initial release with zone-based policy enforcement, daily compliance detection, and guarded email alerting
