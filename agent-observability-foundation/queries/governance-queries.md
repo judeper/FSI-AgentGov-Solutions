@@ -498,7 +498,7 @@ SOX 302/404 compliance requires evidence of effective IT general controls. This 
 | performance/ | 2 | 2.9 |
 | compliance/ | 5 | 1.7, 2.12, 3.4 |
 | sr11-7-model-risk/ | 3 | 2.6 |
-| **Total** | **14** | **7 controls** |
+| **Total** | **14** | **6 controls** |
 
 ---
 
