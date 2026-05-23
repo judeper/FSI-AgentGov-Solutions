@@ -42,7 +42,7 @@
     When omitted, all accessible environments are scanned.
 
 .PARAMETER ExcludeSandbox
-    Exclude sandbox environments from scan. Default: $true.
+    Exclude sandbox environments from scan. Default: $false.
 
 .PARAMETER ExcludeTrial
     Exclude trial environments from scan. Default: $false.
@@ -106,7 +106,7 @@ function Invoke-SharingComplianceScan {
         [string[]]$EnvironmentFilter,
 
         [Parameter()]
-        [switch]$ExcludeSandbox = $true,
+        [switch]$ExcludeSandbox,
 
         [Parameter()]
         [switch]$ExcludeTrial,

@@ -208,9 +208,10 @@ Write-LabLog -Level Info -Message "[Step 3/10] Starting local HTTP listener at $
 if (Test-Path -LiteralPath $captureFile) { Remove-Item -LiteralPath $captureFile -Force }
 try {
     $listenerJob = Start-Job -Name 'mcm-poc-smoke-listener' -ScriptBlock {
-        param($Url, $LogFile)
+        $jobListenerUrl = $using:listenerUrl
+        $jobLogFile = $using:captureFile
         $listener = [System.Net.HttpListener]::new()
-        $listener.Prefixes.Add($Url)
+        $listener.Prefixes.Add($jobListenerUrl)
         try {
             $listener.Start()
         } catch {
@@ -219,7 +220,7 @@ try {
             ([pscustomobject]@{
                 timestamp = (Get-Date).ToString('o')
                 listener_error = $_.Exception.Message
-            } | ConvertTo-Json -Compress) | Out-File -FilePath $LogFile -Append -Encoding utf8
+            } | ConvertTo-Json -Compress) | Out-File -FilePath $jobLogFile -Append -Encoding utf8
             return
         }
         while ($listener.IsListening) {
@@ -234,7 +235,7 @@ try {
                     path          = $context.Request.Url.AbsolutePath
                     contentLength = $context.Request.ContentLength64
                     body          = $body
-                } | ConvertTo-Json -Compress -Depth 5) | Out-File -FilePath $LogFile -Append -Encoding utf8
+                } | ConvertTo-Json -Compress -Depth 5) | Out-File -FilePath $jobLogFile -Append -Encoding utf8
                 $context.Response.StatusCode = 202
                 $context.Response.OutputStream.Close()
             } catch {
@@ -242,7 +243,7 @@ try {
             }
         }
         try { $listener.Stop(); $listener.Close() } catch {}
-    } -ArgumentList $listenerUrl, $captureFile
+    }
 
     # Give the listener a beat to bind
     Start-Sleep -Seconds 2

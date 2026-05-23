@@ -4,6 +4,10 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 
 ## [Unreleased]
 
+### Changed
+
+- `Invoke-SharingComplianceScan.ps1 -ExcludeSandbox` now uses standard switch semantics (default `$false`); callers that want to omit sandbox environments should pass `-ExcludeSandbox`.
+
 ## [2.0.2] — 2026-05-23
 
 ### Fixed

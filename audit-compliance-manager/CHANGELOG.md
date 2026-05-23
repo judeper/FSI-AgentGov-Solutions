@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `Compare-ValidationBaseline.ps1` now uses `$null -eq` baseline detection so array-shaped Dataverse responses are handled consistently.
+
 ## [1.0.5] - 2026-05-23
 
 ### Changed

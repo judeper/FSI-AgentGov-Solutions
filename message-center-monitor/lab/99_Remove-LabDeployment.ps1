@@ -63,7 +63,7 @@ if (Test-Path -LiteralPath $statePath) {
     }
 }
 
-function Try-Action([scriptblock]$action, [string]$desc) {
+function Invoke-LabTeardownAction([scriptblock]$action, [string]$desc) {
     if ($DryRun) {
         Write-LabLog -Level Info -Message "[DRY-RUN] $desc"
         return
@@ -110,18 +110,18 @@ if ($state.dataverse -or $ForceExternalResource) {
             foreach ($name in $envVarNames) {
                 $defs = Invoke-RestMethod -Uri "$api/environmentvariabledefinitions?`$filter=schemaname eq '$name'&`$select=environmentvariabledefinitionid" -Headers $hdr -Method Get -ErrorAction SilentlyContinue
                 foreach ($d in $defs.value) {
-                    Try-Action { Invoke-RestMethod -Uri "$api/environmentvariabledefinitions($($d.environmentvariabledefinitionid))" -Headers $hdr -Method Delete -ErrorAction Stop | Out-Null } "Delete env var def $name"
+                    Invoke-LabTeardownAction { Invoke-RestMethod -Uri "$api/environmentvariabledefinitions($($d.environmentvariabledefinitionid))" -Headers $hdr -Method Delete -ErrorAction Stop | Out-Null } "Delete env var def $name"
                 }
             }
 
             # Disable application user (cannot delete in Dataverse).
             if ($state.dataverse.applicationUserId) {
                 $userId = $state.dataverse.applicationUserId
-                Try-Action { Invoke-RestMethod -Uri "$api/systemusers($userId)" -Headers $hdr -Method Patch -Body (@{ isdisabled = $true } | ConvertTo-Json) -ErrorAction Stop | Out-Null } "Disable Dataverse application user $userId"
+                Invoke-LabTeardownAction { Invoke-RestMethod -Uri "$api/systemusers($userId)" -Headers $hdr -Method Patch -Body (@{ isdisabled = $true } | ConvertTo-Json) -ErrorAction Stop | Out-Null } "Disable Dataverse application user $userId"
             }
 
             # Drop the table.
-            Try-Action {
+            Invoke-LabTeardownAction {
                 $meta = Invoke-RestMethod -Uri "$api/EntityDefinitions(LogicalName='fsi_messagecenterlog')?`$select=MetadataId" -Headers $hdr -Method Get -ErrorAction Stop
                 Invoke-RestMethod -Uri "$api/EntityDefinitions($($meta.MetadataId))" -Headers $hdr -Method Delete -ErrorAction Stop | Out-Null
             } "Delete fsi_messagecenterlog table"
@@ -149,17 +149,17 @@ if ($state.appRegistration -or $ForceExternalResource) {
             # Remove appRoleAssignments + oauth2PermissionGrants tied to this SP.
             $assigns = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $spObjId -ErrorAction SilentlyContinue
             foreach ($a in $assigns) {
-                Try-Action { Remove-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $spObjId -AppRoleAssignmentId $a.Id -ErrorAction Stop } "Remove appRoleAssignment $($a.Id)"
+                Invoke-LabTeardownAction { Remove-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $spObjId -AppRoleAssignmentId $a.Id -ErrorAction Stop } "Remove appRoleAssignment $($a.Id)"
             }
             $grants = Get-MgOauth2PermissionGrant -Filter "clientId eq '$spObjId'" -ErrorAction SilentlyContinue
             foreach ($g in $grants) {
-                Try-Action { Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId $g.Id -ErrorAction Stop } "Remove oauth2PermissionGrant $($g.Id)"
+                Invoke-LabTeardownAction { Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId $g.Id -ErrorAction Stop } "Remove oauth2PermissionGrant $($g.Id)"
             }
-            Try-Action { Remove-MgServicePrincipal -ServicePrincipalId $spObjId -ErrorAction Stop } "Remove service principal $spObjId"
+            Invoke-LabTeardownAction { Remove-MgServicePrincipal -ServicePrincipalId $spObjId -ErrorAction Stop } "Remove service principal $spObjId"
         }
 
         if ($appObjId) {
-            Try-Action { Remove-MgApplication -ApplicationId $appObjId -ErrorAction Stop } "Remove app registration $appObjId"
+            Invoke-LabTeardownAction { Remove-MgApplication -ApplicationId $appObjId -ErrorAction Stop } "Remove app registration $appObjId"
         }
     } finally {
         try { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null } catch {}
@@ -173,8 +173,8 @@ if (-not $KeepKeyVault -and ($state.keyVault -or $ForceExternalResource)) {
     if ($kvName) {
         try {
             Set-AzContext -SubscriptionId ($state.subscriptionId ?? $cfg.azure.subscriptionId) -ErrorAction Stop | Out-Null
-            Try-Action { Remove-AzKeyVault -VaultName $kvName -Force -ErrorAction Stop } "Soft-delete Key Vault $kvName"
-            Try-Action { Remove-AzKeyVault -VaultName $kvName -InRemovedState -Location ($state.azure.region ?? $cfg.azure.region) -Force -ErrorAction Stop } "Purge soft-deleted Key Vault $kvName"
+            Invoke-LabTeardownAction { Remove-AzKeyVault -VaultName $kvName -Force -ErrorAction Stop } "Soft-delete Key Vault $kvName"
+            Invoke-LabTeardownAction { Remove-AzKeyVault -VaultName $kvName -InRemovedState -Location ($state.azure.region ?? $cfg.azure.region) -Force -ErrorAction Stop } "Purge soft-deleted Key Vault $kvName"
         } catch {
             Write-LabLog -Level Warn -Message "Key Vault cleanup partial: $($_.Exception.Message)"
         }
@@ -196,7 +196,7 @@ if ($RemoveEnvironment) {
         Write-LabLog -Level Warn -Message "No powerPlatform.environmentId in lab-config.json. Nothing to delete."
     } else {
         Write-LabLog -Level Info -Message "Deleting Power Platform env $envIdToDelete..."
-        Try-Action {
+        Invoke-LabTeardownAction {
             $bapTok = az account get-access-token --resource 'https://api.bap.microsoft.com' --query accessToken -o tsv 2>$null
             if (-not $bapTok) { throw "az CLI not authenticated. Run: az login --tenant $($cfg.tenant.tenantId)" }
             $hdr = @{ Authorization = "Bearer $bapTok"; 'Content-Type' = 'application/json' }

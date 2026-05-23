@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- `Send-OwnerNotifications.ps1` nested `Main` function now declares `SupportsShouldProcess`, preserving `-WhatIf` handling for live email sends.
+
 ## [1.2.1] - 2026-05-17
 
 ### Changed

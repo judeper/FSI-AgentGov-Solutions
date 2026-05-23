@@ -4,6 +4,10 @@ All notable changes to the Conditional Access Automation solution are documented
 
 ## [Unreleased]
 
+### Fixed
+
+- `Test-EvidenceIntegrity.ps1` now processes `ValueFromPipeline` evidence paths inside a `process {}` block so piped file lists are evaluated one item at a time.
+
 ## [2.0.2] - 2026-05-23
 
 ### Fixed

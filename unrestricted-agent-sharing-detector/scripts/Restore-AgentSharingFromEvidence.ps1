@@ -224,7 +224,7 @@ function Read-EvidenceFile {
 # ── Restore sharing via Dataverse Web API ─────────────────────────────────
 
 function Restore-AgentSharing {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$AccessToken,
         [PSObject]$Agent

@@ -2,6 +2,12 @@
 
 All notable changes to the Agent Communication Restriction Detector are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- `Get-CrossTenantAccessCorrelation.ps1` and `Test-ChildAgentPayloadSize.ps1` now honor `-WhatIf` by returning before Graph or Dataverse scan work when `ShouldProcess` declines the operation.
+
 ## [1.2.1] - 2026-05-23
 
 ### Fixed
