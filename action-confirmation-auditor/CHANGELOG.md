@@ -2,6 +2,31 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [1.2.1] - 2026-05-23
+
+### Fixed
+
+- **Critical**: `scripts/governance/Test-UserDefinedActionMessages.ps1` zone string-to-integer switch labels were `'Zone 1'/'Zone 2'/'Zone 3'` (with spaces) but `Get-ZoneClassification.ps1` returns `'Zone1'/'Zone2'/'Zone3'` (no spaces); every UDAM violation persisted to Dataverse was being written with `fsi_zone = 0` (Unknown). (council review C-1)
+- **Major**: `scripts/Start-ActionConfirmationRunbook-MI.ps1` was splatting `-Zone` and `-IncludeSandbox` parameters that do not exist on `Test-ActionConfirmationCompliance`. Removed the unknown `-Zone` splatting (added a post-scan filter on the `Zone` property in the result envelope instead) and inverted `-IncludeSandbox` into the correct `-ExcludeSandbox` switch. (council review M-1)
+- **Major**: `scripts/Start-ActionConfirmationRunbook-MI.ps1` required `#Requires -Version 7.1` while depending on `Microsoft.PowerApps.Administration.PowerShell` (a Windows PowerShell 5.1 module). Downgraded the requirement to `#Requires -Version 5.1`, pinned `Az.Accounts` to `>= 2.17.0`, replaced `Get-Date -AsUTC -Format 'o'` with `(Get-Date).ToUniversalTime().ToString('o')`, and added a `ConvertFrom-AzAccessTokenValue` helper to unwrap the `SecureString` token that Az.Accounts 2.17+ returns. (council review M-2, m-2)
+- **Major**: `docs/prerequisites.md` footer was `v1.1.1` while `manifest.yaml`, README, and CHANGELOG all said `v1.2.0`. Bumped to `v1.2.1`. (council review M-4)
+- **Major**: Root `CLAUDE.md` Solutions table row for `action-confirmation-auditor` was pinned at `v1.1.0` (two releases behind). Bumped to `v1.2.1`. (council review M-5)
+- **Major**: `scripts/create_connection_references.py` Office 365 connection description still used the legacy Control 1.23 phrase "step-up confirmation"; replaced with "HITL confirmation" to match the Control 2.12 mapping established in v1.1.0. (council review M-6)
+
+### Changed
+
+- **Minor**: Synchronised `Version:` headers in all production `.ps1` / `.psm1` files (`ACAClient.psm1`, `Export-ActionAuditEvidence.ps1`, `Get-AgentActionSettings.ps1`, `Get-ExpectedConfirmationPolicy.ps1`, `Get-PurviewAIHubEvidence.ps1`, `Start-ActionConfirmationRunbook-MI.ps1`, `Start-ActionConfirmationValidationRunbook.ps1`, `Test-ActionConfirmationCompliance.ps1`, `Test-EvidenceIntegrity.ps1`, `Test-ParameterValidation.ps1`, `Test-UserDefinedActionMessages.ps1`) from `1.1.0` / `1.2.0` to `1.2.1`; updated `solutionVersion` metadata in evidence package and the verbose banner in `Test-ActionConfirmationCompliance.ps1`. Per style-decisions §4 (version strings must be bumped with the release).
+
+### Notes (false positives investigated, no change made)
+
+- **m-3 (FALSE POSITIVE)**: Council report claimed `create_connection_references.py:97` calls `client.query(...)` with `filter=` while `ACAClient.query()` uses `filter_expr=`. Verified at `scripts/aca_client.py:166-173`: the local `ACAClient.query()` signature is `query(self, entity_set, select=None, filter=None, orderby=None, top=None)`. The call site `filter=...` matches the parameter name. The council report appears to have conflated the local `ACAClient` API with the shared `DataverseClient` API.
+
+### Deferred (out of scope for patch bump)
+
+- **M-3** (shared `DataverseClient` migration): Reconciling `scripts/aca_client.py` with `scripts/shared/dataverse_client.py` requires per-method API alignment (the shared client uses `query_records(filter_expr=...)`, not `query(filter=...)`), regression testing of `create_dataverse_schema.py` / `create_connection_references.py` / `create_environment_variables.py` / `deploy.py`, and adoption of managed-identity / certificate auth paths the local client does not currently expose. Out of scope for a patch bump; tracked for a future minor.
+- **m-1** (`Import-ActionRiskClassifications.ps1` stub): The script is intentionally retained as a placeholder for the v1.1 risk-classification feature documented in CHANGELOG v1.0.0. Removing or gating it behind an experimental flag is a standalone change not co-located with any fix in this PR. Deferred.
+- **m-4** (`.ralph-config.json` mention in `CLAUDE.md`): Standalone documentation gap. Deferred.
+
 ## [1.2.0] - 2026-05-12
 
 ### Added

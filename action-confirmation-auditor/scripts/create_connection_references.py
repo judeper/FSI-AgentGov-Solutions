@@ -40,7 +40,7 @@ CONNECTION_REF_DEFINITIONS = [
         "connector_id": "shared_office365",
         "description": (
             "Office 365 connection for Action Confirmation Auditor. "
-            "Used to send email alerts when actions missing step-up "
+            "Used to send email alerts when actions missing HITL "
             "confirmation are detected."
         ),
     },

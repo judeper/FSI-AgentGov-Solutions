@@ -76,7 +76,7 @@
 
 .NOTES
     File: Test-UserDefinedActionMessages.ps1
-    Version: 1.1.0
+    Version: 1.2.1
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -577,11 +577,12 @@ function Test-UserDefinedActionMessages {
             }
 
             foreach ($v in $violations) {
-                # Map zone string to picklist integer
+                # Map zone string to picklist integer. Labels must match
+                # the output of Get-ZoneClassification.ps1 (no spaces).
                 $zoneInt = switch ($v.Zone) {
-                    'Zone 1' { 1 }
-                    'Zone 2' { 2 }
-                    'Zone 3' { 3 }
+                    'Zone1'  { 1 }
+                    'Zone2'  { 2 }
+                    'Zone3'  { 3 }
                     default  { 0 }
                 }
 
