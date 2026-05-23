@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- **High**: Drift-handoff Standard-path `reviewerAttestations` constraint required `InfoSec` + `Compliance`, but the classifier always emits `InfoSec` + `Privacy` and adds `Compliance` only when `fsi_t4handlesnpi` is positive. Updated the Standard-path `allOf` in `templates/drift-handoff-payload-schema.json` (lines 561-594) to require `InfoSec` and `Privacy` (the always-present pair) so Standard requests with zero NPI hits can produce a valid payload. (council review H-1)
+- **High**: `fsi_intake_status` values `InReview` (100000011) and `LiveTracking` (100000012) — present in `scripts/create_fsi_intake_dataverse_schema.py` and referenced by `docs/flow-configuration.md` — were missing from `templates/reviewer-app-spec.json` and the smoke-test `ChoiceMap`. Added both values to the reviewer-app spec and expanded the smoke-test `ChoiceMap` to cover all 13 schema values (Draft through LiveTracking). (council review H-2, M-2)
+- **High**: `fsi_intakeretentionrecord` was absent from every reviewer security role's `tablePrivileges` in `templates/reviewer-app-spec.json`, leaving the Governance Lead with no visibility into Purview retention stamping for audit. Added `fsi_intakeretentionrecord` with `Read` at `Global` depth to all six security roles (InfoSec, Privacy, Compliance, Legal, MRM, Governance Lead). (council review H-3)
+- **Medium**: `templates/mrm-handoff-payload-example.json` used `"agentType": "Copilot Studio"` instead of the canonical `fsi_intake_agenttype` label `"Copilot Studio (classic)"`. Updated the example to match the option-set label. (council review M-3)
+- **Medium**: `tests/validators/validate_policy_yaml.py` validated `audience_to_zone` only as a `dict`. Added type and value checks that require all five expected audience keys (`Just me`, `My team`, `My department`, `Anyone in the firm`, `External users`) and confirm each value is an `int` in `{1, 2, 3}` (rejecting `bool` explicitly so `True` cannot pass as zone 1). (council review M-4)
+
+### Changed
+
+- **Medium**: Added a code comment to `scripts/create_fsi_intake_dataverse_schema.py` `fsi_intake_auditeventtype` definition clarifying that the option set is an intentional reference catalog and is NOT deployed by `deploy.ps1` because the backing `fsi_eventtype` column is a String (not Picklist) to permit customer extension. (council review M-1)
+- **Medium**: Added a `_comment` field to `scripts/seed-test-data/request-cross-border-deny.json` `expectedClassification` documenting that `pathUsed = Standard` depends on the default `audience_to_zone` mapping in `templates/policy-lookup-tables.yaml`; if a customer remaps `My team` to Zone 1, the classifier routes the fixture to Full instead. (council review M-5)
+- **Minor**: Added a code comment to `tests/validators/validate_question_catalogs.py` `EXPECTED_QUESTION_COUNTS` documenting the derivation (one entry per `| <ID>` row in the corresponding `docs/intake-questions-<path>.md`) and the maintenance contract. (council review L-4)
+
+### Notes
+
+- Reviewer-app security-role privilege delta (H-3): all six roles (InfoSec, Privacy, Compliance, Legal, MRM, Governance Lead) gain `fsi_intakeretentionrecord` `Read` at `Global` depth. No existing privilege is changed or removed.
+- Council review findings deferred (with rationale): L-1 (`fsiRoleAttestationCatalog` non-standard property in `reviewer-notification-card.json` — documentation-only; defer to a v1.1 card-template overhaul), L-2 (`sponsor-approval-card.json` Express-path language — Express-only by design until sponsor cards are introduced for other paths), L-3 (`autodetect_environments.py` `az login` error handling — small UX improvement, defer to v1.1), I-1 (shared `Get-ZoneClassification.ps1` zone-name inversion — FORBIDDEN shared asset per Wave 3 REFINEMENT 2; tracked as a cross-solution Wave 5 item), I-2 / I-3 / I-6 (informational, no action), I-4 / I-5 (positive observations).
+
 ## [1.0.0-preview] - 2026-05-16
 
 ### Added
