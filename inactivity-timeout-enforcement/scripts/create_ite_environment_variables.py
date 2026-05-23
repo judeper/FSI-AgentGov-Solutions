@@ -133,7 +133,8 @@ Environment variables created:
   - fsi_ITE_NotificationRecipients (semicolon-separated emails)
   - fsi_ITE_BapApiBaseUrl (https://api.bap.microsoft.com)
   - fsi_ITE_ScanFrequencyHours (24 hours)
-  - fsi_ITE_DataverseUrl
+  # Note: fsi_ITE_DataverseUrl removed in v1.1.2 -- Power Automate flow uses
+  # the Dataverse connection reference; the variable was never consumed.
 
 Examples:
   # Interactive authentication

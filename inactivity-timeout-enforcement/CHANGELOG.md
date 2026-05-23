@@ -22,7 +22,7 @@ All notable changes to Inactivity Timeout Enforcement are documented here.
 - **Minor (MIN-6)**: `Get-EnvironmentZone` naming-convention sandbox overlap warning is a cosmetic clarification; deferred.
 - **Minor (MIN-7)**: Adding a script-version-alignment step to `delivery-checklist.md` is net-new test coverage; deferred.
 
-## [1.1.1] - 2026-04-30
+## [1.1.1] - 2026-05-04
 
 ### Changed
 - Refreshed Microsoft Learn 2026-Q2 platform guidance for Power Platform inactivity/session timeout boundaries, Microsoft 365 idle timeout, Conditional Access session controls, and Continuous Access Evaluation.
