@@ -161,7 +161,8 @@ in-flight work to hand off. Backfilling stable solutions is not required.
 
 | Solution | Why it has one |
 |---|---|
-| `message-center-monitor` | Active POC dry-run on `feature/message-center-monitor-poc-ready` (PR #141); 16 dry-run bugs fixed; needs cross-machine resume runbook. |
+| `agent-intake` | v1.0.0-preview customer-deliverable with lab automation, auth quirks, and deploy orchestrator context. Merged via PR #142. |
+| `message-center-monitor` | POC-handoff work with 16 dry-run bug fixes, cross-machine resume runbook, and lab validation scripts. Merged via PR #141. |
 
 ## Multi-Agent Coordination
 
