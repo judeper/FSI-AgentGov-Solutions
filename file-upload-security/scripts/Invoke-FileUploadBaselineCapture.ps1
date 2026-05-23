@@ -76,7 +76,7 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter()]
-    # legacy: dev-only — replace with managed identity in production
+    # legacy: dev-only -- replace with managed identity in production
     [string]$ClientSecret,  # Prefer FUS_CLIENT_SECRET env var over CLI arg to avoid exposure in process tables
 
     [Parameter()]
@@ -117,7 +117,7 @@ Import-Module (Join-Path $privatePath 'FUSClient.psm1') -Force
 $banner = @"
 
 ╔══════════════════════════════════════════════════════════════╗
-║  File Upload Security — Baseline Capture                     ║
+║  File Upload Security -- Baseline Capture                     ║
 ╚══════════════════════════════════════════════════════════════╝
   Tenant:      $TenantId
   Dataverse:   $DataverseUrl
@@ -244,7 +244,7 @@ foreach ($agent in $enriched) {
     $existing = Get-FileUploadBaseline -AgentId $agent.AgentId | Select-Object -First 1
 
     if ($existing -and -not $OverwriteExisting) {
-        Write-Host "  SKIP: $($agent.AgentName) — baseline exists (captured $($existing.CapturedAt))" -ForegroundColor Yellow
+        Write-Host "  SKIP: $($agent.AgentName) -- baseline exists (captured $($existing.CapturedAt))" -ForegroundColor Yellow
         $skipped++
         $results += [PSCustomObject]@{
             AgentName   = $agent.AgentName

@@ -1,7 +1,7 @@
 id: inactivity-timeout-enforcement
 name: Inactivity Timeout Enforcement
 description: Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
-version: 1.1.1
+version: 1.1.2
 status: live
 domain: access-identity
 tier: '2'

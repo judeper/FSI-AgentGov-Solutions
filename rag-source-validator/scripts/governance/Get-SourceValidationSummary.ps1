@@ -18,9 +18,9 @@
     - Overall health status (Healthy/Warning/Critical)
 
     This script supports FSI-AgentGov Controls:
-    - 2.16 (RAG Source Integrity) — source health monitoring
-    - 1.7 (Audit Logging) — operational status reporting
-    - 2.13 (Documentation) — compliance status documentation
+    - 2.16 (RAG Source Integrity) -- source health monitoring
+    - 1.7 (Audit Logging) -- operational status reporting
+    - 2.13 (Documentation) -- compliance status documentation
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
@@ -125,7 +125,7 @@ param(
     [switch]$IncludeArchived,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet('https://login.microsoftonline.com','https://login.microsoftonline.us','https://login.partner.microsoftonline.cn')]
+    [ValidateSet('https://login.microsoftonline.com','https://login.microsoftonline.us','https://login.chinacloudapi.cn')]
     [string]$AuthBaseUrl = 'https://login.microsoftonline.com',
 
     [Parameter(Mandatory = $false)]

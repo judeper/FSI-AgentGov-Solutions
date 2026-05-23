@@ -1,6 +1,6 @@
 # Downstream Attachment Validation Guide
 
-> **Version:** 1.1.1 | **Control:** 1.14 — Data Minimization and Agent Scope Control
+> **Version:** 1.1.2 | **Control:** 1.14 — Data Minimization and Agent Scope Control
 
 This guide documents how downstream consumers (custom Power Automate flows, Azure Functions, or other solutions) should validate file attachments **after** upload to Copilot Studio agents. These checks complement the server-side MIME validation provided by the Dataverse plugin in the [MIME Type Restrictions](../../mime-type-restrictions/README.md) solution.
 

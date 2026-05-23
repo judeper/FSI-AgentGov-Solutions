@@ -95,7 +95,7 @@ if ($PSCmdlet.ParameterSetName -eq 'ServicePrincipal') {
 
     try {
         $clientId = $Credential.UserName
-        # legacy: dev-only — replace with managed identity in production
+        # legacy: dev-only -- replace with managed identity in production
         $clientSecret = $Credential.GetNetworkCredential().Password
 
         $body = @{

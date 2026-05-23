@@ -77,7 +77,7 @@ These solutions operate independently but can be wired into the Compliance Dashb
 | [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.5 | 1.7 |
 | [Conditional Access Automation](./conditional-access-automation/) | v2.0.2 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.2 | 1.27, 1.8 |
-| [File Upload Security](./file-upload-security/) | v1.1.1 | 1.14, 1.8, 1.4 |
+| [File Upload Security](./file-upload-security/) | v1.1.2 | 1.14, 1.8, 1.4 |
 | [Session Security Configurator](./session-security-configurator/) | v1.3.0 | 1.23, 1.11 |
 
 ### Layer 3: Tier 3 / Standalone Solutions
@@ -101,16 +101,16 @@ All other solutions operate independently and can be deployed in any order based
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.4 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.2 | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.2 | personal, team, enterprise |
-| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.0 | enterprise |
+| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.1 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
 | [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.2 | personal, team, enterprise |
-| [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.1 | team, enterprise |
+| [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.2 | team, enterprise |
 | [Message Center Monitor](./message-center-monitor/) | 2 | v2.5.1 | enterprise |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.2.1 | personal, team, enterprise |
 | [Model Risk Management Automation](./model-risk-management-automation/) | 2 | v1.0.4 | enterprise |
 | [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | 2 | v1.2.1 | team, enterprise |
-| [RAG Source Validator](./rag-source-validator/) | 2 | v1.3.0 | personal, team, enterprise |
+| [RAG Source Validator](./rag-source-validator/) | 2 | v1.3.1 | personal, team, enterprise |
 | [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.2 | personal, team, enterprise |
 | [Segregation of Duties Detector](./segregation-detector/) | 2 | v1.2.0 | team, enterprise |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.1 | team, enterprise |

@@ -1,6 +1,6 @@
 # ITE Solution — Delivery Checklist
 
-> **Version:** v1.1.1 | **Solution:** Inactivity Timeout Enforcement (ITE)
+> **Version:** v1.1.2 | **Solution:** Inactivity Timeout Enforcement (ITE)
 
 ## Pre-Deployment Verification
 
@@ -74,5 +74,5 @@
 
 ---
 
-**Package Version:** v1.1.1
+**Package Version:** v1.1.2
 **Solution:** Inactivity Timeout Enforcement (ITE)

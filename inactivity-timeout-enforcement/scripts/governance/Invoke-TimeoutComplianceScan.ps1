@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 <#
 .SYNOPSIS
@@ -85,7 +86,7 @@
     Full scan with Dataverse persistence, returning PSCustomObjects for pipeline use.
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.1.2
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA Section 501(b), SOX Section 302, SOX Section 404, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12
@@ -151,7 +152,7 @@ function Invoke-TimeoutComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Inactivity Timeout Enforcement v1.1.1"
+    Write-Verbose "Inactivity Timeout Enforcement v1.1.2"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -166,10 +167,17 @@ function Invoke-TimeoutComplianceScan {
             Parses ISO 8601 duration format (e.g., PT60M, PT2H, PT1H30M) and
             returns the total duration in minutes. Supports hours (H) and
             minutes (M) components within the time designator (T).
+
+            Intentional limitation: this parser does NOT handle the days (D),
+            seconds (S), weeks (W), or pure-date (no T) components. The BAP API
+            governanceConfiguration?api-version=2021-04-01 contract only returns
+            PTnM or PTnH durations for inactivityTimeoutDuration, so wider ISO
+            8601 coverage is unnecessary. If a future BAP API revision adds D
+            or S components, extend this function and re-run validation.
         .PARAMETER Duration
             ISO 8601 duration string (e.g., PT60M, PT2H, PT1H30M).
         .OUTPUTS
-            Int32 — total minutes, or -1 if parsing fails.
+            Int32 -- total minutes, or -1 if parsing fails.
         #>
         param(
             [Parameter(Mandatory = $true)]
@@ -274,7 +282,7 @@ function Invoke-TimeoutComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Inactivity Timeout Enforcement v1.1.1" -ForegroundColor Cyan
+    Write-Host "Inactivity Timeout Enforcement v1.1.2" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan
@@ -298,7 +306,7 @@ function Invoke-TimeoutComplianceScan {
         }
     }
     else {
-        # legacy: dev-only — replace with managed identity in production
+        # legacy: dev-only -- replace with managed identity in production
         if (-not $ClientId) {
             throw "ClientId is required for legacy client-secret authentication. Prefer -UseManagedIdentity for automation."
         }
@@ -365,7 +373,7 @@ function Invoke-TimeoutComplianceScan {
             }
         }
         else {
-            # legacy: dev-only — replace with managed identity in production
+            # legacy: dev-only -- replace with managed identity in production
             $dvTokenBody = @{
                 grant_type    = 'client_credentials'
                 client_id     = $ClientId
@@ -593,7 +601,7 @@ function Invoke-TimeoutComplianceScan {
             $details = "Timeout enabled at $timeoutMinutes min (zone max: $($policy.MaxDurationMinutes) min)"
         }
         elseif (-not $policy.TimeoutRequired -and -not $timeoutEnabled) {
-            # Zone 1: timeout not required and not enabled — compliant
+            # Zone 1: timeout not required and not enabled -- compliant
             $complianceStatus = 'Compliant'
             $details = "Timeout not required for $zone and is disabled"
         }
