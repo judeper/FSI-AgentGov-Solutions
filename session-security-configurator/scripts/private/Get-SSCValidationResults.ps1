@@ -75,15 +75,20 @@
     reason, remediationHint, timestamp, checkCount, baselineId.
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.3.0
 
     This is a private helper function for internal use by Export-SessionSecurityEvidence.
 
     Option set mappings (must match Dataverse schema):
     - fsi_acv_zone: Zone1=100000001, Zone2=100000002, Zone3=100000003
     - fsi_acv_severity: Passed=1, Warning=2, GracePeriod=3, Failed=4, Error=5
-    - fsi_ssc_validationtype: SessionControls=1, AuthStrength=2, PIMSettings=3,
-                              BreakGlass=4, ConflictAudit=5, Orchestrator=6
+      (shared with other solutions; 1-based values predate the 100000000+
+      convention and are deferred for a coordinated cross-solution migration)
+    - fsi_ssc_validationtype: SessionControls=100000001, AuthStrength=100000002,
+                              PIMSettings=100000003, BreakGlass=100000004,
+                              ConflictAudit=100000005, Orchestrator=100000006
+                              (migrated in v1.3.0 from 1-based values — see
+                              CHANGELOG migration notes)
 
     Query automatically handles pagination via @odata.nextLink to retrieve complete
     result sets (Dataverse default page size is 5000 records).
@@ -157,7 +162,7 @@ function Get-SSCValidationResults {
             # Attempt to get token from current Graph context
             try {
                 $context = Get-MgContext -ErrorAction SilentlyContinue
-                if ($context -and $context.AccessToken) {
+                if ($context -and ($context.PSObject.Properties.Name -contains 'AccessToken') -and $context.AccessToken) {
                     # Graph SDK v1: AccessToken is directly available on context
                     $token = $context.AccessToken
                     Write-Verbose "Using access token from current Microsoft Graph session."

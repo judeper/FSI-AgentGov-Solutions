@@ -2,6 +2,32 @@
 
 All notable changes to the Session Security Configurator solution are documented here.
 
+## [1.3.0] - 2026-05-22
+
+### Fixed
+
+- **Critical — StrictMode-unsafe AccessToken access** (`scripts/private/Get-SSCValidationResults.ps1:160`): Added `PSObject.Properties.Name -contains 'AccessToken'` guard before reading `$context.AccessToken`. The v1.1.0 fix pass applied this guard to `Get-DataverseThreshold.ps1` and `Export-SessionSecurityEvidence.ps1` but missed this third helper. Under `Set-StrictMode -Version Latest` with Graph SDK v2 (where the `AccessToken` property is removed from the context object), the previous code threw `PropertyNotFoundException` instead of falling through gracefully. (council review C-01)
+
+### Changed
+
+- **Major — Auth-mode parity with shared Dataverse client** (`scripts/ssc_client.py`): Extended `SSCClient` to support `access_token` passthrough plus `managed-identity`, `workload-identity`, and `certificate` auth modes alongside the existing `interactive` and `client-secret` modes. Mirrors the constructor shape of `scripts/shared/dataverse_client.py`. Backward-compatible: existing callers using `interactive=True` or `client_id` + `client_secret` keep working unchanged. The CLI now exposes `--auth-mode`, `--access-token`, `--certificate-path`, and `--certificate-password` (also via `SSC_AUTH_MODE`, `SSC_ACCESS_TOKEN`, `SSC_CERTIFICATE_PATH`, `SSC_CERTIFICATE_PASSWORD` env vars). `azure-identity` is now an additional dependency required only for the new auth modes. (council review M-02)
+- **Major — `fsi_ssc_validationtype` option-set migrated to 100000000+ range** (`scripts/create_dataverse_schema.py`, `scripts/Export-SessionSecurityEvidence.ps1`, `docs/dataverse-schema.md`, `scripts/private/Get-SSCValidationResults.ps1`): Migrated SessionControls/AuthStrength/PIMSettings/BreakGlass/ConflictAudit/Orchestrator values from `1-6` to `100000001-100000006` to align with the repository-wide Dataverse option-set convention (CLAUDE.md §8). The `$validationTypeMap` read-side map in `Export-SessionSecurityEvidence.ps1`, the documentation table in `docs/dataverse-schema.md`, and the `.NOTES` section in `Get-SSCValidationResults.ps1` were updated in lockstep. (council review M-01 — `fsi_ssc_validationtype` portion only)
+
+### Minor
+
+- **Minor — Validation-type option-set documentation refreshed** (`scripts/private/Get-SSCValidationResults.ps1:78-95`): Lockstep update of the `.NOTES` option-set table to reflect the new 100000000+ values for `fsi_ssc_validationtype`, and an inline note explaining why `fsi_acv_severity` remains 1-based (shared cross-solution option set; deferred for coordinated migration). (council review m-02)
+
+### Migration notes (BREAKING DEPLOY)
+
+The `fsi_ssc_validationtype` global option-set values changed. Tenants that already deployed v1.2.0 (or earlier) carry `fsi_validationtype` integers `1`-`6` in `fsi_ValidationHistory` rows. v1.3.0 schema scripts emit `100000001`-`100000006`. To migrate:
+
+1. **Add the new option-set values without removing the old ones.** In the Power Platform maker portal, open the `fsi_ssc_validationtype` global option set and add six new options (`100000001` SessionControls, `100000002` AuthStrength, `100000003` PIMSettings, `100000004` BreakGlass, `100000005` ConflictAudit, `100000006` Orchestrator). Keep the existing `1`-`6` labels in place for now so historical rows remain readable.
+2. **Re-key historical rows.** Run an XrmToolBox / FetchXML Builder bulk update (or a one-shot Python script using `SSCClient`) that maps `fsi_validationtype = 1` → `100000001`, `2` → `100000002`, …, `6` → `100000006` across every row in `fsi_validationhistories`. Validate with `SELECT fsi_validationtype, COUNT(*) FROM fsi_validationhistories GROUP BY fsi_validationtype` (or the OData equivalent) — only the new integers should be present after the migration.
+3. **Update any external consumers** (custom Power BI reports, downstream flows, KQL queries) that filter or pivot on `fsi_validationtype` integers. The migration is silent for callers that go through `Export-SessionSecurityEvidence.ps1` — it already translates the integers to label strings.
+4. **Remove the legacy `1`-`6` option-set values** after Step 2 succeeds on every environment. Optional but recommended to prevent new writers from re-introducing the old codes.
+
+The `fsi_acv_severity` option set (`1`-`5`) is **not** migrated in this release. It is shared by 6+ solutions and is tracked for a coordinated cross-solution migration (Wave 5 / style-decisions §9).
+
 ## [1.2.0] - 2026-05-12
 
 ### Added

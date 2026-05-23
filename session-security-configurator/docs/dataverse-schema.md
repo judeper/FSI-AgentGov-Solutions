@@ -112,14 +112,16 @@ Global option set for validation result severity.
 
 Global option set for session security validation dimensions (SSC-specific, not shared with ACV).
 
+> **v1.3.0 migration note:** Values changed from 1-6 to 100000001-100000006 to align with the repository-wide convention. See CHANGELOG for the migration steps that operators must run against existing `fsi_ValidationHistory` rows.
+
 | Value | Label | Description |
 |-------|-------|-------------|
-| 1 | SessionControls | Sign-in frequency, persistent browser settings |
-| 2 | AuthStrength | Authentication strength policy validation |
-| 3 | PIMSettings | PIM activation window and approval settings |
-| 4 | BreakGlass | Break-glass account exclusion verification |
-| 5 | ConflictAudit | CA policy conflict detection |
-| 6 | Orchestrator | Overall validation run coordination |
+| 100000001 | SessionControls | Sign-in frequency, persistent browser settings |
+| 100000002 | AuthStrength | Authentication strength policy validation |
+| 100000003 | PIMSettings | PIM activation window and approval settings |
+| 100000004 | BreakGlass | Break-glass account exclusion verification |
+| 100000005 | ConflictAudit | CA policy conflict detection |
+| 100000006 | Orchestrator | Overall validation run coordination |
 
 ## Environment Variables
 

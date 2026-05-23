@@ -1,8 +1,13 @@
 # Session Security Configurator - Python Dependencies
 # Python 3.10 or later required
 
-# MSAL for Entra ID authentication
+# MSAL for Entra ID authentication (interactive / client-secret modes)
 msal>=1.30.0,<2.0.0
 
 # HTTP requests for Dataverse Web API
 requests>=2.32.0,<3.0.0
+
+# Azure Identity for managed-identity, workload-identity, and certificate
+# auth modes (added in v1.3.0 — Council review M-02). Optional: only
+# required when using --auth-mode managed-identity|workload-identity|certificate.
+azure-identity>=1.17.0,<2.0.0

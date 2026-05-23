@@ -109,7 +109,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.3.0
 
     Requires:
     - PowerShell 7.0 or later
@@ -354,12 +354,12 @@ $zoneMap = @{
 }
 
 $validationTypeMap = @{
-    1 = "SessionControls"
-    2 = "AuthStrength"
-    3 = "PIMSettings"
-    4 = "BreakGlass"
-    5 = "ConflictAudit"
-    6 = "Orchestrator"
+    100000001 = "SessionControls"
+    100000002 = "AuthStrength"
+    100000003 = "PIMSettings"
+    100000004 = "BreakGlass"
+    100000005 = "ConflictAudit"
+    100000006 = "Orchestrator"
 }
 
 # Convert option set values to readable strings
