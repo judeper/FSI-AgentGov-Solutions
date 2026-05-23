@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "HWG docs use shared fsi_acv_zone values Unclassified=0, Zone 1=1, Zone 2=2, Zone 3=3 and fsi_acv_severity values Passed=1 through Error=5; do not substitute 100000000+ ACV values without checking the deployed schema.",
+    "Copilot Studio botcomponents lookups in HWGClient.psm1 key on _botid_value to match production scanning scripts; mixing _parentbotid_value can return zero rows in some tenants.",
+    "fsi_alertsentat is not a column on fsi_HitlCheckpointResult; alert-dispatch metadata is intentionally out-of-schema and should live in the maker audit sink.",
+    "fsi_ActionCategory is not a Dataverse column; action category is local policy state returned as string labels, not a persisted picklist.",
+    "Request for Information and Run a Multistage Approval actions come from the preview shared_advancedapprovals connector and should be reviewed against preview terms before regulated-data use."
+  ]
+}

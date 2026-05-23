@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "CTSG is a known shared-option-set exception: fsi_acv_zone values are Unclassified=0, Zone 1=1, Zone 2=2, and Zone 3=3, while CTSG-specific option sets use 100000000+ values.",
+    "Approved external tenant records use fsi_tenantid as alternate key fsi_TenantIdUniqueKey and carry relationship, approval, risk, and isolation-direction picklists.",
+    "External share findings can be tenant-level: fsi_agentid and fsi_environmentid are nullable, while fsi_externaltenanttenantid, fsi_governancelayer, fsi_findingtype, and fsi_severity classify the finding.",
+    "fsi_crosstenantcomplianceevent is OrganizationOwned append-only audit history; event types include API Schema Validation Failed=100000016, Feature Flag Skip=100000017, and Flow Error=100000018.",
+    "Microsoft Entra cross-tenant access fields are stored in fsi_entractarecord as JSON snapshots such as fsi_automaticuserconsentsettings and fsi_inboundtrust."
+  ]
+}

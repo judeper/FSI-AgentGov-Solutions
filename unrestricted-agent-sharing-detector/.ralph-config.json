@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "UASD zone values are incompatible with fsi_acv_zone: fsi_UASD_zoneclassification maps Zone 1=100000000, Zone 2=100000001, and Zone 3=100000002, while fsi_acv_zone reserves 100000000 for Unclassified.",
+    "fsi_UASD_violationtype values are ORG_WIDE_SHARING=100000000, PUBLIC_INTERNET_LINK=100000001, UNAPPROVED_GROUP=100000002, EXCESSIVE_INDIVIDUAL=100000003, CROSS_TENANT_ACCESS=100000004, and POLICY_VIOLATION=100000005.",
+    "fsi_agentsharingsetting carries fsi_breakglassexclude as a Boolean safety flag; break-glass excluded agents are skipped by remediation while detection evidence is preserved.",
+    "Safe remediation relies on dry-run default true, empty-group guard, evidence capture of prior accesscontrolpolicy and authorizedsecuritygroupids, and If-Match * on bot PATCH.",
+    "Restore-AgentSharingFromEvidence.ps1 has a legacy dev-only ClientSecret path using the v1 OAuth resource flow; ManagedIdentity and Interactive paths use Get-AzAccessToken."
+  ]
+}

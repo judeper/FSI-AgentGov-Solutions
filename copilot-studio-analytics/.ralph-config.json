@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "The CSA watermark table is fsi_csasyncwatermark with entity set fsi_csasyncwatermarks; scripts should not invent a sessions or telemetry table for sync state.",
+    "fsi_syncstatus values are Success=100000000, Failed=100000001, InProgress=100000002, and Warning=100000003; fsi_synctier values are Tier1=100000000 and Tier2=100000001.",
+    "Autonomous-agent classification uses botcomponent.componenttype = 17; querying the human-readable componenttypename caused prior zero-result bugs.",
+    "update_watermark() patches by the pair fsi_environmenturl and fsi_synctier after the first insert so the watermark table does not grow one row per sync attempt.",
+    "Tier 2 transcript parsing is documented as not yet implemented; current sync provides Tier 1 data only."
+  ]
+}

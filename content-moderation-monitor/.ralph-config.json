@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "fsi_moderationvalidationhistory has explicit singular OData entity set fsi_moderationvalidationhistory; the auto-plural fsi_moderationvalidationhistorys returns Web API 404.",
+    "fsi_moderationviolation uses fsi_environmentguid and fsi_actuallevel; older names such as fsi_environmentid or fsi_moderationlevel are not violation-table columns.",
+    "fsi_severity on fsi_moderationviolation is a String with Critical/High/Medium/Warning labels, not the shared fsi_acv_severity option set.",
+    "Only one active fsi_moderationbaseline per agent is expected; new baseline captures deactivate the prior fsi_isactive=true record.",
+    "CMM uses shared fsi_acv_zone values Unclassified=100000000, Zone 1=100000001, Zone 2=100000002, and Zone 3=100000003."
+  ]
+}

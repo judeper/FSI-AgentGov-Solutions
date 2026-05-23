@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "fsi_conflictrule.fsi_category values are Maker/Checker=100000000, Segregation=100000001, and Privileged Access=100000002.",
+    "Role context picklists use Microsoft Entra ID Directory Role=100000000, Microsoft Entra ID App Role=100000001, Power Platform Environment Role=100000002, Dataverse Security Role=100000003, and Custom Application Role=100000004.",
+    "fsi_sodviolation.fsi_status distinguishes Open=100000000, Under Review=100000001, Exception Requested=100000002, Exception Approved=100000003, and resolved or false-positive states.",
+    "PowerShell scripts use entity sets fsi_conflictrules, fsi_sodviolations, systemusers, and roles via systemuserroles_association; do not invent custom role entity sets.",
+    "fsi_userobjectid stores the Microsoft Entra object ID while fsi_userid stores the user principal name."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "fsi_modelinventory uses alternate key fsi_ModelInventoryUniqueKey on fsi_agentid plus fsi_environmentid; do not key model inventory rows by fsi_modelid alone.",
+    "fsi_mrmcomplianceevent is an OrganizationOwned immutable audit log and its lookup chain is only to fsi_modelinventory through fsi_ModelInventory_Lookup.",
+    "fsi_mrm_validationstatus starts at Not Started=100000001; value 100000000 is unused for validation status.",
+    "fsi_mrm_sr117pillar remains the option-set name for Fed SR 11-7 pillars with values Development=100000000, Validation=100000001, and Governance=100000002.",
+    "fsi_mrm_eventtype includes Agent Card Generated=100000011 and Agent Card Fallback Used=100000012, which are distinct audit events."
+  ]
+}

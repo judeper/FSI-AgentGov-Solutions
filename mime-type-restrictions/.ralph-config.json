@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "image/webp is allowed only after validating the WEBP signature at offset 8 inside a RIFF container to avoid collisions with other RIFF formats such as WAV or AVI.",
+    "Animated GIF detection looks for the NETSCAPE2.0 application extension; animatedGifPolicy can be block, flag-for-review, or allow in mime-config.json.",
+    "TIFF was intentionally removed from the Enterprise Managed default allowlist; existing TIFF files in Dataverse are unaffected and only new plugin-validated uploads use the updated config.",
+    "templates/dlp-policy-template.json is a connector-classification reference only and is not importable Power Platform DLP policy JSON.",
+    "ValidateMimeTypePlugin is a Dataverse plugin project targeting net462; do not replace it with a Power Automate flow artifact."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "Environment request choices start at 100000001: fsi_er_zone maps Zone1=100000001, Zone2=100000002, Zone3=100000003, and fsi_er_state maps Draft=100000001 through Cancelled=100000009.",
+    "Provisioning logs are OrganizationOwned immutable audit records related to EnvironmentRequest through lookup column fsi_environmentrequest with Restrict delete behavior.",
+    "fsi_provisioninglog.fsi_correlationid stores the Power Automate run ID, while fsi_sequence preserves the ordered action trail.",
+    "fsi_pl_action reserves DLPAssigned=100000012 and rollback values 100000015/100000016 even though no current flow step logs those actions.",
+    "Older examples using zone values 1 and 3 are stale for the Dataverse schema; builders must use fsi_er_zone values 100000001 through 100000003."
+  ]
+}
