@@ -35,7 +35,13 @@
     Dataverse organization URL for loading approved groups and persisting results.
 
 .PARAMETER DataverseToken
-    Pre-obtained access token for Dataverse authentication.
+    [RESERVED — unused in this version] Earlier designs anticipated forwarding a
+    pre-obtained access token to the scan script. The underlying
+    Invoke-SharingComplianceScan currently acquires its own Dataverse token via
+    client_credentials inside the function, so any value supplied here is
+    accepted for backward compatibility but not used. The parameter is retained
+    to preserve callsite compatibility and will be wired up if/when token
+    forwarding is added.
 
 .PARAMETER PersistResults
     [DEPRECATED — no-op] Earlier versions reserved this switch for writing
@@ -56,11 +62,11 @@
 
 .EXAMPLE
     . .\Test-AgentSharingCompliance.ps1
-    Test-AgentSharingCompliance -OutputFormat JSON -PersistResults `
-        -DataverseUrl "https://org.crm.dynamics.com" `
-        -DataverseToken $token
+    Test-AgentSharingCompliance -OutputFormat JSON `
+        -DataverseUrl "https://org.crm.dynamics.com"
 
-    Full scan with Dataverse persistence and JSON output for evidence pipeline.
+    Full scan with Dataverse persistence (handled by Invoke-SharingComplianceScan
+    when -DataverseUrl is supplied) and JSON output for evidence pipeline.
 
 .EXAMPLE
     . .\Test-AgentSharingCompliance.ps1
@@ -74,7 +80,7 @@
 
 .NOTES
     File: Test-AgentSharingCompliance.ps1
-    Version: 2.0.1
+    Version: 2.0.2
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)

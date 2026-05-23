@@ -79,7 +79,7 @@
 
 .NOTES
     File: Invoke-SharingComplianceScan.ps1
-    Version: 2.0.1
+    Version: 2.0.2
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -131,7 +131,7 @@ function Invoke-SharingComplianceScan {
     $scanStartTime = Get-Date -Format 'o'
 
     Write-Verbose "========================================="
-    Write-Verbose "Agent Sharing Access Restriction Detector v2.0.1"
+    Write-Verbose "Agent Sharing Access Restriction Detector v2.0.2"
     Write-Verbose "RunId: $runId"
     Write-Verbose "ScanStart: $scanStartTime"
     Write-Verbose "========================================="
@@ -148,7 +148,7 @@ function Invoke-SharingComplianceScan {
     #region Authentication
 
     Write-Host ""
-    Write-Host "Agent Sharing Access Restriction Detector v2.0.1" -ForegroundColor Cyan
+    Write-Host "Agent Sharing Access Restriction Detector v2.0.2" -ForegroundColor Cyan
     Write-Host "RunId: $runId" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "[1/5] Authenticating to Power Platform Admin API..." -ForegroundColor Cyan

@@ -229,7 +229,7 @@
     "agent-sharing-access-restriction-detector": {
       "id": "agent-sharing-access-restriction-detector",
       "name": "Agent Sharing Access Restriction Detector",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",
