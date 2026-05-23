@@ -17,7 +17,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | agent-intake | v1.0.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
 | agent-365-lifecycle-governance | v1.1.4 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.1.1 | 3.8 | Automated detection of overly permissive agent access configurations |
-|  | 2.17 | Inter-agent communication restriction validation |
+| agent-communication-restriction-detector | v1.2.0 | 2.17 | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
 | agent-knowledge-source-scanner | v1.1.1 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
 | agent-registry-automation | v2.1.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
 | agent-observability-foundation | v1.2.1 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |

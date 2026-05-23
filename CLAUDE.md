@@ -39,7 +39,7 @@ git rev-parse --show-toplevel
 | [agent-intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | PowerShell/Python/Docs | v1.0.0-preview |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.0 |
-| [ |
+| [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration | PowerShell/Python | v1.2.0 |
 | [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.1.0 |
 | [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.2.0 |
 | [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v2.0.0 |
