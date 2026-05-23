@@ -1,7 +1,7 @@
 # Prerequisites
 
 > **Solution:** Agent Sharing Access Restriction Detector (ASARD)
-> **Version:** v2.0.1
+> **Version:** v2.0.2
 
 ## Required Licenses
 

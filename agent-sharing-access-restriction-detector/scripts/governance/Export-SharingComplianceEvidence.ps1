@@ -40,31 +40,48 @@
     End of date range filter (inclusive). Defaults to current timestamp.
 
 .PARAMETER Interactive
-    Use interactive browser-based authentication instead of service principal.
+    Use interactive device-code authentication instead of service principal. The
+    user copies a one-time code into https://microsoft.com/devicelogin from any
+    browser. Requires -ClientId for the public-client app registration.
 
 .PARAMETER ClientId
-    Microsoft Entra ID application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID. Required for both -Interactive
+    (public-client app) and service-principal authentication.
+
+.PARAMETER ClientSecret
+    Service-principal client secret (SecureString). Required for unattended
+    authentication when -Interactive is not specified.
+
+    Note: client secrets are a legacy dev-only fallback. Per the
+    managed-identity-first authentication standard in AGENTS.md, production
+    workloads should use a managed identity, workload identity federation, or
+    an Az.Accounts session and pass tokens via a future -AccessToken parameter.
 
 .PARAMETER CertificateThumbprint
-    Certificate thumbprint for service principal authentication.
+    [DEPRECATED — removed in 2.0.2] Certificate thumbprint authentication
+    required the archived MSAL.PS module. Use -ClientSecret with a service
+    principal, or -Interactive for device-code flow. Passing this parameter
+    now throws a terminating error rather than silently downgrading auth.
 
 .EXAMPLE
     .\Export-SharingComplianceEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "example.onmicrosoft.com" `
+        -TenantId "00000000-0000-0000-0000-000000000000" `
+        -ClientId "11111111-1111-1111-1111-111111111111" `
         -Interactive
 
-    Exports all compliance records from the past 30 days using interactive auth.
+    Exports all compliance records from the past 30 days using device-code auth.
 
 .EXAMPLE
+    $secret = Read-Host -AsSecureString "Client secret"
     .\Export-SharingComplianceEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
-        -TenantId "example.onmicrosoft.com" `
+        -TenantId "00000000-0000-0000-0000-000000000000" `
         -Zone "2" `
         -FromDate (Get-Date).AddDays(-90) `
         -OutputDirectory "C:\compliance\evidence" `
-        -ClientId "12345..." `
-        -CertificateThumbprint "ABCDEF..."
+        -ClientId "11111111-1111-1111-1111-111111111111" `
+        -ClientSecret $secret
 
     Exports 90 days of Zone 2 compliance records using service principal auth.
 
@@ -79,7 +96,7 @@
 
 .NOTES
     File: Export-SharingComplianceEvidence.ps1
-    Version: 2.0.1
+    Version: 2.0.2
     Solution: Agent Sharing Access Restriction Detector (ASARD)
     Controls: 1.18 (Application-Level Authorization), 2.8 (Access Control/Segregation of Duties)
     Regulations: FINRA Rule 4511, SOX Section 404, GLBA Section 501(b)
@@ -91,6 +108,11 @@
     SHA-256 companion file format:
     - {hash}  {filename}  (two spaces, standard checksum format)
     - Verifiable via Test-EvidenceIntegrity.ps1 or standard tools (shasum, certutil)
+
+    Authentication: direct OAuth 2.0 REST calls to the
+    https://login.microsoftonline.com/{tenant}/oauth2/v2.0/{token,devicecode}
+    endpoints. The archived MSAL.PS module dependency was removed in v2.0.2;
+    the script no longer imports any external auth modules.
 
     Part of FSI Agent Governance Framework
 #>
@@ -125,6 +147,9 @@ param(
     [string]$ClientId,
 
     [Parameter()]
+    [securestring]$ClientSecret,
+
+    [Parameter()]
     [string]$CertificateThumbprint
 )
 
@@ -151,60 +176,124 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
+if ($CertificateThumbprint) {
+    throw "CertificateThumbprint authentication was removed in v2.0.2 (required the archived MSAL.PS module). Use -ClientSecret for service principal auth, or -Interactive for device-code flow."
+}
+
+if (-not $TenantId) {
+    throw "TenantId is required."
+}
+if (-not $ClientId) {
+    throw "ClientId is required (for both -Interactive device-code flow and service-principal authentication)."
+}
+
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
+$tokenEndpoint  = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
 
 if ($Interactive) {
+    # Device-code flow: pure REST equivalent of MSAL.PS interactive auth.
+    # User copies a one-time code into https://microsoft.com/devicelogin.
     try {
-        # NOTE: MSAL.PS is archived and no longer maintained.
-        # Consider migrating to Microsoft.Graph.Authentication or Az.Accounts for token acquisition.
-        # See https://github.com/AzureAD/MSAL.PS for archive notice.
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
+        $deviceCodeEndpoint = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/devicecode"
+        $deviceCodeBody = @{
+            client_id = $ClientId
+            scope     = $dataverseScope
         }
-        Import-Module MSAL.PS -ErrorAction Stop
 
-        $msalParams = @{
-            TenantId    = $TenantId
-            Scopes      = @($dataverseScope)
-            Interactive = $true
+        $deviceCodeResponse = Invoke-RestMethod `
+            -Uri $deviceCodeEndpoint `
+            -Method Post `
+            -ContentType 'application/x-www-form-urlencoded' `
+            -Body $deviceCodeBody `
+            -ErrorAction Stop
+
+        Write-Host ""
+        Write-Host $deviceCodeResponse.message -ForegroundColor Yellow
+        Write-Host ""
+
+        $pollIntervalSeconds = [int]$deviceCodeResponse.interval
+        if ($pollIntervalSeconds -lt 1) { $pollIntervalSeconds = 5 }
+        $expiresInSeconds = [int]$deviceCodeResponse.expires_in
+        $deadline = (Get-Date).AddSeconds($expiresInSeconds)
+
+        $pollBody = @{
+            grant_type  = 'urn:ietf:params:oauth:grant-type:device_code'
+            client_id   = $ClientId
+            device_code = $deviceCodeResponse.device_code
         }
-        if ($ClientId) { $msalParams.ClientId = $ClientId }
 
-        $authResult = Get-MsalToken @msalParams
-        $accessToken = $authResult.AccessToken
+        $accessToken = $null
+        while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds $pollIntervalSeconds
+            try {
+                $tokenResponse = Invoke-RestMethod `
+                    -Uri $tokenEndpoint `
+                    -Method Post `
+                    -ContentType 'application/x-www-form-urlencoded' `
+                    -Body $pollBody `
+                    -ErrorAction Stop
+                $accessToken = $tokenResponse.access_token
+                break
+            }
+            catch {
+                $errorBody = $null
+                if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+                    try { $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json } catch { $errorBody = $null }
+                }
+                $errorCode = if ($errorBody) { $errorBody.error } else { $_.Exception.Message }
+
+                switch ($errorCode) {
+                    'authorization_pending' { continue }
+                    'slow_down'             { $pollIntervalSeconds += 5; continue }
+                    default {
+                        throw "Device-code authentication failed: $errorCode"
+                    }
+                }
+            }
+        }
+
+        if (-not $accessToken) {
+            throw "Device-code authentication timed out before the user completed sign-in."
+        }
     }
     catch {
-        Write-Error "Interactive authentication failed: $($_.Exception.Message)"
+        Write-Error "Interactive (device-code) authentication failed: $($_.Exception.Message)"
         exit 1
     }
 }
 else {
-    if (-not $ClientId) {
-        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
+    if (-not $ClientSecret) {
+        throw "ClientSecret is required for service-principal authentication. Use -Interactive for device-code flow."
     }
-    if (-not $CertificateThumbprint) {
-        throw "CertificateThumbprint is required for service principal authentication."
-    }
+
+    # legacy: dev-only — replace with managed identity in production.
+    $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR(
+        [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
+    )
 
     try {
-        # NOTE: MSAL.PS is archived and no longer maintained.
-        # Consider migrating to Microsoft.Graph.Authentication or Az.Accounts for token acquisition.
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
+        $tokenBody = @{
+            grant_type    = 'client_credentials'
+            client_id     = $ClientId
+            client_secret = $plainSecret
+            scope         = $dataverseScope
         }
-        Import-Module MSAL.PS -ErrorAction Stop
 
-        $authResult = Get-MsalToken `
-            -TenantId $TenantId `
-            -ClientId $ClientId `
-            -ClientCertificate (Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint") `
-            -Scopes @($dataverseScope)
+        $tokenResponse = Invoke-RestMethod `
+            -Uri $tokenEndpoint `
+            -Method Post `
+            -ContentType 'application/x-www-form-urlencoded' `
+            -Body $tokenBody `
+            -ErrorAction Stop
 
-        $accessToken = $authResult.AccessToken
+        $accessToken = $tokenResponse.access_token
     }
     catch {
         Write-Error "Service principal authentication failed: $($_.Exception.Message)"
         exit 1
+    }
+    finally {
+        $plainSecret = $null
     }
 }
 
@@ -322,7 +411,7 @@ elseif ($violationRecords -gt 0) { $overallStatus = 'Review' }
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = 'Agent Sharing Access Restriction Detector'
-    solutionVersion = '2.0.1'
+    solutionVersion = '2.0.2'
     controls        = @('1.18', '2.8')
     fromDate        = $fromDateUtc
     toDate          = $toDateUtc

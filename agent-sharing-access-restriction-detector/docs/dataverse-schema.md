@@ -53,6 +53,9 @@
 | fsi_ApprovedBy | fsi_approvedby | String | No | UPN of the person who approved this policy |  |
 | fsi_ApprovedAt | fsi_approvedat | DateTime | No | When this policy was approved |  |
 | fsi_IsActive | fsi_isactive | Boolean | Yes | Whether this approved security group policy is currently active | `1` = Yes, `0` = No |
+| fsi_SecurityEnabled | fsi_securityenabled | Boolean | Yes | Whether the Entra group has securityEnabled=true at admission time. Groups with securityEnabled=false are rejected. | `1` = Yes, `0` = No |
+| fsi_MailEnabled | fsi_mailenabled | Boolean | Yes | Whether the Entra group has mailEnabled at admission time. Mail-enabled distribution groups are rejected. | `1` = Yes, `0` = No |
+| fsi_GroupTypes | fsi_grouptypes | String | No | Comma-separated Entra groupTypes values at admission (e.g. DynamicMembership, Unified) |  |
 | fsi_PolicyNotes | fsi_policynotes | Memo | No | Additional notes or context for this policy |  |
 
 ## Option Sets
