@@ -143,7 +143,9 @@ CloudAppEvents
                 try {
                     $errBody = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop
                     if ($errBody.error.code) { $errorCode = $errBody.error.code }
-                } catch { }
+                } catch {
+                    Write-Verbose ("Graph error body parse for Defender hunting query output {0} failed; continuing without error code: {1}" -f $OutputPath, $_.Exception.Message)
+                }
             }
 
             $isRetryable = ($statusCode -eq 429) -or
@@ -163,7 +165,9 @@ CloudAppEvents
                         if ($retryValues -and [int]::TryParse([string]$retryValues[0], [ref]$parsedRetryAfter) -and $parsedRetryAfter -gt 0 -and $parsedRetryAfter -le 300) {
                             $retryAfter = $parsedRetryAfter
                         }
-                    } catch { }
+                    } catch {
+                        Write-Verbose ("Retry-After header lookup for Defender hunting query output {0} failed; using fallback delay: {1}" -f $OutputPath, $_.Exception.Message)
+                    }
                 }
                 Write-Warning "Graph API error (HTTP $statusCode / code $errorCode). Retrying in $retryAfter seconds (attempt $attempt of $maxRetries)..."
                 Start-Sleep -Seconds $retryAfter
@@ -234,7 +238,9 @@ finally {
         try {
             Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
         }
-        catch { }
+        catch {
+            Write-Verbose ("Microsoft Graph disconnect after Defender Copilot export to {0} failed (non-fatal): {1}" -f $OutputPath, $_.Exception.Message)
+        }
     }
 }
 

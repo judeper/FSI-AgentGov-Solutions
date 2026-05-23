@@ -163,7 +163,9 @@ function Invoke-AppInsightsQuery {
                         if ($values -and [int]::TryParse($values[0], [ref]$parsed) -and $parsed -gt 0 -and $parsed -le 300) {
                             $retryAfter = $parsed
                         }
-                    } catch { }
+                    } catch {
+                        Write-Verbose ("Retry-After header lookup for Application Insights app {0} failed; using fallback delay: {1}" -f $AppInsightsAppId, $_.Exception.Message)
+                    }
                     Write-Warning "Rate limited by Application Insights API. Retry $attempt/$maxRetries in ${retryAfter}s..."
                     Start-Sleep -Seconds $retryAfter
                     continue

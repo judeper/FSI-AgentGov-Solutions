@@ -272,6 +272,7 @@ finally {
             Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
         }
         catch {
+            Write-Verbose ("Exchange Online disconnect for retention label setup as {0} failed (non-fatal): {1}" -f $resolvedAdminUpn, $_.Exception.Message)
         }
     }
 }

@@ -163,7 +163,9 @@ if ($CheckRoles) {
     } catch {
         $warnings.Add("Role check failed: $($_.Exception.Message). Re-run with -CheckRoles after fixing Graph sign-in.")
     } finally {
-        try { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null } catch {}
+        try { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null } catch {
+            Write-Verbose ("Microsoft Graph disconnect during message-center prereq role check for {0} failed (non-fatal): {1}" -f $ConfigPath, $_.Exception.Message)
+        }
     }
 }
 

@@ -272,9 +272,13 @@ function Send-GraphEmail {
             # Inspect HTTP status code on the response (preferred) and Retry-After if present;
             # fall back to message regex for non-Graph SDK exceptions.
             $statusCode = $null
-            try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { }
+            try { $statusCode = [int]$_.Exception.Response.StatusCode } catch {
+                Write-Verbose ("HTTP status lookup for Graph mail send by {0} failed; continuing without status: {1}" -f $userId, $_.Exception.Message)
+            }
             $retryAfter = $null
-            try { $retryAfter = $_.Exception.Response.Headers['Retry-After'] } catch { }
+            try { $retryAfter = $_.Exception.Response.Headers['Retry-After'] } catch {
+                Write-Verbose ("Retry-After header lookup for Graph mail send by {0} failed; using retry backoff: {1}" -f $userId, $_.Exception.Message)
+            }
 
             $isTransient = (
                 ($statusCode -in @(408, 429, 500, 502, 503, 504)) -or

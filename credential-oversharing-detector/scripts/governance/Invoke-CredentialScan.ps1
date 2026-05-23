@@ -419,7 +419,9 @@ foreach ($env in $environments) {
                         if ($c.connectionId) { $cIds += $c.connectionId }
                     }
                 }
-            } catch {}
+            } catch {
+                Write-Verbose ("Connector configuration parse for agent {0} failed; continuing without indexed connection IDs: {1}" -f $aId, $_.Exception.Message)
+            }
         }
         $agentConnectionIndex[$aId] = $cIds
     }

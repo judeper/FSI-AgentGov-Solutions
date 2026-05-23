@@ -148,7 +148,9 @@ function Invoke-DataverseRequest {
                         $parsed = 0
                         if ([int]::TryParse([string]$retryAfter, [ref]$parsed) -and $parsed -gt 0) { $delay = $parsed }
                     }
-                } catch { }
+                } catch {
+                    Write-Verbose ("Retry-After header lookup for {0} failed; using exponential backoff: {1}" -f $Uri, $_.Exception.Message)
+                }
                 Write-Verbose "Dataverse request failed (HTTP $statusCode), retrying in ${delay}s..."
                 Start-Sleep -Seconds $delay
             } else {

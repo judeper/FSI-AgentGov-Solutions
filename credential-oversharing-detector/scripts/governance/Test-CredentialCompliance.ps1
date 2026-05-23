@@ -208,7 +208,9 @@ try {
             $zonesFromPolicy = ($policyContent.zones | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)
         }
     }
-} catch {}
+} catch {
+    Write-Verbose ("Zone credential policy load from {0} failed; summarizing scan zones only: {1}" -f $policyJsonPath, $_.Exception.Message)
+}
 $zones = @($zonesFromScan + $zonesFromPolicy + @('Unknown')) | Select-Object -Unique
 
 foreach ($zoneName in $zones) {

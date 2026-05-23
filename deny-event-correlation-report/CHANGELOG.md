@@ -2,6 +2,12 @@
 
 All notable changes to the Deny Event Correlation Report are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
+
 ## [2.0.4] — 2026-05-23
 
 ### Fixed

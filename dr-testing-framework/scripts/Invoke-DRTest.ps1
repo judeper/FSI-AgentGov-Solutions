@@ -134,7 +134,7 @@ function Write-AuditLog {
         try {
             Add-Content -Path $script:AuditLogPath -Value $entry -ErrorAction Stop
         } catch {
-            # File write is best-effort; do not fail the test run
+            Write-Verbose ("Audit log write to {0} failed (non-fatal): {1}" -f $script:AuditLogPath, $_.Exception.Message)
         }
     }
 }

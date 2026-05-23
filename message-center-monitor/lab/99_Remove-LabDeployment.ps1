@@ -162,7 +162,9 @@ if ($state.appRegistration -or $ForceExternalResource) {
             Invoke-LabTeardownAction { Remove-MgApplication -ApplicationId $appObjId -ErrorAction Stop } "Remove app registration $appObjId"
         }
     } finally {
-        try { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null } catch {}
+        try { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null } catch {
+            Write-Verbose ("Microsoft Graph disconnect during lab teardown for app {0} failed (non-fatal): {1}" -f $appObjId, $_.Exception.Message)
+        }
     }
 }
 

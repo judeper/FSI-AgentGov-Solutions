@@ -150,7 +150,7 @@ function Get-RetryDelaySeconds {
                 return [int]$retryAfter
             }
         } catch {
-            # Header collection may not expose Retry-After on all exception types.
+            Write-Verbose ("Retry-After header lookup for Dataverse retry response {0} failed; using exponential backoff: {1}" -f $ErrorRecord.TargetObject, $_.Exception.Message)
         }
     }
 
