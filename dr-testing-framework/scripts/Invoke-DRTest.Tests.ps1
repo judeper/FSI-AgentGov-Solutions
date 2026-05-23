@@ -1,5 +1,11 @@
 #Requires -Modules Pester
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingInvokeExpression', '',
+    Justification = 'Pester test harness: extracts FunctionDefinitionAst nodes from production script and evaluates them in test scope via Invoke-Expression. The input is a verified AST .Extent.Text from a trusted file under source control, NOT untrusted user input. This is the standard pattern for testing nested helper functions that are not exported from their parent script.'
+)]
+param()
+
 <#
 .SYNOPSIS
     Pester tests for Invoke-DRTest.ps1
