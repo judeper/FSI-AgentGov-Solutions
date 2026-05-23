@@ -9,7 +9,7 @@ The evidence export feature produces JSON files with SHA-256 integrity hashes fo
 - Dataverse infrastructure deployed (`deploy.py` completed)
 - Validation history records exist (at least one validation run completed)
 - PowerShell 7.0 or later
-- MSAL.PS module for authentication (`Install-Module MSAL.PS`)
+- MSAL.PS module for authentication (`Install-Module MSAL.PS -RequiredVersion 4.37.0`) — note: `MSAL.PS` is archived; pin to `4.37.0` until the script is migrated to `Az.Accounts`/`Microsoft.Identity.Client`
 
 ## Export Compliance Evidence
 
@@ -220,7 +220,7 @@ sha256sum -c Tenant-validation-20260206-143500.json.sha256
 
 | Issue | Cause | Resolution |
 |-------|-------|-----------|
-| Authentication failure | Missing MSAL.PS module | Run `Install-Module MSAL.PS` |
+| Authentication failure | Missing MSAL.PS module | Run `Install-Module MSAL.PS -RequiredVersion 4.37.0` (MSAL.PS is archived; pin to known-good version) |
 | Empty export (0 records) | No validation history in date range | Check -FromDate/-ToDate parameters, verify validation runs completed |
 | Hash mismatch | File modified after export | File integrity compromised, re-export from Dataverse |
 | JSON truncation | Nested object depth exceeded | Evidence export uses -Depth 10 (should not occur) |

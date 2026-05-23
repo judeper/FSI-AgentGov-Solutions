@@ -22,7 +22,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | agent-registry-automation | v2.1.0 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
 | agent-observability-foundation | v1.2.2 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
 | agent-sharing-access-restriction-detector | v2.0.1 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
-| audit-compliance-manager | v1.0.4 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
+| audit-compliance-manager | v1.0.5 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
 | coi-testing | v1.1.1 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
 | compliance-dashboard | v1.0.5 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
 | conditional-access-automation | v2.0.1 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
