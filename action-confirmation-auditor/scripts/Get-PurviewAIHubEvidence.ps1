@@ -39,7 +39,7 @@
 
 .NOTES
     File: Get-PurviewAIHubEvidence.ps1
-    Version: 1.2.0
+    Version: 1.2.1
     Solution: Action Confirmation Auditor (ACA)
     Controls: 2.12, 1.10
     Requires: Microsoft.Graph.Authentication

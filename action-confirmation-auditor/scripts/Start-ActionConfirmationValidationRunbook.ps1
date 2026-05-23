@@ -87,7 +87,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.1.0
+    Version: 1.2.1
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
 

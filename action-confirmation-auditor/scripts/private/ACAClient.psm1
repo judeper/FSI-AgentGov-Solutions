@@ -18,7 +18,7 @@
 
 .NOTES
     Module: ACAClient.psm1
-    Version: 1.1.0
+    Version: 1.2.1
     Requires: Windows PowerShell 5.1+
     Author: FSI Agent Governance Team
 #>
