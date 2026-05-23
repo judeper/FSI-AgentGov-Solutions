@@ -69,7 +69,42 @@ For environments with existing v1.0.x rows:
 5. **Re-publish flows** (Flows 1–6). The shipped `docs/flow-configuration.md`
    already uses post-migration integer values; if you maintain customizations,
    re-key every `fsi_ctsg_*` integer literal per the mapping table above.
-6. **Sample re-key SQL (for verification, against a Dataverse SQL endpoint):**
+6. **Sample re-key Web API calls (representative — actual re-keying is done by
+   the migration script in step 4; these PATCH bodies are what the script
+   sends, shown here for audit-trail / manual-fallback reference):**
+   ```http
+   # fsi_approvedexternaltenant — re-key picklists for one row
+   PATCH /api/data/v9.2/fsi_approvedexternaltenants(<recordId>)
+   Content-Type: application/json
+   If-Match: *
+   { "fsi_relationshiptype": 100000001,
+     "fsi_approvalstatus":   100000001,
+     "fsi_risktier":         100000002,
+     "fsi_ppisolationdirection": 100000000 }
+
+   # fsi_externalsharefinding — re-key picklists for one row
+   PATCH /api/data/v9.2/fsi_externalsharefindings(<recordId>)
+   { "fsi_findingtype":        100000002,
+     "fsi_findingstatus":      100000000,
+     "fsi_severity":           100000001,
+     "fsi_governancelayer":    100000001,
+     "fsi_remediationstatus":  100000000,
+     "fsi_guestdetectionmethod": 100000003 }
+
+   # fsi_tenantisolationrecord — re-key picklist for one row
+   PATCH /api/data/v9.2/fsi_tenantisolationrecords(<recordId>)
+   { "fsi_compliancestatus": 100000001 }
+
+   # fsi_entractarecord — re-key picklist for one row
+   PATCH /api/data/v9.2/fsi_entractarecords(<recordId>)
+   { "fsi_compliancestatus": 100000001 }
+
+   # fsi_crosstenantcomplianceevent — re-key picklists for one row
+   PATCH /api/data/v9.2/fsi_crosstenantcomplianceevents(<recordId>)
+   { "fsi_eventtype":         100000017,
+     "fsi_complianceimpact":  100000003 }
+   ```
+   Verification query (run after migration; should return 0):
    ```sql
    -- Verify no legacy rows remain (should return 0)
    SELECT COUNT(*) FROM fsi_externalsharefinding

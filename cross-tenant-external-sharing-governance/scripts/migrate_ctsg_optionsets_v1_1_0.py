@@ -15,7 +15,8 @@ Run order (per release notes):
 
 USAGE
 -----
-Dry-run (no changes — prints planned PATCH bodies):
+Dry-run (reads live rows; logs the PATCH bodies the live run would send; no PATCH
+sent — requires the same auth/network access as a live run):
 
     python migrate_ctsg_optionsets_v1_1_0.py \\
         --tenant-id <tenant-guid> \\
@@ -28,6 +29,20 @@ Live run (managed-identity-first):
     python migrate_ctsg_optionsets_v1_1_0.py \\
         --environment-url https://<org>.crm.dynamics.com \\
         --auth-mode managed-identity --client-id <user-assigned-mi-client-id>
+
+Certificate auth:
+
+    python migrate_ctsg_optionsets_v1_1_0.py \\
+        --tenant-id <tenant-guid> \\
+        --environment-url https://<org>.crm.dynamics.com \\
+        --auth-mode certificate --client-id <app-id> \\
+        --certificate-path C:\\certs\\ctsg-mi.pem
+
+Externally acquired bearer token (e.g., from `az account get-access-token`):
+
+    python migrate_ctsg_optionsets_v1_1_0.py \\
+        --environment-url https://<org>.crm.dynamics.com \\
+        --access-token "$(az account get-access-token --resource https://<org>.crm.dynamics.com --query accessToken -o tsv)"
 
 ROLLBACK
 --------
@@ -106,6 +121,15 @@ def parse_args() -> argparse.Namespace:
                    help="App / managed-identity client ID. Falls back to $AZURE_CLIENT_ID.")
     p.add_argument("--client-secret", default=os.environ.get("AZURE_CLIENT_SECRET"),
                    help="Client secret (legacy: dev-only). Prefer managed identity.")
+    p.add_argument("--certificate-path", default=os.environ.get("AZURE_CLIENT_CERTIFICATE_PATH"),
+                   help="Path to certificate (.pem/.pfx) for certificate auth. Falls back to "
+                        "$AZURE_CLIENT_CERTIFICATE_PATH.")
+    p.add_argument("--certificate-password", default=os.environ.get("AZURE_CLIENT_CERTIFICATE_PASSWORD"),
+                   help="Optional certificate password. Falls back to "
+                        "$AZURE_CLIENT_CERTIFICATE_PASSWORD.")
+    p.add_argument("--access-token",
+                   help="Externally acquired bearer token (e.g., from 'az account get-access-token "
+                        "--resource <env-url>'). Use when you cannot use any MSAL/azure-identity flow.")
     p.add_argument("--auth-mode",
                    choices=["interactive", "managed-identity", "workload-identity",
                             "certificate", "client-secret"],
@@ -113,7 +137,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--interactive", action="store_true",
                    help="Use interactive browser auth (developer machines only).")
     p.add_argument("--dry-run", action="store_true",
-                   help="Log planned PATCH calls without sending them.")
+                   help="Read live rows and log planned PATCH bodies without sending them. "
+                        "Requires the same auth/network access as a live run.")
     p.add_argument("--verbose", "-v", action="store_true",
                    help="Enable DEBUG logging.")
     return p.parse_args()
@@ -124,10 +149,14 @@ def migrate_entity(
     entity_set: str,
     columns: list[str],
     log: logging.Logger,
+    dry_run: bool = False,
 ) -> tuple[int, int]:
     """Re-key all picklist columns on rows of ``entity_set``.
 
-    Returns (rows_inspected, patches_applied).
+    Returns (rows_inspected, patches_applied). When ``dry_run`` is True, planned
+    PATCH bodies are logged but ``client.update_record`` is not called. The
+    returned ``patches_applied`` count reflects rows that *would* have been
+    patched so the run summary is meaningful in both modes.
     """
     pk = PRIMARY_KEY[entity_set]
     inspected = 0
@@ -171,8 +200,11 @@ def migrate_entity(
         if not patch_body:
             continue
 
-        log.info("  PATCH %s(%s) -> %s", entity_set, row_id, patch_body)
-        client.update_record(entity_set, row_id, patch_body)
+        if dry_run:
+            log.info("  [DRY RUN] Would PATCH %s(%s) -> %s", entity_set, row_id, patch_body)
+        else:
+            log.info("  PATCH %s(%s) -> %s", entity_set, row_id, patch_body)
+            client.update_record(entity_set, row_id, patch_body)
         patches += 1
 
     return inspected, patches
@@ -188,26 +220,43 @@ def main() -> int:
     log = logging.getLogger("migrate_ctsg_optionsets_v1_1_0")
 
     if args.dry_run:
-        log.warning("DRY RUN: no PATCH requests will be sent.")
+        log.warning("DRY RUN: rows will be read live, but no PATCH requests will be sent.")
 
     auth_mode = args.auth_mode
     if not auth_mode:
-        if args.interactive:
+        if args.access_token:
+            auth_mode = "access-token"
+        elif args.interactive:
             auth_mode = "interactive"
+        elif args.certificate_path:
+            auth_mode = "certificate"
         elif args.client_secret:
             auth_mode = "client-secret"
         else:
             auth_mode = "managed-identity"
 
-    client = DataverseClient(
+    # NOTE: We deliberately do NOT pass dry_run to DataverseClient: the shared
+    # client short-circuits *reads* in dry-run mode, which would defeat a
+    # meaningful preview. Instead, we gate only the PATCH locally in
+    # migrate_entity below. The client itself is constructed in live mode for
+    # both --dry-run and live executions.
+    client_kwargs = dict(
         tenant_id=args.tenant_id,
         environment_url=args.environment_url,
         client_id=args.client_id,
         client_secret=args.client_secret,
+        certificate_path=args.certificate_path,
+        certificate_password=args.certificate_password,
         interactive=(auth_mode == "interactive"),
-        auth_mode=auth_mode,
-        dry_run=args.dry_run,
     )
+    if auth_mode == "access-token":
+        # access-token auth bypasses MSAL/azure-identity entirely.
+        client = DataverseClient(
+            **{k: v for k, v in client_kwargs.items() if k not in ("interactive",)},
+            access_token=args.access_token,
+        )
+    else:
+        client = DataverseClient(auth_mode=auth_mode, **client_kwargs)
 
     org = client.test_connection()
     log.info("Connected to Dataverse organization: %s", org.get("name", "<unknown>"))
@@ -215,7 +264,7 @@ def main() -> int:
     totals: dict[str, tuple[int, int]] = {}
     for entity_set, columns in ENTITY_PICKLISTS.items():
         try:
-            inspected, patches = migrate_entity(client, entity_set, columns, log)
+            inspected, patches = migrate_entity(client, entity_set, columns, log, dry_run=args.dry_run)
         except Exception:
             log.exception("Migration failed for %s; aborting before further entities.", entity_set)
             return 2
