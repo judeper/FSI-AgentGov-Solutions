@@ -4,7 +4,7 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
-## [Unreleased] - 2026-Q2 — Microsoft Learn refresh
+## [1.2.0] - 2026-05-23 — Microsoft Learn refresh
 
 ### Added
 
