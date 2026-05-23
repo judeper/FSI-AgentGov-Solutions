@@ -15,7 +15,6 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
@@ -701,7 +700,6 @@ def create_schema(client: DataverseClient, dry_run: bool = False) -> None:
         )
 
     # Summary
-    all_optionsets = {**SHARED_OPTIONSETS, **HWG_OPTIONSETS}
     print("\n" + "=" * 60)
     if dry_run:
         print("DRY RUN COMPLETE - Review output above")

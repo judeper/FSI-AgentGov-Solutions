@@ -9,7 +9,6 @@ Actual connections are bound during solution import or runtime.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from acv_client import ACVClient
 

@@ -9,7 +9,6 @@ with appropriate privilege assignments.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from elm_client import ELMClient
 
@@ -166,7 +165,7 @@ def create_roles(client: ELMClient, dry_run: bool = False) -> bool:
             print(f"    Created role: {role_id}")
 
         # Assign privileges
-        print(f"    Privileges:")
+        print("    Privileges:")
         for entity, operations in role_def["privileges"].items():
             for operation, depth in operations.items():
                 priv_name = get_privilege_name(operation, entity)

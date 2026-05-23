@@ -19,7 +19,6 @@ Zone rules:
 from __future__ import annotations
 
 import json
-import sys
 from typing import Any
 
 ZONE_POLICIES: dict[str, dict[str, Any]] = {

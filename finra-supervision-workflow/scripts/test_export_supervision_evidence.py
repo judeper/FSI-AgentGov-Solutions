@@ -14,7 +14,6 @@ import sys
 import tempfile
 import unittest
 from unittest import mock
-from datetime import datetime, timezone
 
 # Ensure the scripts directory is on sys.path so we can import modules.
 _script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -87,7 +86,7 @@ class TestExportToJson(unittest.TestCase):
         data = [{"id": 1, "name": "test"}]
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "test_export.json")
-            metadata = export_to_json(data, filepath)
+            export_to_json(data, filepath)
             with open(filepath, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
             self.assertEqual(loaded, data)

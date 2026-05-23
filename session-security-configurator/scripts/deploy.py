@@ -11,7 +11,6 @@ Deploys all SSC Dataverse components in the correct order:
 import argparse
 import os
 import sys
-from typing import Optional
 
 from ssc_client import SSCClient
 from create_dataverse_schema import create_schema
@@ -167,7 +166,7 @@ def deploy(
             print("  DEPLOYMENT SUMMARY")
             print("=" * 70)
             print()
-            print(f"Schema:")
+            print("Schema:")
             print(f"  Option Sets: {schema_results.get('option_sets', {}).get('created', 0)} created, "
                   f"{schema_results.get('option_sets', {}).get('skipped', 0)} skipped")
             print(f"  Tables: {schema_results.get('tables', {}).get('created', 0)} created, "

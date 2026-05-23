@@ -166,14 +166,14 @@ def verify_storage_account(
     # Check if hierarchical namespace is enabled (HNS-enabled StorageV2 is unsupported by diagnostic export)
     hns_enabled = account.is_hns_enabled or False
     if hns_enabled:
-        print(f"    - Hierarchical namespace: ENABLED (not compatible with diagnostic settings)")
+        print("    - Hierarchical namespace: ENABLED (not compatible with diagnostic settings)")
         print()
         print("    WARNING: StorageV2 with hierarchical namespace enabled is not supported for")
         print("    diagnostic settings export. WORM policy may exist but telemetry export")
         print("    will not work. Consider recreating as StorageV2 without HNS.")
         return (True, False)
     else:
-        print(f"    - Hierarchical namespace: disabled (correct)")
+        print("    - Hierarchical namespace: disabled (correct)")
 
     if verbose:
         print(f"    - Primary location: {account.primary_location}")
@@ -320,9 +320,9 @@ def verify_immutability_policy(policy_details: Optional[dict], verbose: bool = F
     # Check if locked
     is_locked = state == "Locked"
     if is_locked:
-        print(f"    - SEC 17a-4(f) locked state")
+        print("    - SEC 17a-4(f) locked state")
     else:
-        print(f"    - Policy is UNLOCKED (not yet SEC 17a-4(f) compliant)")
+        print("    - Policy is UNLOCKED (not yet SEC 17a-4(f) compliant)")
         print()
         print("    An unlocked policy can still be modified or deleted.")
         print("    To achieve SEC 17a-4(f) compliance, the policy must be LOCKED.")
@@ -337,7 +337,7 @@ def verify_immutability_policy(policy_details: Optional[dict], verbose: bool = F
         else:
             print(f"    - Retention {retention} < {MIN_RETENTION_DAYS_SEC17A4} days required")
             print()
-            print(f"    SEC 17a-4(a) requires 6-year retention for broker-dealer records.")
+            print("    SEC 17a-4(a) requires 6-year retention for broker-dealer records.")
             print(f"    Recommended minimum: {MIN_RETENTION_DAYS_SEC17A4} days (~7 years).")
 
     return (True, is_locked, retention_adequate, append_ok)

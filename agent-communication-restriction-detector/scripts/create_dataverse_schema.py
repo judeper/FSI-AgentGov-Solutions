@@ -26,7 +26,6 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 # Import shared DataverseClient (the local acrd_client.py was retired in v1.2.1;
 # see acrd_client.py for the deprecation stub).

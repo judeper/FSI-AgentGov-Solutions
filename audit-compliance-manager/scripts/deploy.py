@@ -31,7 +31,6 @@ import argparse
 import os
 import re
 import sys
-from typing import Optional
 
 from acv_client import ACVClient
 from create_dataverse_schema import create_schema

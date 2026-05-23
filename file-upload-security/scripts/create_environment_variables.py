@@ -10,7 +10,6 @@ Usage:
 
 import argparse
 import os
-import sys
 
 from fus_client import FUSClient
 

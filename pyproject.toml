@@ -1,0 +1,22 @@
+# Wave 6 P6 (2026-05-23): pyproject.toml introduced to formalize the Python
+# linting baseline so `ruff check scripts */scripts` is enforceable in CI
+# without spurious failures from intentional sys.path manipulation.
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Match ruff's default rule selection: pycodestyle imports (E4), pycodestyle
+# statements (E7), pycodestyle runtime (E9), and Pyflakes (F). This is the
+# rule set the Wave 6 baseline was cleared against. Expanding to all `E`
+# rules pulls in E501 (line-too-long), which is not the policy in this
+# codebase.
+select = ["E4", "E7", "E9", "F", "W"]
+
+# E402 — Module-level import not at top of file. The repo intentionally
+# manipulates sys.path before importing from sibling solution folders or
+# scripts/shared (see e.g. finra-supervision-workflow/scripts/deploy.py,
+# generative-ai-config-auditor/scripts/deploy.py). Suppress globally rather
+# than scattering per-line `# noqa: E402` markers across every deploy script.
+ignore = ["E402"]

@@ -40,17 +40,17 @@ jobs:
 
       - name: PSScriptAnalyzer
         shell: pwsh
-        # Soft-gate (Wave 6 P1): we now load the project-level
-        # PSScriptAnalyzerSettings.psd1 so the baseline reflects the actual
-        # policy (PSAvoidUsingWriteHost + PSUseSingularNouns excluded with
-        # documented rationale). The gate stays soft until Wave 6 P6 flips
-        # `-Severity` to `Error,Warning` and removes `continue-on-error`.
-        continue-on-error: true
+        # Hard gate (Wave 6 P6 — 2026-05-23): loads the project-level
+        # PSScriptAnalyzerSettings.psd1 (excludes PSAvoidUsingWriteHost +
+        # PSUseSingularNouns) and fails the build on any Warning- or
+        # Error-severity finding. Wave 6 drove the baseline to 0 findings;
+        # this gate keeps it there.
         run: |
-          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error -Settings ./PSScriptAnalyzerSettings.psd1
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning -Settings ./PSScriptAnalyzerSettings.psd1
           $results | Format-Table -AutoSize
           if ($results.Count -gt 0) {
-            Write-Host "::warning::PSScriptAnalyzer reported $($results.Count) Error-severity findings (soft-gated)."
+            Write-Host "::error::PSScriptAnalyzer reported $($results.Count) Warning+Error finding(s)."
+            exit 1
           }
 
       - name: Pester - message-center-monitor (HARD-GATED)
@@ -75,11 +75,12 @@ jobs:
           $cfg.Output.Verbosity = 'Detailed'
           Invoke-Pester -Configuration $cfg
 
-      - name: Pester (repo-wide, soft-gated baseline)
+      - name: Pester (repo-wide)
         shell: pwsh
-        # Soft-gate: surface failing Pester tests outside message-center-monitor
-        # as warnings until the broader baseline is green.
-        continue-on-error: true
+        # Hard gate (Wave 6 P6 — 2026-05-23): repo-wide Pester is now
+        # required. The Wave 6 baseline (audit-compliance-manager
+        # Validators.Tests.ps1) was fixed and the broader suite is green
+        # (102 pass / 0 fail at flip-time).
         run: |
           $tests = Get-ChildItem -Recurse -Filter '*.Tests.ps1' -ErrorAction SilentlyContinue |
             Where-Object { $_.FullName -notmatch '[\\/]message-center-monitor[\\/]tests[\\/]' }

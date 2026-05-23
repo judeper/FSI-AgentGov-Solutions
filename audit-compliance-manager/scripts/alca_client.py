@@ -6,10 +6,7 @@ Uses MSAL for authentication (interactive browser or service principal).
 Includes retry logic, dry-run mode, and alternate key support for safe deployments.
 """
 
-import json
-import os
-import sys
-from typing import Any, Optional
+from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 import msal

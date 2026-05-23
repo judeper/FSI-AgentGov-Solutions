@@ -1173,10 +1173,10 @@ def create_alternate_keys(client: DataverseClient, dry_run: bool) -> dict:
             existed_before = client.get_entity_key(entity, key_logical_name) is not None
             client.ensure_entity_key(entity, key_metadata)
             if existed_before:
-                print(f"    Already exists")
+                print("    Already exists")
                 skipped += 1
             else:
-                print(f"    Created")
+                print("    Created")
                 created += 1
         except requests.HTTPError as e:
             print(f"    Error: {e}")

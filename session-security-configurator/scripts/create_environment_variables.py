@@ -9,7 +9,6 @@ and authentication strength requirements.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from ssc_client import SSCClient
 

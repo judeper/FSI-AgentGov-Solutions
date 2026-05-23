@@ -144,7 +144,7 @@ def verify_application_insights(
         return (False, None, None)
 
     print(f"  Application Insights: {ai_name}")
-    print(f"    - Workspace-based")
+    print("    - Workspace-based")
 
     if verbose:
         redacted_key = component.instrumentation_key[:8] + "..." if component.instrumentation_key else "N/A"
@@ -260,7 +260,7 @@ def verify_copilot_session_events(
             return (False, False, False, [])
 
     if response.status == LogsQueryStatus.PARTIAL:
-        print(f"  Telemetry query: PARTIAL results (query may have timed out)")
+        print("  Telemetry query: PARTIAL results (query may have timed out)")
     elif response.status == LogsQueryStatus.FAILURE:
         print(f"  Telemetry query: FAILED - {response.partial_error}")
         return (False, False, False, [])

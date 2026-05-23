@@ -14,7 +14,6 @@ Tables:
 import argparse
 import os
 import sys
-from typing import Optional
 
 from cmm_client import CMMClient
 

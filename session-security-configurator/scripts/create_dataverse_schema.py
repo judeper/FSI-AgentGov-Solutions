@@ -10,7 +10,6 @@ fsi_acv_severity) when present.
 import argparse
 import os
 import sys
-from typing import Optional
 
 import requests
 

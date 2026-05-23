@@ -161,7 +161,7 @@ def verify_application_insights(
         return (False, None, None)
 
     print(f"  Application Insights: {ai_name}")
-    print(f"    - Workspace-based")
+    print("    - Workspace-based")
 
     # Check retention
     retention = component.retention_in_days
@@ -191,8 +191,8 @@ def verify_retention_compliance(retention_days: int) -> bool:
         return True
     else:
         print(f"  Retention compliance: {retention_days} days < {min_retention} required")
-        print(f"    SEC 17a-4(b)(4) requires 2-year (730 day) retention.")
-        print(f"    Update Application Insights retention settings.")
+        print("    SEC 17a-4(b)(4) requires 2-year (730 day) retention.")
+        print("    Update Application Insights retention settings.")
         return False
 
 
@@ -280,7 +280,7 @@ def query_telemetry_data(
             return (False, False, [])
 
     if response.status == LogsQueryStatus.PARTIAL:
-        print(f"  Telemetry query: PARTIAL results (query may have timed out)")
+        print("  Telemetry query: PARTIAL results (query may have timed out)")
     elif response.status == LogsQueryStatus.FAILURE:
         print(f"  Telemetry query: FAILED - {response.partial_error}")
         return (False, False, [])

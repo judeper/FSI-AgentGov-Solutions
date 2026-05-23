@@ -169,10 +169,11 @@ Examples:
             import getpass
             client_secret = getpass.getpass("Client secret: ")
 
-    # Parse dates
+    # Parse dates (also validates end_date format; the value is forwarded
+    # below as args.end_date so we don't need the parsed datetime locally).
     try:
         start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
-        end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
+        datetime.strptime(args.end_date, "%Y-%m-%d")
     except ValueError as e:
         parser.error(f"Invalid date format: {e}")
 
@@ -322,7 +323,7 @@ Examples:
         print("Files created:")
         for f in manifest["files"]:
             print(f"  - {f['name']} ({f['recordCount']} records)")
-        print(f"  - manifest.json")
+        print("  - manifest.json")
 
         # Warn if both exports are empty
         if requests_count == 0 and logs_count == 0:

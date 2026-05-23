@@ -17,7 +17,6 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 # Import the shared Dataverse client from scripts/shared.
 _SHARED_DIR = Path(__file__).resolve().parent.parent.parent / "scripts" / "shared"

@@ -655,8 +655,8 @@ def main() -> None:
             print("Testing Dataverse connection...")
             org = client.test_connection()
             if not args.dry_run:
-                print(f"  Token acquired: ✓")
-                print(f"  API accessible: ✓")
+                print("  Token acquired: ✓")
+                print("  API accessible: ✓")
                 print(f"  Organization: {org.get('name', 'Unknown')}")
                 print("\nConnection test: PASSED")
             sys.exit(0)

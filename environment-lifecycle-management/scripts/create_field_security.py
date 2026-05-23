@@ -9,7 +9,6 @@ modifying approval-related fields.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from elm_client import ELMClient
 
@@ -136,7 +135,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
         profile_id = None
     else:
         # Create the profile
-        print(f"\n[Creating Field Security Profile]")
+        print("\n[Creating Field Security Profile]")
         profile_data = {
             "name": profile_name,
             "description": "Restricts ELM Approvers to only modify approval-related fields",
@@ -145,7 +144,7 @@ def create_field_security(client: ELMClient, dry_run: bool = False) -> bool:
         print(f"  {profile_name}: created ({profile_id})")
 
     # Create field permissions
-    print(f"\n[Creating Field Permissions]")
+    print("\n[Creating Field Permissions]")
     success = True
 
     for field_name, permissions in APPROVER_FIELD_PERMISSIONS.items():

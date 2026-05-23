@@ -14,7 +14,6 @@ Creates standard views for EnvironmentRequest:
 import argparse
 import os
 import sys
-from typing import Optional
 
 from elm_client import ELMClient
 
@@ -309,7 +308,7 @@ def create_views(client: ELMClient, dry_run: bool = False) -> bool:
         existing = client.get_saved_queries(entity, f"name eq '{view_name}'")
         if existing:
             print(f"\n  {view_name}:")
-            print(f"    Already exists, skipping")
+            print("    Already exists, skipping")
             continue
 
         if dry_run:
@@ -350,7 +349,7 @@ def create_views(client: ELMClient, dry_run: bool = False) -> bool:
             existing = client.get_saved_queries(entity, f"name eq '{view_name}'")
             if existing:
                 print(f"\n  {view_name}:")
-                print(f"    Already exists, skipping")
+                print("    Already exists, skipping")
                 continue
 
             if dry_run:
