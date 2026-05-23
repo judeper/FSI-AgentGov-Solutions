@@ -28,18 +28,20 @@
     curated list of high-privilege Microsoft Graph scopes.
 
 .PARAMETER WhatIf
-    Preview mode — shows deviations without persisting to Dataverse.
+    Preview mode - shows deviations without persisting to Dataverse.
 
 .NOTES
     File: Compare-OAuthScopeBaseline.ps1
-    Version: 2.1.0
+    Version: 2.1.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
+    Requires: Az.Accounts (>= 2.17.0) for Dataverse-scoped token acquisition
 
     Part of FSI Agent Governance Framework
 #>
 
 #Requires -Version 7.0
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 function Compare-OAuthScopeBaseline {
     [CmdletBinding(SupportsShouldProcess)]
@@ -47,6 +49,12 @@ function Compare-OAuthScopeBaseline {
         [Parameter(Mandatory)]
         [ValidatePattern('^https://[a-zA-Z0-9\-]+\.crm[0-9]*\.dynamics\.com')]
         [string]$DataverseUrl,
+
+        [Parameter()]
+        [string]$TenantId,
+
+        [Parameter()]
+        [string]$DataverseToken,
 
         [ValidateSet('Table', 'Json', 'Object')]
         [string]$OutputFormat = 'Table',
@@ -83,9 +91,29 @@ function Compare-OAuthScopeBaseline {
         # ---------------------------------------------------------------
         $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
-        # Use Graph context token for Dataverse (caller must have connected)
+        # IMPORTANT: Dataverse requires a token whose audience is the Dataverse
+        # environment URL. A Microsoft Graph access token (audience graph.microsoft.com)
+        # will produce HTTP 401 against /api/data/v9.2. Acquire a Dataverse-scoped
+        # token via Az.Accounts unless the caller passed one in.
+        $dvAccessToken = $DataverseToken
+        if (-not $dvAccessToken) {
+            try {
+                if (-not (Get-AzContext)) {
+                    if ($TenantId) {
+                        Connect-AzAccount -Tenant $TenantId | Out-Null
+                    } else {
+                        Connect-AzAccount | Out-Null
+                    }
+                }
+                $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -AsSecureString -ErrorAction Stop
+                $dvAccessToken = $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
+            } catch {
+                throw "Could not acquire Dataverse token for $DataverseUrl. Pass -DataverseToken or run Connect-AzAccount first. Inner error: $($_.Exception.Message)"
+            }
+        }
+
         $headers = @{
-            'Authorization' = "Bearer $((Get-MgContext).AccessToken)"
+            'Authorization' = "Bearer $dvAccessToken"
             'Accept'        = 'application/json'
             'OData-Version' = '4.0'
         }
@@ -162,7 +190,7 @@ function Compare-OAuthScopeBaseline {
                 Recommendation   = switch ($severity) {
                     'Critical' { "Remove sensitive excess scopes: $($sensitiveExcess -join ', '). These require elevated approval." }
                     'High'     { "Remove excess scopes: $($excessScopes -join ', '). Agent should use least-privilege scopes." }
-                    'Medium'   { "Sensitive scopes detected ($($sensitiveFound -join ', ')) — verify elevated approval is documented." }
+                    'Medium'   { "Sensitive scopes detected ($($sensitiveFound -join ', ')) - verify elevated approval is documented." }
                     'Passed'   { 'Scopes match approved baseline.' }
                 }
             })
@@ -173,8 +201,9 @@ function Compare-OAuthScopeBaseline {
         # ---------------------------------------------------------------
         if (-not $WhatIfPreference) {
             foreach ($result in ($results | Where-Object { $_.Severity -ne 'Passed' })) {
+                $idSuffix = [guid]::NewGuid().ToString('N').Substring(0, 8)
                 $body = @{
-                    fsi_violationid     = "SCOPE-$($result.AgentId)-$(Get-Date -Format 'yyyyMMdd')"
+                    fsi_violationid     = "SCOPE-$($result.AgentId)-$(Get-Date -Format 'yyyyMMdd')-$idSuffix"
                     fsi_agentid         = $result.AgentId
                     fsi_agentname       = $result.AgentName
                     fsi_violationtype   = 100000001  # ExcessiveOAuthScope
@@ -185,7 +214,7 @@ function Compare-OAuthScopeBaseline {
                         default    { 100000003 }
                     }
                     fsi_violationstatus = 100000000  # Open
-                    fsi_details         = $result.Recommendation
+                    fsi_description     = $result.Recommendation
                 } | ConvertTo-Json
 
                 try {

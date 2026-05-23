@@ -1,8 +1,27 @@
-# Credential Oversharing Detector — Changelog
+# Credential Oversharing Detector - Changelog
 
 All notable changes to this solution are documented here.
 
-## [2.1.0] — 2026-05-12
+## [2.1.1] - 2026-05-22
+
+### Fixed
+
+- **Major**: Removed duplicate `[Parameter()]` attribute on `$ExcludeSandbox` in `scripts/governance/Test-CredentialCompliance.ps1:96-97`. (council review M-1)
+- **Major**: Corrected `fsi_details` -> `fsi_description` column name in v2.1.0 violation writes (matches `fsi_credentialviolation` schema). `scripts/governance/Test-AgentAuthMethod.ps1:225` and `scripts/governance/Compare-OAuthScopeBaseline.ps1:188`. Previously the recommendation text was silently dropped on insert. (council review M-2)
+- **Minor**: Replaced Microsoft Graph access token (`(Get-MgContext).AccessToken`) with Dataverse-audience token acquired via `Get-AzAccessToken -ResourceUrl $DataverseUrl` in `Test-AgentAuthMethod.ps1` and `Compare-OAuthScopeBaseline.ps1`. Graph-audience tokens produce HTTP 401 against `/api/data/v9.2`; v2.1.0 persistence was entirely non-functional. Both scripts now accept an optional `-DataverseToken` parameter for pre-acquired tokens. (council review m-5)
+- **Minor**: `Get-MgApplicationFederatedIdentityCredential -ApplicationId` now receives the Application *object* ID resolved via `Get-MgApplication -Filter "appId eq '...'"` instead of the service principal's `AppId` (client ID). Previous code returned 404 for every service principal that had federated credentials. `scripts/governance/Test-AgentAuthMethod.ps1:128-141`. (council review m-8)
+- **Minor**: Added GUID suffix to violation IDs in v2.1.0 scripts to prevent primary-key collisions when an agent has multiple deviations on the same day. `Test-AgentAuthMethod.ps1:219`, `Compare-OAuthScopeBaseline.ps1:177`. Follows the v2.0.0 pattern from `Invoke-CredentialScan.ps1`. (council review m-4)
+- **Minor**: Added `Unclassified` to `Get-ExpectedCredentialPolicy.ps1` ValidateSet, defaults, and `zone-credential-policy.json`. `Invoke-CredentialScan.ps1` produces the literal `"Unclassified"` when an environment is missing zone metadata; the policy lookup previously threw a parameter-validation error and the `$zoneMap` returned `$null` to Dataverse. Also added `"Unclassified" = 100000000` to the `$zoneMap` in `Invoke-CredentialScan.ps1:651-660`. (council review m-2, m-3)
+- **Minor**: Standardized severity label `Info` -> `Informational` in `scripts/governance/Export-CredentialEvidence.ps1:306` to match the rest of the solution (schema docs, policy file, scan script). (council review m-6)
+- **Minor**: Added v2.1.0 and v2.1.1 entries to README Version History table. (council review m-7)
+- **Minor**: Replaced `Get-Date -AsUTC` (PS 7.0+) with `(Get-Date).ToUniversalTime()` in `scripts/governance/Invoke-CredentialScan.ps1:201` for PS 5.1 lex/parse safety. The script's `Get-Date -Format ... -AsUTC` combination silently fails on Windows PowerShell runners.
+- **Minor**: Replaced em-dashes (U+2014) with ASCII hyphens across all `.ps1` files (Wave 3 ACA precedent: PS 5.1 lexer chokes on em-dashes in non-BOM scripts).
+
+### Known limitations (carried forward)
+
+- `Compare-OAuthScopeBaseline.ps1` queries `fsi_approvedscopes` and `fsi_actualscopes` on `fsi_agentconnectorscope`, but the schema currently defines those memo columns only on `fsi_credentialviolation` and `fsi_credentialexception`. Adding them to the baseline table requires a schema column addition and tenant-side migration; tracked for the next minor bump. Until then, callers should treat the baseline comparison as a placeholder. (council review m-1, deferred)
+
+## [2.1.0] - 2026-05-12
 
 ### Added
 

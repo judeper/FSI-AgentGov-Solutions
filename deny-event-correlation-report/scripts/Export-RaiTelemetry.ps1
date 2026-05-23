@@ -33,9 +33,17 @@
 
 .NOTES
     Author: FSI Agent Governance Framework
-    Version: 1.3
+    Version: 1.4
     Requires: Az.Accounts module
     Authentication: Microsoft Entra ID - uses Connect-AzAccount
+
+    This script targets the classic Application Insights Logs API endpoint
+    (api.applicationinsights.io). Workspace-based Application Insights
+    resources (which route telemetry through an Azure Monitor Log Analytics
+    workspace) require the Azure Monitor Logs API endpoint
+    (api.loganalytics.io) and a different query path; the classic endpoint
+    will return HTTP 404 for those resources. See:
+    https://learn.microsoft.com/azure/azure-monitor/logs/api/overview
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -107,7 +115,7 @@ function Invoke-AppInsightsQuery {
         throw "Authentication failed: $_. Run Connect-AzAccount before executing this script."
     }
 
-    # Convert SecureString token to plaintext for HTTP header (defensive — older Az returns string)
+    # Convert SecureString token to plaintext for HTTP header (defensive - older Az returns string)
     $tokenString = if ($token.Token -is [System.Security.SecureString]) {
         $token.Token | ConvertFrom-SecureString -AsPlainText
     } else {
@@ -146,7 +154,7 @@ function Invoke-AppInsightsQuery {
                     if ($attempt -gt $maxRetries) {
                         throw "Rate limit retry exhausted after $maxRetries attempts."
                     }
-                    # Retry-After header (in seconds). Use HttpResponseHeaders.GetValues — the
+                    # Retry-After header (in seconds). Use HttpResponseHeaders.GetValues - the
                     # `Headers[name]` indexer is not implemented on .NET HttpResponseHeaders.
                     $retryAfter = 60
                     try {
@@ -282,10 +290,10 @@ customEvents
     # row cap of 10K applies to the Direct Query path used by the portal.
     # Warn at 10K to surface narrowing opportunities, and again at 500K.
     if ($response.tables -and $response.tables[0].rows.Count -ge 500000) {
-        Write-Warning "App Insights query returned 500,000 rows — hard API limit reached and results ARE truncated. Narrow the date range or split the query."
+        Write-Warning "App Insights query returned 500,000 rows - hard API limit reached and results ARE truncated. Narrow the date range or split the query."
     }
     elseif ($response.tables -and $response.tables[0].rows.Count -ge 10000) {
-        Write-Warning "App Insights query returned >=10,000 rows — consider narrowing the date range. Hard API limit is 500K rows / 64MB."
+        Write-Warning "App Insights query returned >=10,000 rows - consider narrowing the date range. Hard API limit is 500K rows / 64MB."
     }
 
     # Convert response

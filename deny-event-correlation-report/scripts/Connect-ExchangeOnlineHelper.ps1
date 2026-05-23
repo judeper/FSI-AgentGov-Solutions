@@ -21,7 +21,7 @@ function Connect-ToExchangeOnline {
     .PARAMETER CertificateThumbprint
         Thumbprint of the certificate associated with the Entra app registration.
     .PARAMETER Organization
-        Tenant primary domain (e.g. `contoso.onmicrosoft.com`) — required for
+        Tenant primary domain (e.g. `example.onmicrosoft.com`) - required for
         certificate-based connections.
     .PARAMETER ManagedIdentity
         Use the Azure managed identity assigned to the runbook host. Requires
