@@ -870,7 +870,9 @@ try {
             catch {
                 Write-AuditLog "Failed to scan $($target.SiteUrl)/$($target.LibraryName): $($_.Exception.Message)" "ERROR"
                 $scanSummary.ErrorCount++
-                try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch { }
+                try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {
+                    Write-Verbose ("PnP Online disconnect after scanning {0}/{1} failed (non-fatal): {2}" -f $target.SiteUrl, $target.LibraryName, $_.Exception.Message)
+                }
             }
         }
     }
@@ -930,7 +932,9 @@ catch {
     exit 1
 }
 finally {
-    try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch { }
+    try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {
+        Write-Verbose ("Final PnP Online disconnect for knowledge source scan output {0} failed (non-fatal): {1}" -f $OutputPath, $_.Exception.Message)
+    }
 }
 
 #endregion

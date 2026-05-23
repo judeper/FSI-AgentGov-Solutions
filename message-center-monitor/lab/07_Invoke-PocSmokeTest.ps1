@@ -246,7 +246,9 @@ try {
                 break
             }
         }
-        try { $listener.Stop(); $listener.Close() } catch {}
+        try { $listener.Stop(); $listener.Close() } catch {
+            Write-Verbose ("Listener cleanup for {0} failed (non-fatal): {1}" -f $jobListenerUrl, $_.Exception.Message)
+        }
     }
 
     # Give the listener a beat to bind
@@ -434,10 +436,14 @@ finally {
         try {
             Stop-Job -Job $listenerJob -ErrorAction SilentlyContinue
             Remove-Job -Job $listenerJob -Force -ErrorAction SilentlyContinue
-        } catch {}
+        } catch {
+            Write-Verbose ("Listener job cleanup for {0} failed (non-fatal): {1}" -f $listenerJob.Name, $_.Exception.Message)
+        }
     }
     if (Test-Path -LiteralPath $captureFile) {
-        try { Remove-Item -LiteralPath $captureFile -Force -ErrorAction SilentlyContinue } catch {}
+        try { Remove-Item -LiteralPath $captureFile -Force -ErrorAction SilentlyContinue } catch {
+            Write-Verbose ("Cleanup of capture file {0} failed (non-fatal): {1}" -f $captureFile, $_.Exception.Message)
+        }
     }
 }
 

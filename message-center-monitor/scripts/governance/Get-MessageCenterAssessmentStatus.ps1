@@ -287,7 +287,9 @@ if ($urgentMessages -and $urgentMessages.Count -gt 0) {
 # Build readable records for output
 $outputRecords = $allRecords | ForEach-Object {
     $sevValue = $null
-    try { if ($null -ne $_.fsi_severity) { $sevValue = [int]$_.fsi_severity } } catch {}
+    try { if ($null -ne $_.fsi_severity) { $sevValue = [int]$_.fsi_severity } } catch {
+        Write-Verbose ("Severity conversion for fsi_severity value {0} failed; returning raw severity: {1}" -f $_.TargetObject, $_.Exception.Message)
+    }
     [PSCustomObject]@{
         MessageId       = $_.fsi_messagecenterid
         Title           = $_.fsi_title

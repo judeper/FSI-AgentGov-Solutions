@@ -93,7 +93,9 @@ function Invoke-CAARestMethod {
                 try {
                     $retryAfter = $_.Exception.Response.Headers.GetValues('Retry-After') | Select-Object -First 1
                     if ($retryAfter) { $delay = [math]::Max($delay, [int]$retryAfter) }
-                } catch { }
+                } catch {
+                    Write-Verbose ("Retry-After header lookup for {0} failed; using exponential backoff: {1}" -f $Uri, $_.Exception.Message)
+                }
             }
             Write-Verbose "Attempt $attempt/$MaxRetries failed (HTTP $statusCode). Retrying in ${delay}s..."
             Start-Sleep -Seconds $delay

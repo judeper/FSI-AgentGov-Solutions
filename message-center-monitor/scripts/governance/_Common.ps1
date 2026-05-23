@@ -261,7 +261,9 @@ function Invoke-McmRest {
         }
         catch {
             $status = $null
-            try { $status = [int]$_.Exception.Response.StatusCode } catch {}
+            try { $status = [int]$_.Exception.Response.StatusCode } catch {
+                Write-Verbose ("Response status lookup for {0} {1} failed; continuing without status: {2}" -f $Method, (Format-McmSafeUri $Uri), $_.Exception.Message)
+            }
 
             $isRetryable = ($status -eq 429 -or ($status -ge 500 -and $status -le 599))
             if ($isRetryable -and $attempt -le $MaxRetries) {
@@ -280,7 +282,9 @@ function Invoke-McmRest {
                         $hdr = $hdrs['Retry-After']
                         if ($hdr) { $retryAfter = [int]$hdr }
                     }
-                } catch {}
+                } catch {
+                    Write-Verbose ("Retry-After header lookup for {0} {1} failed; using exponential backoff: {2}" -f $Method, (Format-McmSafeUri $Uri), $_.Exception.Message)
+                }
                 if ($retryAfter -le 0) {
                     $retryAfter = [Math]::Min($MaxDelaySeconds, $BaseDelaySeconds * [Math]::Pow(2, $attempt - 1))
                 }
@@ -294,7 +298,9 @@ function Invoke-McmRest {
                 if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
                     $body = $_.ErrorDetails.Message
                 }
-            } catch {}
+            } catch {
+                Write-Verbose ("Error details lookup for {0} {1} failed; continuing without response body: {2}" -f $Method, (Format-McmSafeUri $Uri), $_.Exception.Message)
+            }
             $msg = "Invoke-McmRest failed: status=$status method=$Method uri=$(Format-McmSafeUri $Uri) error=$($_.Exception.Message)"
             if ($body) { $msg += " body=$(Format-McmSafeErrorBody $body)" }
             throw $msg

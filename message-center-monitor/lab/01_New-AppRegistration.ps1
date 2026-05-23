@@ -294,5 +294,7 @@ try {
     Write-LabLog -Level Info -Message "App registration ready. Next: pwsh ./02_New-KeyVault.ps1"
 }
 finally {
-    try { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null } catch {}
+    try { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null } catch {
+        Write-Verbose ("Microsoft Graph disconnect after app registration setup for {0} failed (non-fatal): {1}" -f $appName, $_.Exception.Message)
+    }
 }

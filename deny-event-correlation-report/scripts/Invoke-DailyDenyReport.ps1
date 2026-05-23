@@ -595,7 +595,9 @@ finally {
     try {
         Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
     }
-    catch { }
+    catch {
+        Write-Verbose ("Exchange Online disconnect after daily deny report in {0} failed (non-fatal): {1}" -f $OutputDirectory, $_.Exception.Message)
+    }
 }
 
 #endregion Main Execution

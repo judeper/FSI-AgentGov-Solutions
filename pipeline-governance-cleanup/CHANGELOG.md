@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 - `Send-OwnerNotifications.ps1` nested `Main` function now declares `SupportsShouldProcess`, preserving `-WhatIf` handling for live email sends.
 
 ## [1.2.1] - 2026-05-17

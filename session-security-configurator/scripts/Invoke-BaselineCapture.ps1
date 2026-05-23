@@ -425,5 +425,7 @@ catch {
 }
 finally {
     # Disconnect from Graph using shared helper (guard against dot-source failure)
-    try { Disconnect-GraphSession } catch { }
+    try { Disconnect-GraphSession } catch {
+        Write-Verbose ("Graph session disconnect after session baseline capture for zone {0} failed (non-fatal): {1}" -f $Zone, $_.Exception.Message)
+    }
 }

@@ -85,7 +85,9 @@ $env:MCM_ENVIRONMENT_URL = $cfg.powerPlatform.environmentUrl
 $adminDvToken = $null
 try {
     $adminDvToken = az account get-access-token --resource $cfg.powerPlatform.environmentUrl.TrimEnd('/') --tenant $cfg.tenant.tenantId --query accessToken -o tsv 2>$null
-} catch {}
+} catch {
+    Write-Verbose ("Admin Dataverse token acquisition for {0} failed; falling back to service principal auth: {1}" -f $cfg.powerPlatform.environmentUrl, $_.Exception.Message)
+}
 if ($adminDvToken) {
     Write-LabLog -Level Info -Message "Using admin Dataverse token for schema deploy (SP has no role yet)."
     $env:MCM_ACCESS_TOKEN = $adminDvToken

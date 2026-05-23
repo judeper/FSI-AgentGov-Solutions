@@ -174,12 +174,16 @@ try {
         try {
             $mgCtx = Get-MgContext -ErrorAction Stop
             if ($mgCtx -and $mgCtx.TenantId) { $TenantId = $mgCtx.TenantId }
-        } catch { }
+        } catch {
+            Write-Verbose ("Active Microsoft Graph context lookup for TenantId derivation on {0} failed; checking next context source: {1}" -f $DataverseUrl, $_.Exception.Message)
+        }
         if (-not $TenantId) {
             try {
                 $azCtx = Get-AzContext -ErrorAction Stop
                 if ($azCtx -and $azCtx.Tenant.Id) { $TenantId = $azCtx.Tenant.Id }
-            } catch { }
+            } catch {
+                Write-Verbose ("Active Azure context lookup for TenantId derivation on {0} failed; TenantId remains unresolved: {1}" -f $DataverseUrl, $_.Exception.Message)
+            }
         }
     }
 

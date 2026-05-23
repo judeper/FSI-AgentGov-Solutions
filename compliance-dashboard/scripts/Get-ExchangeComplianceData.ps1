@@ -196,7 +196,9 @@ function Invoke-GraphRequest {
             $statusCode = $_.Exception.Response.StatusCode.value__
             # Honor server-supplied Retry-After header on 429/503 when available.
             $retryAfterHeader = $null
-            try { $retryAfterHeader = $_.Exception.Response.Headers['Retry-After'] } catch {}
+            try { $retryAfterHeader = $_.Exception.Response.Headers['Retry-After'] } catch {
+                Write-Verbose ("Retry-After header lookup for {0} failed; using fallback retry delay: {1}" -f $Uri, $_.Exception.Message)
+            }
 
             if ($statusCode -eq 429 -and $attempt -lt $MaxRetries) {
                 $retryAfter = if ($retryAfterHeader -and [int]::TryParse($retryAfterHeader, [ref]$null)) {
@@ -693,7 +695,9 @@ catch {
     throw
 }
 finally {
-    try { Disconnect-MgGraph -ErrorAction SilentlyContinue } catch { }
+    try { Disconnect-MgGraph -ErrorAction SilentlyContinue } catch {
+        Write-Verbose ("Microsoft Graph disconnect after Exchange compliance collection for {0} failed (non-fatal): {1}" -f $OutputPath, $_.Exception.Message)
+    }
 }
 
 #endregion

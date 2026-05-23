@@ -2,6 +2,12 @@
 
 All notable changes to the Session Security Configurator solution are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
+
 ## [1.3.0] - 2026-05-22
 
 ### Fixed
