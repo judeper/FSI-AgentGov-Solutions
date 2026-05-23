@@ -198,7 +198,7 @@ function Get-AccessToken {
 #region Initialization
 
 Write-Host "`n[COD Credential Oversharing Scan]" -ForegroundColor Cyan
-Write-Host "  Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC' -AsUTC)" -ForegroundColor Gray
+Write-Host "  Started: $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss UTC'))" -ForegroundColor Gray
 
 # Resolve ClientSecret from environment if not provided
 if (-not $ClientSecret -and $env:AZURE_CLIENT_SECRET) {
@@ -400,7 +400,7 @@ foreach ($env in $environments) {
 
     Write-Host "    Agents found: $($agents.Count)" -ForegroundColor Gray
 
-    # Pre-build connection-id index for SharedCredentialMisuse — parse each agent's
+    # Pre-build connection-id index for SharedCredentialMisuse - parse each agent's
     # configuration ONCE and map agentId -> [connectionIds]. Avoids regex false
     # positives against the raw configuration JSON string.
     $agentConnectionIndex = @{}
@@ -648,11 +648,15 @@ if ($DataverseUrl -and $dvHeaders) {
     $dvApiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
     # Option set integer mappings (from create_cod_dataverse_schema.py)
+    # fsi_acv_zone: 100000000=Unclassified, 100000001=Zone1, 100000002=Zone2, 100000003=Zone3.
+    # "Unknown" is the script's fallback label when zone resolution fails; map it
+    # to Unclassified so Dataverse picklist writes do not store $null.
     $zoneMap = @{
-        "Zone1"   = 100000001
-        "Zone2"   = 100000002
-        "Zone3"   = 100000003
-        "Unknown" = 100000000
+        "Unclassified" = 100000000
+        "Zone1"        = 100000001
+        "Zone2"        = 100000002
+        "Zone3"        = 100000003
+        "Unknown"      = 100000000
     }
     $violationTypeMap = @{
         "OverprivilegedConnector"    = 100000000
@@ -791,7 +795,7 @@ switch ($OutputFormat) {
         if ($IncludeCompliant) {
             $jsonOutput["compliantAgents"] = @($compliantAgents)
         }
-        # Emit JSON only — do NOT fall through to the PSCustomObject return below
+        # Emit JSON only - do NOT fall through to the PSCustomObject return below
         # which would pollute machine-parseable output.
         Write-Host "`n  Scan: COMPLETE" -ForegroundColor Green
         return ($jsonOutput | ConvertTo-Json -Depth 10)

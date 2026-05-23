@@ -1,7 +1,7 @@
 id: scope-drift-monitor
 name: Scope Drift Monitor
 description: Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements.
-version: 1.2.1
+version: 1.2.2
 status: live
 domain: monitoring-analytics
 tier: '2'
