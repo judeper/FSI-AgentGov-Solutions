@@ -259,7 +259,7 @@ function Get-SharePointContent {
 
     # Validate URI to prevent SSRF / token exfiltration (commercial + sovereign clouds)
     # Note: Direct SharePoint REST URLs (*.sharepoint.com/_api/...) are allowed by this
-    # check but will fail authentication — the script only acquires a Graph API-scoped
+    # check but will fail authentication -- the script only acquires a Graph API-scoped
     # token. Use Graph API URLs (graph.microsoft.com/v1.0/sites/...) for SharePoint access.
     if ($Uri -notmatch '^https://(graph\.microsoft\.(com|us)|dod-graph\.microsoft\.us|microsoftgraph\.chinacloudapi\.cn|[a-z0-9\-]+\.sharepoint\.(com|us|cn)|[a-z0-9\-]+\.sharepoint-mil\.us)/') {
         throw "Blocked URI '$Uri': only Microsoft Graph and SharePoint domains (commercial and sovereign clouds) are allowed."
@@ -276,7 +276,7 @@ function Get-SharePointContent {
         $contentUri = if ($Uri -match '/items/[^/]+$') { "$Uri/content" } elseif ($Uri -match ':/.+:$') { $Uri -replace ':$', ':/content' } else { Write-Warning "URI '$Uri' does not match known Graph API content patterns (/items/{id} or :/path:). Fetching as-is; response may contain volatile metadata fields causing false-positive hash mismatches."; $Uri }
         $response = Invoke-WebRequest -Uri $contentUri -Headers $headers -Method Get -MaximumRetryCount 3 -RetryIntervalSec 5
         # Read raw bytes to ensure binary content (PDF, DOCX, etc.) is not
-        # charset-decoded to a string, which would produce incorrect hashes on PS 7.0–7.3.
+        # charset-decoded to a string, which would produce incorrect hashes on PS 7.0-7.3.
         $response.RawContentStream.Position = 0
         $memStream = [System.IO.MemoryStream]::new()
         try {
@@ -604,7 +604,7 @@ foreach ($source in $sources) {
                     Write-Host "  STALE - Last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -ForegroundColor Yellow
                     Write-Log "STALE: $($source.fsi_sourcename) - last modified $([math]::Round($daysSinceModified)) days ago (threshold: $($source.fsi_freshnessthreshold) days)" -Level "WARN"
                     if ($result.fsi_result -eq 2) {
-                        # Preserve hash-mismatch result — integrity violations must not be
+                        # Preserve hash-mismatch result -- integrity violations must not be
                         # reclassified as staleness (SEC Rule 17a-4, FINRA Rule 4511(a)).
                         Write-Warning "Source '$($source.fsi_sourcename)' is also stale, but hash-mismatch result is preserved as the higher-severity finding."
                         $stale++  # Count staleness independently; counters represent conditions, not a partition

@@ -6,6 +6,30 @@ All notable changes to the RAG Source Validator.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-05-23
+
+### Council Review -- Production-Readiness Fixes
+
+This release addresses findings from a 3-member AI Council review (PowerShell + Python + Documentation) focused on sovereign-cloud parity, evidence accuracy, and deployment-script auth-mode parity with the shared Dataverse client.
+
+### Fixed
+- **Major**: `Export-ValidationEvidence.ps1` and `Get-SourceValidationSummary.ps1` `-AuthBaseUrl` `ValidateSet` used the deprecated alias `https://login.partner.microsoftonline.cn` for China sovereign cloud; running either script with the documented endpoint from `Invoke-SourceValidation.ps1` (`https://login.chinacloudapi.cn`) failed parameter validation. Aligned all three scripts on `https://login.chinacloudapi.cn`. `scripts/governance/Export-ValidationEvidence.ps1:128`, `scripts/governance/Get-SourceValidationSummary.ps1:128`. (council review M1)
+- **Major**: `Export-ValidationEvidence.ps1` evidence metadata hard-coded `solutionVersion = "1.1.1"` while the solution shipped at v1.3.0, producing audit evidence files stamped with the wrong version. Updated to `"1.3.1"`. `scripts/governance/Export-ValidationEvidence.ps1:479`. (council review M2)
+
+### Changed
+- **Major**: `create_rsv_dataverse_schema.py`, `create_rsv_connection_references.py`, and `create_rsv_environment_variables.py` now expose `--auth-mode`, `--access-token`, `--certificate-path`, and `--certificate-password-env` CLI arguments, matching the shared `DataverseClient` capabilities. Supports `managed-identity`, `workload-identity`, `certificate`, externally-acquired bearer tokens, `interactive`, and legacy `client-secret`. Defaults to `managed-identity` when no client secret is available, enabling Azure Automation and CI/CD deployments without architectural workarounds. `client-secret` is retained as a documented dev-only fallback. (council review M3)
+- **Minor**: README footer Version History table now lists v1.3.1 and dates v1.3.0 as "May 2026" instead of "Unreleased", aligning with the CHANGELOG date. `README.md`. (council review m4)
+- **Minor**: README "Related Controls" table no longer lists control 4.3, which is not in `manifest.yaml`. Replaced with a note clarifying that 4.3 is related context but not a primary control implementation; `manifest.yaml` remains the canonical source. `README.md`. (council review m5)
+- **Minor**: Replaced non-ASCII em-dashes and ellipses in PowerShell comments and inline metadata with ASCII equivalents (`--`, `...`) for cross-runtime safety. `scripts/Invoke-SourceValidation.ps1`, `scripts/governance/*.ps1`.
+
+### Deferred
+- **m1 (refactor)**: Extracting duplicated `Get-ManagedIdentityAccessToken` boilerplate into a shared `RSV-Auth.psm1` is a maintainability improvement, not a functional bug; deferred to a future structural refactor PR.
+- **m2 (performance)**: `Get-SourceValidationSummary.ps1` N+1 query loop deferred -- requires server-side `$apply`/FetchXML aggregation work that exceeds the council-review remediation scope and is not co-located with any other fix here.
+- **m3 (informational)**: New v1.3.0 columns (`fsi_etag`, `fsi_ctag`, `fsi_deltalink`, `fsi_searchconnectorid`, `fsi_lineageuri`) are correctly documented as externally-maintained informational fields; no runtime bug, no fix required.
+
+### Migration notes
+None. No schema, option-set, or column changes. Version bump is a patch release.
+
 ## [1.3.0] - 2026-05-17
 
 ### Added

@@ -29,7 +29,7 @@ Solutions for securing agent content, file handling, and knowledge sources.
 | [Content Moderation Monitor](content-moderation-monitor/index.md) | Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements. | v1.1.2 | live | personal, team, enterprise | 1.27, 1.8 |
 | [File Upload Security](file-upload-security/index.md) | Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 by detecting agents with file uploads enabled where uploads should be restricted or disabled. | v1.1.2 | live | personal, team, enterprise | 1.14, 1.8, 1.4 |
 | [MIME Type Restrictions for File Uploads](mime-type-restrictions/index.md) | Dataverse plugin, connector-classification reference, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios. | v1.2.1 | live | personal, team, enterprise | 1.5, 1.13, 1.25, 3.3, 3.7 |
-| [RAG Source Validator](rag-source-validator/index.md) | Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities. | v1.3.0 | live | personal, team, enterprise | 2.16, 1.7, 2.13 |
+| [RAG Source Validator](rag-source-validator/index.md) | Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities. | v1.3.1 | live | personal, team, enterprise | 2.16, 1.7, 2.13 |
 
 ## Compliance & Audit
 

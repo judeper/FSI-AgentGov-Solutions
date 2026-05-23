@@ -701,13 +701,23 @@ def main() -> None:
     parser.add_argument("--tenant-id", default=os.environ.get("RSV_TENANT_ID"),
                         help="Entra ID tenant ID (or set RSV_TENANT_ID env var)")
     parser.add_argument("--client-id", default=os.environ.get("RSV_CLIENT_ID"),
-                        help="Application (client) ID (or set RSV_CLIENT_ID env var)")
+                        help="Application/client ID for user-assigned managed identity, workload identity, certificate, or legacy client-secret auth (or set RSV_CLIENT_ID env var)")
     parser.add_argument("--client-secret", default=os.environ.get("RSV_CLIENT_SECRET"),
-                        help="Client secret (or set RSV_CLIENT_SECRET env var)")
+                        help="Client secret (legacy dev-only; prefer managed identity, workload identity, or certificate)")
     parser.add_argument("--environment-url", default=os.environ.get("RSV_ENVIRONMENT_URL"),
                         help="Dataverse environment URL (or set RSV_ENVIRONMENT_URL env var)")
     parser.add_argument("--interactive", action="store_true",
                         help="Use interactive browser authentication")
+    parser.add_argument("--auth-mode",
+                        choices=["interactive", "managed-identity", "workload-identity", "certificate", "client-secret"],
+                        default=os.environ.get("RSV_AUTH_MODE"),
+                        help="Authentication mode; prefer managed-identity, workload-identity, or certificate for automation")
+    parser.add_argument("--access-token", default=os.environ.get("RSV_ACCESS_TOKEN"),
+                        help="Externally acquired Dataverse bearer token; takes precedence over other auth modes")
+    parser.add_argument("--certificate-path", default=os.environ.get("RSV_CERTIFICATE_PATH"),
+                        help="PEM/PFX certificate path for certificate authentication")
+    parser.add_argument("--certificate-password-env", default="RSV_CERTIFICATE_PASSWORD",
+                        help="Environment variable name containing the certificate password")
     parser.add_argument("--dry-run", action="store_true",
                         help="Preview schema operations without API calls")
     parser.add_argument("--output-docs", action="store_true",
@@ -727,22 +737,27 @@ def main() -> None:
         print(f"Schema docs written to {out_path}")
         sys.exit(0)
 
-    if not args.tenant_id or not args.environment_url:
+    if not args.environment_url:
         parser.error(
-            "Missing required arguments. Provide --tenant-id and --environment-url "
-            "(or set RSV_TENANT_ID and RSV_ENVIRONMENT_URL env vars)"
+            "Missing required argument. Provide --environment-url "
+            "(or set RSV_ENVIRONMENT_URL env var)"
         )
-    if not args.client_id and not args.interactive:
-        parser.error(
-            "--client-id is required (or set RSV_CLIENT_ID env var) "
-            "unless --interactive is specified"
-        )
+    if not args.access_token and not args.tenant_id:
+        parser.error("--tenant-id is required unless --access-token is provided (or set RSV_TENANT_ID)")
 
     client_secret = args.client_secret
-    if not args.interactive:
-        if not client_secret:
-            import getpass
-            client_secret = getpass.getpass("Client secret: ")
+    auth_mode = "interactive" if args.interactive else (
+        args.auth_mode or ("client-secret" if client_secret else "managed-identity")
+    )
+    if not args.access_token and auth_mode in {"interactive", "workload-identity", "certificate", "client-secret"} and not args.client_id:
+        parser.error("--client-id is required for the selected auth mode (or set RSV_CLIENT_ID env var)")
+
+    # legacy: dev-only -- replace with managed identity, workload identity federation, or certificate auth in production
+    if not args.access_token and auth_mode == "client-secret" and not client_secret:
+        import getpass
+        client_secret = getpass.getpass("Client secret: ")
+
+    certificate_password = os.environ.get(args.certificate_password_env) if args.certificate_password_env else None
 
     try:
         client = DataverseClient(
@@ -750,9 +765,13 @@ def main() -> None:
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
-            dry_run=args.dry_run,
+            auth_mode=auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=certificate_password,
         )
+        client.dry_run = args.dry_run
 
         if args.dry_run:
             print("=== DRY RUN MODE - No changes will be made ===")

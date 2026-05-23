@@ -17,9 +17,9 @@
     exports with full validation history, timestamps, and audit trail metadata.
 
     This script supports FSI-AgentGov Controls:
-    - 2.16 (RAG Source Integrity) — evidence of source validation
-    - 1.7 (Audit Logging) — exportable audit trail
-    - 2.13 (Documentation) — compliance documentation support
+    - 2.16 (RAG Source Integrity) -- evidence of source validation
+    - 1.7 (Audit Logging) -- exportable audit trail
+    - 2.13 (Documentation) -- compliance documentation support
 
 .PARAMETER DataverseUrl
     Dataverse organization URL (e.g., https://org.crm.dynamics.com).
@@ -125,7 +125,7 @@ param(
     [string]$SourceType = 'All',
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet('https://login.microsoftonline.com','https://login.microsoftonline.us','https://login.partner.microsoftonline.cn')]
+    [ValidateSet('https://login.microsoftonline.com','https://login.microsoftonline.us','https://login.chinacloudapi.cn')]
     [string]$AuthBaseUrl = 'https://login.microsoftonline.com',
 
     [Parameter(Mandatory = $false)]
@@ -476,7 +476,7 @@ $evidence = [PSCustomObject]@{
     metadata = [PSCustomObject]@{
         exportedAt      = $exportTimestamp
         solution        = "RAG Source Validator"
-        solutionVersion = "1.1.1"
+        solutionVersion = "1.3.1"
         daysBack        = $DaysBack
         fromDate        = $fromDate
         sourceTypeFilter = $SourceType
