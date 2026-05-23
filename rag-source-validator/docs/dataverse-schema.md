@@ -29,6 +29,11 @@
 | fsi_AlertOnChange | fsi_alertonchange | Boolean | No | Send notification when source content changes | `1` = Yes, `0` = No |
 | fsi_FreshnessThreshold | fsi_freshnessthreshold | Integer | No | Maximum acceptable age in days before source is considered stale |  |
 | fsi_LastModified | fsi_lastmodified | DateTime | No | Timestamp of last detected source modification |  |
+| fsi_eTag | fsi_etag | String | No | Document eTag from SharePoint/OneDrive for change detection |  |
+| fsi_cTag | fsi_ctag | String | No | Document cTag from SharePoint/OneDrive (catalog tag) |  |
+| fsi_DeltaLink | fsi_deltalink | String | No | Microsoft Graph delta query link for incremental change tracking |  |
+| fsi_SearchConnectorId | fsi_searchconnectorid | String | No | Microsoft Search connector identifier |  |
+| fsi_LineageUri | fsi_lineageuri | String | No | Source lineage URI for RAG provenance tracking |  |
 
 ### fsi_ValidationResult (`fsi_validationresult`)
 
