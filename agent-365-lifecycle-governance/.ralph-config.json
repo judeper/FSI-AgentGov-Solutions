@@ -5,6 +5,6 @@
     "Deactivation request approval status uses fsi_approvalstatus (not fsi_requeststatus). SchemaName: fsi_ApprovalStatus.",
     "Deletion hold expiry uses fsi_deletionholduntil (not fsi_deletionholdexpiry). SchemaName: fsi_DeletionHoldUntil.",
     "Microsoft Learn currently documents Graph beta /agentRegistry/agentInstances with ownerIds for Agent 365 registry automation; older /agentRegistry/agents and sponsor@odata.bind patterns are stale.",
-    "HTTP with Microsoft Entra ID (preauthorized) connector is the current name — not 'HTTP with Microsoft Entra ID'."
+    "HTTP with Microsoft Entra ID (preauthorized) connector is the current name — the legacy 'HTTP with Azure AD' label is obsolete (Microsoft renamed the connector in 2023)."
   ]
 }

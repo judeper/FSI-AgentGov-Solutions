@@ -78,6 +78,7 @@ jobs:
                    --exclude='THREAT-MODEL.md' \
                    --exclude='CHANGELOG.md' \
                    --exclude='*/CHANGELOG.md' \
+                   --exclude='agent-365-lifecycle-governance/.ralph-config.json' \
                    '\bAzure AD\b' . || true)
           if [ -n "$hits" ]; then
             echo "::error::'Azure AD' found outside CHANGELOG/instruction files (use 'Microsoft Entra ID'):"
