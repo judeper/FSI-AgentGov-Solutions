@@ -88,7 +88,7 @@ function Write-AuditLog {
         [string]$Level = "INFO",
         [string]$CorrelationId = $script:CorrelationId
     )
-    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
+    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     Write-Host "[$timestamp] [$Level] [$CorrelationId] $Message"
 }
 $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)
@@ -186,7 +186,7 @@ function Get-AccessToken {
         throw "Managed identity authentication was unavailable and client-secret fallback parameters were incomplete. For production, run from an Azure host with a system-assigned or user-assigned managed identity."
     }
 
-    # legacy: dev-only — replace with managed identity in production
+    # legacy: dev-only -- replace with managed identity in production
     $loginEndpoint = switch -Wildcard ($Scope) {
         "*office365.us*"           { "https://login.microsoftonline.us" }
         "*eaglex.ic.gov*"          { "https://login.microsoftonline.us" }
@@ -750,7 +750,7 @@ Write-Host "  Scope Drift Detection Scanner" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-AuditLog "Drift scan starting — Environment=$Environment AgentFilter=$(if ($AgentId) { $AgentId } else { 'All' }) Lookback=${Minutes}m"
+Write-AuditLog "Drift scan starting -- Environment=$Environment AgentFilter=$(if ($AgentId) { $AgentId } else { 'All' }) Lookback=${Minutes}m"
 
 Write-Host "Environment: $Environment"
 Write-Host "Agent Filter: $(if ($AgentId) { $AgentId } else { 'All active agents' })"
@@ -831,7 +831,7 @@ foreach ($event in $events) {
         continue
     }
 
-    # Skip events with no identifiable agent — avoids false "No Baseline" violations.
+    # Skip events with no identifiable agent -- avoids false "No Baseline" violations.
     if (-not $eventAgentId) {
         continue
     }
@@ -867,7 +867,7 @@ foreach ($event in $events) {
                 Resource = $violation.Resource
                 Severity = Get-SeverityLabel -Severity $violation.Severity
             }
-            Write-AuditLog "Violation detected — Agent=$(if ($eventAgentId) { $eventAgentId } else { 'Unknown' }) Type=$($violation.Type) Resource=$($violation.Resource) Severity=$(Get-SeverityLabel -Severity $violation.Severity)" -Level "WARN"
+            Write-AuditLog "Violation detected -- Agent=$(if ($eventAgentId) { $eventAgentId } else { 'Unknown' }) Type=$($violation.Type) Resource=$($violation.Resource) Severity=$(Get-SeverityLabel -Severity $violation.Severity)" -Level "WARN"
         }
     }
 }
@@ -916,7 +916,7 @@ $output = [PSCustomObject]@{
     ScanTime          = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 }
 
-Write-AuditLog "Drift scan complete — Events=$($events.Count) Agents=$($agentsScanned.Count) Violations=$totalViolations FetchErrors=$($script:auditFetchErrors)"
+Write-AuditLog "Drift scan complete -- Events=$($events.Count) Agents=$($agentsScanned.Count) Violations=$totalViolations FetchErrors=$($script:auditFetchErrors)"
 
 Write-Output $output
 

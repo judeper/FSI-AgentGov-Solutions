@@ -101,7 +101,7 @@
   the compliance team when this script exits with a non-zero code:
 
   - Exit 1: All extractions failed (critical)
-  - Exit 2: Partial failure — some extractions succeeded, some failed
+  - Exit 2: Partial failure - some extractions succeeded, some failed
 
   Recommended notification mechanisms:
   - Azure Automation: Configure webhook or Logic App alert on runbook failure
@@ -236,7 +236,7 @@ function Get-KeyVaultSecrets {
     $secrets = @{}
 
     # Retrieve App Insights App ID from Key Vault
-    # NOTE: AppInsightsApiKey retrieval removed — Entra ID auth (Wave 1 migration) no longer needs it
+    # NOTE: AppInsightsApiKey retrieval removed - Entra ID auth (Wave 1 migration) no longer needs it
     try {
         $secrets.AppInsightsAppId = Get-AzKeyVaultSecret -VaultName $VaultName -Name "AppInsightsAppId" -AsPlainText -ErrorAction SilentlyContinue
     }
@@ -324,7 +324,7 @@ try {
         if (-not $AppInsightsAppId -and $kvSecrets.AppInsightsAppId) {
             $AppInsightsAppId = $kvSecrets.AppInsightsAppId
         }
-        # NOTE: ApiKey no longer retrieved from KeyVault — Entra ID auth path does not need it
+        # NOTE: ApiKey no longer retrieved from KeyVault - Entra ID auth path does not need it
     }
 
 
@@ -372,7 +372,7 @@ try {
                 & $copilotScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $copilotDenyPath @exchangeAuthArgs
             }
 
-            # Script completed without error — mark success even if zero events (no CSV created)
+            # Script completed without error - mark success even if zero events (no CSV created)
             $results.CopilotDeny.Success = $true
             if (Test-Path $copilotDenyPath) {
                 $count = (Import-Csv $copilotDenyPath | Measure-Object).Count
@@ -401,7 +401,7 @@ try {
                 & $dlpScript -StartDate $reportStartDate -EndDate $reportEndDate -OutputPath $dlpEventsPath @exchangeAuthArgs
             }
 
-            # Script completed without error — mark success even if zero events (no CSV created)
+            # Script completed without error - mark success even if zero events (no CSV created)
             $results.DlpEvents.Success = $true
             if (Test-Path $dlpEventsPath) {
                 $count = (Import-Csv $dlpEventsPath | Measure-Object).Count
@@ -436,7 +436,7 @@ try {
                             -OutputPath $raiTelemetryPath
                     }
 
-                    # Script completed without error — mark success even if zero events (no CSV created)
+                    # Script completed without error - mark success even if zero events (no CSV created)
                     $results.RaiTelemetry.Success = $true
                     if (Test-Path $raiTelemetryPath) {
                         $count = (Import-Csv $raiTelemetryPath | Measure-Object).Count
@@ -472,6 +472,9 @@ try {
             $defenderScript = Join-Path $scriptDir "Export-DefenderCopilotEvents.ps1"
 
             if (Test-Path $defenderScript) {
+                # NOTE: $exchangeAuthArgs intentionally NOT splatted here. The Defender
+                # extractor uses Microsoft Graph (advanced hunting) and does not require
+                # an Exchange Online session; auth flows through Connect-MgGraph instead.
                 Invoke-WithRetry -ScriptBlock {
                     & $defenderScript `
                         -StartDate $reportStartDate `
@@ -514,7 +517,7 @@ try {
                 -FilePaths $filesToUpload `
                 -DateFolder $dateStamp
 
-            # Clean up local CSV files only if all blob uploads succeeded (data hygiene — CSVs contain PII)
+            # Clean up local CSV files only if all blob uploads succeeded (data hygiene - CSVs contain PII)
             if ($script:BlobUploadFailures -eq 0) {
                 foreach ($csvFile in $filesToUpload) {
                     try {
@@ -527,7 +530,7 @@ try {
                 }
             }
             else {
-                Write-Warning "  Skipping local file cleanup — $($script:BlobUploadFailures) blob upload(s) failed. Local CSVs retained for manual upload."
+                Write-Warning "  Skipping local file cleanup - $($script:BlobUploadFailures) blob upload(s) failed. Local CSVs retained for manual upload."
             }
         }
         else {

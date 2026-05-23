@@ -417,7 +417,7 @@
     "credential-oversharing-detector": {
       "id": "credential-oversharing-detector",
       "name": "Credential Oversharing Detector",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -509,7 +509,7 @@
     "deny-event-correlation-report": {
       "id": "deny-event-correlation-report",
       "name": "Deny Event Correlation Report",
-      "version": "2.0.3",
+      "version": "2.0.4",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",
@@ -886,7 +886,7 @@
     "scope-drift-monitor": {
       "id": "scope-drift-monitor",
       "name": "Scope Drift Monitor",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",
