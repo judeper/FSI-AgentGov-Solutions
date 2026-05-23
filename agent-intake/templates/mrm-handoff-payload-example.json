@@ -1,0 +1,106 @@
+{
+  "$schema": "https://judeper.github.io/FSI-AgentGov-Solutions/schemas/mrm-handoff-payload-v1.json",
+  "payloadVersion": "1.0.0",
+  "intake": {
+    "requestId": "9bd0c41c-1cc4-45c5-acde-f2a97c5d9b87",
+    "submittedOnUtc": "2026-05-14T16:12:43Z",
+    "pathUsed": "Full",
+    "riskTier": "Tier 1 (High)",
+    "zone": "Zone 1 (Enterprise)",
+    "mrmRequired": true
+  },
+  "agent": {
+    "displayName": "Credit Adverse Action Review Copilot",
+    "agentType": "Copilot Studio",
+    "platformAgentId": "3c2fd0ea-78e0-4d42-9c28-2d2ff9ed9f8e",
+    "environmentId": "f1f2d9be-8dc4-4d19-9bb0-4d4c5c1215be",
+    "entraAgentId": "b9152d94-0d34-4c3e-8bb5-9aa38fcb4d7e",
+    "intendedAudience": "Anyone in the firm",
+    "businessOutcome": "Decision support for adverse-action notice quality review",
+    "businessJustification": "Supports first-line reviewers by summarizing case facts and highlighting policy exceptions before a human decision is recorded."
+  },
+  "maker": {
+    "upn": "maria.chen@contoso.com",
+    "displayName": "Maria Chen",
+    "department": "Retail Credit Risk",
+    "country": "US"
+  },
+  "model": {
+    "vendorOrInternal": "Vendor",
+    "modelFamily": "GPT-4.1",
+    "providerName": "OpenAI",
+    "providerModelId": "gpt-4.1",
+    "decisionOutputType": "Decision Support",
+    "materiality": "High",
+    "fineTuned": true,
+    "validationEvidenceUrl": "https://contoso.sharepoint.com/sites/mrm/Shared%20Documents/validations/credit-adverse-action.pdf",
+    "championChallengerPlan": "Quarterly challenger benchmark against the current adverse-action quality-assurance rubric.",
+    "knownLimitations": [
+      "May inherit ambiguity from incomplete case files.",
+      "Does not make final customer credit decisions."
+    ]
+  },
+  "data": {
+    "declaredSources": [
+      {
+        "name": "Retail Lending Case Files",
+        "type": "Dataverse",
+        "classification": "NPI",
+        "residencyCountry": "US",
+        "customerData": true,
+        "restricted": false
+      },
+      {
+        "name": "Policy Exceptions Register",
+        "type": "SharePoint",
+        "classification": "Confidential",
+        "residencyCountry": "US",
+        "customerData": false,
+        "restricted": true
+      }
+    ],
+    "crossBorder": false,
+    "npiInvolved": true,
+    "mnpiInvolved": false
+  },
+  "controls": {
+    "humanOversightLevel": "L4",
+    "explainabilityArtifacts": [
+      "https://contoso.sharepoint.com/sites/mrm/Shared%20Documents/explainability/credit-adverse-action-decision-tree.pdf"
+    ],
+    "biasFairnessAssessmentUrl": "https://contoso.sharepoint.com/sites/mrm/Shared%20Documents/fairness/credit-adverse-action-fairness-review.pdf"
+  },
+  "sponsor": {
+    "upn": "alice.nguyen@contoso.com",
+    "displayName": "Alice Nguyen",
+    "attestationCardHash": "9a2df4c2f2c44196d9db7b4bf5f1f3f2b6c1f3b8d9e4a5c6b7d8e9f0a1b2c3d4"
+  },
+  "reviewers": [
+    {
+      "role": "InfoSec",
+      "upn": "infosec-review@contoso.com",
+      "decision": "Approved",
+      "decidedOnUtc": "2026-05-15T10:18:00Z",
+      "decisionPackHash": "6f3b2d83413e6b6c2cb6e9cf992b444c7f3f7b34de0f0fcd3e4cab17a6f89a6d"
+    },
+    {
+      "role": "Compliance",
+      "upn": "compliance-review@contoso.com",
+      "decision": "Approved",
+      "decidedOnUtc": "2026-05-15T12:30:00Z",
+      "decisionPackHash": "6f3b2d83413e6b6c2cb6e9cf992b444c7f3f7b34de0f0fcd3e4cab17a6f89a6d"
+    },
+    {
+      "role": "MRM",
+      "upn": "noah.reed@contoso.com",
+      "decision": "Pending"
+    }
+  ],
+  "routing": {
+    "mrmOfficerUpn": "noah.reed@contoso.com",
+    "auditorUpn": "susan.audit@contoso.com"
+  },
+  "decisionPackHash": "6f3b2d83413e6b6c2cb6e9cf992b444c7f3f7b34de0f0fcd3e4cab17a6f89a6d",
+  "retentionLabel": "FSI-AgentIntake-7yr",
+  "policyVersion": "1.0.0-preview"
+}

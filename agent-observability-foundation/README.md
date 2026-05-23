@@ -9,7 +9,8 @@ coe_function: optimize
 # Agent Observability Foundation
 
 > **Version:** v1.2.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
 

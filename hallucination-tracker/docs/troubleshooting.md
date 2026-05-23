@@ -66,6 +66,47 @@ Warning: enriched feedback columns are unavailable; falling back to legacy v1.1.
 3. Copilot Studio reactions/comments are unsupported for the selected channel (for example, Microsoft 365 Copilot channel).
 4. Transcript or Product Feedback retention windows expired before ingestion.
 5. The `fsi_hallucinationreports` table does not exist — deploy the Dataverse schema first.
+6. Product Feedback CSV was validated with `--dry-run` but never written to Dataverse.
+
+### Product Feedback CSV missing required columns
+
+**Error:**
+
+```
+Error: Missing required CSV columns: App, Comments, Date Submitted, Feedback Type
+```
+
+**Solution:**
+
+1. Re-export the file from **Microsoft 365 admin center > Health > Product Feedback**.
+2. Confirm the export still includes `Comments`, `Date Submitted`, and `Feedback Type`.
+3. The importer accepts the current `App` header and a legacy `Product` alias.
+
+### Product Feedback rows skipped during import
+
+**Symptom:** Import summary shows skipped rows such as `invalid_date`, `not_negative_feedback`, `duplicate_row`, or `already_exists`.
+
+**Solution:**
+
+1. Run `python scripts/import_product_feedback_csv.py --input exports/product-feedback.csv --output normalized-product-feedback.json --dry-run` to preview normalized rows before writing to Dataverse.
+2. Correct malformed timestamps in the source export before rerunning.
+3. Positive or non-actionable feedback is skipped intentionally so the tracker stays focused on hallucination investigations.
+4. Duplicate and `already_exists` skips are expected on reruns because the importer uses deterministic `fsi_reportname` values for idempotence.
+
+### Product Feedback rows land in single-record clusters
+
+**Symptom:** Imported rows have `fsi_topicid` values ending with `record-<hash>` and do not group with other Product Feedback rows.
+
+**Possible causes:**
+
+1. The export omitted usable `Comments` and `Survey Responses`, so the importer had no shared text signal to normalize.
+2. `Feature Area`, `App module`, or `Channel` differed between rows even though the app name looked similar.
+
+**Solution:**
+
+1. Re-export Product Feedback with comment text when tenant policy allows it.
+2. Compare `fsi_topicname`, `fsi_channelid`, and `fsi_conversationid` to confirm whether the rows should share a cluster.
+3. Use `fsi_topicname`, `fsi_channelid`, and `fsi_reportedat` for broader app/feature/day triage when per-record fallback clustering is expected.
 
 ### Required packages not installed
 

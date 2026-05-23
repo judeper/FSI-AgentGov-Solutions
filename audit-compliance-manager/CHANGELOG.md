@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-05-17
+
 ### Changed
 
 - Bumped solution version to v1.0.4 for the Microsoft Learn 2026-Q2 technical refresh.

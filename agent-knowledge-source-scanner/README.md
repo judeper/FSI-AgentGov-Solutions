@@ -8,7 +8,9 @@ coe_function: govern
 ---
 # Agent Knowledge Source Scanner
 
-> **Status:** Completed | **Version:** v1.1.1
+> **Version:** v1.1.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources.
 

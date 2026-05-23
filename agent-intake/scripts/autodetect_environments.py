@@ -42,8 +42,15 @@ API_VERSION = "2020-10-01"
 def get_token_via_cli(resource: str = PPAC_RESOURCE) -> str:
     """Dev fallback — get an access token from azure-cli cache."""
     # legacy: dev-only — replace with managed identity in production
+    # On Windows, `az` is `az.cmd`. Python's subprocess does not honour PATHEXT
+    # for the first argument of a list invocation, so we resolve via shutil.which
+    # to get the full path (with .cmd extension on Windows) and fall back to the
+    # bare name on Unix where the launcher is a real binary.
+    import shutil
+
+    az_executable = shutil.which("az") or "az"
     out = subprocess.check_output(
-        ["az", "account", "get-access-token", "--resource", resource.rstrip("/"), "--query", "accessToken", "-o", "tsv"],
+        [az_executable, "account", "get-access-token", "--resource", resource.rstrip("/"), "--query", "accessToken", "-o", "tsv"],
         text=True,
     )
     return out.strip()

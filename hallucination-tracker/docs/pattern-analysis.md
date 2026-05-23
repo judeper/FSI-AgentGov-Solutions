@@ -70,6 +70,31 @@ Identifies recurring patterns using frequency thresholds:
 
 ## Usage
 
+### Microsoft 365 Product Feedback import
+
+```bash
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output normalized-product-feedback.json \
+  --dry-run
+
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output dataverse \
+  --environment-url https://your-org.crm.dynamics.com \
+  --interactive
+```
+
+Imported rows land in `fsi_hallucinationreports` with `fsi_source = 100000004`; `analyze_patterns.py` reads them directly for source, topic, channel, and day-level analysis.
+
+The importer now pre-populates the clustering fields the analyzer expects:
+
+- `fsi_topicname` carries the human-readable app/workload scope, enriched with `Feature Area` or `App module` when available.
+- `fsi_topicid` carries a deterministic `m365pf-*` cluster key for per-cluster aggregation and export review.
+- `fsi_channelid` is always present because the importer normalizes `Channel` and defaults missing values to `m365copilot`.
+- `fsi_feedbackcomment` is always populated from `Comments`, `Survey Responses`, or `Feedback Type` fallback text.
+- Blank comment/survey rows fall back to a per-record `fsi_topicid` ending in `record-<hash>` so ingestion remains deterministic without collapsing unrelated feedback into the same cluster.
+
 ### Live Mode
 
 ```bash
@@ -106,7 +131,6 @@ python scripts/analyze_patterns.py --environment "https://example.crm.dynamics.c
 ## Future Enhancements
 
 - CSV/Dataverse importer for Copilot Studio transcript reactions and comments.
-- CSV importer for Microsoft 365 admin center Product Feedback exports.
 - Semantic clustering and similarity search after governance approval for prompt/response/comment data handling.
 - Dedicated CSAT and groundedness score columns if product-team review confirms reporting requirements.
 - Automated remediation recommendations.

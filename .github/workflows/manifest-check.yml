@@ -22,6 +22,14 @@ jobs:
           ref: ${{ vars.FRAMEWORK_REF || 'v1.4.0' }}
           path: fsi-agentgov
 
+      - name: Reject stale framework pillar path segments
+        working-directory: solutions
+        run: |
+          if grep -rE 'pillar-(1-foundation|2-lifecycle|3-monitoring)' --include='*.md' --include='*.yaml' --include='*.yml' . ; then
+            echo "Stale pillar path segment found"
+            exit 1
+          fi
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

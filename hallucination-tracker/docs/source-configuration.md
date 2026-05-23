@@ -94,13 +94,47 @@ Set `fsi_source` to `100000000` (User) for Copilot Studio custom-agent records.
 
 Microsoft 365 Copilot feedback is governed by Microsoft 365 feedback policies. Users can provide thumbs-up/thumbs-down feedback and comments from Microsoft 365 Copilot experiences when tenant policy allows it. Administrators can view and export organizational feedback from **Microsoft 365 admin center > Health > Product Feedback**.
 
-Set `fsi_source` to `100000004` (Microsoft 365 Copilot) for records imported from Product Feedback export.
+Set `fsi_source` to `100000004` (Microsoft 365 Copilot) for records imported from Product Feedback export. The supported importer is `python scripts/import_product_feedback_csv.py`.
 
 | Signal | Weight | `fsi_category` | `fsi_severity` | Enrichment guidance |
 |--------|--------|----------------|----------------|---------------------|
-| Copilot thumbs down with incorrect/incomplete comment | High | 100000000 (Factual error) | 100000002 | Map Product, Date Submitted, Feedback Type, and Comments into `fsi_description` / `fsi_feedbackcomment`. |
+| Copilot thumbs down with incorrect/incomplete comment | High | 100000000 (Factual error) | 100000002 | Map `App` (`Product` alias accepted), `Date Submitted`, `Feedback Type`, and `Comments` into `fsi_description` / `fsi_feedbackcomment`. |
 | Feedback indicates missing sources or unsupported claim | High | 100000002 (Citation missing) | 100000002 | Include only prompt/response content permitted by tenant feedback policy and privacy review. |
 | Repeated app-specific feedback | Medium | 100000004 (Confidence overstatement) | 100000001 | Use `fsi_topicname` for app or workload area (for example, Teams, Outlook, Word). |
+
+**Supported CSV columns:**
+
+- Required: `App` (the importer also accepts legacy `Product`), `Comments`, `Date Submitted`, `Feedback Type`
+- Optional: `Sentiment`, `User Id`, `User Email`, `Language or Comment Language`, `Channel`, `Feature Area`, `App Build`, `App Language`, `Attachments`, `TenantId`, `App module`, `Survey Questions`, `Survey Responses`, `Feedback Id`, and, after privacy review, `Prompt` / `Generated Response`
+
+**Ingestion-time clustering enrichment:**
+
+- `fsi_topicname` = `App / Feature Area` or `App / App module` when the export provides that scope.
+- `fsi_topicid` = deterministic `m365pf-*` cluster key derived from app, feature/module, channel, category, and normalized comment or survey text.
+- `fsi_channelid` = normalized `Channel`; when the export omits it, the importer defaults to `m365copilot` so channel clustering still works.
+- `fsi_feedbackcomment` = `Comments`, or `Survey Responses`, or `Feedback Type` as a final fallback.
+- `fsi_conversationid` = raw `Feedback Id` for traceability; if both `Comments` and `Survey Responses` are blank, the importer falls back to a per-record `fsi_topicid` keyed from that identifier instead of over-grouping unrelated rows.
+
+**Dry run / preview:**
+
+```bash
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output normalized-product-feedback.json \
+  --dry-run
+```
+
+**Write to Dataverse:**
+
+```bash
+python scripts/import_product_feedback_csv.py \
+  --input exports/product-feedback.csv \
+  --output dataverse \
+  --environment-url https://your-org.crm.dynamics.com \
+  --interactive
+```
+
+**Content sample caveat:** `Prompt` and `Generated Response` stay out of Dataverse unless `--include-content-samples` is explicitly approved and supplied.
 
 **Graph note:** Microsoft Graph Copilot interaction history can retrieve Microsoft 365 Copilot prompts/responses for licensed users with `AiEnterpriseInteraction.Read.All`, but it is not a user-feedback API and does not retrieve interactions in agents created by Copilot Studio. Use it only as governed context for an approved investigation, not as the primary feedback source.
 

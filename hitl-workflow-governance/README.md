@@ -9,7 +9,9 @@ coe_function: govern
 # HITL Workflow Governance
 
 > **Version:** v1.1.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
+> **Upstream Microsoft dependency:** Preview — The Request for Information and Run a Multistage Approval actions remain preview in Microsoft Learn and should be reviewed against preview terms before regulated-data use.
 
 Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `shared_advancedapprovals` connector.
 
@@ -23,10 +25,10 @@ Microsoft introduced the **Request for Information** (RFI) action for Copilot St
 
 | Control | Relationship |
 |---------|--------------|
-| [2.12 - Supervision and Oversight](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-lifecycle/2.12-supervision-and-oversight/) | Primary — Human review checkpoint validation for supervision evidence |
-| [2.17 - Multi-Agent Orchestration Limits](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-lifecycle/2.17-multi-agent-orchestration-limits/) | Primary — HITL checkpoints within multi-step and multi-agent workflow patterns |
+| [2.12 - Supervision and Oversight (FINRA Rule 3110)](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.12-supervision-and-oversight-finra-rule-3110/) | Primary — Human review checkpoint validation for supervision evidence |
+| [2.17 - Multi-Agent Orchestration Limits](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.17-multi-agent-orchestration-limits/) | Primary — HITL checkpoints within multi-step and multi-agent workflow patterns |
 | [1.10 - Communication Compliance](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.10-communication-compliance-monitoring/) | Supporting — Reviewer identity, decision context, and timestamp retention for output review |
-| [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-lifecycle/2.1-managed-environments/) | Dependency — Zone classification source |
+| [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Dependency — Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Downstream — Evidence export for governance dashboard |
 
 ## Regulatory Context

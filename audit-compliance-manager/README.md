@@ -9,7 +9,8 @@ coe_function: govern
 # Audit Compliance Manager (ACM)
 
 > **Version:** v1.0.4
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the Audit Configuration Validator (ACV) and Audit Logging Compliance Automation (ALCA) into a single solution that validates audit configurations, detects compliance gaps, and remediates non-compliant environments.
 

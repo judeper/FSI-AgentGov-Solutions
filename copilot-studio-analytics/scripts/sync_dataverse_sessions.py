@@ -38,10 +38,12 @@ Requirements:
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 import yaml
@@ -83,6 +85,222 @@ WATERMARK_STATUS_IN_PROGRESS = 100000002
 WATERMARK_STATUS_WARNING = 100000003
 WATERMARK_TIER_1 = 100000000
 WATERMARK_TIER_2 = 100000001
+RECENT_SESSION_STATE_FILE = "sync_dataverse_sessions.state.json"
+RECENT_SESSION_STATE_VERSION = 1
+
+
+def format_utc_datetime(value: datetime) -> str:
+    """Format a timezone-aware datetime as an ISO 8601 UTC string."""
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def parse_iso_datetime(value: Any) -> Optional[datetime]:
+    """Parse an ISO 8601 timestamp into an aware UTC datetime."""
+    if not value:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def get_session_created_timestamp(session: dict[str, Any]) -> Optional[datetime]:
+    """Return the session creation timestamp used by the Dataverse lookback filter."""
+    return parse_iso_datetime(session.get("msdyn_sessioncreatedon"))
+
+
+def get_session_effective_timestamp(session: dict[str, Any]) -> Optional[datetime]:
+    """Return the session timestamp used for watermark advancement."""
+    return parse_iso_datetime(session.get("msdyn_sessionclosedon")) or get_session_created_timestamp(session)
+
+
+def get_latest_session_timestamp(sessions: list[dict[str, Any]], fallback: datetime) -> datetime:
+    """Return the latest created/closed timestamp across the fetched session set."""
+    timestamps = [
+        timestamp
+        for session in sessions
+        if (timestamp := get_session_effective_timestamp(session)) is not None
+    ]
+    return max(timestamps, default=fallback)
+
+
+def get_recent_session_state_path() -> Path:
+    """Return the on-disk state path used to suppress lookback replays."""
+    return Path(__file__).resolve().parent.parent / "output" / RECENT_SESSION_STATE_FILE
+
+
+def get_recent_session_scope_key(environment_url: str, tier: int) -> str:
+    """Return the per-environment/per-tier key used inside the dedup state file."""
+    return f"{environment_url}|tier:{tier}"
+
+
+def load_recent_session_state(state_path: Path) -> dict[str, Any]:
+    """Load recent-session dedup state from disk, tolerating missing/corrupt files."""
+    default_state = {"version": RECENT_SESSION_STATE_VERSION, "scopes": {}}
+
+    if not state_path.exists():
+        return default_state
+
+    try:
+        with state_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not read recent-session state from %s: %s", state_path, exc)
+        return default_state
+
+    if not isinstance(data, dict):
+        logger.warning("Ignoring unexpected recent-session state shape in %s", state_path)
+        return default_state
+
+    scopes = data.get("scopes")
+    if data.get("version") != RECENT_SESSION_STATE_VERSION or not isinstance(scopes, dict):
+        logger.warning("Ignoring unexpected recent-session state shape in %s", state_path)
+        return default_state
+
+    return {"version": RECENT_SESSION_STATE_VERSION, "scopes": scopes}
+
+
+def save_recent_session_state(state_path: Path, state: dict[str, Any]) -> None:
+    """Persist recent-session dedup state atomically."""
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = state_path.with_suffix(state_path.suffix + ".tmp")
+
+    with temp_path.open("w", encoding="utf-8") as handle:
+        json.dump(state, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+
+    temp_path.replace(state_path)
+
+
+def prune_recent_session_index(
+    session_index: dict[str, dict[str, str]],
+    cutoff: datetime,
+) -> dict[str, dict[str, str]]:
+    """Keep only session IDs that can still reappear inside the lookback window."""
+    pruned: dict[str, dict[str, str]] = {}
+
+    for session_id, metadata in session_index.items():
+        if not isinstance(metadata, dict):
+            continue
+
+        session_timestamp = parse_iso_datetime(metadata.get("sessionCreatedOn")) or parse_iso_datetime(
+            metadata.get("recordedAt")
+        )
+        if session_timestamp is None or session_timestamp >= cutoff:
+            pruned[session_id] = metadata
+
+    return pruned
+
+
+def get_recent_emitted_session_ids(
+    state_path: Path,
+    environment_url: str,
+    tier: int,
+    lookback_hours: int,
+    watermark: Optional[datetime],
+) -> set[str]:
+    """Return the session IDs emitted in the current overlap window."""
+    if watermark is None:
+        return set()
+
+    state = load_recent_session_state(state_path)
+    scope = state["scopes"].get(get_recent_session_scope_key(environment_url, tier), {})
+    session_index = scope.get("sessions", {}) if isinstance(scope, dict) else {}
+    if not isinstance(session_index, dict):
+        return set()
+
+    cutoff = watermark - timedelta(hours=lookback_hours)
+    return set(prune_recent_session_index(session_index, cutoff).keys())
+
+
+def partition_sessions_for_emit(
+    sessions: list[dict[str, Any]],
+    previously_emitted_session_ids: set[str],
+) -> tuple[list[dict[str, Any]], int]:
+    """Filter out sessions that were already emitted inside the overlapping lookback window."""
+    pending: list[dict[str, Any]] = []
+    seen_session_ids = set(previously_emitted_session_ids)
+    skipped = 0
+
+    for session in sessions:
+        session_id = session.get("msdyn_botsessionid", "")
+        if session_id and session_id in seen_session_ids:
+            skipped += 1
+            continue
+
+        if session_id:
+            seen_session_ids.add(session_id)
+        pending.append(session)
+
+    return pending, skipped
+
+
+def build_recent_session_index(
+    session_index: dict[str, dict[str, str]],
+    sent_events: list[dict[str, Any]],
+    lookback_hours: int,
+    watermark: datetime,
+    recorded_at: datetime,
+) -> dict[str, dict[str, str]]:
+    """Merge sent events into the bounded recent-session dedup index."""
+    next_index = dict(session_index)
+
+    for event in sent_events:
+        custom_dimensions = event.get("customDimensions", {})
+        if not isinstance(custom_dimensions, dict):
+            continue
+
+        session_id = custom_dimensions.get("sessionId", "")
+        if not session_id:
+            continue
+
+        session_created_on = custom_dimensions.get("sessionCreatedOn", "")
+        recorded_timestamp = parse_iso_datetime(session_created_on) or parse_iso_datetime(
+            event.get("timestamp")
+        ) or recorded_at
+        next_index[session_id] = {
+            "sessionCreatedOn": format_utc_datetime(recorded_timestamp),
+            "recordedAt": format_utc_datetime(recorded_at),
+        }
+
+    cutoff = watermark - timedelta(hours=lookback_hours)
+    return prune_recent_session_index(next_index, cutoff)
+
+
+def record_sent_events(
+    state_path: Path,
+    environment_url: str,
+    tier: int,
+    sent_events: list[dict[str, Any]],
+    lookback_hours: int,
+    watermark: datetime,
+    recorded_at: datetime,
+) -> None:
+    """Persist recently emitted session IDs so overlap windows stay idempotent across runs."""
+    state = load_recent_session_state(state_path)
+    scope_key = get_recent_session_scope_key(environment_url, tier)
+    scope = state["scopes"].get(scope_key, {})
+    session_index = scope.get("sessions", {}) if isinstance(scope, dict) else {}
+    if not isinstance(session_index, dict):
+        session_index = {}
+
+    state["scopes"][scope_key] = {
+        "updatedAt": format_utc_datetime(recorded_at),
+        "watermark": format_utc_datetime(watermark),
+        "sessions": build_recent_session_index(
+            session_index,
+            sent_events,
+            lookback_hours,
+            watermark,
+            recorded_at,
+        ),
+    }
+    save_recent_session_state(state_path, state)
 
 
 def load_config(config_path: str, auth_mode_override: Optional[str] = None) -> dict[str, Any]:
@@ -651,11 +869,11 @@ def transform_session(
 
 
 def send_to_app_insights(
-    events: list[dict],
+    events: list[dict[str, Any]],
     instrumentation_key: str,
     batch_size: int,
     dry_run: bool = False,
-) -> tuple[int, int]:
+) -> tuple[int, int, list[dict[str, Any]]]:
     """
     Send CopilotSessionOutcome events to Application Insights in batches.
 
@@ -666,11 +884,11 @@ def send_to_app_insights(
         dry_run: If True, log events without sending
 
     Returns:
-        Tuple of (sent_count, failed_count)
+        Tuple of (sent_count, failed_count, sent_events)
     """
     if not events:
         logger.info("No events to send")
-        return (0, 0)
+        return (0, 0, [])
 
     if dry_run:
         logger.info("[DRY RUN] Would send %d events to App Insights", len(events))
@@ -684,12 +902,13 @@ def send_to_app_insights(
             )
         if len(events) > 3:
             logger.info("  [DRY RUN] ... and %d more events", len(events) - 3)
-        return (len(events), 0)
+        return (len(events), 0, list(events))
 
     tc = TelemetryClient(instrumentation_key)
 
     sent = 0
     failed = 0
+    sent_events: list[dict[str, Any]] = []
 
     # Process in batches
     for batch_start in range(0, len(events), batch_size):
@@ -707,13 +926,14 @@ def send_to_app_insights(
                 )
             tc.flush()
             sent += len(batch)
+            sent_events.extend(batch)
             logger.info("Batch %d/%d sent successfully", batch_num, total_batches)
         except Exception as e:
             failed += len(batch)
             logger.error("Batch %d/%d failed: %s", batch_num, total_batches, e)
 
     logger.info("App Insights send complete: %d sent, %d failed", sent, failed)
-    return (sent, failed)
+    return (sent, failed, sent_events)
 
 
 def get_app_insights_credential(config: dict[str, Any]) -> str:
@@ -952,8 +1172,22 @@ Examples:
             logger.error("Aborting: another sync is in progress. Retry later.")
             sys.exit(1)
 
-        # 5. Read watermark
+        # 5. Read watermark and the recent-session dedup ledger
         watermark = get_watermark(dv_client, dv_config["environment_url"], tier)
+        recent_session_state_path = get_recent_session_state_path()
+        recent_emitted_session_ids = get_recent_emitted_session_ids(
+            recent_session_state_path,
+            dv_config["environment_url"],
+            tier,
+            lookback_hours,
+            watermark,
+        )
+        if recent_emitted_session_ids:
+            logger.info(
+                "Loaded %d recently emitted session IDs from %s",
+                len(recent_emitted_session_ids),
+                recent_session_state_path,
+            )
 
         # 6. Update watermark to InProgress (advisory lock)
         update_watermark(
@@ -985,41 +1219,71 @@ Examples:
                 print_sync_summary(0, 0, 0, 0, 0.0)
                 sys.exit(0)
 
-            # 9. Correlate knowledge sources
-            ks_map = correlate_knowledge_sources(dv_client, sessions)
+            last_session_timestamp = get_latest_session_timestamp(sessions, watermark or sync_start)
 
-            # 10. Resolve governance zone
+            # 9. Drop sessions that were already emitted by the previous overlapping run(s)
+            pending_sessions, skipped_replays = partition_sessions_for_emit(
+                sessions,
+                recent_emitted_session_ids,
+            )
+            if skipped_replays:
+                logger.info(
+                    "Skipping %d previously emitted session(s) from the lookback overlap",
+                    skipped_replays,
+                )
+
+            if not pending_sessions:
+                logger.info("All fetched sessions were already emitted in the current lookback window")
+                update_watermark(
+                    dv_client,
+                    dv_config["environment_url"],
+                    tier,
+                    last_session_timestamp,
+                    0,
+                    WATERMARK_STATUS_SUCCESS,
+                )
+                duration = (datetime.now(timezone.utc) - sync_start).total_seconds()
+                print_sync_summary(len(sessions), 0, 0, 0, duration)
+                sys.exit(0)
+
+            # 10. Correlate knowledge sources
+            ks_map = correlate_knowledge_sources(dv_client, pending_sessions)
+
+            # 11. Resolve governance zone
             zone = resolve_zone(dv_config["environment_url"], config.get("zone_mapping", {}))
             logger.info("Governance zone: %s", zone)
 
-            # 11. Transform sessions to events
+            # 12. Transform sessions to events
             events = []
-            for session in sessions:
+            for session in pending_sessions:
                 event = transform_session(
                     session, agent_classifications, ks_map, zone, tier
                 )
                 if event:
                     events.append(event)
 
-            logger.info("Transformed %d/%d sessions to events", len(events), len(sessions))
+            logger.info(
+                "Transformed %d/%d sessions to events after dedup",
+                len(events),
+                len(pending_sessions),
+            )
 
-            # Determine the latest session timestamp for watermark advancement
-            # Use the last session's closed or created timestamp (sessions are ordered asc)
-            last_session_timestamp = sync_start  # fallback
-            if events:
-                last_ts_str = events[-1].get("timestamp", "")
-                if last_ts_str:
-                    try:
-                        last_session_timestamp = datetime.fromisoformat(
-                            last_ts_str.replace("Z", "+00:00")
-                        )
-                    except (ValueError, TypeError):
-                        logger.warning("Could not parse last event timestamp, using sync_start")
+            # 13. Send to App Insights
+            sent, failed, sent_events = send_to_app_insights(events, ikey, batch_size, args.dry_run)
 
-            # 12. Send to App Insights
-            sent, failed = send_to_app_insights(events, ikey, batch_size, args.dry_run)
+            # 14. Persist the recent-session dedup ledger after successful emits
+            if sent_events and not args.dry_run:
+                record_sent_events(
+                    recent_session_state_path,
+                    dv_config["environment_url"],
+                    tier,
+                    sent_events,
+                    lookback_hours,
+                    last_session_timestamp,
+                    sync_start,
+                )
 
-            # 13. Update watermark to last session timestamp (not sync_start)
+            # 15. Update watermark to last session timestamp (not sync_start)
             if failed == 0:
                 update_watermark(
                     dv_client,
@@ -1050,7 +1314,7 @@ Examples:
                     error_message=f"All {failed} events failed to send",
                 )
 
-            # 14. Print summary
+            # 16. Print summary
             duration = (datetime.now(timezone.utc) - sync_start).total_seconds()
             print_sync_summary(len(sessions), len(events), sent, failed, duration)
 

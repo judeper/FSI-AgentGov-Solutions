@@ -1,0 +1,1224 @@
+{
+  "schemaVersion": "1.0.0-preview",
+  "appName": "AgentIntakeReviewerApp",
+  "appDisplayName": "FSI Agent Intake Reviewer",
+  "appDescription": "Model-driven reviewer workspace for Standard and Full agent-intake paths.",
+  "solutionName": "AgentIntakeReviewerApp",
+  "solutionDisplayName": "FSI Agent Intake Reviewer App",
+  "solutionVersion": "1.0.0.0",
+  "publisher": {
+    "name": "FSIPublisher",
+    "uniqueName": "FSIPublisher",
+    "prefix": "fsi",
+    "customizationOptionValuePrefix": 10000,
+    "description": "Shared FSI publisher used for reviewer-app assets."
+  },
+  "reviewerRoles": [
+    "InfoSec",
+    "Privacy",
+    "Compliance",
+    "Legal",
+    "MRM"
+  ],
+  "queueAssumptions": {
+    "reviewTableOwnership": "Route each fsi_intakereview row to the assigned reviewer as the Dataverse owner so the My open reviews system view can use ownerid = Current User.",
+    "softForeignKeyCaveat": "The preview schema links request and review records by fsi_requestid rather than a Dataverse lookup. The app therefore uses paired request and review forms unless the customer adds a true lookup in a future schema pass.",
+    "roleScopedViews": "Dataverse system views do not evaluate a custom role token at runtime. Awaiting my role is materialized as one system view per reviewer role."
+  },
+  "optionsets": {
+    "fsi_intake_pathused": {
+      "Express": 100000000,
+      "Standard": 100000001,
+      "Full": 100000002
+    },
+    "fsi_intake_status": {
+      "Draft": 100000000,
+      "Submitted": 100000001,
+      "AwaitingSponsor": 100000002,
+      "AwaitingReviewers": 100000003,
+      "Approved": 100000004,
+      "Denied": 100000005,
+      "Withdrawn": 100000006,
+      "Escalated": 100000007,
+      "AutoApproved": 100000008,
+      "DeferredOutOfScope": 100000009,
+      "SponsorTimeout": 100000010
+    },
+    "fsi_intake_reviewerrole": {
+      "InfoSec": 100000000,
+      "Privacy": 100000001,
+      "Compliance": 100000002,
+      "Legal": 100000003,
+      "MRM": 100000004,
+      "Sponsor": 100000005
+    },
+    "fsi_intake_reviewdecision": {
+      "Pending": 100000000,
+      "Approved": 100000001,
+      "Approved with conditions": 100000002,
+      "Denied": 100000003,
+      "Recused": 100000004,
+      "Timeout": 100000005
+    },
+    "fsi_intake_risktier": {
+      "Tier 1 (High)": 100000000,
+      "Tier 2 (Medium)": 100000001,
+      "Tier 3 (Low)": 100000002
+    },
+    "fsi_acv_zone": {
+      "Unclassified": 100000000,
+      "Zone 1 (Enterprise)": 100000001,
+      "Zone 2 (Team)": 100000002,
+      "Zone 3 (Personal)": 100000003
+    },
+    "fsi_intake_mrmhandoffstatus": {
+      "Pending": 100000000,
+      "Handed off": 100000001,
+      "NotApplicable": 100000002,
+      "Failed": 100000003
+    }
+  },
+  "tables": [
+    {
+      "logicalName": "fsi_intakerequest",
+      "schemaName": "fsi_IntakeRequest",
+      "entitySetName": "fsi_intakerequests",
+      "primaryIdAttribute": "fsi_intakerequestid",
+      "displayName": "Intake Request",
+      "appUsage": "Primary reviewer queue and request context surface.",
+      "access": "read-only"
+    },
+    {
+      "logicalName": "fsi_intakereview",
+      "schemaName": "fsi_IntakeReview",
+      "entitySetName": "fsi_intakereviews",
+      "primaryIdAttribute": "fsi_intakereviewid",
+      "displayName": "Intake Review",
+      "appUsage": "Reviewer-owned decision rows for Standard and Full paths.",
+      "access": "read-write"
+    },
+    {
+      "logicalName": "fsi_intakeapproval",
+      "schemaName": "fsi_IntakeApproval",
+      "entitySetName": "fsi_intakeapprovals",
+      "primaryIdAttribute": "fsi_intakeapprovalid",
+      "displayName": "Intake Approval",
+      "appUsage": "Read-only sponsor and approver history.",
+      "access": "read-only"
+    },
+    {
+      "logicalName": "fsi_intakesponsorship",
+      "schemaName": "fsi_IntakeSponsorship",
+      "entitySetName": "fsi_intakesponsorships",
+      "primaryIdAttribute": "fsi_intakesponsorshipid",
+      "displayName": "Intake Sponsorship",
+      "appUsage": "Read-only sponsor attestation evidence.",
+      "access": "read-only"
+    },
+    {
+      "logicalName": "fsi_intakedatasource",
+      "schemaName": "fsi_IntakeDataSource",
+      "entitySetName": "fsi_intakedatasources",
+      "primaryIdAttribute": "fsi_intakedatasourceid",
+      "displayName": "Intake Data Source",
+      "appUsage": "Read-only declared data-source context.",
+      "access": "read-only"
+    },
+    {
+      "logicalName": "fsi_intakerisksignal",
+      "schemaName": "fsi_IntakeRiskSignal",
+      "entitySetName": "fsi_intakerisksignals",
+      "primaryIdAttribute": "fsi_intakerisksignalid",
+      "displayName": "Intake Risk Signal",
+      "appUsage": "Read-only routing and trigger evidence.",
+      "access": "read-only"
+    },
+    {
+      "logicalName": "fsi_intakeauditevent",
+      "schemaName": "fsi_IntakeAuditEvent",
+      "entitySetName": "fsi_intakeauditevents",
+      "primaryIdAttribute": "fsi_intakeauditeventid",
+      "displayName": "Intake Audit Event",
+      "appUsage": "Read-only lifecycle trail for transparency and lock checks.",
+      "access": "read-only"
+    },
+    {
+      "logicalName": "fsi_intakedecisionlog",
+      "schemaName": "fsi_IntakeDecisionLog",
+      "entitySetName": "fsi_intakedecisionlogs",
+      "primaryIdAttribute": "fsi_intakedecisionlogid",
+      "displayName": "Intake Decision Log",
+      "appUsage": "Read-only immutable decision-pack evidence.",
+      "access": "read-only"
+    }
+  ],
+  "navigation": [
+    {
+      "title": "My open reviews",
+      "table": "fsi_intakereview",
+      "defaultView": "My open reviews"
+    },
+    {
+      "title": "Requests in queue",
+      "table": "fsi_intakerequest",
+      "defaultView": "All Standard requests in queue"
+    },
+    {
+      "title": "Audit",
+      "table": "fsi_intakereview",
+      "defaultView": "Approved with conditions"
+    }
+  ],
+  "views": [
+    {
+      "name": "My open reviews",
+      "table": "fsi_intakereview",
+      "automation": "provisioned",
+      "description": "Pending review rows owned by the current reviewer.",
+      "conditions": [
+        {
+          "attribute": "ownerid",
+          "operator": "eq-userid"
+        },
+        {
+          "attribute": "fsi_reviewoutcome",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_reviewdecision",
+          "choice": "Pending"
+        }
+      ],
+      "sort": [
+        {
+          "attribute": "fsi_dueon",
+          "descending": false
+        },
+        {
+          "attribute": "createdon",
+          "descending": true
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_reviewerrole",
+          "width": 120
+        },
+        {
+          "name": "fsi_reviewtype",
+          "width": 120
+        },
+        {
+          "name": "fsi_dueon",
+          "width": 140
+        },
+        {
+          "name": "fsi_reviewoutcome",
+          "width": 130
+        },
+        {
+          "name": "fsi_quorumweight",
+          "width": 110
+        }
+      ]
+    },
+    {
+      "name": "All Standard requests in queue",
+      "table": "fsi_intakerequest",
+      "automation": "provisioned",
+      "description": "Standard-path requests awaiting reviewer decisions.",
+      "conditions": [
+        {
+          "attribute": "fsi_pathused",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_pathused",
+          "choice": "Standard"
+        },
+        {
+          "attribute": "fsi_status",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_status",
+          "choice": "AwaitingReviewers"
+        }
+      ],
+      "sort": [
+        {
+          "attribute": "fsi_submittedon",
+          "descending": true
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_agentdisplayname",
+          "width": 220
+        },
+        {
+          "name": "fsi_makerdisplayname",
+          "width": 180
+        },
+        {
+          "name": "fsi_intendedaudience",
+          "width": 150
+        },
+        {
+          "name": "fsi_risktier",
+          "width": 120
+        },
+        {
+          "name": "fsi_zone",
+          "width": 120
+        },
+        {
+          "name": "fsi_quorumrequired",
+          "width": 120
+        },
+        {
+          "name": "fsi_submittedon",
+          "width": 150
+        }
+      ]
+    },
+    {
+      "name": "All Full requests in queue",
+      "table": "fsi_intakerequest",
+      "automation": "provisioned",
+      "description": "Full-path requests awaiting reviewer decisions.",
+      "conditions": [
+        {
+          "attribute": "fsi_pathused",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_pathused",
+          "choice": "Full"
+        },
+        {
+          "attribute": "fsi_status",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_status",
+          "choice": "AwaitingReviewers"
+        }
+      ],
+      "sort": [
+        {
+          "attribute": "fsi_submittedon",
+          "descending": true
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_agentdisplayname",
+          "width": 220
+        },
+        {
+          "name": "fsi_makerdisplayname",
+          "width": 180
+        },
+        {
+          "name": "fsi_intendedaudience",
+          "width": 150
+        },
+        {
+          "name": "fsi_risktier",
+          "width": 120
+        },
+        {
+          "name": "fsi_zone",
+          "width": 120
+        },
+        {
+          "name": "fsi_quorumrequired",
+          "width": 120
+        },
+        {
+          "name": "fsi_submittedon",
+          "width": 150
+        }
+      ]
+    },
+    {
+      "name": "MRM queue",
+      "table": "fsi_intakerequest",
+      "automation": "provisioned",
+      "description": "Tier 1 requests that require MRM reviewer action.",
+      "conditions": [
+        {
+          "attribute": "fsi_mrmrequired",
+          "operator": "eq",
+          "value": true
+        },
+        {
+          "attribute": "fsi_risktier",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_risktier",
+          "choice": "Tier 1 (High)"
+        },
+        {
+          "attribute": "fsi_status",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_status",
+          "choice": "AwaitingReviewers"
+        }
+      ],
+      "sort": [
+        {
+          "attribute": "fsi_submittedon",
+          "descending": true
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_agentdisplayname",
+          "width": 220
+        },
+        {
+          "name": "fsi_makerdisplayname",
+          "width": 180
+        },
+        {
+          "name": "fsi_mrmhandoffstatus",
+          "width": 140
+        },
+        {
+          "name": "fsi_quorumrequired",
+          "width": 120
+        },
+        {
+          "name": "fsi_zone",
+          "width": 120
+        },
+        {
+          "name": "fsi_submittedon",
+          "width": 150
+        }
+      ]
+    },
+    {
+      "name": "Awaiting my role",
+      "namePattern": "Awaiting my role - {role}",
+      "table": "fsi_intakereview",
+      "automation": "provisioned",
+      "materializePerRole": true,
+      "roles": [
+        "InfoSec",
+        "Privacy",
+        "Compliance",
+        "Legal",
+        "MRM"
+      ],
+      "description": "Pending reviews segmented into one queue view per reviewer role.",
+      "conditions": [
+        {
+          "attribute": "fsi_reviewoutcome",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_reviewdecision",
+          "choice": "Pending"
+        }
+      ],
+      "roleCondition": {
+        "attribute": "fsi_reviewerrole",
+        "operator": "eq",
+        "choiceSet": "fsi_intake_reviewerrole"
+      },
+      "sort": [
+        {
+          "attribute": "fsi_dueon",
+          "descending": false
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_reviewerrole",
+          "width": 120
+        },
+        {
+          "name": "fsi_reviewerupn",
+          "width": 220
+        },
+        {
+          "name": "fsi_reviewtype",
+          "width": 120
+        },
+        {
+          "name": "fsi_dueon",
+          "width": 140
+        },
+        {
+          "name": "fsi_quorumweight",
+          "width": 110
+        }
+      ]
+    },
+    {
+      "name": "Approved with conditions",
+      "table": "fsi_intakereview",
+      "automation": "provisioned",
+      "description": "Audit view for reviewers that approved with conditions.",
+      "conditions": [
+        {
+          "attribute": "fsi_reviewoutcome",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_reviewdecision",
+          "choice": "Approved with conditions"
+        }
+      ],
+      "sort": [
+        {
+          "attribute": "fsi_completedon",
+          "descending": true
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_reviewerrole",
+          "width": 120
+        },
+        {
+          "name": "fsi_reviewerupn",
+          "width": 220
+        },
+        {
+          "name": "fsi_conditionstext",
+          "width": 260
+        },
+        {
+          "name": "fsi_completedon",
+          "width": 150
+        }
+      ]
+    },
+    {
+      "name": "Denied",
+      "table": "fsi_intakereview",
+      "automation": "provisioned",
+      "description": "Audit view for denied reviewer decisions.",
+      "conditions": [
+        {
+          "attribute": "fsi_reviewoutcome",
+          "operator": "eq",
+          "choiceSet": "fsi_intake_reviewdecision",
+          "choice": "Denied"
+        }
+      ],
+      "sort": [
+        {
+          "attribute": "fsi_completedon",
+          "descending": true
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_reviewerrole",
+          "width": 120
+        },
+        {
+          "name": "fsi_reviewerupn",
+          "width": 220
+        },
+        {
+          "name": "fsi_reviewnotes",
+          "width": 260
+        },
+        {
+          "name": "fsi_completedon",
+          "width": 150
+        }
+      ]
+    },
+    {
+      "name": "Sponsor self-approvals attempted",
+      "table": "fsi_intakerequest",
+      "automation": "provisioned",
+      "description": "Risk surface that highlights requests where maker and sponsor UPN values match.",
+      "conditions": [
+        {
+          "attribute": "fsi_sponsorupn",
+          "operator": "not-null"
+        },
+        {
+          "attribute": "fsi_makerupn",
+          "operator": "eq",
+          "valueOf": "fsi_sponsorupn"
+        }
+      ],
+      "sort": [
+        {
+          "attribute": "fsi_submittedon",
+          "descending": true
+        }
+      ],
+      "columns": [
+        {
+          "name": "fsi_requestid",
+          "width": 150
+        },
+        {
+          "name": "fsi_makerdisplayname",
+          "width": 180
+        },
+        {
+          "name": "fsi_makerupn",
+          "width": 220
+        },
+        {
+          "name": "fsi_sponsorupn",
+          "width": 220
+        },
+        {
+          "name": "fsi_pathused",
+          "width": 110
+        },
+        {
+          "name": "fsi_status",
+          "width": 120
+        },
+        {
+          "name": "fsi_submittedon",
+          "width": 150
+        }
+      ]
+    }
+  ],
+  "dashboards": [
+    {
+      "name": "Reviewer Operations",
+      "automation": "manual",
+      "cards": [
+        {
+          "title": "Requests by tier",
+          "table": "fsi_intakerequest",
+          "visual": "chart",
+          "chartType": "stackedColumn",
+          "aggregate": "count",
+          "groupBy": "fsi_risktier"
+        },
+        {
+          "title": "Requests by path",
+          "table": "fsi_intakerequest",
+          "visual": "chart",
+          "chartType": "donut",
+          "aggregate": "count",
+          "groupBy": "fsi_pathused"
+        },
+        {
+          "title": "MRM queue",
+          "table": "fsi_intakerequest",
+          "visual": "view",
+          "view": "MRM queue"
+        }
+      ]
+    },
+    {
+      "name": "Reviewer SLA",
+      "automation": "manual",
+      "cards": [
+        {
+          "title": "Average decision latency by role",
+          "table": "fsi_intakereview",
+          "visual": "chart",
+          "chartType": "bar",
+          "aggregate": "averageDurationHours",
+          "groupBy": "fsi_reviewerrole",
+          "startColumn": "fsi_startedon",
+          "endColumn": "fsi_completedon"
+        },
+        {
+          "title": "SLA breaches",
+          "table": "fsi_intakereview",
+          "visual": "view",
+          "filter": "fsi_dueon lt Now() and fsi_reviewoutcome = Pending"
+        },
+        {
+          "title": "Approved with conditions",
+          "table": "fsi_intakereview",
+          "visual": "view",
+          "view": "Approved with conditions"
+        },
+        {
+          "title": "Denied",
+          "table": "fsi_intakereview",
+          "visual": "view",
+          "view": "Denied"
+        }
+      ]
+    }
+  ],
+  "forms": [
+    {
+      "name": "Reviewer triage workspace",
+      "automation": "manual",
+      "pattern": "pairedForms",
+      "description": "Open the read-only request context form on fsi_intakerequest and pin the editable reviewer decision form on fsi_intakereview in a side pane. This satisfies the one-screen triage goal without requiring a new Dataverse lookup.",
+      "requestContext": {
+        "table": "fsi_intakerequest",
+        "sections": [
+          {
+            "name": "Header",
+            "fields": [
+              "fsi_requestid",
+              "fsi_agentdisplayname",
+              "fsi_status",
+              "fsi_pathused",
+              "fsi_risktier",
+              "fsi_zone"
+            ]
+          },
+          {
+            "name": "Maker context",
+            "fields": [
+              "fsi_makerdisplayname",
+              "fsi_makerupn",
+              "fsi_intendedaudience",
+              "fsi_businessoutcome",
+              "fsi_businessjustification"
+            ]
+          },
+          {
+            "name": "Routing context",
+            "fields": [
+              "fsi_quorumrequired",
+              "fsi_parallelreviewersjson",
+              "fsi_mrmrequired",
+              "fsi_mrmhandoffstatus",
+              "fsi_targetenvironmentname"
+            ]
+          }
+        ]
+      },
+      "reviewDecision": {
+        "table": "fsi_intakereview",
+        "sections": [
+          {
+            "name": "Assignment",
+            "fields": [
+              "fsi_requestid",
+              "fsi_reviewerrole",
+              "fsi_reviewerupn",
+              "fsi_reviewtype",
+              "fsi_dueon",
+              "fsi_quorumweight"
+            ]
+          },
+          {
+            "name": "Decision",
+            "fields": [
+              "fsi_reviewoutcome",
+              "fsi_conditionstext",
+              "fsi_reviewnotes",
+              "fsi_startedon",
+              "fsi_completedon"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Audit decision log",
+      "automation": "manual",
+      "table": "fsi_intakedecisionlog",
+      "description": "Read-only audit form for retained decision-pack evidence.",
+      "sections": [
+        {
+          "name": "Decision summary",
+          "fields": [
+            "fsi_requestid",
+            "fsi_decisionoutcome",
+            "fsi_risktier",
+            "fsi_zone",
+            "fsi_pathused",
+            "fsi_decidedon"
+          ]
+        },
+        {
+          "name": "Evidence",
+          "fields": [
+            "fsi_policyversionapplied",
+            "fsi_decisionpackhash",
+            "fsi_retentionlabelapplied",
+            "fsi_retentionlabelappliedon"
+          ]
+        }
+      ]
+    }
+  ],
+  "securityRoles": [
+    {
+      "name": "FSI Agent Intake Reviewer - InfoSec",
+      "reviewerRole": "InfoSec",
+      "description": "InfoSec queue triage and reviewer decision capture.",
+      "appAccess": true,
+      "tablePrivileges": [
+        {
+          "table": "fsi_intakereview",
+          "rights": [
+            "Read",
+            "Write",
+            "Append",
+            "AppendTo"
+          ],
+          "depth": "Basic"
+        },
+        {
+          "table": "fsi_intakerequest",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeapproval",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakesponsorship",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedatasource",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakerisksignal",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeauditevent",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        }
+      ]
+    },
+    {
+      "name": "FSI Agent Intake Reviewer - Privacy",
+      "reviewerRole": "Privacy",
+      "description": "Privacy queue triage and reviewer decision capture.",
+      "appAccess": true,
+      "tablePrivileges": [
+        {
+          "table": "fsi_intakereview",
+          "rights": [
+            "Read",
+            "Write",
+            "Append",
+            "AppendTo"
+          ],
+          "depth": "Basic"
+        },
+        {
+          "table": "fsi_intakerequest",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeapproval",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakesponsorship",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedatasource",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakerisksignal",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeauditevent",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        }
+      ]
+    },
+    {
+      "name": "FSI Agent Intake Reviewer - Compliance",
+      "reviewerRole": "Compliance",
+      "description": "Compliance queue triage and reviewer decision capture.",
+      "appAccess": true,
+      "tablePrivileges": [
+        {
+          "table": "fsi_intakereview",
+          "rights": [
+            "Read",
+            "Write",
+            "Append",
+            "AppendTo"
+          ],
+          "depth": "Basic"
+        },
+        {
+          "table": "fsi_intakerequest",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeapproval",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakesponsorship",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedatasource",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakerisksignal",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeauditevent",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        }
+      ]
+    },
+    {
+      "name": "FSI Agent Intake Reviewer - Legal",
+      "reviewerRole": "Legal",
+      "description": "Legal queue triage and reviewer decision capture.",
+      "appAccess": true,
+      "tablePrivileges": [
+        {
+          "table": "fsi_intakereview",
+          "rights": [
+            "Read",
+            "Write",
+            "Append",
+            "AppendTo"
+          ],
+          "depth": "Basic"
+        },
+        {
+          "table": "fsi_intakerequest",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeapproval",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakesponsorship",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedatasource",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakerisksignal",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeauditevent",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        }
+      ]
+    },
+    {
+      "name": "FSI Agent Intake Reviewer - MRM",
+      "reviewerRole": "MRM",
+      "description": "MRM queue triage and reviewer decision capture.",
+      "appAccess": true,
+      "tablePrivileges": [
+        {
+          "table": "fsi_intakereview",
+          "rights": [
+            "Read",
+            "Write",
+            "Append",
+            "AppendTo"
+          ],
+          "depth": "Basic"
+        },
+        {
+          "table": "fsi_intakerequest",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeapproval",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakesponsorship",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedatasource",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakerisksignal",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeauditevent",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        }
+      ]
+    },
+    {
+      "name": "FSI Agent Intake Governance Lead",
+      "reviewerRole": "GovernanceLead",
+      "description": "Cross-board oversight role with visibility across all reviewer queues.",
+      "appAccess": true,
+      "tablePrivileges": [
+        {
+          "table": "fsi_intakereview",
+          "rights": [
+            "Read",
+            "Write",
+            "Append",
+            "AppendTo",
+            "Assign",
+            "Share"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakerequest",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeapproval",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakesponsorship",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedatasource",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakerisksignal",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeauditevent",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        }
+      ]
+    }
+  ],
+  "businessRules": [
+    {
+      "name": "Reviewer conditions required",
+      "table": "fsi_intakereview",
+      "automation": "manual",
+      "implementedByScript": false,
+      "condition": "fsi_reviewoutcome == Approved with conditions",
+      "effect": "Require fsi_conditionstext before the decision can be saved."
+    },
+    {
+      "name": "Reviewer decision lock after audit event",
+      "table": "fsi_intakereview",
+      "automation": "manual-server-guard",
+      "implementedByScript": false,
+      "condition": "Related fsi_intakeauditevent contains EventType = ReviewerDecided or PathPhase = ReviewerDecided",
+      "effect": "Prevent further edits to fsi_reviewoutcome, fsi_conditionstext, and fsi_reviewnotes after the decision has been recorded."
+    }
+  ],
+  "teamsNotification": {
+    "flowName": "fsi-intake-reviewer-card",
+    "cardTemplatePath": "agent-intake/templates/reviewer-notification-card.json",
+    "actions": [
+      "Approve",
+      "Approve with conditions",
+      "Deny",
+      "Open in reviewer app"
+    ]
+  },
+  "manualSteps": [
+    {
+      "area": "App designer pages",
+      "message": "Add Dataverse table pages for fsi_intakerequest, fsi_intakereview, and the audit surfaces in the model-driven app designer. PAC CLI creates the app shell but does not yet compose table pages or sitemap groups for this design."
+    },
+    {
+      "area": "Paired-form workspace",
+      "message": "Use a request context main form and a reviewer decision side-pane form because the preview schema uses fsi_requestid soft foreign keys rather than Dataverse lookups."
+    },
+    {
+      "area": "Dashboards",
+      "message": "Create the Reviewer Operations and Reviewer SLA dashboards in the maker portal, using the chart and view definitions above."
+    },
+    {
+      "area": "Business rules",
+      "message": "Build the conditions-required business rule in Dataverse and implement the post-audit decision lock in the reviewer decision writer or a plug-in because Dataverse business rules cannot query fsi_intakeauditevent."
+    },
+    {
+      "area": "Queue routing",
+      "message": "If your routing flow does not reassign fsi_intakereview ownership to the reviewer user, replace the My open reviews system view with a custom page or personal view that filters on fsi_reviewerupn."
+    }
+  ]
+}

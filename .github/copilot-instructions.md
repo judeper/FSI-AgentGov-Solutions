@@ -14,7 +14,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
 | action-confirmation-auditor | v1.2.0 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
-| agent-intake | v0.2.1-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express path MVP) with sponsor 1-click approval and Entra Agent ID handoff |
+| agent-intake | v1.0.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
 | agent-365-lifecycle-governance | v1.1.4 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.1.1 | 3.8 | Automated detection of overly permissive agent access configurations |
 |  | 2.17 | Inter-agent communication restriction validation |
@@ -74,18 +74,16 @@ FSI-AgentGov-Solutions/
 └── CHANGELOG.md
 ```
 
-## Per-solution AGENTS.md (opt-in convention)
+## Per-Solution AGENTS.md (Context Cascade)
 
-When a solution has non-trivial in-flight work (active POC dry-run, customer
-handoff, multi-session refactor), it ships a `<solution>/AGENTS.md` that
-**adds to this file**. Read it AFTER `.github/instructions/*` when working
-inside that solution folder. It carries the current operational state and
-solution-specific conventions. Solution-specific guidance wins only on
-solution-specific topics; cross-cutting rules (Dataverse naming, language
-guidelines, lab guards) here always apply.
+Some solutions carry a per-solution `AGENTS.md` at their root (e.g., `agent-intake/AGENTS.md`). When working on a solution that has one, **read it first** — it captures dev/AI-agent context: active development status, resume-on-new-machine workflow, auth quirks specific to that solution, pending polish items, and recent design decisions. Per-solution `AGENTS.md` files are **not** customer-facing (that's `README.md`); they exist so a new session or a new machine picks up exactly where the previous one left off.
 
-Backfilling stable solutions is not required. Currently shipped:
-`message-center-monitor/AGENTS.md`.
+Active per-solution `AGENTS.md` files:
+
+- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · merged via PR #142
+- [`message-center-monitor/AGENTS.md`](message-center-monitor/AGENTS.md) — v2.5.1 · POC dry-run in progress (PR #141)
+
+When you add a per-solution `AGENTS.md`, list it here and link to it from the solution's README.
 
 ## Solution Content Policy (CRITICAL)
 
@@ -153,7 +151,7 @@ When updating solution READMEs, ensure Related Controls sections match the contr
 
 The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in two steps by CI (`.github/workflows/publish_docs.yml`):
 
-1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root), the README solutions table, `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), and the home-page hero metrics block. Sub-docs from `{slug}/docs/*.md` are copied with filename normalization.
+1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root, including canonical per-solution `solutions[*].controls` coverage), the README solutions table, any solution README blocks opted into manifest-managed implemented-controls markers, `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), and the home-page hero metrics block. Sub-docs from `{slug}/docs/*.md` are copied with filename normalization.
 2. `mkdocs build --strict` — renders the site from `site-docs/`.
 
 A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest.py --check` on every PR and fails when manifests reference unknown framework control IDs or generated artifacts drift.
@@ -166,7 +164,7 @@ A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest
 
 ### To change overview pages
 
-- **Description, version, domain, tier, controls, prerequisites, verification, status**: edit `<slug>/manifest.yaml` — single source of truth, schema-validated by `scripts/manifest.schema.json`.
+- **Description, version, domain, tier, controls, prerequisites, verification, status**: edit `<slug>/manifest.yaml` — single source of truth, schema-validated by `scripts/manifest.schema.json`. `manifest.yaml.controls` is projected into `solutions.json` and any opt-in README implemented-controls block.
 - **Layout / table structure**: edit `scripts/build-manifest.py`.
 
 ### To change detail-page sub-docs

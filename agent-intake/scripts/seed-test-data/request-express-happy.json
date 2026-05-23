@@ -1,0 +1,65 @@
+{
+  "scenario": "express-happy",
+  "sponsorRole": "LineOfBusinessSponsor",
+  "reviewers": {
+    "InfoSec": "infosec-intake@contoso.example",
+    "Privacy": "privacy-intake@contoso.example",
+    "Compliance": "compliance-intake@contoso.example",
+    "Legal": "legal-intake@contoso.example",
+    "MRM": "mrm-intake@contoso.example"
+  },
+  "seedArtifacts": {
+    "syntheticEntraAgentId": "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa",
+    "registryRecordId": "aaaa0000-1111-4111-8111-aaaaaaaaaaaa",
+    "mrmOfficerUpn": "mrm-officer@contoso.example",
+    "auditorUpn": "audit-intake@contoso.example"
+  },
+  "expectedClassification": {
+    "pathUsed": "Express",
+    "decisionPath": "Express",
+    "riskTier": "Tier 3 (Low)",
+    "zone": "Zone 3 (Personal)",
+    "quorumRequired": 1
+  },
+  "expectedOutcome": {
+    "decisionOutcome": "Approved",
+    "reviewerCount": 0,
+    "agentIdExpected": true,
+    "mrmExpected": false,
+    "driftPayloadExpected": true
+  },
+  "fsi_intakerequest": {
+    "fsi_requestid": "11111111-1111-4111-8111-111111111111",
+    "fsi_agentdisplayname": "FSI Personal Research Copilot",
+    "fsi_agenttype": "Declarative Agent (M365 Copilot)",
+    "fsi_businessoutcome": "Summarize personal research notes for a single maker.",
+    "fsi_businessjustification": "The maker needs a low-risk assistant for individual market-research preparation.",
+    "fsi_makerupn": "alex.maker@contoso.example",
+    "fsi_makerdepartment": "Sales Operations",
+    "fsi_makercountry": "US",
+    "fsi_makerdisplayname": "Alex Maker",
+    "fsi_makerjobtitle": "Sales Operations Manager",
+    "fsi_sponsorupn": "jamie.sponsor@contoso.example",
+    "fsi_intendedaudience": "Just me",
+    "fsi_t1initiatesfinancialtxn": "No",
+    "fsi_t2customerfacing": "No",
+    "fsi_t3autonomousunmonitored": "No",
+    "fsi_t4handlesnpi": "No",
+    "fsi_t5handlesmnpi": "No",
+    "fsi_t6crossborderdata": "No",
+    "fsi_makerattestation": true,
+    "fsi_dataresidencycountry": "US",
+    "fsi_privacyoverride": false
+  },
+  "dataSources": [
+    {
+      "name": "SalesOps Personal SharePoint Workspace",
+      "type": "SharePoint",
+      "classification": "Internal",
+      "isCustomerData": false,
+      "isRestricted": false,
+      "dataResidencyCountry": "US"
+    }
+  ]
+}
+

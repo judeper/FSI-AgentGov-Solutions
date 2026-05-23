@@ -4,6 +4,8 @@ All notable changes to the Content Moderation Monitor.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-17
+
 ### Added
 
 - **Purview Audit / DSPM correlation.** New `correlate_purview_events.py` script correlates moderation violations with Purview unified audit log events and DSPM signals. Queries Purview Audit via Graph `auditLogQuery` API, matches events by user + timestamp proximity (5-minute window), and enriches output with sensitivity labels, DLP policy matches, and Copilot interaction context. Requires `AuditLogsQuery.Read.All` and `User.Read.All` Graph permissions.

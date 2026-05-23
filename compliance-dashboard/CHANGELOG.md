@@ -6,6 +6,8 @@ All notable changes to the Compliance Dashboard solution.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-05-17
+
 ### Changed
 
 - Bumped solution metadata to v1.0.4 for the Microsoft Learn 2026-Q2 refresh.

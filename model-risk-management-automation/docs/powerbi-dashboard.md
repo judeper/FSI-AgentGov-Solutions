@@ -2,7 +2,7 @@
 
 ## Overview
 
-Examiner-facing dashboard for model inventory status, validation coverage, risk distribution, and monitoring trends. This dashboard supports compliance with Fed SR 11-7 and OCC 2011-12 reporting expectations by providing centralized visibility into MRM program metrics.
+Examiner-facing dashboard for model inventory status, validation coverage, risk distribution, and monitoring trends. This dashboard supports institution-specific model risk management reporting expectations informed by Fed SR 26-2 (formerly Fed SR 11-7) and OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) by providing centralized visibility into MRM program metrics.
 
 > **Note:** This dashboard aids in meeting regulatory reporting requirements. Organizations should verify that dashboard content and refresh cadence meet their specific examination obligations.
 
@@ -80,7 +80,7 @@ Connect to the following Dataverse tables. Use the OData connector in Power BI D
 |--------|------|-------------|
 | Total Events (Last 30 Days) | Card | Filtered count of `fsi_mrmcomplianceevent` |
 | Events by Type | Bar chart | X-axis: `fsi_eventtype`, Y-axis: count |
-| Events by SR 11-7 Pillar | Pie chart | Segments from `fsi_sr117pillar` (option set `fsi_mrm_sr117pillar`: 100000000=Pillar 1, 100000001=Pillar 2, 100000002=Pillar 3) |
+| Events by MRM Pillar | Pie chart | Segments from `fsi_sr117pillar` (option set `fsi_mrm_sr117pillar`: 100000000=Pillar 1, 100000001=Pillar 2, 100000002=Pillar 3) |
 | Recent Compliance Events | Table | Event ID, Model Name, Event Type, Impact Level, Date, Details |
 
 ## Key DAX Measures

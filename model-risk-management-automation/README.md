@@ -8,13 +8,17 @@ coe_function: govern
 ---
 # Model Risk Management Automation
 
-> **Status:** Production Ready (v1.0.3)
+> **Version:** v1.0.3
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
-Automated OCC 2011-12 / Fed SR 11-7 model risk management for AI agents deployed on Power Platform. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation.
+Automated model risk management workflows for AI agents deployed on Power Platform, aligned to OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) and Fed SR 26-2 (formerly Fed SR 11-7) principles where applicable. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation.
 
 ## Overview
 
-OCC 2011-12 and Federal Reserve SR 11-7 are the primary supervisory frameworks for model risk management at US financial institutions. The 2021 Interagency Request for Information confirmed these frameworks apply to traditional machine learning systems; their application to large language models and agentic AI is an active area of supervisory guidance and institutions should consult their legal and compliance teams when applying MRM to LLM-based agents.
+OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) and Fed SR 26-2 (formerly Fed SR 11-7) are the current supervisory frameworks for traditional model risk management at US financial institutions. This solution uses those frameworks as the baseline for model inventory, validation, and ongoing monitoring workflows on Power Platform.
+
+> **Scope note**: SR 26-2 / OCC Bulletin 2026-13 (issued April 17, 2026) explicitly excludes generative AI and agentic AI models from its scope. This automation reflects analogous sound risk management principles applied to GenAI/agentic AI scenarios; for those scenarios the citation is informational rather than a direct regulatory obligation. For traditional ML models (algorithmic credit scoring, fraud detection, statistical models), SR 26-2 / OCC 2026-13 applies directly per the guidance.
 
 This solution addresses three operational gaps that examiners consistently cite:
 
@@ -61,7 +65,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 
 | Control | Description | Coverage |
 |---------|-------------|----------|
-| **2.6** | Model Risk Management (OCC 2011-12 / SR 11-7) | Primary |
+| **2.6** | Model Risk Management (OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7)) | Primary |
 | **2.5** | Testing, Validation, and Quality Assurance | Secondary |
 | **2.9** | Agent Performance Monitoring | Secondary |
 | **2.11** | Bias Testing and Fairness Assessment | Secondary |
@@ -69,9 +73,9 @@ This solution addresses three operational gaps that examiners consistently cite:
 | **3.1** | Agent Inventory and Metadata Management | Secondary |
 | **1.2** | Agent Registry | Secondary |
 
-## SR 11-7 Three-Pillar Coverage
+## MRM Three-Pillar Coverage
 
-| SR 11-7 Pillar | Examiner Requirement | Solution Component |
+| Supervisory Pillar | Examiner Requirement | Solution Component |
 |----------------|---------------------|--------------------|
 | **Pillar 1: Model Development** | Documented model purpose, design, inputs, limitations | `fsi_modelinventory` + Agent Card generation |
 | **Pillar 2: Model Validation** | Independent validation, ongoing monitoring, outcomes analysis | `fsi_validationcycle` + Flow 3 + Flow 4 |
@@ -90,7 +94,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 
 | Regulation | How This Solution Helps |
 |------------|------------------------|
-| OCC 2011-12 / Fed SR 11-7 | Supports comprehensive model inventory, independent validation, and ongoing monitoring automation |
+| OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7) | Supports comprehensive model inventory, independent validation, and ongoing monitoring automation |
 | SOX 302/404 | Aids in documenting IT model controls with 7-year retention via Dataverse LTR and versioned Agent Cards |
 | FINRA Rule 3110 | Supports supervision and oversight of AI systems by separating maker (model owner), checker (independent validator), and approver (MRM officer) roles in the validation workflow |
 | NIST AI RMF | Helps address risk identification, measurement, and management for AI systems |
@@ -234,7 +238,7 @@ Review and complete all items in [DELIVERY-CHECKLIST.md](DELIVERY-CHECKLIST.md) 
 
 Microsoft has introduced an AI-powered self-healing capability for Power Automate desktop flows (preview), which uses GPT-4.1 mini and Claude Sonnet 4.5 to recover from runtime UI errors (e.g., "Element not found" failures) in single-element UI/web actions.
 
-**Impact on this solution:** Self-healing desktop flows represent an emerging AI capability that may require MRM inventory tracking under OCC 2011-12 / SR 11-7:
+**Impact on this solution:** Self-healing desktop flows represent an emerging AI capability that may require MRM inventory tracking under institution-specific policies informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7):
 
 - **Model inventory scope:** Organizations should evaluate whether self-healing-enabled desktop flows meet the threshold for "model" classification under their MRM policy framework
 - **Risk rating considerations:** Self-healing introduces runtime AI decision-making that operates outside the original flow design — this may warrant a higher risk rating than standard RPA flows
@@ -246,7 +250,7 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 
 ### Background
 
-Microsoft Entra Agent ID (Control 2.26) introduces a new identity model for AI agents. Organizations migrating from legacy Copilot Studio app registrations to Entra Agent IDs must maintain an auditable trail of the migration for OCC 2011-12 / SR 11-7 model risk examinations.
+Microsoft Entra Agent ID (Control 2.26) introduces a new identity model for AI agents. Organizations migrating from legacy Copilot Studio app registrations to Entra Agent IDs must maintain an auditable trail of the migration for model risk examinations informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7).
 
 The MRM model inventory (`fsi_modelinventory`) stores an `fsi_agentid` column that references the agent's identity. When migrating from a legacy Bot Framework app registration to an Entra Agent ID, the old and new identifiers must be linked to preserve the validation history chain.
 
@@ -300,9 +304,9 @@ Loan Officer Assist,cr8a5_loanOfficerAssist,b2c3d4e5-f6a7-8901-bcde-f12345678901
 2. **During migration**: Log each Agent ID change as an `AgentIdMigration` compliance event
 3. **After migration**: Run `Test-MRMCompliance.ps1` to verify all inventory records have valid Entra Agent IDs and linked validation history
 
-### SR 11-7 Alignment
+### MRM Alignment
 
-| SR 11-7 Requirement | How Migration Evidence Helps |
+| MRM Requirement | How Migration Evidence Helps |
 |---------------------|------------------------------|
 | Complete model inventory | Migration records help demonstrate no agents were lost during identity transition |
 | Audit trail for model changes | `fsi_mrmcomplianceevent` with `AgentIdMigration` type provides timestamped change records |
@@ -316,7 +320,7 @@ Loan Officer Assist,cr8a5_loanOfficerAssist,b2c3d4e5-f6a7-8901-bcde-f12345678901
 - **Copilot Studio telemetry:** Agent usage telemetry may not expose granular error and escalation rates via Power Platform API. Flow 4 creates monitoring records with `fsi_datasource = "Not Available"` to preserve cadence evidence.
 - **Keyword-based data sensitivity scoring:** Flow 2 Step 3b uses keyword analysis which may mis-score agents with unusual terminology. MRM officer review and override mechanism is built in.
 - **Word Online connector dependency:** Flow 5 requires a deployed `AgentCard-Template.docx`. JSON fallback is fully implemented with `fsi_agentcardformat` field and compliance event logging.
-- **SR 11-7 monitoring thresholds:** No explicit quantitative thresholds exist in SR 11-7 for AI models. All thresholds are exposed as environment variables for institution-specific calibration.
+- **MRM monitoring thresholds:** Current supervisory guidance does not prescribe explicit quantitative thresholds for AI models. All thresholds are exposed as environment variables for institution-specific calibration.
 - **Power Platform scope:** This solution governs Copilot Studio and Agent Builder agents only — Azure ML models, custom-trained models, and third-party AI APIs require separate MRM processes.
 - **Shared biennial cadence:** Tier 2 and Tier 3 share a Biennial validation cadence — rationale documented in DELIVERY-CHECKLIST.md.
 

@@ -1,0 +1,66 @@
+{
+  "scenario": "sponsor-self-approval-deny",
+  "sponsorRole": "LineOfBusinessSponsor",
+  "reviewers": {
+    "InfoSec": "infosec-selfapproval@contoso.example",
+    "Privacy": "privacy-selfapproval@contoso.example",
+    "Compliance": "compliance-selfapproval@contoso.example",
+    "Legal": "legal-selfapproval@contoso.example",
+    "MRM": "mrm-selfapproval@contoso.example"
+  },
+  "seedArtifacts": {
+    "syntheticEntraAgentId": "eeeeeeee-5555-4555-8555-eeeeeeeeeeee",
+    "registryRecordId": "eeee0000-5555-4555-8555-eeeeeeeeeeee",
+    "mrmOfficerUpn": "mrm-officer@contoso.example",
+    "auditorUpn": "audit-intake@contoso.example"
+  },
+  "expectedClassification": {
+    "pathUsed": "Express",
+    "decisionPath": "DefaultDeny",
+    "riskTier": "Tier 3 (Low)",
+    "zone": "Zone 3 (Personal)",
+    "quorumRequired": 1,
+    "routingReason": "sponsor_self_approval"
+  },
+  "expectedOutcome": {
+    "decisionOutcome": "Denied",
+    "reviewerCount": 0,
+    "agentIdExpected": false,
+    "mrmExpected": false,
+    "driftPayloadExpected": false
+  },
+  "fsi_intakerequest": {
+    "fsi_requestid": "55555555-5555-4555-8555-555555555555",
+    "fsi_agentdisplayname": "Self Sponsor Test Copilot",
+    "fsi_agenttype": "Declarative Agent (M365 Copilot)",
+    "fsi_businessoutcome": "Validate that a maker cannot approve their own low-risk intake request.",
+    "fsi_businessjustification": "This fixture exercises the default-deny path when maker and sponsor identity match.",
+    "fsi_makerupn": "pat.maker@contoso.example",
+    "fsi_makerdepartment": "Operations",
+    "fsi_makercountry": "US",
+    "fsi_makerdisplayname": "Pat Maker",
+    "fsi_makerjobtitle": "Operations Manager",
+    "fsi_sponsorupn": "pat.maker@contoso.example",
+    "fsi_intendedaudience": "Just me",
+    "fsi_t1initiatesfinancialtxn": "No",
+    "fsi_t2customerfacing": "No",
+    "fsi_t3autonomousunmonitored": "No",
+    "fsi_t4handlesnpi": "No",
+    "fsi_t5handlesmnpi": "No",
+    "fsi_t6crossborderdata": "No",
+    "fsi_makerattestation": true,
+    "fsi_dataresidencycountry": "US",
+    "fsi_privacyoverride": false
+  },
+  "dataSources": [
+    {
+      "name": "Operations Working Notes",
+      "type": "SharePoint",
+      "classification": "Internal",
+      "isCustomerData": false,
+      "isRestricted": false,
+      "dataResidencyCountry": "US"
+    }
+  ]
+}
+

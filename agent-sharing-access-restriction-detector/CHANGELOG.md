@@ -4,6 +4,8 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-05-17
+
 ### Fixed
 
 - Critical: `Invoke-SharingComplianceScan.ps1` now evaluates Copilot Studio agent sharing from the Dataverse `bot.accesscontrolpolicy` and `bot.authorizedsecuritygroupids` columns instead of the non-current `sharingtype` field and unsupported `Get-AdminPowerAppRoleAssignment -ResourceType/-ResourceId` parameters.

@@ -6,6 +6,8 @@ All notable changes to the COI Testing Framework.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-17
+
 ### Changed
 
 - Refreshed Dataverse authentication guidance and runner support for managed identity, workload identity federation, certificate auth, Azure CLI auth, and legacy development client-secret fallback based on Microsoft Learn 2026-Q2 guidance.

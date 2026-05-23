@@ -6,8 +6,13 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ## [Unreleased] - 2026-Q2 — Microsoft Learn refresh
 
+### Added
+
+- Added `scripts/import_product_feedback_csv.py` plus pytest coverage to normalize Microsoft 365 admin center Product Feedback CSV exports into `fsi_hallucinationreports` with dry-run validation, deterministic deduplication, and optional content-sample import.
+
 ### Changed
 
+- Extended `scripts/import_product_feedback_csv.py` to pre-populate deterministic clustering fields during ingestion, including normalized topic scope, channel defaults, structured cluster keys, and per-record fallback keys when comment text is absent.
 - Bumped solution manifest to 1.2.0 for the Microsoft Learn 2026-Q2 technical review.
 - Updated Copilot Studio feedback source guidance to use current reactions/comments, Analytics, transcript CSV, and Dataverse transcript patterns, including Microsoft 365 Copilot channel limitations.
 - Added Microsoft 365 Copilot Product Feedback export guidance and clarified that Microsoft Graph Copilot interaction history is not a feedback API and does not retrieve Copilot Studio agent interactions.

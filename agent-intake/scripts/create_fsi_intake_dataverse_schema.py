@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Create Dataverse schema for Agent Intake (Express-path MVP).
+"""Create Dataverse schema for Agent Intake (Express + Standard + Full foundations).
 
-Defines 9 tables that capture the full intake decision pack for the Express
-path, plus 7 global option sets. All operations are idempotent.
+Defines 9 tables that capture the intake decision pack for the Express,
+Standard, and Full paths, plus the global option sets used for routing,
+review, and MRM handoff state. All operations are idempotent.
 
 Tables:
   - fsi_IntakeRequest (UserOwned): The maker's submitted request — parent record
@@ -84,6 +85,16 @@ INTAKE_OPTIONSETS = {
             ("AutoApproved", 100000008),
             ("DeferredOutOfScope", 100000009),
             ("SponsorTimeout", 100000010),
+            ("InReview", 100000011),
+            ("LiveTracking", 100000012),
+        ],
+    },
+    "fsi_intake_routingtopology": {
+        "name": "fsi_intake_routingtopology",
+        "options": [
+            ("Sequential", 100000000),
+            ("Parallel", 100000001),
+            ("Quorum", 100000002),
         ],
     },
     "fsi_intake_risktier": {
@@ -113,6 +124,38 @@ INTAKE_OPTIONSETS = {
             ("Restricted", 100000003),
         ],
     },
+    "fsi_intake_reviewerrole": {
+        "name": "fsi_intake_reviewerrole",
+        "options": [
+            ("InfoSec", 100000000),
+            ("Privacy", 100000001),
+            ("Compliance", 100000002),
+            ("Legal", 100000003),
+            ("MRM", 100000004),
+            ("Sponsor", 100000005),
+            ("Sponsor Manager", 100000006),
+        ],
+    },
+    "fsi_intake_reviewdecision": {
+        "name": "fsi_intake_reviewdecision",
+        "options": [
+            ("Pending", 100000000),
+            ("Approved", 100000001),
+            ("Approved with conditions", 100000002),
+            ("Denied", 100000003),
+            ("Recused", 100000004),
+            ("Timeout", 100000005),
+        ],
+    },
+    "fsi_intake_mrmhandoffstatus": {
+        "name": "fsi_intake_mrmhandoffstatus",
+        "options": [
+            ("Pending", 100000000),
+            ("Handed off", 100000001),
+            ("NotApplicable", 100000002),
+            ("Failed", 100000003),
+        ],
+    },
     "fsi_intake_decisionoutcome": {
         "name": "fsi_intake_decisionoutcome",
         "options": [
@@ -121,6 +164,36 @@ INTAKE_OPTIONSETS = {
             ("Denied", 100000002),
             ("EscalatedToManager", 100000003),
             ("WithdrawnByMaker", 100000004),
+        ],
+    },
+    "fsi_intake_auditeventtype": {
+        "name": "fsi_intake_auditeventtype",
+        "options": [
+            ("RouterDecided", 100000000),
+            ("RouterFailed", 100000001),
+            ("SponsorDecided", 100000002),
+            ("SponsorTimeout", 100000003),
+            ("SponsorEscalated", 100000004),
+            ("SponsorCardFailed", 100000005),
+            ("ReviewerQueued", 100000006),
+            ("ReviewerQueueFailed", 100000007),
+            ("ReviewerDecided", 100000008),
+            ("QuorumReached", 100000009),
+            ("RequestDenied", 100000010),
+            ("ReviewerDecisionHandlerFailed", 100000011),
+            ("ReviewerEscalated", 100000012),
+            ("ReviewerEscalationFailed", 100000013),
+            ("MrmHandoffSubmitted", 100000014),
+            ("MRMHandoffPending", 100000015),
+            ("MrmDecisionMirrored", 100000016),
+            ("DecisionPackWritten", 100000017),
+            ("EntraAgentIdMinted", 100000018),
+            ("RegistryHandoffComplete", 100000019),
+            ("DriftHandoffSubmitted", 100000020),
+            ("AppealSubmitted", 100000021),
+            ("AppealRejected", 100000022),
+            ("AppealCreateFailed", 100000023),
+            ("RetentionLabelApplied", 100000024),
         ],
     },
 }
@@ -146,7 +219,9 @@ def _label(text):
 
 def _string_col(schema_name, display, max_length, required=True, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+        "AttributeType": "String",
+        "AttributeTypeName": {"Value": "StringType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
@@ -160,7 +235,9 @@ def _string_col(schema_name, display, max_length, required=True, description="")
 
 def _memo_col(schema_name, display, max_length, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.MemoAttributeMetadata",
+        "AttributeType": "Memo",
+        "AttributeTypeName": {"Value": "MemoType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "None"},
@@ -171,15 +248,25 @@ def _memo_col(schema_name, display, max_length, description=""):
     return defn
 
 
-def _integer_col(schema_name, display, required=True, description=""):
+def _integer_col(schema_name, display, required=True, default=None, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.IntegerAttributeMetadata",
+        "AttributeType": "Integer",
+        "AttributeTypeName": {"Value": "IntegerType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
         "MinValue": 0,
         "MaxValue": 2147483647,
     }
+    # IntegerAttributeMetadata does not expose DefaultValue through the Web API
+    # EDM schema (the SDK does, but POSTing it returns 0x80048d19). When a
+    # default is requested we surface it in the description so the maker can
+    # set it through the column designer after deploy.
+    if default is not None and description:
+        description = f"{description} (default: {default})"
+    elif default is not None:
+        description = f"Default: {default}"
     if description:
         defn["Description"] = _label(description)
     return defn
@@ -187,12 +274,16 @@ def _integer_col(schema_name, display, required=True, description=""):
 
 def _boolean_col(schema_name, display, default=False, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "DefaultValue": default,
         "OptionSet": {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+            "OptionSetType": "Boolean",
             "TrueOption": {"Value": 1, "Label": _label("Yes")},
             "FalseOption": {"Value": 0, "Label": _label("No")},
         },
@@ -204,7 +295,9 @@ def _boolean_col(schema_name, display, default=False, description=""):
 
 def _datetime_col(schema_name, display, required=True, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
+        "AttributeType": "DateTime",
+        "AttributeTypeName": {"Value": "DateTimeType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
@@ -217,11 +310,12 @@ def _datetime_col(schema_name, display, required=True, description=""):
 
 def _picklist_col(schema_name, display, global_optionset_name, required=True, description=""):
     defn = {
-        "@odata.type": "#Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "@odata.type": "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {"Value": "ApplicationRequired" if required else "None"},
-        "OptionSet": None,
         "GlobalOptionSet@odata.bind": (
             f"/GlobalOptionSetDefinitions(Name='{global_optionset_name}')"
         ),
@@ -231,11 +325,40 @@ def _picklist_col(schema_name, display, global_optionset_name, required=True, de
     return defn
 
 
+def _resolve_picklist_bind(col, optionset_metadata_ids, dry_run):
+    """Rewrite Picklist columns to bind by MetadataId GUID (Dataverse requirement).
+
+    The compact column builder writes ``GlobalOptionSet@odata.bind`` using a
+    ``Name='...'`` key for readability, but Dataverse only accepts GUID keys on
+    the @odata.bind reference and returns ``Guid should contain 32 digits ...``
+    when given a Name key. We replace the key with the previously resolved
+    MetadataId at deploy time.
+    """
+    bind_key = "GlobalOptionSet@odata.bind"
+    bind_value = col.get(bind_key)
+    if not bind_value or "Name='" not in bind_value:
+        return col
+    if dry_run:
+        return col
+    name = bind_value.split("Name='", 1)[1].split("'", 1)[0]
+    metadata_id = optionset_metadata_ids.get(name)
+    if not metadata_id:
+        raise RuntimeError(
+            f"Picklist column {col.get('SchemaName', '?')} references unknown global option set '{name}'"
+        )
+    resolved = dict(col)
+    resolved[bind_key] = f"/GlobalOptionSetDefinitions({metadata_id})"
+    return resolved
+
+
 def _optionset_metadata(optionset_def):
     """Convert the compact option-set definition into Dataverse metadata."""
     name = optionset_def["name"]
     display_name = name.replace("fsi_", "").replace("_", " ").title()
     return {
+        # Dataverse rejects the payload as 'Invalid property Options ... on OptionSetMetadataBase'
+        # unless the derived OptionSetMetadata type is declared on the root resource.
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": name,
         "DisplayName": _label(display_name),
         "Description": _label(f"Agent Intake option set {name}"),
@@ -255,6 +378,10 @@ def _optionset_metadata(optionset_def):
 INTAKE_REQUEST_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="Globally unique intake request identifier (GUID)"),
+    # v1.0-preview keeps appeal lineage as request-ID text. Convert this to a
+    # self-lookup once the schema deployment path adds relationship helpers.
+    _string_col("fsi_AppealOfId", "Appeal Of", 100, required=False,
+                description="Original intake request that this request is appealing"),
     _string_col("fsi_AgentDisplayName", "Agent Display Name", 200,
                 description="Maker-provided name for the proposed agent"),
     _picklist_col("fsi_AgentType", "Agent Type", "fsi_intake_agenttype",
@@ -293,12 +420,15 @@ INTAKE_REQUEST_COLUMNS = [
                  description="Maker acknowledged the acceptable-use and accuracy attestation before submission"),
     _picklist_col("fsi_PathUsed", "Path Used", "fsi_intake_pathused",
                   description="Express / Standard / Full — set by routing rules"),
+    # logical name: fsi_routingtopology
+    _picklist_col("fsi_RoutingTopology", "Routing Topology", "fsi_intake_routingtopology", required=False,
+                  description="Sequential / Parallel / Quorum topology selected by routing rules"),
     _picklist_col("fsi_RiskTier", "Risk Tier", "fsi_intake_risktier",
                   description="Tier 1 / 2 / 3 per SR 11-7 mapping; computed from trigger Qs"),
     _picklist_col("fsi_Zone", "Zone", "fsi_acv_zone",
-                  description="Zone classification — Express MVP locks to Zone 3"),
+                  description="Zone classification selected by policy and routing rules"),
     _picklist_col("fsi_DataClassification", "Data Classification", "fsi_intake_dataclassification",
-                  description="Highest sensitivity of declared data sources (maker-declared in Express MVP)"),
+                  description="Highest sensitivity of declared data sources used for intake routing"),
     _picklist_col("fsi_Status", "Status", "fsi_intake_status",
                   description="Lifecycle status of the intake request"),
     _string_col("fsi_TargetEnvironmentId", "Target Environment ID", 100, required=False,
@@ -310,9 +440,20 @@ INTAKE_REQUEST_COLUMNS = [
     _string_col("fsi_DlpPolicyOutcome", "DLP Policy Outcome", 100, required=False,
                 description="Result from the Power Platform data policy simulation"),
     _string_col("fsi_DecisionPath", "Decision Path", 100, required=False,
-                description="Express, DeferredOutOfScope, or DefaultDeny computed by routing rules"),
+                description="Express, Standard, Full, DeferredOutOfScope, or DefaultDeny computed by routing rules"),
     _integer_col("fsi_TriggerHitCount", "Trigger Hit Count", required=False,
                  description="Count of trigger answers equal to Yes or Not sure"),
+    # logical name: fsi_quorumrequired
+    _integer_col("fsi_QuorumRequired", "Quorum Required", required=False,
+                 description="Minimum reviewer approvals required before the request can advance"),
+    _boolean_col("fsi_NonMrmQuorumMet", "Non-MRM Quorum Met", default=False,
+                 description="TRUE when the non-MRM reviewer board (InfoSec/Privacy/Compliance/Legal) has reached quorum on a Tier-1 Full request; gates Flow 7 (MRM handoff)"),
+    # v1.0-preview keeps reviewer-board state in JSON instead of a dedicated
+    # fsi_IntakeReviewerAssignment table so the schema change stays small; v1.1
+    # can add the table once the reviewer app needs Dataverse sub-grid views.
+    # logical name: fsi_parallelreviewersjson
+    _memo_col("fsi_ParallelReviewersJson", "Parallel Reviewers JSON", 65536,
+              description="JSON array of reviewer role, UPN, due date, weight, and state for routed reviewers"),
     _string_col("fsi_DataResidencyCountry", "Data Residency Country", 100, required=False,
                 description="Maker-declared or detected residency for data sources"),
     _integer_col("fsi_RetentionYears", "Retention Years", required=False,
@@ -321,8 +462,17 @@ INTAKE_REQUEST_COLUMNS = [
                  description="True when the decision pack is stamped with the WORM retention label"),
     _boolean_col("fsi_PrivacyOverride", "Privacy Override", default=False,
                  description="Set only by Privacy to override the cross-border default-deny rule"),
+    # logical name: fsi_mrmrequired
+    _boolean_col("fsi_MrmRequired", "MRM Required", default=False,
+                 description="True when policy requires model-risk-management-automation handoff evidence"),
+    # logical name: fsi_mrmhandoffstatus
+    _picklist_col("fsi_MrmHandoffStatus", "MRM Handoff Status", "fsi_intake_mrmhandoffstatus", required=False,
+                  description="Pending / Handed off / NotApplicable / Failed for the MRM handoff"),
     _memo_col("fsi_DeclaredDataSourcesJson", "Declared Data Sources JSON", 65536,
               description="JSON snapshot of maker-declared data sources/connectors for drift comparison"),
+    # logical name: fsi_standardfullquestionsjson
+    _memo_col("fsi_StandardFullQuestionsJson", "Standard Full Questions JSON", 65536,
+              description="JSON snapshot of the extended Standard and Full path question responses"),
     _string_col("fsi_EntraAgentId", "Entra Agent ID", 100, required=False,
                 description="Microsoft Entra Agent ID service principal ID minted at handoff"),
     _string_col("fsi_RegistryRecordId", "Registry Record ID", 100, required=False,
@@ -366,16 +516,26 @@ INTAKE_RISKSIGNAL_COLUMNS = [
 INTAKE_REVIEW_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
-    _string_col("fsi_ReviewerRole", "Reviewer Role", 100,
-                description="InfoSec / Privacy / Compliance / MRM / Records / Legal"),
+    # logical name: fsi_reviewerrole
+    _picklist_col("fsi_ReviewerRole", "Reviewer Role", "fsi_intake_reviewerrole",
+                  description="InfoSec / Privacy / Compliance / Legal / MRM / Sponsor"),
     _string_col("fsi_ReviewerUpn", "Reviewer UPN", 200,
                 description="Reviewer user principal name"),
     _string_col("fsi_ReviewType", "Review Type", 100,
                 description="SampleAudit / Standard / Full"),
-    _string_col("fsi_ReviewOutcome", "Review Outcome", 100, required=False,
-                description="Approve / Override / Reject / NoAction"),
+    _picklist_col("fsi_ReviewOutcome", "Review Outcome", "fsi_intake_reviewdecision", required=False,
+                  description="Pending / Approved / Approved with conditions / Denied / Recused / Timeout"),
     _memo_col("fsi_ReviewNotes", "Review Notes", 4000,
               description="Reviewer notes (optional)"),
+    # logical name: fsi_quorumweight
+    _integer_col("fsi_QuorumWeight", "Quorum Weight", required=False, default=1,
+                 description="Weight contributed by this reviewer toward quorum calculations"),
+    # logical name: fsi_dueon
+    _datetime_col("fsi_DueOn", "Due On", required=False,
+                  description="Date/time when the reviewer response is due under policy"),
+    # logical name: fsi_conditionstext
+    _memo_col("fsi_ConditionsText", "Conditions Text", 4000,
+              description="Reviewer conditions recorded when the decision is Approved with conditions"),
     _datetime_col("fsi_StartedOn", "Started On", required=False,
                   description="Timestamp review started"),
     _datetime_col("fsi_CompletedOn", "Completed On", required=False,
@@ -385,8 +545,9 @@ INTAKE_REVIEW_COLUMNS = [
 INTAKE_APPROVAL_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
-    _string_col("fsi_ApproverRole", "Approver Role", 100,
-                description="Sponsor / SponsorManager (escalation) / ReviewerLead"),
+    # logical name: fsi_approverrole
+    _picklist_col("fsi_ApproverRole", "Approver Role", "fsi_intake_reviewerrole",
+                  description="Sponsor / InfoSec / Privacy / Compliance / Legal / MRM / Sponsor Manager"),
     _string_col("fsi_ApproverUpn", "Approver UPN", 200,
                 description="Approver user principal name"),
     _picklist_col("fsi_DecisionOutcome", "Decision Outcome", "fsi_intake_decisionoutcome",
@@ -399,6 +560,9 @@ INTAKE_APPROVAL_COLUMNS = [
                 description="SHA-256 of the rendered decision context shown to the approver (tamper evidence)"),
     _string_col("fsi_ClientIpAddress", "Client IP Address", 100, required=False,
                 description="Source IP recorded at decision time (supervisory evidence)"),
+    # logical name: fsi_dependsonapprovalid
+    _string_col("fsi_DependsOnApprovalId", "Depends On Approval ID", 100, required=False,
+                description="Optional predecessor approval row ID used for sequential approval chains"),
 ]
 
 INTAKE_DECISIONLOG_COLUMNS = [
@@ -449,7 +613,10 @@ INTAKE_AUDITEVENT_COLUMNS = [
     _string_col("fsi_RequestId", "Request ID", 100,
                 description="FK to fsi_IntakeRequest.fsi_RequestId"),
     _string_col("fsi_EventType", "Event Type", 100,
-                description="Submitted / Routed / SponsorNotified / SponsorClicked / AutoApproved / Denied / HandoffComplete / RegistryWritten / EntraAgentIdMinted / RetentionStamped"),
+                description="Lifecycle event name emitted by intake flows. Bundled values are catalogued in the fsi_intake_auditeventtype option set, but this column remains text so customers can extend the inventory without a schema change."),
+    # logical name: fsi_pathphase
+    _string_col("fsi_PathPhase", "Path Phase", 100, required=False,
+                description="Submitted / RouterRouted / SponsorAttested / ReviewerQueued / ReviewerDecided / Escalated / Handed off"),
     _string_col("fsi_ActorUpn", "Actor UPN", 200, required=False,
                 description="UPN of the actor who triggered the event (system events use 'system')"),
     _datetime_col("fsi_EventOn", "Event On",
@@ -479,7 +646,7 @@ TABLES = {
         "schema_name": "fsi_IntakeRequest",
         "display": "Intake Request",
         "plural": "Intake Requests",
-        "description": "Maker-submitted request to build an AI agent (parent record)",
+        "description": "Maker-submitted request to build an AI agent across Express, Standard, and Full paths",
         "ownership": "UserOwned",
         "columns": INTAKE_REQUEST_COLUMNS,
         "entity_set_name": "fsi_intakerequests",
@@ -506,7 +673,7 @@ TABLES = {
         "schema_name": "fsi_IntakeReview",
         "display": "Intake Review",
         "plural": "Intake Reviews",
-        "description": "Reviewer activity (sample audit on Express; Standard/Full reviewer outcomes)",
+        "description": "Reviewer activity (sample audit on Express; Standard/Full and MRM reviewer outcomes)",
         "ownership": "UserOwned",
         "columns": INTAKE_REVIEW_COLUMNS,
         "entity_set_name": "fsi_intakereviews",
@@ -515,7 +682,7 @@ TABLES = {
         "schema_name": "fsi_IntakeApproval",
         "display": "Intake Approval",
         "plural": "Intake Approvals",
-        "description": "Per-approver decision (sponsor + reviewers)",
+        "description": "Per-approver decision (sponsor + sequential or parallel approvers)",
         "ownership": "UserOwned",
         "columns": INTAKE_APPROVAL_COLUMNS,
         "entity_set_name": "fsi_intakeapprovals",
@@ -545,7 +712,7 @@ TABLES = {
         "schema_name": "fsi_IntakeAuditEvent",
         "display": "Intake Audit Event",
         "plural": "Intake Audit Events",
-        "description": "Lifecycle event audit trail",
+        "description": "Lifecycle event audit trail with path-phase checkpoints",
         "ownership": "OrganizationOwned",
         "columns": INTAKE_AUDITEVENT_COLUMNS,
         "entity_set_name": "fsi_intakeauditevents",
@@ -669,6 +836,8 @@ def write_schema_docs(path):
     lines.append("")
     lines.append("All child tables (`fsi_intakedatasource`, `fsi_intakerisksignal`, `fsi_intakereview`, `fsi_intakeapproval`, `fsi_intakedecisionlog`, `fsi_intakesponsorship`, `fsi_intakeauditevent`, `fsi_intakeretentionrecord`) carry an `fsi_requestid` string column that references the parent `fsi_intakerequest.fsi_requestid`. This is intentionally a **soft FK** (not a Dataverse lookup) so that the immutable `fsi_intakedecisionlog` records survive deletion of the parent request — required for FINRA 4511 / SEC 17a-4 evidence retention.")
     lines.append("")
+    lines.append("Reviewer-board state for Standard and Full requests is intentionally stored in `fsi_intakerequest.fsi_parallelreviewersjson` in v1.0-preview to keep the schema small; a dedicated reviewer-assignment table is deferred until the reviewer app needs Dataverse sub-grid views.")
+    lines.append("")
 
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
@@ -693,11 +862,23 @@ def deploy(client, dry_run=False):
             client.create_option_set(_optionset_metadata(os_def))
 
     print("\n[2/4] Tables and columns")
+    # Resolve global option-set MetadataIds because Dataverse's
+    # GlobalOptionSet@odata.bind only accepts GUID keys, not Name keys.
+    optionset_metadata_ids = {}
+    if not dry_run:
+        for _, os_dict in [("shared", SHARED_OPTIONSETS), ("intake", INTAKE_OPTIONSETS)]:
+            for _, os_def in os_dict.items():
+                name = os_def["name"]
+                meta = client.get_global_optionset(name)
+                if not meta or not meta.get("MetadataId"):
+                    raise RuntimeError(f"Could not resolve MetadataId for global option set '{name}'")
+                optionset_metadata_ids[name] = meta["MetadataId"]
+
     for tname, tdef in TABLES.items():
         print(f"\n  --- {tdef['display']} ({tdef['ownership']}) ---")
         if not client.check_table_exists(tname):
             definition = {
-                "@odata.type": "#Microsoft.Dynamics.CRM.EntityMetadata",
+                "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
                 "SchemaName": tdef["schema_name"],
                 "DisplayName": _label(tdef["display"]),
                 "DisplayCollectionName": _label(tdef["plural"]),
@@ -710,13 +891,16 @@ def deploy(client, dry_run=False):
                 "PrimaryNameAttribute": "fsi_name",
                 "Attributes": [
                     {
-                        "@odata.type": "#Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                        "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+                        "AttributeType": "String",
+                        "AttributeTypeName": {"Value": "StringType"},
                         "SchemaName": "fsi_Name",
                         "DisplayName": _label(f"{tdef['display']} ID"),
                         "Description": _label("Primary name attribute"),
                         "RequiredLevel": {"Value": "ApplicationRequired"},
                         "MaxLength": 500,
                         "FormatName": {"Value": "Text"},
+                        "IsPrimaryName": True,
                     }
                 ],
             }
@@ -727,10 +911,23 @@ def deploy(client, dry_run=False):
         else:
             print(f"  {tname}: already exists")
         for col in tdef["columns"]:
-            client.create_column(tname, col)
+            col_payload = _resolve_picklist_bind(col, optionset_metadata_ids, dry_run)
+            client.create_column(tname, col_payload)
 
-    print("\n[3/4] Alternate key (best-effort idempotent)")
-    print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}")
+    print("\n[3/4] Alternate key (idempotent)")
+    key_payload = {
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityKeyMetadata",
+        "SchemaName": ALTERNATE_KEY["schema_name"],
+        "DisplayName": _label(ALTERNATE_KEY["display"]),
+        "KeyAttributes": ALTERNATE_KEY["key_columns"],
+    }
+    key_logical_name = ALTERNATE_KEY["schema_name"].lower()
+    existing_key = client.get_entity_key(ALTERNATE_KEY["entity"], key_logical_name)
+    if existing_key:
+        print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}: already exists")
+    else:
+        client.create_entity_key(ALTERNATE_KEY["entity"], key_payload)
+        print(f"  {ALTERNATE_KEY['schema_name']} on {ALTERNATE_KEY['entity']}: created (Dataverse may take 30-90s to activate the supporting index)")
 
     print("\n[4/4] Done")
 
@@ -742,7 +939,7 @@ def deploy(client, dry_run=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Create Dataverse schema for Agent Intake (Express-path MVP)",
+        description="Create Dataverse schema for Agent Intake (Express + Standard + Full foundations)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--tenant-id", default=os.environ.get("INTAKE_TENANT_ID") or os.environ.get("DATAVERSE_TENANT_ID"),

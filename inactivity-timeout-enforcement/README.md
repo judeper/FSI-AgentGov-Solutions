@@ -9,7 +9,8 @@ coe_function: govern
 # Inactivity Timeout Enforcement
 
 > **Version:** v1.1.1
-> **Status:** Completed
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
 Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments.
 
@@ -24,9 +25,9 @@ This solution provides a Power Automate cloud flow that performs daily scans of 
 | Control | Relationship |
 |---------|--------------|
 | [2.22 - Inactivity Timeout Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.22-inactivity-timeout-enforcement/) | Primary — Timeout policy compliance detection |
-| [1.23 - Session Security](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.23-session-security/) | Session timeout configuration validation |
-| [3.7 - Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.7-monitoring/) | Continuous compliance monitoring and alerting |
-| [3.8 - Access Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-monitoring/3.8-access-monitoring/) | Overly permissive access detection via timeout gaps |
+| [1.23 - Step-Up Authentication for AI Agent Operations](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.23-step-up-authentication-for-agent-operations/) | Session timeout configuration validation |
+| [3.7 - PPAC Security Posture Assessment](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.7-ppac-security-posture-assessment/) | Continuous compliance monitoring and alerting |
+| [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Overly permissive access detection via timeout gaps |
 
 ## Components
 

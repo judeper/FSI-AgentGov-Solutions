@@ -5,12 +5,14 @@ Walks every top-level folder, loads `manifest.yaml`, and emits the following
 deterministic artifacts from a single source of truth:
 
 * `solutions.json` (committed at repo root) — mirrors the framework
-  `solutions-lock.json` schema 1:1 so `refresh_solutions_lock.py --tag v1.5.x`
-  in fsi-agentgov can consume the tagged release directly.
+  `solutions-lock.json` contract and publishes canonical machine-readable
+  inventory counts (`counts.total`, `counts.live`, `counts.preview`) plus
+  per-solution control coverage (`solutions.<solution-id>.controls`) so
+  downstream consumers never have to parse generated prose.
 * `README.md` solutions table inside `<!-- BEGIN:SOLUTIONS -->` /
   `<!-- END:SOLUTIONS -->` markers.
 * `site-docs/solutions/index.md` — Solutions Catalog grouped by domain.
-* `site-docs/solutions/<slug>/index.md` — per-solution detail page (35 of them).
+* `site-docs/solutions/<slug>/index.md` — per-solution detail pages.
 * `site-docs/reference/control-mapping.md` — all 78 framework controls grouped
   by pillar; controls without solutions render "No solution yet".
 * `site-docs/index.md` — hero metric counts derived from data (never hardcoded).
@@ -26,11 +28,28 @@ Validation runs on every invocation:
 * Every `controls[]` entry MUST exist in the framework `controls.json`
   (path resolved from FRAMEWORK_CONTROLS env var, defaulting to a sibling
   `fsi-agentgov` checkout).
+* Every top-level solution `README.md` MUST expose a parseable metadata header
+  near the H1 that matches the manifest-driven version/status contract:
+  `Version`, `Status`, `Validated against framework version`, and an optional
+  `Upstream Microsoft dependency` line when `manifest.yaml.upstreamDependency`
+  is present.
 
 Usage:
 
     python scripts/build-manifest.py            # write artifacts in place
     python scripts/build-manifest.py --check    # validate + assert no drift
+
+Canonical inventory contract
+----------------------------
+
+Downstream consumers MUST treat `solutions.json` as the authoritative export.
+Use the top-level `counts` object for `total` / `live` / `preview` inventory
+statistics. Treat each solution's `manifest.yaml.controls` array as the
+canonical control-coverage declaration and sync it from
+`solutions.json.solutions.<solution-id>.controls`. Generated Markdown summaries
+(`README.md`, manifest-managed solution README blocks, `site-docs/solutions/index.md`,
+etc.) are human-readable projections only and MUST NOT be parsed for counts or
+control mappings.
 
 Schema evolution policy
 -----------------------
@@ -52,9 +71,15 @@ was widened to accept both 1.4.x and 1.5.x in the companion PR before this
 change shipped.
 
 1.5.0 changelog (BREAKING):
-* `zones` is now REQUIRED on every solution entry. All 35 catalog
-  solutions already have `zones` populated and confirmed (commit
-  `ce82f83`); the schema change is a tightening, not a data change.
+* `zones` is now REQUIRED on every solution entry. The catalog already had
+  `zones` populated and confirmed (commit `ce82f83`); the schema change is a
+  tightening, not a data change.
+
+1.5.x contract notes:
+* Top-level `counts` exposes the authoritative `total` / `live` / `preview`
+  inventory summary for downstream sync.
+* `solutions.<solution-id>.controls` is the authoritative per-solution control
+  list mirrored from `manifest.yaml.controls`.
 
 1.4.2 changelog (additive only — historical):
 * Optional `zones` field — array of {personal, team, enterprise}.
@@ -109,9 +134,12 @@ SITE_CATALOG = SOLUTIONS_OUT / "index.md"
 
 GITHUB_BLOB = "https://github.com/judeper/FSI-AgentGov-Solutions/blob/main"
 SITE_BASE = "https://judeper.github.io/FSI-AgentGov-Solutions"
+CONTROL_MAPPING_PAGE = f"{SITE_BASE}/reference/control-mapping/"
 
 SOLUTIONS_BEGIN = "<!-- BEGIN:SOLUTIONS -->"
 SOLUTIONS_END = "<!-- END:SOLUTIONS -->"
+IMPLEMENTED_CONTROLS_BEGIN = "<!-- BEGIN:IMPLEMENTED_CONTROLS -->"
+IMPLEMENTED_CONTROLS_END = "<!-- END:IMPLEMENTED_CONTROLS -->"
 HERO_BEGIN = "<!-- BEGIN:HERO_METRICS -->"
 HERO_END = "<!-- END:HERO_METRICS -->"
 DEPLOY_LAYERS_BEGIN = "<!-- BEGIN:DEPLOY_LAYERS -->"
@@ -120,6 +148,30 @@ ZONE_ROADMAP_BEGIN = "<!-- BEGIN:ZONE_ROADMAP -->"
 ZONE_ROADMAP_END = "<!-- END:ZONE_ROADMAP -->"
 
 DEPLOYMENT_GUIDE = ROOT / "DEPLOYMENT-GUIDE.md"
+
+README_HEADER_FIELD_LABELS = {
+    "version": "Version",
+    "status": "Status",
+    "validated against framework version": "Validated against framework version",
+    "upstream microsoft dependency": "Upstream Microsoft dependency",
+}
+README_STATUS_SECTION_RE = re.compile(
+    r"^## Status\s*$\n(?:\n|\r\n)(?P<body>\|.*(?:\n|\r\n))+?(?=^## |\Z)",
+    re.MULTILINE,
+)
+README_STATUS_ROW_RE = re.compile(
+    r"^\|\s*(?P<prop>[^|]+?)\s*\|\s*(?P<value>[^|]+?)\s*\|$",
+    re.MULTILINE,
+)
+README_VERSION_TOKEN_RE = re.compile(r"v?(\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)")
+README_CAPE_VERSION_RE = re.compile(
+    r"^#\s*(v\d+\.\d+\.\d+)\s+CAPE alignment metadata$", re.MULTILINE
+)
+UPSTREAM_DEPENDENCY_STATUS_LABELS = {
+    "preview": "Preview",
+    "ga": "GA",
+    "mixed": "Mixed",
+}
 
 CHANGELOG_PATTERNS = {"acv-changelog.md", "alca-changelog.md"}
 
@@ -272,6 +324,146 @@ def validate_manifests(
     return errors
 
 
+def extract_cape_framework_version(readme_text: str) -> str | None:
+    """Return the CAPE-alignment framework version embedded in README frontmatter."""
+    match = README_CAPE_VERSION_RE.search(readme_text[:500])
+    return match.group(1) if match else None
+
+
+def render_readme_status(status: str) -> str:
+    """Render the manifest enum for human-facing README headers."""
+    return status.capitalize()
+
+
+def render_upstream_dependency(dependency: dict[str, str]) -> str:
+    """Render the optional upstream Microsoft dependency header value."""
+    status = UPSTREAM_DEPENDENCY_STATUS_LABELS[dependency["status"]]
+    note = dependency["note"].strip()
+    return f"{status} — {note}" if note else status
+
+
+def build_expected_readme_header(readme_text: str, manifest: dict) -> dict[str, str]:
+    """Return the expected README header fields for one solution."""
+    header = {
+        "version": f"v{manifest['version']}",
+        "status": render_readme_status(manifest.get("status", "live")),
+    }
+    framework_version = extract_cape_framework_version(readme_text)
+    if framework_version:
+        header["validated against framework version"] = framework_version
+    dependency = manifest.get("upstreamDependency")
+    if dependency:
+        header["upstream microsoft dependency"] = render_upstream_dependency(dependency)
+    return header
+
+
+def parse_readme_header_fields(readme_text: str) -> dict[str, str]:
+    """Parse the top-of-file README metadata header into a normalized mapping."""
+    top = "\n".join(readme_text.splitlines()[:80])
+    fields: dict[str, str] = {}
+    for key, label in README_HEADER_FIELD_LABELS.items():
+        match = re.search(rf"\*\*{re.escape(label)}:\*\*\s*(?P<value>[^\n]+)", top)
+        if match:
+            fields[key] = match.group("value").strip()
+
+    if "version" not in fields or "status" not in fields:
+        section = README_STATUS_SECTION_RE.search(top)
+        if section:
+            for row in README_STATUS_ROW_RE.finditer(section.group("body")):
+                prop = row.group("prop").strip().lower()
+                value = row.group("value").strip()
+                if prop == "version" and "version" not in fields:
+                    fields["version"] = value
+                elif prop == "status" and "status" not in fields:
+                    fields["status"] = value
+    return fields
+
+
+def parse_version_claim(value: str | None) -> str | None:
+    """Extract a semver token from a README metadata value."""
+    if not value:
+        return None
+    match = README_VERSION_TOKEN_RE.search(value)
+    return match.group(1) if match else None
+
+
+def normalize_status_claim(value: str | None) -> str | None:
+    """Map legacy README labels to the manifest status enum."""
+    if not value:
+        return None
+    lowered = value.lower()
+    patterns = (
+        (r"\b(public\s+)?preview\b", "preview"),
+        (r"\bscaffold\b", "preview"),
+        (r"\bin development\b", "preview"),
+        (r"\blive\b", "live"),
+        (r"\bproduction ready\b", "live"),
+        (r"\bcompleted\b", "live"),
+        (r"\bvalidated\b", "live"),
+        (r"\bactive\b", "live"),
+        (r"\breleased\b", "live"),
+        (r"\bcomplete\b", "live"),
+        (r"\bga\b", "live"),
+    )
+    for pattern, normalized in patterns:
+        if re.search(pattern, lowered):
+            return normalized
+    return None
+
+
+def validate_solution_readme_headers(manifests: dict[str, dict]) -> list[str]:
+    """Validate that each solution README header agrees with manifest metadata."""
+    errors: list[str] = []
+    for slug, manifest in manifests.items():
+        path = ROOT / slug / "README.md"
+        if not path.is_file():
+            errors.append(f"{slug}/README.md: missing top-level solution README")
+            continue
+
+        readme_text = path.read_text(encoding="utf-8")
+        header_fields = parse_readme_header_fields(readme_text)
+        expected_header = build_expected_readme_header(readme_text, manifest)
+
+        claimed_version = parse_version_claim(
+            header_fields.get("version") or header_fields.get("status")
+        )
+        if claimed_version is None:
+            errors.append(f"{slug}/README.md: missing parseable Version header")
+        elif claimed_version != manifest["version"]:
+            errors.append(
+                f"{slug}/README.md: Version header claims v{claimed_version}, "
+                f"expected v{manifest['version']} from manifest.yaml"
+            )
+
+        claimed_status = normalize_status_claim(header_fields.get("status"))
+        expected_status = manifest.get("status", "live")
+        if claimed_status is None:
+            errors.append(f"{slug}/README.md: missing parseable Status header")
+        elif claimed_status != expected_status:
+            errors.append(
+                f"{slug}/README.md: Status header claims {header_fields.get('status')!r}, "
+                f"expected {render_readme_status(expected_status)!r}"
+            )
+
+        for key in (
+            "validated against framework version",
+            "upstream microsoft dependency",
+        ):
+            expected_value = expected_header.get(key)
+            claimed_value = header_fields.get(key)
+            if expected_value and claimed_value != expected_value:
+                errors.append(
+                    f"{slug}/README.md: {README_HEADER_FIELD_LABELS[key]!r} should be "
+                    f"{expected_value!r}, got {claimed_value!r}"
+                )
+            if not expected_value and claimed_value:
+                errors.append(
+                    f"{slug}/README.md: unexpected {README_HEADER_FIELD_LABELS[key]!r} "
+                    f"header {claimed_value!r}; declare it in manifest.yaml first"
+                )
+    return errors
+
+
 # ---------------------------------------------------------------------------
 # Emitters
 # ---------------------------------------------------------------------------
@@ -304,14 +496,37 @@ def project_to_lock(m: dict) -> dict:
     return out
 
 
+def compute_inventory_counts(manifests: dict[str, dict]) -> dict[str, int]:
+    """Return canonical inventory counts for the aggregated export."""
+    return {
+        "total": len(manifests),
+        "live": sum(
+            1 for m in manifests.values() if m.get("status", "live") == "live"
+        ),
+        "preview": sum(
+            1 for m in manifests.values() if m.get("status", "live") == "preview"
+        ),
+    }
+
+
+def format_inventory_summary(counts: dict[str, int], noun: str) -> str:
+    """Render a short human-readable summary from canonical inventory counts."""
+    return (
+        f"{counts['total']} {noun} "
+        f"({counts['live']} live, {counts['preview']} preview)"
+    )
+
+
 def emit_solutions_json(
     manifests: dict[str, dict],
     schema_version: str = "1.5.0",
 ) -> str:
     """Return the canonical solutions.json content (deterministic)."""
+    counts = compute_inventory_counts(manifests)
     out = {
         "schemaVersion": schema_version,
         "generatedBy": "scripts/build-manifest.py",
+        "counts": counts,
         "solutions": {
             slug: project_to_lock(manifests[slug])
             for slug in sorted(manifests)
@@ -323,11 +538,22 @@ def emit_solutions_json(
 
 def emit_readme_table(manifests: dict[str, dict]) -> str:
     """Generate the README solutions table block (between markers, inclusive)."""
+    counts = compute_inventory_counts(manifests)
     rows = []
     rows.append(SOLUTIONS_BEGIN)
     rows.append(f"<!-- Generated by scripts/build-manifest.py — do not edit by hand. -->")
     rows.append("")
-    rows.append(f"This repository currently includes **{len(manifests)} live solution implementations**.")
+    rows.append(
+        "This repository currently includes "
+        f"**{format_inventory_summary(counts, 'solution implementations')}**."
+    )
+    rows.append("")
+    rows.append(
+        "Downstream consumers should treat `solutions.json` (top-level `counts` "
+        "plus each `solutions.<solution-id>.controls` list mirrored from "
+        "`manifest.yaml.controls`) as the authoritative machine-readable export; "
+        "this README block and its Controls column are generated summaries only."
+    )
     rows.append("")
     rows.append("| Solution | Description | Version | Status | Zones | Controls |")
     rows.append("|----------|-------------|---------|--------|-------|----------|")
@@ -344,6 +570,63 @@ def emit_readme_table(manifests: dict[str, dict]) -> str:
     return "\n".join(rows)
 
 
+def emit_solution_readme_controls_block(
+    m: dict,
+    framework_titles: dict[str, str],
+) -> str:
+    """Generate a manifest-managed README block for canonical implemented controls."""
+    controls = m.get("controls", [])
+    lines = [
+        IMPLEMENTED_CONTROLS_BEGIN,
+        "<!-- Generated by scripts/build-manifest.py from manifest.yaml.controls — do not edit by hand. -->",
+        "",
+        "## Implemented Controls",
+        "",
+        "Canonical control coverage for this solution is declared in "
+        "`manifest.yaml.controls` and exported in `solutions.json` as "
+        "`solutions.<solution-id>.controls`. Downstream consumers should sync "
+        "from that machine-readable list rather than parsing hand-maintained "
+        "README prose.",
+        "",
+    ]
+    if controls:
+        lines.append("| Control | Description |")
+        lines.append("|---------|-------------|")
+        for control_id in controls:
+            link = f"{CONTROL_MAPPING_PAGE}#control-{control_id.replace('.', '-')}"
+            title = framework_titles.get(control_id, "See control mapping")
+            lines.append(f"| [{control_id}]({link}) | {title} |")
+    else:
+        lines.append("_No framework controls mapped._")
+    lines.append("")
+    lines.append(IMPLEMENTED_CONTROLS_END)
+    return "\n".join(lines)
+
+
+def sync_solution_readme_controls(
+    slug: str,
+    m: dict,
+    framework_titles: dict[str, str],
+) -> tuple[Path, str] | None:
+    """Return an updated README when a solution opts into manifest-managed controls."""
+    path = ROOT / slug / "README.md"
+    if not path.is_file():
+        return None
+    original = path.read_text(encoding="utf-8")
+    if (
+        IMPLEMENTED_CONTROLS_BEGIN not in original
+        or IMPLEMENTED_CONTROLS_END not in original
+    ):
+        return None
+    new_block = emit_solution_readme_controls_block(m, framework_titles)
+    return path, replace_block(
+        original,
+        IMPLEMENTED_CONTROLS_BEGIN,
+        IMPLEMENTED_CONTROLS_END,
+        new_block,
+    )
+
+
 def replace_block(text: str, begin: str, end: str, new_block: str) -> str:
     pattern = re.compile(
         rf"{re.escape(begin)}.*?{re.escape(end)}", re.DOTALL
@@ -356,13 +639,14 @@ def replace_block(text: str, begin: str, end: str, new_block: str) -> str:
 
 
 def emit_site_catalog(manifests: dict[str, dict]) -> str:
+    counts = compute_inventory_counts(manifests)
     by_domain: dict[str, list[str]] = defaultdict(list)
     for slug, m in manifests.items():
         by_domain[m["domain"]].append(slug)
     lines = [
         "# Solutions Catalog",
         "",
-        f"{len(manifests)} live reference implementations organized by functional domain.",
+        f"{format_inventory_summary(counts, 'reference implementations')} organized by functional domain.",
         "",
         "<!-- Generated by scripts/build-manifest.py — do not edit by hand. -->",
         "",
@@ -524,12 +808,15 @@ def emit_control_mapping(
             )
         lines.append("")
 
+    counts = compute_inventory_counts(manifests)
     lines.append("## Coverage Summary")
     lines.append("")
     lines.append(f"- **Controls with implementations:** {mapped_count} of {total}")
-    lines.append(f"- **Live solution folders:** {len(manifests)}")
+    lines.append(
+        f"- **Solution inventory:** {format_inventory_summary(counts, 'solutions')}"
+    )
     avg = (
-        sum(len(m.get("controls", [])) for m in manifests.values()) / max(len(manifests), 1)
+        sum(len(m.get("controls", [])) for m in manifests.values()) / max(counts["total"], 1)
     )
     lines.append(f"- **Controls per solution (avg):** {avg:.1f}")
     lines.append("")
@@ -670,7 +957,8 @@ def emit_hero_metrics_block(
     manifests: dict[str, dict],
     framework_pillars: dict[str, int],
 ) -> str:
-    n_solutions = len(manifests)
+    counts = compute_inventory_counts(manifests)
+    n_solutions = counts["total"]
     n_controls = len(framework_pillars)
     n_domains = len({m["domain"] for m in manifests.values()})
     n_tiers = len({m["tier"] for m in manifests.values()})
@@ -852,6 +1140,7 @@ def run(check: bool) -> int:
     log.info("  manifests loaded: %d", len(manifests))
 
     errors = validate_manifests(manifests, framework_pillars)
+    errors.extend(validate_solution_readme_headers(manifests))
     if errors:
         for e in errors:
             log.error(e)
@@ -878,6 +1167,14 @@ def run(check: bool) -> int:
         new_block = emit_readme_table(manifests)
         new_readme = replace_block(original, SOLUTIONS_BEGIN, SOLUTIONS_END, new_block)
         record(README, new_readme, drift)
+
+    # 2b. Solution README control blocks (opt-in via markers)
+    for slug, m in manifests.items():
+        pending = sync_solution_readme_controls(slug, m, framework_titles)
+        if pending is None:
+            continue
+        path, content = pending
+        record(path, content, drift)
 
     # 3. Site catalog
     record(SITE_CATALOG, emit_site_catalog(manifests), drift)

@@ -8,17 +8,17 @@ coe_function: optimize
 ---
 # Content Moderation Monitor
 
-Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.
+> **Version:** v1.1.1
+> **Status:** Live
+> **Validated against framework version:** v1.6.0
 
-> **Status:** Completed
+Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.
 
 ## Overview
 
 The Content Moderation Monitor detects when Copilot Studio agents have insufficient content moderation settings for their governance zone. Unlike environment-level solutions, this monitor performs **per-agent validation** — examining each bot deployed across your Power Platform environments.
 
 It supports Control 1.27 (AI Agent Content Moderation Enforcement) by automating compliance validation against the FSI Agent Governance Framework's zone-based moderation requirements, and contributes complementary evidence to Control 1.8 (Runtime Protection and External Threat Detection). See [Scope and Limitations](#scope-and-limitations) below.
-
-**Version:** 1.1.1
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 
@@ -214,8 +214,8 @@ python scripts/correlate_purview_events.py \
 
 | Control | Relationship |
 |---------|--------------|
-| [1.27 - AI Agent Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-foundation/1.27-ai-agent-content-moderation-enforcement/) | Primary — agent-default content moderation level enforcement |
-| [1.8 - Runtime Protection and External Threat Detection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-foundation/1.8-runtime-protection-and-external-threat-detection/) | Complementary — provides one configuration signal; 1.8 also requires runtime threat detection beyond this solution's scope |
+| [1.27 - AI Agent Content Moderation Enforcement](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.27-ai-agent-content-moderation-enforcement/) | Primary — agent-default content moderation level enforcement |
+| [1.8 - Runtime Protection and External Threat Detection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-protection-and-external-threat-detection/) | Complementary — provides one configuration signal; 1.8 also requires runtime threat detection beyond this solution's scope |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Zone classification source |
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Governance dashboard integration |
 

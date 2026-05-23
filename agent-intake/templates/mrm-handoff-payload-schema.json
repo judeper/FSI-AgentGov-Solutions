@@ -1,0 +1,436 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/schemas/mrm-handoff-payload-v1.json",
+  "title": "Agent Intake MRM Handoff Payload",
+  "description": "Versioned handoff contract from agent-intake to model-risk-management-automation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "payloadVersion",
+    "intake",
+    "agent",
+    "maker",
+    "model",
+    "data",
+    "controls",
+    "sponsor",
+    "reviewers",
+    "decisionPackHash",
+    "retentionLabel",
+    "policyVersion"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "https://judeper.github.io/FSI-AgentGov-Solutions/schemas/mrm-handoff-payload-v1.json"
+    },
+    "payloadVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "intake": {
+      "$ref": "#/$defs/intake"
+    },
+    "agent": {
+      "$ref": "#/$defs/agent"
+    },
+    "maker": {
+      "$ref": "#/$defs/maker"
+    },
+    "model": {
+      "$ref": "#/$defs/model"
+    },
+    "data": {
+      "$ref": "#/$defs/data"
+    },
+    "controls": {
+      "$ref": "#/$defs/controls"
+    },
+    "sponsor": {
+      "$ref": "#/$defs/sponsor"
+    },
+    "reviewers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/reviewer"
+      }
+    },
+    "routing": {
+      "$ref": "#/$defs/routing"
+    },
+    "decisionPackHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "retentionLabel": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "policyVersion": {
+      "$ref": "#/$defs/nonEmptyString"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "upn": {
+      "type": "string",
+      "format": "email"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "intake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "submittedOnUtc",
+        "pathUsed",
+        "riskTier",
+        "zone",
+        "mrmRequired"
+      ],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "submittedOnUtc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "pathUsed": {
+          "type": "string",
+          "const": "Full"
+        },
+        "riskTier": {
+          "type": "string",
+          "const": "Tier 1 (High)"
+        },
+        "zone": {
+          "type": "string",
+          "enum": [
+            "Unclassified",
+            "Zone 1 (Enterprise)",
+            "Zone 2 (Team)",
+            "Zone 3 (Personal)"
+          ]
+        },
+        "mrmRequired": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "displayName",
+        "agentType",
+        "platformAgentId",
+        "environmentId",
+        "intendedAudience",
+        "businessOutcome"
+      ],
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "agentType": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "platformAgentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "environmentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "entraAgentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "intendedAudience": {
+          "type": "string",
+          "enum": [
+            "Just me",
+            "My team",
+            "My department",
+            "Anyone in the firm",
+            "External users"
+          ]
+        },
+        "businessOutcome": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "businessJustification": {
+          "type": "string",
+          "maxLength": 4000
+        }
+      }
+    },
+    "maker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "upn",
+        "displayName"
+      ],
+      "properties": {
+        "upn": {
+          "$ref": "#/$defs/upn"
+        },
+        "displayName": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "department": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "country": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vendorOrInternal",
+        "modelFamily",
+        "providerName",
+        "providerModelId",
+        "decisionOutputType",
+        "materiality"
+      ],
+      "properties": {
+        "vendorOrInternal": {
+          "type": "string",
+          "enum": [
+            "Internal",
+            "Vendor"
+          ]
+        },
+        "modelFamily": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "providerName": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "providerModelId": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "underlyingModel": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "decisionOutputType": {
+          "type": "string",
+          "enum": [
+            "Quantitative Estimate",
+            "Decision Support",
+            "Information Retrieval",
+            "Productivity"
+          ]
+        },
+        "materiality": {
+          "type": "string",
+          "enum": [
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "fineTuned": {
+          "type": "boolean"
+        },
+        "validationEvidenceUrl": {
+          "$ref": "#/$defs/url"
+        },
+        "championChallengerPlan": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "knownLimitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "dataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "classification",
+        "residencyCountry"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "type": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "classification": {
+          "type": "string",
+          "enum": [
+            "NPI",
+            "MNPI",
+            "Confidential",
+            "Internal",
+            "Restricted",
+            "Public"
+          ]
+        },
+        "residencyCountry": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "customerData": {
+          "type": "boolean"
+        },
+        "restricted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declaredSources",
+        "crossBorder",
+        "npiInvolved",
+        "mnpiInvolved"
+      ],
+      "properties": {
+        "declaredSources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/dataSource"
+          }
+        },
+        "crossBorder": {
+          "type": "boolean"
+        },
+        "npiInvolved": {
+          "type": "boolean"
+        },
+        "mnpiInvolved": {
+          "type": "boolean"
+        }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "humanOversightLevel",
+        "explainabilityArtifacts"
+      ],
+      "properties": {
+        "humanOversightLevel": {
+          "type": "string",
+          "pattern": "^L[0-5]$"
+        },
+        "explainabilityArtifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "biasFairnessAssessmentUrl": {
+          "$ref": "#/$defs/url"
+        }
+      }
+    },
+    "sponsor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "upn",
+        "displayName",
+        "attestationCardHash"
+      ],
+      "properties": {
+        "upn": {
+          "$ref": "#/$defs/upn"
+        },
+        "displayName": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "attestationCardHash": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "upn",
+        "decision"
+      ],
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "upn": {
+          "$ref": "#/$defs/upn"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "Approved",
+            "ApprovedWithConditions",
+            "Rejected",
+            "Pending",
+            "NoAction"
+          ]
+        },
+        "decidedOnUtc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decisionPackHash": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mrmOfficerUpn": {
+          "$ref": "#/$defs/upn"
+        },
+        "auditorUpn": {
+          "$ref": "#/$defs/upn"
+        }
+      }
+    }
+  }
+}

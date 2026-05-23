@@ -178,6 +178,26 @@ class DataverseClient:
             "Prefer": "odata.include-annotations=*",
         }
 
+    @staticmethod
+    def _raise_for_status(response, context: str = "") -> None:
+        """Raise an HTTPError that includes the Dataverse response body.
+
+        requests.Response.raise_for_status only surfaces status + URL, which
+        hides the actual Dataverse error code/message and makes 4xx failures
+        opaque. This helper preserves the same exception type while including
+        the server-side payload so callers see *why* a request was rejected.
+        """
+        if response.ok:
+            return
+        body = (response.text or "").strip()
+        snippet = body[:2000] + ("... (truncated)" if len(body) > 2000 else "")
+        msg = f"HTTP {response.status_code} {response.reason} for {response.request.method} {response.url}"
+        if context:
+            msg += f" [{context}]"
+        if snippet:
+            msg += f"\nResponse body: {snippet}"
+        raise requests.HTTPError(msg, response=response)
+
     def test_connection(self) -> dict:
         if self.dry_run:
             print("  [DRY RUN] Would test connection to Dataverse")
@@ -269,7 +289,7 @@ class DataverseClient:
             print(f"  [DRY RUN] Would create entity: {schema_name}")
             return {"LogicalName": schema_name.lower()}
         response = self._session.post(urljoin(self.api_url, "EntityDefinitions"), headers=self._get_headers(), json=entity_metadata)
-        response.raise_for_status()
+        self._raise_for_status(response, context=f"create entity {entity_metadata.get('SchemaName', '?')}")
         entity_id = response.headers.get("OData-EntityId", "")
         if entity_id:
             get_response = self._session.get(entity_id, headers=self._get_headers())
@@ -282,7 +302,7 @@ class DataverseClient:
             print(f"  [DRY RUN] Would create column: {entity_logical_name}.{col_name}")
             return attribute_metadata
         response = self._session.post(urljoin(self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes"), headers=self._get_headers(), json=attribute_metadata)
-        response.raise_for_status()
+        self._raise_for_status(response, context=f"create attribute {entity_logical_name}.{attribute_metadata.get('SchemaName', '?')}")
         return attribute_metadata
 
     def get_attribute_metadata(self, entity_logical_name, attribute_logical_name):
@@ -304,7 +324,7 @@ class DataverseClient:
             print(f"  [DRY RUN] Would create option set: {name}")
             return optionset_metadata
         response = self._session.post(urljoin(self.api_url, "GlobalOptionSetDefinitions"), headers=self._get_headers(), json=optionset_metadata)
-        response.raise_for_status()
+        self._raise_for_status(response, context=f"create option set {optionset_metadata.get('Name', '?')}")
         return optionset_metadata
 
     def get_global_optionset(self, name):
@@ -355,7 +375,7 @@ class DataverseClient:
             return None
         url = urljoin(self.api_url, "RelationshipDefinitions")
         response = self._session.post(url, headers=self._get_headers(), json=relationship_metadata)
-        response.raise_for_status()
+        self._raise_for_status(response, context=f"create relationship {relationship_metadata.get('SchemaName', '?')}")
         return response.headers.get("OData-EntityId")
 
     def get_relationship(self, schema_name):
@@ -370,6 +390,57 @@ class DataverseClient:
         response.raise_for_status()
         data = response.json()
         return data.get("value", [None])[0] if data.get("value") else None
+
+    def get_entity_key(self, entity_logical_name, key_logical_name):
+        """Return the alternate-key (EntityKeyMetadata) for an entity, or None if absent."""
+        if self.dry_run:
+            print(f"  [DRY RUN] Would check entity key: {entity_logical_name}.{key_logical_name}")
+            return None
+        url = urljoin(
+            self.api_url,
+            f"EntityDefinitions(LogicalName='{entity_logical_name}')/Keys(LogicalName='{key_logical_name}')",
+        )
+        try:
+            response = self._session.get(url, headers=self._get_headers())
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
+
+    def create_entity_key(self, entity_logical_name, key_metadata):
+        """Create an alternate key on an entity.
+
+        Dataverse processes alternate-key creation as an async system job; the POST
+        returns 204 (or 202) and the actual key becomes queryable shortly after. The
+        caller can poll with get_entity_key for guaranteed availability.
+        """
+        if self.dry_run:
+            schema_name = key_metadata.get("SchemaName", "Unknown")
+            print(f"  [DRY RUN] Would create entity key: {entity_logical_name}.{schema_name}")
+            return None
+        url = urljoin(
+            self.api_url,
+            f"EntityDefinitions(LogicalName='{entity_logical_name}')/Keys",
+        )
+        response = self._session.post(url, headers=self._get_headers(), json=key_metadata)
+        self._raise_for_status(
+            response,
+            context=f"create entity key {entity_logical_name}.{key_metadata.get('SchemaName', '?')}",
+        )
+        return response.headers.get("OData-EntityId")
+
+    def ensure_entity_key(self, entity_logical_name, key_metadata):
+        """Create an alternate key only if it does not already exist (idempotent)."""
+        schema_name = key_metadata.get("SchemaName", "")
+        key_logical_name = schema_name.lower()
+        existing = self.get_entity_key(entity_logical_name, key_logical_name)
+        if existing:
+            return None
+        return self.create_entity_key(entity_logical_name, key_metadata)
 
 
 def main():

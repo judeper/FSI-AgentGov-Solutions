@@ -36,7 +36,7 @@ git rev-parse --show-toplevel
 | Solution | Description | Type | Version |
 |----------|-------------|------|---------|
 | [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.1.0 |
-| [agent-intake](./agent-intake/) | Pre-build maker intake — Express-path MVP with sponsor 1-click approval, immutable decision log, Entra Agent ID handoff | PowerShell/Python/Docs | v0.2.1-preview |
+| [agent-intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | PowerShell/Python/Docs | v1.0.0-preview |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
 | [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.0 |
 | [ |
@@ -62,7 +62,7 @@ git rev-parse --show-toplevel
 | [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v1.1.0 |
 | [hitl-workflow-governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | PowerShell/Python | v1.1.0 |
 | [inactivity-timeout-enforcement](./inactivity-timeout-enforcement/) | Policy-driven inactivity timeout validation with zone-based durations | PowerShell/Python | v1.1.0 |
-| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.3.0 |
+| [message-center-monitor](./message-center-monitor/) | M365 Message Center monitoring for platform changes | Docs/Dataverse | v2.5.1 |
 | [mime-type-restrictions](./mime-type-restrictions/) | Zone-based MIME type configuration with server-side validation | PowerShell/Python | v1.1.0 |
 | [model-risk-management-automation](./model-risk-management-automation/) | OCC 2011-12 / SR 11-7 model risk management with inventory, risk scoring, validation workflows, and Agent Card generation | PowerShell/Python | v1.0.2 |
 | [pipeline-governance-cleanup](./pipeline-governance-cleanup/) | Discover, notify, clean up personal pipelines | PowerShell/Manual | v1.2.0 |
@@ -77,7 +77,7 @@ git rev-parse --show-toplevel
 | Solution | Primary Controls | Description |
 |----------|-----------------|-------------|
 | action-confirmation-auditor | 2.12, 1.10 | HITL confirmation node validation in Copilot Studio agent topics; FINRA 3110 supervision evidence |
-| agent-intake | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake with risk-tiered routing, sponsor attestation (FINRA 3110), immutable decision log (FINRA 4511 / SEC 17a-4) |
+| agent-intake | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
 | agent-365-lifecycle-governance | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Agent lifecycle governance with sponsor enforcement and access reviews |
 | agent-access-monitor | 3.8 | Overly permissive agent access detection per governance zone |
 | agent-communication-restriction-detector | 2.17 | Multi-agent orchestration limits per zone routing policy |
@@ -142,6 +142,16 @@ FSI-AgentGov-Solutions/
 │   └── templates/             # JSON schemas and sample payloads
 └── CHANGELOG.md
 ```
+
+## Per-Solution AGENTS.md (Context Cascade)
+
+Some solutions carry a per-solution `AGENTS.md` at their root (e.g., `agent-intake/AGENTS.md`). When working on a solution that has one, **read it first** — it captures dev/AI-agent context: active development status, resume-on-new-machine workflow, auth quirks specific to that solution, pending polish items, and recent design decisions. Per-solution `AGENTS.md` files are **not** customer-facing (that's `README.md`); they exist so a new session or a new machine picks up exactly where the previous one left off.
+
+Active per-solution `AGENTS.md` files:
+
+- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · PR #142 open
+
+When you add a per-solution `AGENTS.md`, list it here and link to it from the solution's README.
 
 ## Hooks
 
