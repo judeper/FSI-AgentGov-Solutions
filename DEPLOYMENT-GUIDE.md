@@ -95,10 +95,10 @@ All other solutions operate independently and can be deployed in any order based
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.2 | team, enterprise |
 | [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.5 | enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.2 | personal, team, enterprise |
-| [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.0 | personal, team, enterprise |
+| [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.1 | personal, team, enterprise |
 | [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.3 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.1.0 | enterprise |
-| [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.3 | team, enterprise |
+| [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.4 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.1 | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.2 | personal, team, enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.0 | enterprise |
@@ -111,7 +111,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Model Risk Management Automation](./model-risk-management-automation/) | 2 | v1.0.4 | enterprise |
 | [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | 2 | v1.2.1 | team, enterprise |
 | [RAG Source Validator](./rag-source-validator/) | 2 | v1.3.1 | personal, team, enterprise |
-| [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.1 | personal, team, enterprise |
+| [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.2 | personal, team, enterprise |
 | [Segregation of Duties Detector](./segregation-detector/) | 2 | v1.2.0 | team, enterprise |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.1 | team, enterprise |
 

@@ -247,4 +247,4 @@ union isfuzzy=true
 
 ---
 
-*FSI Agent Governance Framework v1.2 - January 2026*
+*FSI Agent Governance Framework v1.6.0*

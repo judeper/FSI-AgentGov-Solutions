@@ -139,7 +139,7 @@ try {
         return $true
     }
     else {
-        # Hash mismatch — evidence may be tampered
+        # Hash mismatch - evidence may be tampered
         if (-not $Quiet) {
             Write-Warning "╔══════════════════════════════════════════════════╗"
             Write-Warning "║       Evidence Integrity: FAILED                ║"

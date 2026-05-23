@@ -11,16 +11,18 @@
     credential sharing rules, and violation severity mappings.
 
     Zone policies:
-    - Zone1 (Personal/Developer): Relaxed — up to 20 OAuth scopes, shared
+    - Zone1 (Personal/Developer): Relaxed - up to 20 OAuth scopes, shared
       credentials permitted, cross-environment allowed, 180-day credential age
-    - Zone2 (Team/Collaborative): Moderate — up to 10 OAuth scopes, no shared
+    - Zone2 (Team/Collaborative): Moderate - up to 10 OAuth scopes, no shared
       credentials, no cross-environment, 90-day credential age
-    - Zone3 (Enterprise/Production): Strict — up to 5 OAuth scopes, service
+    - Zone3 (Enterprise/Production): Strict - up to 5 OAuth scopes, service
       principal required, no sharing, 30-day credential age, auto-remediation
+    - Unclassified: Zone classification missing - treated as restricted (same
+      defaults as Unknown) until reclassified
     - Unknown: Treated as restricted until classified
 
 .PARAMETER Zone
-    The governance zone: Zone1, Zone2, Zone3, or Unknown.
+    The governance zone: Zone1, Zone2, Zone3, Unclassified, or Unknown.
 
 .PARAMETER PolicyPath
     Path to zone-credential-policy.json. Defaults to
@@ -66,7 +68,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Zone1', 'Zone2', 'Zone3', 'Unknown')]
+    [ValidateSet('Zone1', 'Zone2', 'Zone3', 'Unclassified', 'Unknown')]
     [string]$Zone,
 
     [Parameter()]
@@ -124,7 +126,7 @@ if (Test-Path $PolicyPath) {
 $defaultPolicies = @{
     'Zone1' = [PSCustomObject]@{
         Zone                       = 'Zone1'
-        DisplayName                = 'Zone 1 — Personal / Developer'
+        DisplayName                = 'Zone 1 - Personal / Developer'
         MaxOAuthScopes             = 20
         RequireServicePrincipal    = $false
         AllowCrossEnvironment      = $true
@@ -149,7 +151,7 @@ $defaultPolicies = @{
 
     'Zone2' = [PSCustomObject]@{
         Zone                       = 'Zone2'
-        DisplayName                = 'Zone 2 — Team / Collaborative'
+        DisplayName                = 'Zone 2 - Team / Collaborative'
         MaxOAuthScopes             = 10
         RequireServicePrincipal    = $false
         AllowCrossEnvironment      = $false
@@ -174,7 +176,7 @@ $defaultPolicies = @{
 
     'Zone3' = [PSCustomObject]@{
         Zone                       = 'Zone3'
-        DisplayName                = 'Zone 3 — Enterprise / Production'
+        DisplayName                = 'Zone 3 - Enterprise / Production'
         MaxOAuthScopes             = 5
         RequireServicePrincipal    = $true
         AllowCrossEnvironment      = $false
@@ -194,6 +196,29 @@ $defaultPolicies = @{
             Critical = 'Immediate remediation required. Supports compliance with GLBA 501(b) safeguards rule, SEC Reg S-P, and FINRA Rule 3110 supervisory controls. Escalate to CISO. (SEC 17a-4 governs evidence retention of any resulting records.)'
             High     = 'Required review within 24 hours per SOX Section 302/404 and OCC 2011-12 model risk management.'
             Medium   = 'Review within 1 business week per GLBA 501(b) safeguards rule.'
+        }
+    }
+
+    'Unclassified' = [PSCustomObject]@{
+        Zone                       = 'Unclassified'
+        DisplayName                = 'Unclassified (no zone assigned)'
+        MaxOAuthScopes             = 5
+        RequireServicePrincipal    = $true
+        AllowCrossEnvironment      = $false
+        AllowSharedCredentials     = $false
+        MaxCredentialAgeDays       = 30
+        RequireCredentialRotation  = $true
+        AutoRemediate              = $false
+        ViolationSeverities        = @{
+            OverprivilegedConnector    = 'High'
+            ExcessiveOAuthScope        = 'High'
+            UnauthorizedServiceAccount = 'High'
+            CrossEnvironmentCredential = 'High'
+            SharedCredentialMisuse     = 'High'
+            StaleCredentialAccess      = 'High'
+        }
+        RegulatoryContext          = @{
+            High = 'Zone classification missing. Treat as restricted until classified. Review per governance policy.'
         }
     }
 

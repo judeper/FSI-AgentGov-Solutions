@@ -153,9 +153,9 @@ function Get-WorkloadIdentityCAPolicy {
                 ApplicablePolicies   = ($applicablePolicies.PolicyName -join '; ')
                 RiskLevel            = $riskLevel
                 Recommendation       = switch ($riskLevel) {
-                    'Critical' { 'No workload identity CA policy covers this service principal — create a CA policy with location and risk conditions' }
-                    'High'     { 'CA policy exists but lacks both location and risk conditions — add location-based or risk-based restrictions' }
-                    'Medium'   { 'Partial coverage — add missing location or risk-based condition for defense in depth' }
+                    'Critical' { 'No workload identity CA policy covers this service principal - create a CA policy with location and risk conditions' }
+                    'High'     { 'CA policy exists but lacks both location and risk conditions - add location-based or risk-based restrictions' }
+                    'Medium'   { 'Partial coverage - add missing location or risk-based condition for defense in depth' }
                     'Low'      { 'Adequate workload identity CA coverage' }
                 }
             })

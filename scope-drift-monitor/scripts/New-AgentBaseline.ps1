@@ -184,7 +184,7 @@ function Get-AccessToken {
         throw "Managed identity authentication was unavailable and client-secret fallback parameters were incomplete. For production, run from an Azure host with a system-assigned or user-assigned managed identity."
     }
 
-    # legacy: dev-only — replace with managed identity in production
+    # legacy: dev-only -- replace with managed identity in production
     $loginEndpoint = switch -Wildcard ($Scope) {
         "*office365.us*"           { "https://login.microsoftonline.us" }
         "*eaglex.ic.gov*"          { "https://login.microsoftonline.us" }
@@ -695,7 +695,7 @@ try {
 }
 catch {
     # Fail closed: if we cannot determine whether a duplicate baseline exists,
-    # do NOT proceed — silently creating a duplicate would corrupt the active scope
+    # do NOT proceed -- silently creating a duplicate would corrupt the active scope
     # set and the scanner would non-deterministically pick one (Goldeneye M1).
     # Force the operator to retry once Dataverse access is restored, or pass
     # -SkipDuplicateCheck if intentional override is required.

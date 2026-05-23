@@ -5,10 +5,10 @@
 .DESCRIPTION
     Inspects Copilot Studio agent service principals and managed identities to
     determine the authentication method in use. Classifies each credential as:
-    - ManagedIdentity (system-assigned or user-assigned) — recommended
-    - Certificate — acceptable
-    - ClientSecret — legacy/risky, recommend migration
-    - FederatedCredential (workload identity federation/OIDC) — acceptable
+    - ManagedIdentity (system-assigned or user-assigned) - recommended
+    - Certificate - acceptable
+    - ClientSecret - legacy/risky, recommend migration
+    - FederatedCredential (workload identity federation/OIDC) - acceptable
 
     Records evidence to Dataverse for audit trail, including credential type,
     creation date, expiration, and migration recommendation.
@@ -29,20 +29,21 @@
     Output format: Table (default), Json, or Object.
 
 .PARAMETER WhatIf
-    Preview mode — shows findings without persisting to Dataverse.
+    Preview mode - shows findings without persisting to Dataverse.
 
 .NOTES
     File: Test-AgentAuthMethod.ps1
-    Version: 2.1.0
+    Version: 2.1.1
     Solution: Credential Oversharing Detector (COD)
     Controls: 1.14, 1.4, 1.18
-    Requires: Microsoft.Graph.Applications
+    Requires: Microsoft.Graph.Applications, Microsoft.Graph.Authentication, Az.Accounts (>= 2.17.0)
 
     Part of FSI Agent Governance Framework
 #>
 
 #Requires -Version 7.0
 #Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Applications
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 function Test-AgentAuthMethod {
     [CmdletBinding(SupportsShouldProcess)]
@@ -52,6 +53,9 @@ function Test-AgentAuthMethod {
 
         [ValidatePattern('^https://[a-zA-Z0-9\-]+\.crm[0-9]*\.dynamics\.com')]
         [string]$DataverseUrl,
+
+        [Parameter()]
+        [string]$DataverseToken,
 
         [ValidateSet('Table', 'Json', 'Object')]
         [string]$OutputFormat = 'Table'
@@ -124,10 +128,19 @@ function Test-AgentAuthMethod {
                 }
             }
 
-            # Check for federated credentials (OIDC)
+            # Check for federated credentials (OIDC). The Graph cmdlet expects the
+            # Application *object* ID, not the AppId (client ID). Resolve via filter
+            # before querying federated identity credentials.
             try {
-                $fedCreds = Get-MgApplicationFederatedIdentityCredential `
-                    -ApplicationId $sp.AppId -ErrorAction SilentlyContinue
+                $appObject = Get-MgApplication -Filter "appId eq '$($sp.AppId)'" `
+                    -Property Id -Top 1 -ErrorAction SilentlyContinue
+                if ($appObject) {
+                    $fedCreds = Get-MgApplicationFederatedIdentityCredential `
+                        -ApplicationId $appObject.Id -ErrorAction SilentlyContinue
+                } else {
+                    $fedCreds = $null
+                    Write-Verbose "No Application object found for AppId $($sp.AppId) (likely managed identity or first-party SP); skipping federated credential lookup."
+                }
                 if ($fedCreds) {
                     foreach ($fed in $fedCreds) {
                         $authMethods.Add([PSCustomObject]@{
@@ -178,11 +191,11 @@ function Test-AgentAuthMethod {
             $recommendation = if ($hasClientSecret -and -not $hasMI) {
                 'MIGRATE: Replace client secret with managed identity (system-assigned preferred) or certificate-based authentication'
             } elseif ($hasClientSecret -and $hasMI) {
-                'CLEANUP: Remove legacy client secret — managed identity is already configured'
+                'CLEANUP: Remove legacy client secret - managed identity is already configured'
             } elseif ($hasClientSecret -and $hasCert) {
-                'CLEANUP: Remove legacy client secret — certificate is already configured'
+                'CLEANUP: Remove legacy client secret - certificate is already configured'
             } else {
-                'No action required — authentication method follows managed-identity-first standard'
+                'No action required - authentication method follows managed-identity-first standard'
             }
 
             $results.Add([PSCustomObject]@{
@@ -207,30 +220,54 @@ function Test-AgentAuthMethod {
         # ---------------------------------------------------------------
         if ($DataverseUrl -and -not $WhatIfPreference) {
             Write-Verbose "Recording auth method evidence to Dataverse..."
-            $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
-            $headers = @{
-                'Authorization' = "Bearer $((Get-MgContext).AccessToken)"
-                'Content-Type'  = 'application/json'
-                'OData-Version' = '4.0'
+
+            # IMPORTANT: Dataverse requires a token whose audience is the Dataverse
+            # environment URL. A Microsoft Graph access token (audience graph.microsoft.com)
+            # will produce HTTP 401 against /api/data/v9.2. Acquire a Dataverse-scoped
+            # token via Az.Accounts unless the caller passed one in.
+            $dvAccessToken = $DataverseToken
+            if (-not $dvAccessToken) {
+                try {
+                    if (-not (Get-AzContext)) {
+                        Connect-AzAccount -Tenant $TenantId | Out-Null
+                    }
+                    $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -AsSecureString -ErrorAction Stop
+                    $dvAccessToken = $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
+                } catch {
+                    Write-Warning "Could not acquire Dataverse token for ${DataverseUrl}: $($_.Exception.Message). Skipping persistence."
+                    $dvAccessToken = $null
+                }
             }
 
-            foreach ($result in ($results | Where-Object HasClientSecret)) {
-                $body = @{
-                    fsi_violationid     = "AUTH-$($result.ServicePrincipalId)-$(Get-Date -Format 'yyyyMMdd')"
-                    fsi_agentid         = $result.AppId
-                    fsi_agentname       = $result.DisplayName
-                    fsi_violationtype   = 100000002  # UnauthorizedServiceAccount
-                    fsi_severity        = 100000000  # Critical
-                    fsi_violationstatus = 100000000  # Open
-                    fsi_details         = $result.Recommendation
-                } | ConvertTo-Json
+            if (-not $dvAccessToken) {
+                Write-Warning "No Dataverse token available; skipping violation persistence."
+            } else {
+                $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
+                $headers = @{
+                    'Authorization' = "Bearer $dvAccessToken"
+                    'Content-Type'  = 'application/json'
+                    'OData-Version' = '4.0'
+                }
 
-                try {
-                    if ($PSCmdlet.ShouldProcess($result.DisplayName, 'Record auth method violation')) {
-                        Invoke-RestMethod -Uri "$apiBase/fsi_credentialviolations" -Headers $headers -Method Post -Body $body -ErrorAction Stop | Out-Null
+                foreach ($result in ($results | Where-Object HasClientSecret)) {
+                    $idSuffix = [guid]::NewGuid().ToString('N').Substring(0, 8)
+                    $body = @{
+                        fsi_violationid     = "AUTH-$($result.ServicePrincipalId)-$(Get-Date -Format 'yyyyMMdd')-$idSuffix"
+                        fsi_agentid         = $result.AppId
+                        fsi_agentname       = $result.DisplayName
+                        fsi_violationtype   = 100000002  # UnauthorizedServiceAccount
+                        fsi_severity        = 100000000  # Critical
+                        fsi_violationstatus = 100000000  # Open
+                        fsi_description     = $result.Recommendation
+                    } | ConvertTo-Json
+
+                    try {
+                        if ($PSCmdlet.ShouldProcess($result.DisplayName, 'Record auth method violation')) {
+                            Invoke-RestMethod -Uri "$apiBase/fsi_credentialviolations" -Headers $headers -Method Post -Body $body -ErrorAction Stop | Out-Null
+                        }
+                    } catch {
+                        Write-Warning "Failed to record violation for $($result.DisplayName): $_"
                     }
-                } catch {
-                    Write-Warning "Failed to record violation for $($result.DisplayName): $_"
                 }
             }
         }

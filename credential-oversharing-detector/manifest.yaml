@@ -1,7 +1,7 @@
 id: credential-oversharing-detector
 name: Credential Oversharing Detector
 description: Scans Copilot Studio agent credentials against zone policy to detect overprivileged connectors, excessive OAuth scopes, unauthorized service accounts, cross-environment sharing, and stale credentials.
-version: 2.1.0
+version: 2.1.1
 status: live
 domain: agent-config
 tier: '2'

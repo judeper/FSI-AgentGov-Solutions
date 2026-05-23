@@ -1,7 +1,7 @@
 id: deny-event-correlation-report
 name: Deny Event Correlation Report
 description: Daily reporting for correlating deny/no-content events across Copilot and Copilot Studio using Purview, Application Insights, and optional Defender data.
-version: 2.0.3
+version: 2.0.4
 status: live
 domain: monitoring-analytics
 tier: '2'
