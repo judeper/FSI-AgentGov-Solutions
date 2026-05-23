@@ -20,6 +20,13 @@
 .PARAMETER DataverseUrl
     Dataverse environment URL for querying GAC configuration data.
 
+.PARAMETER DataverseToken
+    Pre-acquired Dataverse-scoped bearer token. If omitted, the script
+    attempts to acquire one via Az.Accounts (Get-AzAccessToken). Graph
+    tokens are NOT valid for Dataverse — supply a Dataverse-scoped token
+    here to avoid 401 errors when the implicit Az.Accounts fallback is
+    unavailable.
+
 .PARAMETER OutputFormat
     Output format: Table (default), Json, or Object.
 
@@ -31,15 +38,25 @@
 
 .NOTES
     File: Get-PurviewDLPEvidence.ps1
-    Version: 1.2.0
+    Version: 1.2.1
     Solution: Generative AI Config Auditor (GAC)
     Control: 2.24 (Agent Feature Enablement Governance)
-    Requires: Microsoft.Graph.Authentication, ExchangeOnlineManagement (for DLP cmdlets)
+    Requires:
+    - PowerShell 7.4 or later
+    - Microsoft.Graph.Authentication (Connect-MgGraph)
+    - ExchangeOnlineManagement (optional, for Get-DlpCompliancePolicy / Get-Label)
+    - Az.Accounts (optional, for -DataverseToken acquisition when not supplied)
+
+    Token handling:
+    - Graph API calls use Invoke-MgGraphRequest (no manual Authorization header).
+    - Dataverse calls require a separate token: pass -DataverseToken (recommended)
+      or rely on the implicit Az.Accounts fallback. Graph tokens are not valid
+      for Dataverse.
 
     Part of FSI Agent Governance Framework
 #>
 
-#Requires -Version 7.0
+#Requires -Version 7.4
 #Requires -Modules Microsoft.Graph.Authentication
 
 function Get-PurviewDLPEvidence {
@@ -48,6 +65,9 @@ function Get-PurviewDLPEvidence {
         [Parameter()]
         [ValidatePattern('^https://[a-zA-Z0-9\-]+\.crm[0-9]*\.dynamics\.com')]
         [string]$DataverseUrl,
+
+        [Parameter()]
+        [string]$DataverseToken,
 
         [ValidateSet('Table', 'Json', 'Object')]
         [string]$OutputFormat = 'Table',
@@ -75,16 +95,13 @@ function Get-PurviewDLPEvidence {
         Write-Verbose "Querying DLP policies for generative AI scope..."
 
         try {
-            # Use Graph Security API for DLP policy retrieval
-            $graphHeaders = @{
-                'Authorization' = "Bearer $((Get-MgContext).AccessToken)"
-                'Accept'        = 'application/json'
-                'Content-Type'  = 'application/json'
-            }
-
-            # Query information protection policies
+            # Use Microsoft.Graph SDK helper rather than reading AccessToken from
+            # MgContext directly. (Get-MgContext).AccessToken is not surfaced on
+            # SDK v2.x and reusing a Graph token for Dataverse fails with 401
+            # because the audiences differ. Invoke-MgGraphRequest manages the
+            # token lifecycle for Graph calls correctly.
             $dlpUri = 'https://graph.microsoft.com/v1.0/informationProtection/policy/labels'
-            $dlpResp = Invoke-RestMethod -Uri $dlpUri -Headers $graphHeaders -Method Get -ErrorAction SilentlyContinue
+            $dlpResp = Invoke-MgGraphRequest -Uri $dlpUri -Method Get -ErrorAction SilentlyContinue
             $infoLabels = $dlpResp.value
 
             if ($infoLabels) {
@@ -177,23 +194,55 @@ function Get-PurviewDLPEvidence {
         # Step 2: Query Dataverse for AI-related label application
         # ---------------------------------------------------------------
         if ($DataverseUrl) {
-            Write-Verbose "Querying Dataverse for AI configuration label references..."
-            $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
-            $dvHeaders = @{
-                'Authorization' = "Bearer $((Get-MgContext).AccessToken)"
-                'Accept'        = 'application/json'
-                'OData-Version' = '4.0'
+            # Dataverse and Graph require different token audiences. If the
+            # caller did not supply -DataverseToken, fall back to Az.Accounts
+            # for a Dataverse-scoped token (never reuse the Graph token).
+            $effectiveDataverseToken = $DataverseToken
+            if (-not $effectiveDataverseToken) {
+                if (Get-Module -ListAvailable -Name Az.Accounts) {
+                    Import-Module Az.Accounts -ErrorAction Stop
+                    try {
+                        $dataverseResource = $DataverseUrl.TrimEnd('/')
+                        try {
+                            $azTok = Get-AzAccessToken -ResourceUri $dataverseResource -ErrorAction Stop
+                        } catch [System.Management.Automation.ParameterBindingException] {
+                            $azTok = Get-AzAccessToken -ResourceUrl $dataverseResource -ErrorAction Stop
+                        }
+                        if ($azTok.Token -is [System.Security.SecureString]) {
+                            $effectiveDataverseToken = [System.Net.NetworkCredential]::new('', $azTok.Token).Password
+                        } else {
+                            $effectiveDataverseToken = $azTok.Token
+                        }
+                    } catch {
+                        Write-Warning "Could not acquire Dataverse token via Az.Accounts: $_. Skipping Dataverse evidence collection."
+                    }
+                } else {
+                    Write-Warning "Dataverse evidence requested but no -DataverseToken provided and Az.Accounts module not installed. Skipping."
+                }
             }
 
-            # Query GAC validation history for sensitivity label references
-            $select = "fsi_gacvalidationhistoryid,fsi_agentname,fsi_zone,createdon"
-            $uri = "$apiBase/fsi_gacvalidationhistories?`$select=$select&`$orderby=createdon desc&`$top=100"
+            if ($effectiveDataverseToken) {
+                Write-Verbose "Querying Dataverse for AI configuration label references..."
+                $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
+                $dvHeaders = @{
+                    'Authorization' = "Bearer $effectiveDataverseToken"
+                    'Accept'        = 'application/json'
+                    'OData-Version' = '4.0'
+                }
 
-            try {
-                $validationResp = Invoke-RestMethod -Uri $uri -Headers $dvHeaders -Method Get -ErrorAction Stop
-                $evidence | Add-Member -NotePropertyName 'ValidationHistoryCount' -NotePropertyValue $validationResp.value.Count
-            } catch {
-                Write-Warning "Dataverse GAC history query failed: $_"
+                # Query GAC validation history for sensitivity label references.
+                # Entity set name is explicit-singular (fsi_gacvalidationhistory)
+                # in create_dataverse_schema.py to avoid the auto-plural
+                # fsi_gacvalidationhistorys; do NOT add an 'es' or 's' suffix.
+                $select = "fsi_gacvalidationhistoryid,fsi_runid,fsi_overallstatus,createdon"
+                $uri = "$apiBase/fsi_gacvalidationhistory?`$select=$select&`$orderby=createdon desc&`$top=100"
+
+                try {
+                    $validationResp = Invoke-RestMethod -Uri $uri -Headers $dvHeaders -Method Get -ErrorAction Stop
+                    $evidence | Add-Member -NotePropertyName 'ValidationHistoryCount' -NotePropertyValue $validationResp.value.Count
+                } catch {
+                    Write-Warning "Dataverse GAC history query failed: $_"
+                }
             }
         }
 
