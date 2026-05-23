@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "The DR result table is fsi_drtestresult and scripts should target the default plural entity set fsi_drtestresults when writing Dataverse rows.",
+    "fsi_drt_teststatus uses nonstandard values 1=Pass and 2=Fail rather than 100000000+ Dataverse choice values.",
+    "fsi_actualrto stores ProbeDurationHours and fsi_targetrto stores ProbeDurationTargetHours; these are read-only validation metrics, not regulator-grade recovery-time objectives.",
+    "fsi_rtomet is a Boolean stored as 1/0 that reports whether the validation probe completed within the configured probe budget.",
+    "fsi_correlationid is a short hex link to the on-disk audit log file, not the Dataverse primary key or validation run GUID."
+  ]
+}

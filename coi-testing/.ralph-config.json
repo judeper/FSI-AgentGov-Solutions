@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "COI Testing has no create_coi_dataverse_schema.py generator; docs/dataverse-schema.md is the source for manually creating fsi_coitestresult with entity set fsi_coitestresults.",
+    "The fsi_coitestresult primary name attribute is fsi_scenarioid, and fsi_category is a String constrained by runner categories such as proprietary_bias, suitability, fee_transparency, and cross_selling.",
+    "fsi_status values are PASS=100000000, FAIL=100000001, SKIPPED=100000002, WARN=100000003, and ERROR=100000004; save_results() writes these integers directly.",
+    "The runner currently reports scaffold scenarios as SKIPPED until Direct Line agent-interaction support ships; --allow-skipped is required to persist skipped scaffold results.",
+    "--dry-run intentionally skips Dataverse persistence even when --allow-skipped is provided."
+  ]
+}

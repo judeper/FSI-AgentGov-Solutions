@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "fsi_gacvalidationhistory has explicit singular OData entity set fsi_gacvalidationhistory; querying the auto-plural fsi_gacvalidationhistorys caused prior Web API 404s.",
+    "Get-PurviewDLPEvidence.ps1 requires separate Graph and Dataverse tokens; Invoke-MgGraphRequest Graph tokens are not valid for Dataverse Web API calls.",
+    "Get-PurviewDLPEvidence.ps1 requires PowerShell 7.4 and Microsoft.Graph.Authentication, with Az.Accounts used only as an optional Dataverse-token fallback.",
+    "fsi_GACViolation.fsi_Severity is a String with Critical/High/Medium/Warning labels, not the shared fsi_acv_severity option set.",
+    "The baseline table stores fsi_ModelKnowledgeEnabled and fsi_SemanticSearchEnabled drift inputs; omitting them misses general-knowledge and semantic-search configuration changes."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "fsi_HT_category values are FactualError=100000000, FabricatedData=100000001, CitationMissing=100000002, OutdatedInfo=100000003, and ConfidenceOverstatement=100000004.",
+    "fsi_HT_severity values are Low=100000000, Medium=100000001, High=100000002, and Critical=100000003; these are not shared ACV severity values.",
+    "fsi_source is nullable in the Dataverse schema even though source-configuration.md treats source as an operational requirement for new flows; null supports backward compatibility.",
+    "fsi_groundednessdetected and fsi_isresolved are Boolean fields stored as 1/0, not picklists.",
+    "Summary output uses ShareOfReports rather than HallucinationRate because the denominator is hallucination report count, not total agent response count."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "AAM and CMM history tables are explicit singular entity sets fsi_accessvalidationhistory and fsi_moderationvalidationhistory; hard-coded plural forms return Web API 404.",
+    "fsi_environmentregistry pluralizes to fsi_environmentregistries; Register-ProvisionedEnvironment.ps1 relies on that consonant-plus-y entity set form.",
+    "The integration layer must not filter history rows by fsi_validationtype because ACV, SSC, and CAA history tables do not contain that column.",
+    "All integrated solutions correlate run-level records through fsi_runid as a String logical GUID, not a Dataverse lookup relationship.",
+    "Export-UnifiedComplianceEvidence.ps1 registers run-level evidence only as of v2.0.2; per-finding violation rows remain in the owning solutions rather than the consolidated package."
+  ]
+}

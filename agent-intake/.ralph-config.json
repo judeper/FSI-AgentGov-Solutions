@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "The fsi_intakerequest entity set is fsi_intakerequests; alternate key fsi_RequestIdUniqueKey is on fsi_requestid, but AGENTS.md documents a 30-90 second index activation window where alt-key URI PATCH can fail.",
+    "Child tables carry fsi_requestid as a String soft foreign key rather than Dataverse lookups so immutable fsi_intakedecisionlog records can survive parent request deletion.",
+    "fsi_eventtype on fsi_intakeauditevent is intentionally a String; fsi_intake_auditeventtype is a reference catalog and must not be added to deploy.ps1 OptionSetNameList.",
+    "Reviewer-board state for Standard and Full requests is stored in fsi_intakerequest.fsi_parallelreviewersjson in v1.0-preview; there is no reviewer-assignment table yet.",
+    "The OrganizationOwned evidence tables are fsi_intakedecisionlog, fsi_intakeauditevent, and fsi_intakeretentionrecord; most workflow request/approval tables are UserOwned."
+  ]
+}

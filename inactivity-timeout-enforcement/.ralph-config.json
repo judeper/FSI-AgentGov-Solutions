@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "ITE uses fsi_acv_zone values Unclassified=100000000, Zone 1=100000001, Zone 2=100000002, and Zone 3=100000003 across policy, compliance, and error tables.",
+    "fsi_ITE_errortype values are MissingPolicy=100000000, Unauthorized=100000001, Forbidden=100000002, NotFound=100000003, Throttled=100000004, ParseError=100000005, and DataverseError=100000006.",
+    "The documented cloud flow List_Environments action reads only the first BAP Admin API page unless extended with nextLink pagination; the standalone PowerShell scanner follows BAP pagination.",
+    "ConvertFrom-Iso8601Duration handles PT-prefixed hour and minute durations only; days and seconds components such as P1DT2H or PT1H30M15S are outside the current parser scope.",
+    "Test-EvidenceIntegrity.ps1 returns false instead of throwing on hash mismatch or validation errors so callers can branch on integrity status."
+  ]
+}

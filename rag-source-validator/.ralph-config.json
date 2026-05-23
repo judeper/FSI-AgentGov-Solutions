@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "fsi_RSV_sourcetype uses compact values 1-13, with Copilot Studio Uploaded Document=13; do not remap to Dataverse default 100000000+ values.",
+    "fsi_RSV_validationresult uses compact values 1-8, where Skipped - Not Implemented=7 and Skipped - Unsupported Type=8.",
+    "fsi_SourceChange tracks review workflow through fsi_reviewed, fsi_reviewedby, fsi_reviewedon, and fsi_approved rather than a separate review table.",
+    "Council review found China sovereign-cloud auth mismatch: governance scripts allowed login.partner.microsoftonline.cn while Invoke-SourceValidation.ps1 used login.chinacloudapi.cn.",
+    "create_rsv_dataverse_schema.py, create_rsv_connection_references.py, and create_rsv_environment_variables.py expose interactive and client-secret auth only; managed identity or access-token modes require extra handling."
+  ]
+}

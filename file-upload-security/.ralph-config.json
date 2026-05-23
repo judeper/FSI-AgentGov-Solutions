@@ -1,0 +1,9 @@
+{
+  "domainFacts": [
+    "Dataverse Organization.AllowedMimeTypes takes precedence over Organization.BlockedMimeTypes; this solution validates Copilot Studio agent file-upload settings rather than replacing Dataverse server-side file controls.",
+    "fsi_fileuploadvalidationhistory is OrganizationOwned append-only scan history and contains both fsi_runtimestamp and fsi_validationtime for run start and validation completion timing.",
+    "fsi_fileuploadviolation uses String columns fsi_fileuploadexpected and fsi_fileuploadactual for Enabled, Disabled, or Indeterminate states rather than Boolean-only file upload status.",
+    "The shared FUS fsi_acv_severity values are Info=100000000, Low=100000001, Medium=100000002, High=100000003, Critical=100000004, and Warning=100000005.",
+    "fsi_FUS_GracePeriodHours has a Dataverse environment variable default of 24 hours, while PowerShell scripts default to 48 only when the environment variable is absent; Dataverse takes precedence."
+  ]
+}
