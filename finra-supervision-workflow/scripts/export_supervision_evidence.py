@@ -325,7 +325,7 @@ def main() -> None:
             "start_date": args.start_date,
             "end_date": args.end_date,
             "exported_at": datetime.now(timezone.utc).isoformat(),
-            "exported_by": "export_supervision_evidence.py v1.1.0",
+            "exported_by": "export_supervision_evidence.py v1.1.1",
             "status": "complete"
         },
         "files": []
