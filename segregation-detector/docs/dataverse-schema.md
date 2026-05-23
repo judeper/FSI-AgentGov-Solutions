@@ -204,4 +204,4 @@ Create these Dataverse tables and choices with the exact SchemaNames and numeric
 
 ---
 
-*Segregation of Duties Detector v1.2.0*
+*Segregation of Duties Detector v1.2.1*

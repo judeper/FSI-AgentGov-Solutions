@@ -64,10 +64,10 @@ param(
     [string]$FederatedTokenFile = $env:AZURE_FEDERATED_TOKEN_FILE,
 
     [Parameter(Mandatory = $false)]
-    # legacy: dev-only — replace with managed identity in production
+    # legacy: dev-only -- replace with managed identity in production
     # Prefer environment variables (FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET) over the -ClientSecret
     # parameter to avoid exposing secrets in process listings, shell history, and transcript logs.
-    # Note: do NOT use [ValidateNotNullOrEmpty()] here — the validator runs at parameter binding
+    # Note: do NOT use [ValidateNotNullOrEmpty()] here -- the validator runs at parameter binding
     # and would mask the actionable "FSI_CLIENT_SECRET / AZURE_CLIENT_SECRET" guidance below.
     # (Council Opus #6)
     [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET)
@@ -99,7 +99,7 @@ switch ($AuthMode) {
         }
     }
     "ClientSecret" {
-        # legacy: dev-only — replace with managed identity in production
+        # legacy: dev-only -- replace with managed identity in production
         if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
             throw "TenantId, ClientId, and ClientSecret are required for legacy ClientSecret auth. Prefer -AuthMode ManagedIdentity or WorkloadIdentity for production."
         }
@@ -161,7 +161,7 @@ $DefaultRules = @{
             # tenant). (Council Goldeneye #3)
             fsi_enabled = $false
             fsi_allowexception = $false
-            fsi_description = "Flags potential self-exemption from DLP policies (DISABLED — requires custom DLP policy ownership collector; not produced by Power Platform BAP role-assignment API)"
+            fsi_description = "Flags potential self-exemption from DLP policies (DISABLED -- requires custom DLP policy ownership collector; not produced by Power Platform BAP role-assignment API)"
         },
         @{
             fsi_name = "Connection Creator cannot be Connection Approver"
@@ -229,7 +229,7 @@ $DefaultRules = @{
             # collector. (Council Goldeneye #3)
             fsi_enabled = $false
             fsi_allowexception = $true
-            fsi_description = "Environment lifecycle separation (DISABLED — 'Environment Approver' is not a Power Platform BAP built-in role; rename to your tenant's approval group before enabling)"
+            fsi_description = "Environment lifecycle separation (DISABLED -- 'Environment Approver' is not a Power Platform BAP built-in role; rename to your tenant's approval group before enabling)"
         },
         @{
             fsi_name = "Data Steward cannot be Data Consumer for sensitive data"

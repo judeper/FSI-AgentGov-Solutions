@@ -181,4 +181,4 @@ Before deployment, verify:
 
 ---
 
-*Segregation of Duties Detector v1.2.0*
+*Segregation of Duties Detector v1.2.1*

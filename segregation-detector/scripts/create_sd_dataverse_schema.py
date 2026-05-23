@@ -424,7 +424,7 @@ def generate_schema_docs() -> str:
         "",
         "---",
         "",
-        "*Segregation of Duties Detector v1.2.0*",
+        "*Segregation of Duties Detector v1.2.1*",
         "",
     ])
     return "\n".join(lines)

@@ -916,7 +916,7 @@
     "segregation-detector": {
       "id": "segregation-detector",
       "name": "Segregation of Duties Detector",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",

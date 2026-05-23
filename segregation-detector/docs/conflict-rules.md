@@ -225,4 +225,4 @@ Validate rule syntax by importing with `-WhatIf`:
 
 ---
 
-*Segregation of Duties Detector v1.2.0*
+*Segregation of Duties Detector v1.2.1*

@@ -65,10 +65,10 @@ param(
     [string]$FederatedTokenFile = $env:AZURE_FEDERATED_TOKEN_FILE,
 
     [Parameter(Mandatory = $false)]
-    # legacy: dev-only — replace with managed identity in production
+    # legacy: dev-only -- replace with managed identity in production
     # Prefer environment variables (FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET) over the -ClientSecret
     # parameter to avoid exposing secrets in process listings, shell history, and transcript logs.
-    # Note: do NOT use [ValidateNotNullOrEmpty()] here — the parameter resolves at bind time, before
+    # Note: do NOT use [ValidateNotNullOrEmpty()] here -- the parameter resolves at bind time, before
     # the manual check below can run, and the validator's generic message would mask the actionable
     # "FSI_CLIENT_SECRET / AZURE_CLIENT_SECRET" guidance the script emits later. (Council Opus #6)
     [string]$ClientSecret = ($env:FSI_CLIENT_SECRET ?? $env:AZURE_CLIENT_SECRET),
@@ -203,7 +203,7 @@ function Get-PowerPlatformRoleAssignments {
             try {
                 $roleResponse = Invoke-WithRetry { Invoke-RestMethod -Uri $roleUri -Headers $headers -Method Get }
                 foreach ($ra in $roleResponse.value) {
-                    # Filter to user principals only — groups and service principals would otherwise
+                    # Filter to user principals only -- groups and service principals would otherwise
                     # be merged into the user role map and emit false-positive SoD violations against
                     # GUIDs that are not real users. (Council Opus #1 / Goldeneye #4)
                     $principalType = $ra.properties.principal.type
@@ -227,8 +227,8 @@ function Get-PowerPlatformRoleAssignments {
         } while ($roleUri)
     }
     if ($skippedCount -gt 0) {
-        Write-Warning "$skippedCount of $totalEnvironments environment(s) failed Power Platform role queries — results may be incomplete"
-        # Fail closed when ALL environment queries failed — silently returning an empty
+        Write-Warning "$skippedCount of $totalEnvironments environment(s) failed Power Platform role queries -- results may be incomplete"
+        # Fail closed when ALL environment queries failed -- silently returning an empty
         # assignment set would be reported as "no violations" when in fact no data was
         # retrieved (e.g., service principal not registered with New-PowerAppManagementApp,
         # or BAP outage). (Council Opus #3 / Goldeneye #2)
@@ -259,7 +259,7 @@ function Get-DataverseSecurityRoleAssignments {
     }
 
     $results = [System.Collections.Generic.List[hashtable]]::new()
-    # Filter out application users (service principals provisioned as systemusers) — they would
+    # Filter out application users (service principals provisioned as systemusers) -- they would
     # otherwise be merged into the user role map and reported as SoD violators against the
     # service principal's Microsoft Entra object ID. (Council Opus #2)
     $nextLink = "$Environment/api/data/v9.2/systemusers?`$select=systemuserid,azureactivedirectoryobjectid,domainname,fullname&`$expand=systemuserroles_association(`$select=name,roleid)&`$filter=isdisabled eq false and applicationid eq null"
@@ -446,7 +446,7 @@ switch ($AuthMode) {
         Write-Host "Authentication: WorkloadIdentity" -ForegroundColor Gray
     }
     "ClientSecret" {
-        # legacy: dev-only — replace with managed identity in production
+        # legacy: dev-only -- replace with managed identity in production
         if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) {
             throw "TenantId, ClientId, and ClientSecret are required for legacy ClientSecret auth. Prefer -AuthMode ManagedIdentity or WorkloadIdentity for production."
         }
@@ -734,7 +734,7 @@ $activeOpenCount = $existingViolations.Count + $newViolations.Count
 Write-AuditLog -Message "SoD scan completed: $usersScanned users scanned, $conflictsFound conflicts found, $($newViolations.Count) new violations ($persistedCount persisted), $($existingViolations.Count) pre-existing open violations"
 
 # Exit-code semantics for CI/CD pipeline gates (Council Opus #13 / Goldeneye #1):
-#   * In -DryRun mode, NEVER fail the build — dry runs are evidence collection and would
+#   * In -DryRun mode, NEVER fail the build -- dry runs are evidence collection and would
 #     otherwise block every CI run that finds even pre-existing conflicts.
 #   * Otherwise, exit non-zero if ANY active conflicts exist (newly detected OR previously
 #     recorded but not yet resolved). The earlier behavior of gating only on "newly created"
