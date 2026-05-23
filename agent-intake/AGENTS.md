@@ -6,7 +6,7 @@
 |---|---|
 | **Solution** | agent-intake |
 | **Version** | v1.0.0-preview |
-| **Status** | Ready for customer pilot · PR #142 merged |
+| **Status** | Ready for customer pilot · merged to main via PR #142 |
 | **Owner** | judeper / FSI Agent Governance |
 
 One-sentence intent: a pre-build maker-intake layer that captures FSI AI-agent requests, classifies risk into Express / Standard / Full paths, routes for sponsor or reviewer approval with FINRA 3110 attestation, records an immutable decision pack with 7-year retention, and hands the approved request off to `agent-registry-automation` via a Microsoft Entra Agent ID.
@@ -37,7 +37,7 @@ If you skip this step, `Invoke-Deploy.ps1` and every other lab script will fail 
 - Live-lab e2e validated on the user's Autonomous Demo Sandbox in tenant `M365CPI57786004`: teardown (~646s) → fresh redeploy (~2200s · 8 stages all green) → seed 5 scenarios → post-seed smoke (5 PASS · 2 MANUAL · 1 WARN — all expected).
 - Six bug-fixes from live validation consolidated in commit `53a09c4`.
 
-**Open PR:** [#142 — feat(agent-intake): v1.0.0-preview customer-deliverable](https://github.com/judeper/FSI-AgentGov-Solutions/pull/142) was merged. The branch and worktree have moved on; the council-review remediation work now lands via `fix/agent-intake-council-review` on top of the merged `main`.
+**PR:** [#142 — feat(agent-intake): v1.0.0-preview customer-deliverable](https://github.com/judeper/FSI-AgentGov-Solutions/pull/142) — **merged** 2026-05-22. The council-review remediation work now lands via `fix/agent-intake-council-review` on top of the merged `main`.
 
 **In-flight (this session, pending push):**
 
@@ -52,7 +52,7 @@ If you skip this step, `Invoke-Deploy.ps1` and every other lab script will fail 
 
 1. On the new machine, follow [Resuming on a different dev machine](#resuming-on-a-different-dev-machine).
 2. `cd agent-intake/lab; .\Invoke-Deploy.ps1 -DryRun` as a sanity-check before any live test.
-3. Decision on the table: merge PR #142 to `main` or keep iterating.
+3. Decide next iteration scope (v1.1 follow-ups listed in [Pending work](#pending-work)).
 
 ---
 
@@ -64,8 +64,8 @@ The session-state folder (`~\.copilot\session-state\`) lives on the **previous**
 # 1. Clone or update
 git clone https://github.com/judeper/FSI-AgentGov-Solutions
 cd FSI-AgentGov-Solutions
-git checkout feature/agent-intake
-git pull origin feature/agent-intake
+git checkout main
+git pull origin main
 
 # 2. Fix the gh-account credential helper FIRST (see Auth quirks below)
 gh auth setup-git --hostname github.com
@@ -193,7 +193,7 @@ For the full architectural decision record, see [`docs/decisions.md`](docs/decis
 | Run the test suite | `pytest agent-intake/tests` (42 cases) |
 | Understand the orchestrator | [`docs/orchestrator-architecture.md`](docs/orchestrator-architecture.md) |
 | Understand drift integration | [`docs/drift-detection-integration.md`](docs/drift-detection-integration.md) |
-| Find the open PR | [PR #142 on GitHub](https://github.com/judeper/FSI-AgentGov-Solutions/pull/142) |
+| Find the merged PR | [PR #142 on GitHub](https://github.com/judeper/FSI-AgentGov-Solutions/pull/142) (merged) |
 
 ---
 

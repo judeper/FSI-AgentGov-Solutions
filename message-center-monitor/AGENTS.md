@@ -15,7 +15,7 @@
 |---|---|
 | **Solution** | `message-center-monitor` |
 | **Version** | v2.5.1 (latest tag); `[Unreleased]` carries the POC-handoff + dry-run fixes |
-| **Status** | POC dry-run in progress on `feature/message-center-monitor-poc-ready` (PR #141) |
+| **Status** | POC code merged to main via PR #141 · dry-run phases 1.1–2.2 complete |
 | **Primary controls** | 2.3 (change-management evidence), 2.10 (platform-update awareness) |
 | **Regulatory mapping** | FINRA 4511 / 3110, SEC 17a-4 (immutable evidence), GLBA 501(b) |
 | **Tech stack** | PowerShell 7.2+ (governance scripts + lab), Python 3.10+ (schema setup), Dataverse Web API, Microsoft Graph (`ServiceMessage.Read.All`), Teams incoming webhook (Phase 1) / Power Automate (Phase 3) |
@@ -190,7 +190,6 @@ couldn't resolve. From that point, decide whether to re-create it via
 
 ## 6. Things AI agents must NOT do in this solution
 
-- **Do NOT push to PR #141** without explicit user ack. `git push` to `feature/message-center-monitor-poc-ready` requires authorization.
 - **Do NOT change the severity / assessment-status option-set integer values** — they are stamped into 315+ live Dataverse rows on the test env (and presumably in customer envs).
 - **Do NOT add admin-owned columns to the direct-PATCH allowlist** in `_Common.ps1` Invoke-McmDvUpsertMessage's post-notify write-back. `fsi_notifiedon` is the ONLY permitted member. Enforced by `Sync.Tests.ps1` AST invariant.
 - **Do NOT remove the alt-key POST fallback** in `_Common.ps1`. Real Dataverse returns 404 on PATCH + If-None-Match against a missing row instead of the documented 201 — the fallback is empirical, not theoretical.
