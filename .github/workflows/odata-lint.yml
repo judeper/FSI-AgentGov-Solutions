@@ -27,9 +27,8 @@ jobs:
         # from underscored snake_case to single-word PascalCase per the
         # team convention. Baseline is now clean.
 
-      # TODO(post-baseline): flip to `python scripts/lint-odata-existence.py --strict`
-      # after false-positive findings are triaged and the baseline is clean.
+      # Strict mode enabled in PR #204 (Wave 5 close-out) — baseline is now clean
+      # after PR #203 fixed AAM + CMM Get-ZoneClassification.ps1 ELM table-name refs.
       # --cross-solution-ok accepts column tokens declared in any solution's
       # schema (intentional cross-solution couplings like ARA → all agents, CAA → ELM).
-      - run: python scripts/lint-odata-existence.py --cross-solution-ok
-        continue-on-error: true
+      - run: python scripts/lint-odata-existence.py --cross-solution-ok --strict
