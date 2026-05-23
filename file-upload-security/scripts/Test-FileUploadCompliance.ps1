@@ -179,7 +179,7 @@ $agentSettings = Get-AgentFileUploadSettings @getParams
 if (-not $agentSettings -or $agentSettings.Count -eq 0) {
     # Fail closed: zero agents may indicate a real compliance result OR an upstream auth/connectivity failure.
     # In production we exit non-zero so the runbook does not silently produce a green PASS evidence row.
-    Write-Warning "No agents found across the targeted environments. This may indicate authentication failure, connectivity issues, or a genuine empty result. Treating as a HARD FAIL — review the warning lines above before re-running."
+    Write-Warning "No agents found across the targeted environments. This may indicate authentication failure, connectivity issues, or a genuine empty result. Treating as a HARD FAIL -- review the warning lines above before re-running."
     if ($AllowEmptyResultSet) {
         Write-Host "  -AllowEmptyResultSet specified; recording an empty validation run as PASS." -ForegroundColor Yellow
         return
@@ -260,7 +260,7 @@ switch ($OutputFormat) {
             if ($IncludeCompliant) {
                 Write-Host "  No agents found in scan results." -ForegroundColor Gray
             } else {
-                Write-Host "  All agents compliant — no violations to display." -ForegroundColor Green
+                Write-Host "  All agents compliant -- no violations to display." -ForegroundColor Green
                 Write-Host "  Use -IncludeCompliant to see all agents." -ForegroundColor Gray
             }
         }

@@ -4,6 +4,26 @@ All notable changes to the File Upload Security Configurator will be documented 
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-23
+
+AI Council technical-accuracy review (council-review/file-upload-security-review.md). Verbose-summary completeness, runbook version requirement, and version-header alignment.
+
+### Fixed
+
+- **Major**: Compare-FileUploadCompliance.ps1 verbose severity summary now iterates all six severities (`Critical`, `High`, `Medium`, `Low`, `Warning`, `Info`); previously skipped `Low` and `Info` in the verbose output loop even though the counters tracked all six. `scripts/Compare-FileUploadCompliance.ps1:200`. (council review M1)
+- **Minor**: Start-FileUploadValidationRunbook.ps1 `#Requires -Version` raised from `7.0` to `7.4` to match the other entry-point scripts and the `Get-Date -AsUTC` usage on lines 459 and 493 (PowerShell 7.1+ feature). `scripts/Start-FileUploadValidationRunbook.ps1:1`. (council review m1)
+- **Minor**: Version strings in `.NOTES` blocks of `Compare-FileUploadCompliance.ps1`, `Get-AgentFileUploadSettings.ps1`, and `private/Get-ExpectedFileUploadPolicy.ps1` synced from stale `1.0.0` to current solution version. (council review m2)
+
+### Changed
+
+- **Chore**: Replaced non-ASCII punctuation (em-dash, en-dash, smart quotes) with ASCII equivalents across all PowerShell scripts under `scripts/` to satisfy the cross-cutting style sweep. No behavior change.
+
+### Deferred (tracked for future)
+
+- **m3** (Boolean type for `fsi_FUS_IncludeSandbox` / `fsi_FUS_IncludeDrafts` env vars): requires changing Dataverse env-var type and re-keying existing rows; documented behavior is correct and the schema doc already calls out the String-based representation.
+- **m4** (`fsi_FUS_GracePeriodHours` default 24 vs PowerShell 48): intentional documented precedence; schema.md already explains the runtime override.
+- **m5** (Decimal -> JSON env-var workaround): cosmetic comment improvement only; behavior is correct.
+
 ## [1.1.1] — 2026-05-17
 
 ### Added

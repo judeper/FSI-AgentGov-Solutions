@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # File Upload Security Configurator
 
-> **Version:** v1.1.1
+> **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 

@@ -327,7 +327,7 @@ function Get-BotFileUploadEnabled {
         }
     }
 
-    Write-Verbose "File upload setting not found for bot '$($Bot.name)' — treating as indeterminate"
+    Write-Verbose "File upload setting not found for bot '$($Bot.name)' -- treating as indeterminate"
     return $null  # Caller must handle $null as indeterminate, not as disabled
 }
 
@@ -409,7 +409,7 @@ function ConvertTo-ZoneOptionValue {
         '2' { return 100000001 }
         '3' { return 100000002 }
         default {
-            Write-Warning "Unknown zone '$Zone' — cannot map to option set value"
+            Write-Warning "Unknown zone '$Zone' -- cannot map to option set value"
             return $null
         }
     }
@@ -422,7 +422,7 @@ function ConvertTo-SeverityOptionValue {
     #>
     param([string]$Severity)
     switch ($Severity) {
-        'None'     { return 100000000 }   # legacy callers — alias for Info
+        'None'     { return 100000000 }   # legacy callers -- alias for Info
         'Info'     { return 100000000 }
         'Low'      { return 100000001 }
         'Warning'  { return 100000005 }
@@ -430,7 +430,7 @@ function ConvertTo-SeverityOptionValue {
         'High'     { return 100000003 }
         'Critical' { return 100000004 }
         default {
-            Write-Warning "Unknown severity '$Severity' — cannot map to option set value"
+            Write-Warning "Unknown severity '$Severity' -- cannot map to option set value"
             return $null
         }
     }
@@ -580,7 +580,7 @@ function Save-FUSBaseline {
             $prevId = $prev.fsi_fileuploadbaselineid
             if ($PSCmdlet.ShouldProcess("Baseline $prevId for $AgentName", "Deactivate previous active baseline")) {
                 $patchUri = "$script:DataverseUrl/api/data/v9.2/fsi_fileuploadbaselines($prevId)"
-                # Dataverse rejects partial state transitions — must include statuscode paired with statecode
+                # Dataverse rejects partial state transitions -- must include statuscode paired with statecode
                 $patchBody = @{ statecode = 1; statuscode = 2 } | ConvertTo-Json
                 Invoke-DataverseRequest -Uri $patchUri -Headers $headers -Method Patch -Body $patchBody | Out-Null
                 Write-Verbose "Deactivated previous baseline: $prevId"

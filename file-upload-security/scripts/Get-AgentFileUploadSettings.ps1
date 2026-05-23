@@ -11,11 +11,11 @@
     and extracts the file upload enabled status and content moderation level
     from each agent's configuration.
 
-    Operates at agent granularity — one result per agent per environment.
+    Operates at agent granularity -- one result per agent per environment.
 
 .NOTES
     File: Get-AgentFileUploadSettings.ps1
-    Version: 1.0.0
+    Version: 1.1.2
     Solution: File Upload Security Configurator (v8)
 #>
 
@@ -74,7 +74,7 @@ function Get-AgentFileUploadSettings {
         Retrieves file upload settings and pipes to compliance comparison.
 
     .OUTPUTS
-        PSCustomObject[] — One object per agent with properties:
+        PSCustomObject[] -- One object per agent with properties:
         AgentId, AgentName, AgentStatus, FileUploadEnabled, ContentModerationLevel,
         EnvironmentId, EnvironmentDisplayName, EnvironmentType,
         Zone, DataverseUrl, LastPublished, RetrievedAt
@@ -155,7 +155,7 @@ function Get-AgentFileUploadSettings {
         $envType = $Environment.EnvironmentType
         $createdTime = $Environment.CreatedTime
 
-        # Include filter — whitelist mode
+        # Include filter -- whitelist mode
         if ($FilterConfig.FilterMode -eq 'Include') {
             foreach ($include in $FilterConfig.IncludeEnvironments) {
                 if ($envId -eq $include -or $envName -like "*$include*") {
@@ -165,7 +165,7 @@ function Get-AgentFileUploadSettings {
             return $false
         }
 
-        # Exclude filter — blacklist mode
+        # Exclude filter -- blacklist mode
         if ($FilterConfig.FilterMode -eq 'Exclude') {
             foreach ($exclude in $FilterConfig.ExcludeEnvironments) {
                 if ($envId -eq $exclude -or $envName -like "*$exclude*") {

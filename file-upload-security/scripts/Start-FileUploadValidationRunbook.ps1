@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+#Requires -Version 7.4
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#
@@ -284,7 +284,7 @@ try {
 
         Write-Verbose "Loaded $($baselineMap.Count) active baseline(s) into lookup hashtable"
     } catch {
-        Write-Warning "Baseline query failed — treating as potential drift for safety"
+        Write-Warning "Baseline query failed -- treating as potential drift for safety"
         Write-Verbose "Baseline query error: $($_.Exception.Message)"
         $baselineQueryFailed = $true
         $AlertRequired = $true
@@ -301,7 +301,7 @@ try {
 
     if ($baselineQueryFailed -or $baselineMap.Count -eq 0) {
         $globalIsFirstRun = $true
-        Write-Verbose "No active baselines found — first run for all agents"
+        Write-Verbose "No active baselines found -- first run for all agents"
     }
 
     # Build unique agent list from scan results
@@ -480,7 +480,7 @@ try {
     $jsonOutput = $output | ConvertTo-Json -Depth 10
     Write-Verbose "JSON output length: $($jsonOutput.Length) characters"
 
-    # This is the ONLY output — Azure Automation captures this as job output
+    # This is the ONLY output -- Azure Automation captures this as job output
     $jsonOutput
 
     #endregion
