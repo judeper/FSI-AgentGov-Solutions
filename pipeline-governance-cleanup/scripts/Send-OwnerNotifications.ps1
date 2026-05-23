@@ -264,6 +264,9 @@ function Send-GraphEmail {
 
 # Main execution
 function Main {
+    [CmdletBinding(SupportsShouldProcess)]
+    param()
+
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Pipeline Governance Notification Script" -ForegroundColor Cyan
     Write-Host "  Version: 1.1.0 - April 2026" -ForegroundColor Cyan

@@ -71,6 +71,10 @@ function Get-CrossTenantAccessCorrelation {
     }
 
     process {
+        if (-not $PSCmdlet.ShouldProcess($DataverseUrl, 'Read and correlate cross-tenant access findings')) {
+            return
+        }
+
         # ---------------------------------------------------------------
         # Step 1: Retrieve default cross-tenant access policy
         # ---------------------------------------------------------------

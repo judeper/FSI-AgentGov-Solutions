@@ -5,7 +5,9 @@ All notable changes to the Unrestricted Agent Sharing Detector are documented he
 
 ## [Unreleased]
 
-- No unreleased changes.
+### Fixed
+
+- `Restore-AgentSharingFromEvidence.ps1` nested `Restore-AgentSharing` helper now declares `SupportsShouldProcess`, preserving `-WhatIf` handling for live sharing restore calls.
 
 ## [2.0.1] — 2026-05-04
 

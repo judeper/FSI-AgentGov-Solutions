@@ -656,7 +656,7 @@ function Get-ExistingEnvironmentVariableValue {
     return $null
 }
 
-function Upsert-EnvironmentVariable {
+function Sync-EnvironmentVariable {
     param(
         [Parameter(Mandatory = $true)][hashtable]$Definition,
         [Parameter(Mandatory = $true)][string]$Token
@@ -777,7 +777,7 @@ function Get-ExistingConnectionReference {
     return $null
 }
 
-function Upsert-ConnectionReference {
+function Sync-ConnectionReference {
     param(
         [Parameter(Mandatory = $true)][hashtable]$Definition,
         [Parameter(Mandatory = $true)][string]$Token
@@ -912,15 +912,15 @@ foreach ($optionSetName in $optionSetNames) {
 
 if (-not [string]::IsNullOrWhiteSpace($resolvedToken)) {
     foreach ($definition in $envVarDefinitions) {
-        Upsert-EnvironmentVariable -Definition $definition -Token $resolvedToken
+        Sync-EnvironmentVariable -Definition $definition -Token $resolvedToken
     }
 
     foreach ($definition in $connectionReferenceDefinitions) {
-        Upsert-ConnectionReference -Definition $definition -Token $resolvedToken
+        Sync-ConnectionReference -Definition $definition -Token $resolvedToken
     }
 
     if (-not [string]::IsNullOrWhiteSpace($GraphCustomConnectorApiId)) {
-        Upsert-ConnectionReference -Definition @{
+        Sync-ConnectionReference -Definition @{
             LogicalName  = 'fsi_cr_graph_agentintake'
             DisplayName  = 'Microsoft Graph - Agent Intake'
             ConnectorApiId = $GraphCustomConnectorApiId

@@ -90,6 +90,10 @@ function Test-ChildAgentPayloadSize {
     }
 
     process {
+        if (-not $PSCmdlet.ShouldProcess('Power Platform environments', 'Scan child-agent payload sizes')) {
+            return
+        }
+
         # ---------------------------------------------------------------
         # Step 1: Enumerate environments
         # ---------------------------------------------------------------

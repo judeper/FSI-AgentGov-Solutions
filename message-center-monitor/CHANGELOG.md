@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- `lab/07_Invoke-PocSmokeTest.ps1` listener job now passes capture-listener values with `$using:` scope so the background runspace receives the expected URL and capture file path.
 - `fsi_assessedby` column read as Lookup at 4 code sites (and described as Lookup in 2 comments) across `scripts/governance/Export-MessageCenterEvidence.ps1` and `scripts/governance/Get-MessageCenterAssessmentStatus.ps1`. The schema defines `fsi_AssessedBy` as a String column (`StringAttributeMetadata`, MaxLength 200); the `_fsi_assessedby_value` OData syntax that v2.4.0 introduced returns 400 Bad Request because that syntax is Lookup-only. Reverts the mistaken Lookup treatment introduced in v2.4.0 (see the correction note appended to the v2.4.0 entry below).
 - `scripts/governance/Export-MessageCenterEvidence.ps1` output object previously exposed two fields (`assessedBy` mapped to the `_<col>_value@OData.Community.Display.V1.FormattedValue` annotation and `assessedById` mapped to `_<col>_value`) that were both modeled on Lookup semantics. Collapsed to a single `assessedBy` String field and removed the dead `_fsi_assessedby_value@OData.Community.Display.V1.FormattedValue` annotation block (the annotation never appears on a String column).
 

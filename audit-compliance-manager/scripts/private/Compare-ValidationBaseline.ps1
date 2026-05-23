@@ -212,7 +212,7 @@ function Compare-ValidationBaseline {
 
         # Parse baseline result
         $baseline = $response.value | Select-Object -First 1
-        $isFirstRun = $baseline -eq $null
+        $isFirstRun = $null -eq $baseline
 
         if ($isFirstRun) {
             # No baseline exists - this is first run
