@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Agent Communication Restriction Detector
 
-> **Version:** v1.2.0
+> **Version:** v1.2.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 

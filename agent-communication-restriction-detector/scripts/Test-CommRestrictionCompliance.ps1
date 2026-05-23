@@ -22,7 +22,7 @@
 
 .NOTES
     File: Test-CommRestrictionCompliance.ps1
-    Version: 1.1.1
+    Version: 1.2.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -175,7 +175,7 @@ function Test-CommRestrictionCompliance {
     $runId = [guid]::NewGuid().ToString()
 
     Write-Verbose "========================================="
-    Write-Verbose "Agent Communication Restriction Detector v1.1.0"
+    Write-Verbose "Agent Communication Restriction Detector v1.2.1"
     Write-Verbose "RunId: $runId"
     Write-Verbose "========================================="
 

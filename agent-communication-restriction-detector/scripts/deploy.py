@@ -9,6 +9,11 @@ Orchestrates the full deployment pipeline:
 
 All operations are idempotent -- safe to re-run. Supports selective
 deployment via --tables-only, --vars-only, --refs-only flags.
+
+Version: 1.2.1
+
+Migrated in v1.2.1 from the solution-local `acrd_client.py` to the shared
+`scripts/shared/dataverse_client.py`. (council review M-1)
 """
 
 import argparse
@@ -16,10 +21,15 @@ import os
 import sys
 import time
 
-from acrd_client import ACRDClient
-from create_dataverse_schema import create_schema
-from create_environment_variables import create_environment_variables
-from create_connection_references import create_connection_references
+# Import shared DataverseClient (the local acrd_client.py was retired in v1.2.1).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
+)
+from dataverse_client import DataverseClient  # noqa: E402
+
+from create_dataverse_schema import create_schema  # noqa: E402
+from create_environment_variables import create_environment_variables  # noqa: E402
+from create_connection_references import create_connection_references  # noqa: E402
 
 
 # =============================================================================
@@ -60,7 +70,7 @@ Post-Deployment Steps
 
 
 def run_deployment(
-    client: ACRDClient,
+    client: DataverseClient,
     dry_run: bool = False,
     tables_only: bool = False,
     vars_only: bool = False,
@@ -73,7 +83,7 @@ def run_deployment(
     When a selective flag is provided, only that step runs.
 
     Args:
-        client: Authenticated ACRDClient instance
+        client: Authenticated shared DataverseClient instance
         dry_run: Preview mode flag
         tables_only: Deploy only Dataverse schema
         vars_only: Deploy only environment variables
@@ -200,17 +210,52 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ACRD_CLIENT_ID"),
-        help="Service principal app ID (or set ACRD_CLIENT_ID env var)",
+        help="Application (client) ID (or set ACRD_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ACRD_CLIENT_SECRET"),
-        help="Service principal secret (or set ACRD_CLIENT_SECRET env var)",
+        # legacy: dev-only — replace with managed identity in production
+        help=(
+            "Service principal secret (or set ACRD_CLIENT_SECRET env var). "
+            "Dev-only fallback; prefer managed identity in production."
+        ),
     )
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ACRD_ENVIRONMENT_URL"),
         help="Dataverse environment URL (or set ACRD_ENVIRONMENT_URL env var)",
+    )
+    parser.add_argument(
+        "--auth-mode",
+        default=os.environ.get("ACRD_AUTH_MODE"),
+        choices=[
+            "interactive",
+            "managed-identity",
+            "workload-identity",
+            "certificate",
+            "client-secret",
+        ],
+        help=(
+            "Authentication mode for the shared DataverseClient. "
+            "Defaults to client-secret when --client-secret is supplied "
+            "or to interactive when --interactive is set."
+        ),
+    )
+    parser.add_argument(
+        "--certificate-path",
+        default=os.environ.get("ACRD_CERTIFICATE_PATH"),
+        help="Path to PEM/PFX certificate for --auth-mode certificate.",
+    )
+    parser.add_argument(
+        "--certificate-password",
+        default=os.environ.get("ACRD_CERTIFICATE_PASSWORD"),
+        help="Optional certificate password for --auth-mode certificate.",
+    )
+    parser.add_argument(
+        "--access-token",
+        default=os.environ.get("ACRD_ACCESS_TOKEN"),
+        help="Externally-acquired Dataverse bearer token (overrides other auth).",
     )
     parser.add_argument(
         "--interactive",
@@ -248,27 +293,44 @@ def main() -> None:
     args = parser.parse_args()
 
     # Validate required arguments
-    if not args.tenant_id:
-        print("ERROR: --tenant-id or ACRD_TENANT_ID required")
-        sys.exit(1)
     if not args.environment_url:
         print("ERROR: --environment-url or ACRD_ENVIRONMENT_URL required")
         sys.exit(1)
-    if not args.interactive and (not args.client_id or not args.client_secret):
+    if (
+        not args.tenant_id
+        and not args.access_token
+        and args.auth_mode not in ("managed-identity", "workload-identity")
+    ):
+        print(
+            "ERROR: --tenant-id or ACRD_TENANT_ID required "
+            "(not needed for managed-identity / workload-identity / --access-token)"
+        )
+        sys.exit(1)
+    # Only require client-id/secret when no stronger auth mode is requested
+    needs_client_secret_auth = (
+        not args.interactive
+        and not args.access_token
+        and args.auth_mode in (None, "client-secret")
+    )
+    if needs_client_secret_auth and (not args.client_id or not args.client_secret):
         print(
             "ERROR: --client-id and --client-secret required "
-            "(or use --interactive)"
+            "(or use --interactive / --auth-mode managed-identity / --access-token)"
         )
         sys.exit(1)
 
     try:
-        client = ACRDClient(
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            auth_mode=args.auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=args.certificate_password,
         )
 
         run_deployment(

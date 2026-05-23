@@ -69,7 +69,7 @@
     Valid DirectionType values: OneWay, Bidirectional
     The combination of SourceZone + TargetZone + DirectionType is the idempotency key.
 
-    Version: 1.1.0
+    Version: 1.2.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 #>
@@ -341,7 +341,10 @@ foreach ($row in $csvData) {
         # fsi_ApprovedBy and fsi_ApprovedAt are ApplicationRequired in the schema —
         # always populate them on CREATE/UPDATE so Dataverse does not return HTTP 400.
         'fsi_approvedby'            = $rowApprovedBy
-        'fsi_approvedat'            = (Get-Date -AsUTC -Format 'o')
+        # `Get-Date -AsUTC` requires PowerShell 7.1+; this script declares
+        # `#Requires -Version 5.1`. Use the PS-5.1-compatible idiom.
+        # (council review C-2)
+        'fsi_approvedat'            = (Get-Date).ToUniversalTime().ToString('o')
     }
 
     if ($expirationDate) {

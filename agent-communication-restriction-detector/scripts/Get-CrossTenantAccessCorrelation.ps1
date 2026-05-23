@@ -46,7 +46,10 @@ function Get-CrossTenantAccessCorrelation {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
-        [ValidatePattern('^https://[a-zA-Z0-9\-]+\.crm[0-9]*\.dynamics\.com')]
+        # Accept commercial (.crm[N].dynamics.com), GCC High (.crm9.dynamics.com),
+        # DoD (.crm.microsoftdynamics.us), and Germany (.crm.microsoftdynamics.de)
+        # sovereign cloud URLs. (council review M-4)
+        [ValidatePattern('^https://[a-zA-Z0-9\-]+\.(crm[0-9]*\.dynamics\.com|crm\.microsoftdynamics\.(us|de))/?$')]
         [string]$DataverseUrl,
 
         [ValidateSet('Table', 'Json', 'Object')]
@@ -94,9 +97,17 @@ function Get-CrossTenantAccessCorrelation {
         # ---------------------------------------------------------------
         # Step 3: Query ACRD cross-tenant violations from Dataverse
         # ---------------------------------------------------------------
+        # Graph and Dataverse require tokens with different audiences. Reusing the
+        # Microsoft Graph token from (Get-MgContext).AccessToken (which previously
+        # produced 401 Unauthorized on every Dataverse call) is incorrect. Acquire
+        # a Dataverse-audience token via the private helper, which calls
+        # Az.Accounts Get-AzAccessToken with -ResourceUrl set to the env URL.
+        # (council review C-1)
         $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
+        $dataverseToken = & (Join-Path $privatePath 'Connect-EnvironmentDataverse.ps1') `
+            -DataverseUrl $DataverseUrl
         $headers = @{
-            'Authorization' = "Bearer $((Get-MgContext).AccessToken)"
+            'Authorization' = "Bearer $dataverseToken"
             'Accept'        = 'application/json'
             'OData-Version' = '4.0'
         }
