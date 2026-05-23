@@ -58,13 +58,15 @@ jobs:
         # Wave 6 P6 (2026-05-23): flipped strict. The "sys.exit() at import
         # time" claim in the previous comment is obsolete: those exits are
         # inside `try/except ImportError` blocks that fire only when runtime
-        # deps are missing. With `pip install requests msal` and pytest's
-        # `--import-mode=importlib` (avoids module-name collisions across
-        # solutions with top-level `tests/` directories), the full repo-wide
-        # suite passes (189 pass / 2 skip / 0 fail as of close-out).
+        # deps are missing. With `pip install requests msal azure-identity`
+        # (covers every solution script that pytest will transitively import)
+        # and pytest's `--import-mode=importlib` (avoids module-name
+        # collisions across solutions with top-level `tests/` directories),
+        # the full repo-wide suite passes (189 pass / 2 skip / 0 fail as of
+        # close-out).
         run: |
           # Runtime deps of solution scripts that pytest imports
-          pip install requests msal
+          pip install requests msal azure-identity
           test_files=$(git ls-files '*test_*.py' '*_test.py' '**/tests/**/*.py' | grep -v '^message-center-monitor/tests/' | head -50)
           if [ -z "$test_files" ]; then
             echo "No additional pytest files discovered; skipping."
