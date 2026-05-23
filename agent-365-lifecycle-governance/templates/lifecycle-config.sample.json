@@ -14,6 +14,8 @@
   "fsi_ALG_InactivityThresholdZone1": 180,
   "fsi_ALG_InactivityThresholdZone2": 90,
   "fsi_ALG_InactivityThresholdZone3": 30,
+  "fsi_ALG_DeletionHoldDays": 30,
+  "fsi_ALG_AgentRegistryApiVersion": "v1.0",
   "_zoneSettingsReference": {
     "_note": "Reference values that flows currently hard-code. Not deployed as separate environment variables.",
     "Zone1": { "inactivityThresholdDays": 180, "reviewCadence": "Annual",       "deletionHoldDays": 30, "sponsorRequired": false, "conditionalAccessRequired": false },

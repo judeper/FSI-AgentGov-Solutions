@@ -44,7 +44,7 @@
     .\Invoke-GraphPermissionScan.ps1 -DriveId "b!abc123" -ItemIds @("01ABC","02DEF") -AccessToken $token
 
 .NOTES
-    Version:    1.2.0
+    Version:    1.1.2
     Author:     FSI Agent Governance
     Framework:  FSI Agent Governance
     Controls:   4.3, 1.4, 1.5
@@ -309,7 +309,12 @@ function Get-DriveItemPermissionsBatched {
 
         $results = Invoke-GraphBatch -Requests $batch -MaxSubRequestRetries $MaxRetries
 
-        # Map results back to item IDs
+        # Map results back to item IDs.
+        # ID-to-index contract: batch request IDs are generated above as "$($i + $idx)"
+        # where $i is the batch offset into $ItemIds and $idx is 1-based within the batch,
+        # producing 1-based sequential IDs across all batches. Subtracting 1 recovers the
+        # 0-based $ItemIds index. If either the ID generator above OR this consumer is
+        # modified, both sides MUST be updated together.
         for ($j = 0; $j -lt $batch.Count; $j++) {
             $req = $batch[$j]
             $itemId = $ItemIds[[int]$req.id - 1]

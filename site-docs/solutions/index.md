@@ -14,7 +14,7 @@ Solutions for controlling who can access, share, and publish AI agents.
 |----------|-------------|---------|--------|-------|----------|
 | [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.2 | live | team, enterprise | 3.8 |
 | [Agent Sharing Access Restriction Detector](agent-sharing-access-restriction-detector/index.md) | Detects and remediates agent sharing configurations that violate zone-based security group policies. | v2.0.1 | live | team, enterprise | 1.18, 2.8 |
-| [Conditional Access Automation](conditional-access-automation/index.md) | Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot). | v2.0.1 | live | team, enterprise | 1.11, 1.23, 1.18 |
+| [Conditional Access Automation](conditional-access-automation/index.md) | Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot). | v2.0.2 | live | team, enterprise | 1.11, 1.23, 1.18 |
 | [Cross-Tenant External Sharing Governance](cross-tenant-external-sharing-governance/index.md) | Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments. | v1.1.0 | live | enterprise | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 |
 | [Inactivity Timeout Enforcement](inactivity-timeout-enforcement/index.md) | Cloud Flow template for daily compliance detection of inactivity timeout settings across Power Platform environments. | v1.1.1 | live | team, enterprise | 2.22, 1.23, 3.7, 3.8 |
 | [Unrestricted Agent Sharing Detector](unrestricted-agent-sharing-detector/index.md) | Continuous detection of overly permissive agent sharing configurations with automated remediation and exception management. | v2.0.1 | live | team, enterprise | 1.1, 3.8 |
@@ -25,7 +25,7 @@ Solutions for securing agent content, file handling, and knowledge sources.
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Agent Knowledge Source Scanner](agent-knowledge-source-scanner/index.md) | Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources. | v1.1.1 | live | personal, team, enterprise | 4.3, 1.4, 1.5 |
+| [Agent Knowledge Source Scanner](agent-knowledge-source-scanner/index.md) | Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources. | v1.1.2 | live | personal, team, enterprise | 4.3, 1.4, 1.5 |
 | [Content Moderation Monitor](content-moderation-monitor/index.md) | Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements. | v1.1.2 | live | personal, team, enterprise | 1.27, 1.8 |
 | [File Upload Security](file-upload-security/index.md) | Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 by detecting agents with file uploads enabled where uploads should be restricted or disabled. | v1.1.1 | live | personal, team, enterprise | 1.14, 1.8, 1.4 |
 | [MIME Type Restrictions for File Uploads](mime-type-restrictions/index.md) | Dataverse plugin, connector-classification reference, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios. | v1.2.1 | live | personal, team, enterprise | 1.5, 1.13, 1.25, 3.3, 3.7 |
@@ -52,7 +52,7 @@ Solutions for observability, analytics, event correlation, and drift detection.
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
 | [Agent Observability Foundation](agent-observability-foundation/index.md) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.2 | live | personal, team, enterprise | 1.7, 2.8, 2.9, 3.2 |
-| [Copilot Studio Analytics](copilot-studio-analytics/index.md) | Business impact analytics for Copilot Studio agents—session outcomes, CSAT, Agent Assisted Hours, and ROI tracking. Extends Agent Observability Foundation with zone-based governance; not a full Viva Insights replacement. | v2.0.1 | live | personal, team, enterprise | 3.2 |
+| [Copilot Studio Analytics](copilot-studio-analytics/index.md) | Business impact analytics for Copilot Studio agents—session outcomes, CSAT, Agent Assisted Hours, and ROI tracking. Extends Agent Observability Foundation with zone-based governance; not a full Viva Insights replacement. | v2.0.2 | live | personal, team, enterprise | 3.2 |
 | [Deny Event Correlation Report](deny-event-correlation-report/index.md) | Daily reporting for correlating deny/no-content events across Copilot and Copilot Studio using Purview, Application Insights, and optional Defender data. | v2.0.3 | live | team, enterprise | 1.5, 1.7, 1.8, 3.4 |
 | [Hallucination Feedback Tracker](hallucination-tracker/index.md) | Feedback aggregation pipeline for tracking and analyzing hallucination patterns in AI agent outputs. | v1.2.0 | live | personal, team, enterprise | 3.10, 2.9, 2.12 |
 | [Scope Drift Monitor](scope-drift-monitor/index.md) | Automated detection of AI agent data access beyond declared operational scope, supporting GDPR data minimization and FSI data governance requirements. | v1.2.1 | live | personal, team, enterprise | 1.14, 1.4, 1.5 |
@@ -75,10 +75,10 @@ Solutions for environment provisioning, agent lifecycle, and operational testing
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Agent 365 Lifecycle Governance](agent-365-lifecycle-governance/index.md) | Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds. | v1.1.4 | live | enterprise | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
+| [Agent 365 Lifecycle Governance](agent-365-lifecycle-governance/index.md) | Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds. | v1.1.5 | live | enterprise | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
 | [Agent Intake](agent-intake/index.md) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | v1.0.0-preview | preview | personal, team, enterprise | 1.2, 1.7, 2.1, 2.13, 3.1 |
 | [Agent Registry Automation](agent-registry-automation/index.md) | Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform. | v2.1.0 | live | personal, team, enterprise | 1.2, 1.7, 2.1, 2.13 |
-| [Conflict of Interest Testing](coi-testing/index.md) | Automated conflict-of-interest testing for AI agent recommendations in financial services. | v1.1.1 | live | team, enterprise | 2.18, 2.11, 2.5 |
+| [Conflict of Interest Testing](coi-testing/index.md) | Automated conflict-of-interest testing for AI agent recommendations in financial services. | v1.1.2 | live | team, enterprise | 2.18, 2.11, 2.5 |
 | [DR Testing Framework](dr-testing-framework/index.md) | Post-recovery validation and evidence packaging for Power Platform DR testing. | v2.0.1 | live | enterprise | 2.4, 2.1, 1.9 |
 | [Environment Lifecycle Management](environment-lifecycle-management/index.md) | Automated Power Platform environment provisioning with zone-based governance. | v1.2.2 | live | personal, team, enterprise | 2.1, 2.2, 2.8, 1.7 |
 | [Message Center Monitor](message-center-monitor/index.md) | Monitor Microsoft 365 Message Center for platform changes affecting AI agents. | v2.5.1 | live | enterprise | 2.3 |

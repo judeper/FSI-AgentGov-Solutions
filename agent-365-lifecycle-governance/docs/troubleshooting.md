@@ -219,4 +219,4 @@ For issues not covered here:
 
 ---
 
-*Agent 365 Lifecycle Governance v1.1.4*
+*Agent 365 Lifecycle Governance v1.1.5*

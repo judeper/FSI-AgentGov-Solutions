@@ -65,7 +65,7 @@
 
 .NOTES
     File: Test-PolicyCompliance.ps1
-    Version: 2.0.1
+    Version: 2.0.2
     Supports compliance with FINRA 4511/3110, SEC 17a-3/4, and OCC 2011-12
     through automated policy coverage verification and gap detection.
 #>

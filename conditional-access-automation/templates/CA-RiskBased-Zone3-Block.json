@@ -15,8 +15,8 @@
     "users": {
       "includeUsers": ["All"],
       "excludeUsers": [
-        "<break-glass-account-1>",
-        "<break-glass-account-2>"
+        "<break-glass-1>",
+        "<break-glass-2>"
       ],
       "excludeGroups": [
         "<service-account-group-id>"
@@ -27,5 +27,10 @@
   "grantControls": {
     "operator": "OR",
     "builtInControls": ["block"]
+  },
+  "_metadata": {
+    "schemaVersion": "v1.0",
+    "lastValidated": "2026-02-10",
+    "targetControl": "1.11"
   }
 }
