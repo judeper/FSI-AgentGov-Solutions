@@ -2,6 +2,31 @@
 
 All notable changes to the Generative AI Config Auditor are documented in this file.
 
+## [1.2.1] - 2026-05-19
+
+### Changed
+
+- **Shared Dataverse client refactor**: All deployment scripts (`create_dataverse_schema.py`, `create_environment_variables.py`, `create_connection_references.py`, `deploy.py`) now use the shared `scripts/shared/dataverse_client.DataverseClient` instead of the solution-local `gac_client.GACClient`. This standardises auth modes (managed-identity, workload-identity, certificate, interactive, client-secret) and retry/backoff handling across all FSI solutions.
+- **`gac_client.py` deprecated**: Replaced with a deprecation stub that raises `ImportError` on import directing callers to the shared client. The original 620-line implementation is removed.
+- **`Import-ApprovedAoaiConnections.ps1` deduplication** (M-4): Removed the local 56-line `Invoke-DataverseRequest` function and now imports the canonical helper from `GACClient.psm1`. Single source of truth for Dataverse retry/backoff policy in PowerShell governance scripts.
+- **Dry-run semantics**: Scripts no longer pass `dry_run=` to `DataverseClient(...)`. Reads now hit the live tenant for accurate preview; only writes are gated locally. Dry-run output is more informative (shows which records would be created vs. already exist).
+
+### Fixed
+
+- **Critical: `Get-PurviewDLPEvidence.ps1` entity-set name** — Dataverse Web API query targeted `fsi_gacvalidationhistories` (auto-plural), but the table is registered with explicit singular `EntitySetName=fsi_gacvalidationhistory`. Every Dataverse evidence call returned 404. Query now matches the schema.
+- **Critical: `Export-GenAIConfigEvidence.ps1` solutionVersion** — Evidence JSON tagged `"solutionVersion": "1.0.1"` for every export despite the solution being on v1.2.x for months. Auditors couldn't tell which solution build produced a given evidence file. Now correctly emits `"1.2.1"`.
+- **`Get-PurviewDLPEvidence.ps1` token separation** (M-3) — Single token was reused for both Microsoft Graph and Dataverse calls. Graph calls now use `Invoke-MgGraphRequest` (no manual token extraction), and Dataverse calls use a separately acquired token via `[string]$DataverseToken` parameter or `Az.Accounts` fallback (handles Az 12.x+ `SecureString` tokens).
+- **PowerShell version pinning** (M-2): `Get-PurviewDLPEvidence.ps1` `#Requires -Version` raised from 7.0 to 7.4 (required for `Az.Accounts` SecureString token handling).
+- **Drift comparison completeness** (m-1): `Start-GenAIConfigValidationRunbook.ps1` drift comparison object now includes `ModelKnowledgeEnabled` and `SemanticSearchEnabled` (Allow ungrounded responses and Work IQ). v1.1.0 added baseline persistence for these toggles but the runbook drift comparison still only checked AOAI / orchestration / generative-answers, so Rule 5 and Rule 6 violations never surfaced through the drift path.
+
+### Documentation
+
+- `.NOTES` version blocks aligned to v1.2.1 and PowerShell 7.4 across `Export-GenAIConfigEvidence.ps1`, `private/GACClient.psm1`, `private/Test-ParameterValidation.ps1`, and `private/Connect-EnvironmentDataverse.ps1`.
+
+### Dependencies
+
+- `requirements.txt`: Added `azure-identity>=1.15.0` (required by the shared `DataverseClient` for managed-identity, workload-identity-federation, and certificate authentication modes).
+
 ## [1.2.0] - 2026-05-12
 
 ### Added

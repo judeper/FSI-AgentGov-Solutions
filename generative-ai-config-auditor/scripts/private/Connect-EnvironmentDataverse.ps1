@@ -42,8 +42,8 @@
 
 .NOTES
     File: Connect-EnvironmentDataverse.ps1
-    Version: 0.1.0
-    Requires: PowerShell 7.0+
+    Version: 1.2.1
+    Requires: PowerShell 7.4+
 #>
 
 #Requires -Version 7.4
