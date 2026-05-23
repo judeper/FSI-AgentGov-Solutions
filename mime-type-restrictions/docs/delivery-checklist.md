@@ -135,7 +135,7 @@ CRITICAL CONFIGURATION REQUIREMENTS:
    - Max file size: 10 MB default (adjust based on business requirements)
 
 2. **Allowed MIME Types:**
-   - Default allowlist: PDF, PNG, JPEG, GIF, TIFF, TXT, CSV, DOCX, XLSX, PPTX
+   - Default allowlist: PDF, PNG, JPEG, GIF, WebP, TXT, CSV, DOCX, XLSX, PPTX
    - Customize based on organization's legitimate file upload needs
    - Require business justification for new MIME type additions
 
