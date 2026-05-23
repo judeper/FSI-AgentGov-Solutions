@@ -12,7 +12,7 @@ Solutions for controlling who can access, share, and publish AI agents.
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.1 | live | team, enterprise | 3.8 |
+| [Agent Access Governance Monitor](agent-access-monitor/index.md) | Automated validation of Power Platform environment agent access settings against zone-specific governance requirements. | v1.1.2 | live | team, enterprise | 3.8 |
 | [Agent Sharing Access Restriction Detector](agent-sharing-access-restriction-detector/index.md) | Detects and remediates agent sharing configurations that violate zone-based security group policies. | v2.0.2 | live | team, enterprise | 1.18, 2.8 |
 | [Conditional Access Automation](conditional-access-automation/index.md) | Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot). | v2.0.2 | live | team, enterprise | 1.11, 1.23, 1.18 |
 | [Cross-Tenant External Sharing Governance](cross-tenant-external-sharing-governance/index.md) | Automated detection, validation, and remediation of cross-tenant access for Power Platform AI agents in FSI environments. | v1.1.0 | live | enterprise | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 |

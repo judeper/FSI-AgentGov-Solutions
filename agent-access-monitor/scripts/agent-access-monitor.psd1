@@ -3,7 +3,7 @@
     RootModule = 'private\AAMClient.psm1'
     
     # Version number of this module
-    ModuleVersion     = '1.1.1'
+    ModuleVersion     = '1.1.2'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -92,6 +92,13 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
+## 1.1.2 - 2026-05-22
+
+### Fixed
+- Bumped `AAMClient.psm1` module header version to match the solution version.
+- `aam_client.py` now lazy-imports `azure.identity` and `azure.core.exceptions` so consumers using only `--access-token` or legacy client-secret auth do not require the Azure Identity packages.
+- `aam_client.py` `get_global_optionset` now lowercases the option-set name for the existence probe, matching the shared client and preventing a 400 `SchemaNameisNotUnique` re-create on case-mismatched lookups.
+
 ## 1.1.1 - 2026-05-13
 
 ### Changed

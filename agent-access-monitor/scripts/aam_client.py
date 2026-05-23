@@ -15,9 +15,36 @@ from urllib.parse import urljoin
 
 import msal
 import requests
-from azure.core.exceptions import ClientAuthenticationError
-from azure.identity import ManagedIdentityCredential, WorkloadIdentityCredential
 from requests.adapters import HTTPAdapter, Retry
+
+
+def _azure_identity_class(class_name: str):
+    """Lazy import an azure.identity credential class.
+
+    Mirrors the shared scripts/shared/dataverse_client.py pattern so the
+    module can be imported even when azure-identity is not installed
+    (e.g., when only --access-token or legacy client-secret auth is used).
+    """
+    try:
+        import azure.identity as azure_identity  # type: ignore
+    except ImportError as exc:  # pragma: no cover - depends on optional runtime package
+        raise RuntimeError(
+            "azure-identity is required for managed identity or workload identity auth. "
+            "Install the solution requirements first (pip install -r requirements.txt)."
+        ) from exc
+    return getattr(azure_identity, class_name)
+
+
+def _client_authentication_error_cls():
+    """Lazy import ClientAuthenticationError from azure.core.exceptions."""
+    try:
+        from azure.core.exceptions import ClientAuthenticationError  # type: ignore
+    except ImportError as exc:  # pragma: no cover - depends on optional runtime package
+        raise RuntimeError(
+            "azure-core is required for managed identity or workload identity auth. "
+            "Install the solution requirements first (pip install -r requirements.txt)."
+        ) from exc
+    return ClientAuthenticationError
 
 
 class AAMClient:
@@ -92,11 +119,13 @@ class AAMClient:
                 credential_kwargs = {}
                 if managed_identity_client_id:
                     credential_kwargs["client_id"] = managed_identity_client_id
+                ManagedIdentityCredential = _azure_identity_class("ManagedIdentityCredential")
                 self._azure_credential = ManagedIdentityCredential(**credential_kwargs)
                 self._app = None
             elif workload_identity:
                 if not client_id:
                     raise ValueError("client_id is required for workload identity authentication")
+                WorkloadIdentityCredential = _azure_identity_class("WorkloadIdentityCredential")
                 self._azure_credential = WorkloadIdentityCredential(
                     tenant_id=tenant_id,
                     client_id=client_id,
@@ -119,6 +148,7 @@ class AAMClient:
     def _get_token(self) -> str:
         """Acquire access token with caching."""
         if self._azure_credential is not None:
+            ClientAuthenticationError = _client_authentication_error_cls()
             try:
                 access_token = self._azure_credential.get_token(self._scope[0])
             except ClientAuthenticationError as exc:
@@ -418,9 +448,17 @@ class AAMClient:
             print(f"  [DRY RUN] Would check option set: {name}")
             return None
 
+        # Dataverse normalises the OptionSet Name to lowercase (matching the
+        # logical-name convention). The lookup-by-Name is case-sensitive, so
+        # querying with the SchemaName casing (e.g. "fsi_ACV_Zone") 404s even
+        # when the option set exists, then the subsequent create POST returns
+        # 400 SchemaNameisNotUnique. Always lowercase the name for the
+        # existence probe. Mirrors scripts/shared/dataverse_client.py.
+        lookup_name = name.lower()
+
         try:
             response = self._session.get(
-                urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{name}')"),
+                urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{lookup_name}')"),
                 headers=self._get_headers(),
             )
             if response.status_code == 404:
