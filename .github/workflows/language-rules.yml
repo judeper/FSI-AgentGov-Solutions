@@ -57,12 +57,21 @@ jobs:
       - name: Banned product naming (Azure AD outside CHANGELOG/instructions)
         run: |
           set +e
-          hits=$(grep -rEn --include='*.md' \
+          hits=$(grep -rEn \
+                   --include='*.md' \
+                   --include='*.ps1' \
+                   --include='*.psm1' \
+                   --include='*.py' \
+                   --include='*.json' \
+                   --include='*.yaml' \
+                   --include='*.yml' \
+                   --include='*.kql' \
                    --exclude-dir='.git' \
                    --exclude-dir='site' \
                    --exclude-dir='site-docs' \
                    --exclude-dir='.github' \
                    --exclude-dir='research' \
+                   --exclude-dir='files' \
                    --exclude='AGENTS.md' \
                    --exclude='CLAUDE.md' \
                    --exclude='SECURITY.md' \
@@ -70,6 +79,12 @@ jobs:
                    --exclude='CHANGELOG.md' \
                    --exclude='*/CHANGELOG.md' \
                    '\bAzure AD\b' . || true)
+          # Path-based exclusion: ALG ralph-config intentionally preserves the legacy
+          # connector name as a runtime hint to agents. grep's --exclude only matches
+          # basename so we filter the full path here.
+          if [ -n "$hits" ]; then
+            hits=$(echo "$hits" | grep -vE 'agent-365-lifecycle-governance/\.ralph-config\.json' || true)
+          fi
           if [ -n "$hits" ]; then
             echo "::error::'Azure AD' found outside CHANGELOG/instruction files (use 'Microsoft Entra ID'):"
             echo "$hits"

@@ -294,5 +294,5 @@ An autonomous dual-model council review (GPT-5.4 + Claude Opus 4.6) audited all 
 - **Dataverse column mismatches** are the #1 source of runtime bugs. Always verify OData column names against `create_*_dataverse_schema.py`.
 - **`.ralph-config.json`** files now exist in 14 solutions (6 pre-existing + 8 new) containing domain facts about correct column names, entity set names, and platform constraints. Read these before editing any solution.
 - **Option set values** in flow docs must use integer values (100000000+), not 0/1/2/3. Multiple solutions had this error.
-- **"Azure AD"** branding was found in ~60 files. Always use "Microsoft Entra ID" — the only acceptable legacy reference is in CHANGELOG historical entries.
-- **PnP.PowerShell** cmdlets were renamed: `Get-PnPAzureADGroupMember` → `Get-PnPEntraIDGroupMember` in PnP 3.x.
+- Legacy tenant-identity branding was found in ~60 files. Always use "Microsoft Entra ID" — the only acceptable legacy reference is in CHANGELOG historical entries.
+- **PnP.PowerShell** Microsoft Entra ID group-member cmdlets should use `Get-PnPEntraIDGroupMember` in PnP 3.x.
