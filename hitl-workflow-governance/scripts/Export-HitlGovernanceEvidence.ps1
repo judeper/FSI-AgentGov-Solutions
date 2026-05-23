@@ -89,12 +89,12 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.0.0
+    Version: 1.1.2
     Solution: HITL Workflow Governance (HWG)
     Controls: 2.12 (Supervision/FINRA Rule 3110), 2.17 (Multi-Agent Orchestration), 1.10 (Communication Compliance)
     Requires:
     - PowerShell 7.0 or later
-    - MSAL.PS module for Dataverse authentication
+    - Az.Accounts module (>= 2.17.0) for Dataverse authentication via Connect-EnvironmentDataverse.ps1
     - HWG Dataverse schema deployed (fsi_hitlscanruns,
       fsi_hitlcheckpointresults, fsi_hitlcheckpointexceptions tables)
 
@@ -168,55 +168,48 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
-$dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
+# §18 TrimEnd note: $DataverseUrl.TrimEnd('/') is SAFE because the argument
+# is a single character. Do NOT compose multi-character TrimEnd arguments
+# like the literal forward-slash-dot-default pattern — TrimEnd treats its
+# argument as a character set, not a substring, and silently corrupts
+# sovereign-cloud URLs (e.g. .de top-level domains).
+# Connect-EnvironmentDataverse.ps1 acquires Az.Accounts tokens scoped to the
+# bare environment URL (no /.default suffix) so we never need to strip a
+# scope suffix here.
+
+$connectScript = Join-Path -Path $scriptRoot -ChildPath 'private\Connect-EnvironmentDataverse.ps1'
+if (-not (Test-Path -Path $connectScript)) {
+    Write-Error "Required helper not found: $connectScript"
+    throw "Connect-EnvironmentDataverse.ps1 must be present in scripts/private/."
+}
 
 if ($Interactive) {
     try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $msalParams = @{
-            TenantId    = $TenantId
-            Scopes      = @($dataverseScope)
-            Interactive = $true
-        }
-
-        if ($ClientId) {
-            $msalParams.ClientId = $ClientId
-        }
-
-        $authResult = Get-MsalToken @msalParams
-        $accessToken = $authResult.AccessToken
+        $accessToken = & $connectScript -DataverseUrl $DataverseUrl -Interactive -ErrorAction Stop
     } catch {
         Write-Error "Interactive authentication failed: $($_.Exception.Message)"
         throw
     }
 } else {
     # Service principal authentication with client secret
+    # legacy: dev-only — replace with managed identity in production
     if (-not $ClientId) {
-        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
+        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth (preferred for admin workstations) or run from a managed-identity host."
     }
     if (-not $ClientSecret) {
         throw "ClientSecret is required for service principal authentication."
     }
 
     try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
+        $secureSecret = ConvertTo-SecureString -String $ClientSecret -AsPlainText -Force
+        $spCredential = New-Object -TypeName System.Management.Automation.PSCredential `
+            -ArgumentList $ClientId, $secureSecret
 
-        $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
-
-        $authResult = Get-MsalToken `
+        $accessToken = & $connectScript `
+            -DataverseUrl $DataverseUrl `
             -TenantId $TenantId `
-            -ClientId $ClientId `
-            -ClientSecret $secureSecret `
-            -Scopes @($dataverseScope)
-
-        $accessToken = $authResult.AccessToken
+            -Credential $spCredential `
+            -ErrorAction Stop
     } catch {
         Write-Error "Service principal authentication failed: $($_.Exception.Message)"
         throw
@@ -389,7 +382,6 @@ if ($IncludeExceptions) {
     $exceptionsReadable = $exceptionRecords | ForEach-Object {
         [PSCustomObject]@{
             agentId       = $_.fsi_agentid
-            agentName     = $_.fsi_agentname
             flowName      = $_.fsi_flowname
             flowId        = $_.fsi_flowid
             zone          = $_.fsi_zone

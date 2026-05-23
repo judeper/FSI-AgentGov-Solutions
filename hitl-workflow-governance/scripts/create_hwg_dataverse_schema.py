@@ -17,7 +17,10 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from hwg_client import HWGClient
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
+)
+from dataverse_client import DataverseClient  # noqa: E402
 
 # Publisher prefix for custom entities
 PUBLISHER_PREFIX = "fsi"
@@ -517,32 +520,82 @@ def generate_docs(output_path: str) -> None:
 # =============================================================================
 
 
-def create_shared_optionsets(client: HWGClient, dry_run: bool = False) -> None:
+def _build_optionset_metadata(os_def: dict) -> dict:
+    """Construct a Dataverse global OptionSetMetadata payload from an HWG def."""
+    name = os_def["name"]
+    options = os_def["options"]
+    display_label = os_def.get("display") or " ".join(
+        word.capitalize() for word in name.split("_")[1:]
+    ) or name
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
+        "Name": name,
+        "DisplayName": _label(display_label),
+        "Description": _label(os_def.get("description", display_label)),
+        "OptionSetType": "Picklist",
+        "IsGlobal": True,
+        "IsCustomOptionSet": True,
+        "Options": [
+            {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
+                "Value": value,
+                "Label": _label(label),
+            }
+            for (label, value) in options
+        ],
+    }
+
+
+def create_shared_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
     """Create or verify shared global option sets.
 
     These option sets are shared with ACV and other solutions.
     Existence is checked before creation to support idempotent runs.
+
+    NOTE: ``dry_run`` is **not** passed to the shared DataverseClient
+    constructor (per the migrate_ctsg_optionsets_v1_1_0.py pattern), because
+    that would short-circuit reads. Writes are gated locally via the
+    ``if not dry_run`` branch below.
     """
     print("\n[Creating/Verifying Shared Option Sets]")
 
     for os_name, os_def in SHARED_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        existing = client.get_global_optionset(os_def["name"])
+        if existing:
+            print(f"  {os_def['name']}: already exists, skipping")
+            continue
+        if dry_run:
+            print(f"  [DRY RUN] Would create option set: {os_def['name']}")
+        else:
+            client.create_global_optionset(_build_optionset_metadata(os_def))
+            print(f"  {os_def['name']}: created")
 
 
-def create_hwg_optionsets(client: HWGClient, dry_run: bool = False) -> None:
+def create_hwg_optionsets(client: DataverseClient, dry_run: bool = False) -> None:
     """Create HWG-specific global option sets.
 
     These option sets are unique to HITL Workflow Governance.
     Existence is checked before creation to support idempotent runs.
+
+    Local write gating mirrors create_shared_optionsets — see that docstring
+    for the rationale on not passing ``dry_run`` to the shared client.
     """
     print("\n[Creating HWG-Specific Option Sets]")
 
     for os_name, os_def in HWG_OPTIONSETS.items():
-        client.create_option_set(os_def["name"], os_def["options"])
+        existing = client.get_global_optionset(os_def["name"])
+        if existing:
+            print(f"  {os_def['name']}: already exists, skipping")
+            continue
+        if dry_run:
+            print(f"  [DRY RUN] Would create option set: {os_def['name']}")
+        else:
+            client.create_global_optionset(_build_optionset_metadata(os_def))
+            print(f"  {os_def['name']}: created")
 
 
 def create_table_with_columns(
-    client: HWGClient,
+    client: DataverseClient,
     table_name: str,
     table_def: dict,
     columns: list[dict],
@@ -551,15 +604,16 @@ def create_table_with_columns(
     """Create a table and its columns (idempotent).
 
     Args:
-        client: HWGClient instance
+        client: shared DataverseClient instance (constructed in live mode)
         table_name: Logical table name
         table_def: Table definition dict
         columns: List of column definitions
-        dry_run: Preview mode flag
+        dry_run: Preview mode flag (gates writes locally)
     """
     logical_name = table_name.lower()
 
-    # Check if table already exists
+    # Check if table already exists (live read; ``dry_run`` is not passed to
+    # the client, so this returns the real result in both modes).
     if client.check_table_exists(logical_name):
         print(f"  {logical_name}: already exists, skipping table creation")
     else:
@@ -597,18 +651,28 @@ def create_table_with_columns(
         if table_def.get("entity_set_name"):
             definition["EntitySetName"] = table_def["entity_set_name"]
 
-        client.create_entity(definition)
-        print(f"  {logical_name}: created")
+        if dry_run:
+            print(f"  [DRY RUN] Would create entity: {table_def['schema_name']}")
+        else:
+            client.create_entity(definition)
+            print(f"  {logical_name}: created")
 
     # Create columns
     print(f"  {logical_name} columns:")
     for col in columns:
         col_schema = col["SchemaName"]
-        col_type = col.get("@odata.type", "Unknown").split(".")[-1]
-        client.create_column(logical_name, col_schema, col_type, col)
+        col_logical = col_schema.lower()
+        existing_col = client.get_attribute_metadata(logical_name, col_logical)
+        if existing_col:
+            continue
+        if dry_run:
+            print(f"    [DRY RUN] Would create column: {logical_name}.{col_schema}")
+        else:
+            client.create_attribute(logical_name, col)
+            print(f"    {logical_name}.{col_schema}: created")
 
 
-def create_schema(client: HWGClient, dry_run: bool = False) -> None:
+def create_schema(client: DataverseClient, dry_run: bool = False) -> None:
     """Orchestrate full schema deployment.
 
     Order: shared option sets -> HWG option sets -> tables -> columns.
@@ -731,13 +795,21 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        client = HWGClient(
+        # NOTE: dry_run is deliberately NOT passed to the shared
+        # DataverseClient constructor (canonical reference:
+        # cross-tenant-external-sharing-governance/scripts/
+        #   migrate_ctsg_optionsets_v1_1_0.py lines 238-267). Doing so would
+        # short-circuit READS (get_global_optionset, check_table_exists,
+        # get_attribute_metadata), silently making every preview claim that
+        # nothing exists and thereby reporting bogus "would create" output.
+        # Writes are gated locally inside create_shared_optionsets,
+        # create_hwg_optionsets, and create_table_with_columns instead.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         create_schema(client, dry_run=args.dry_run)
