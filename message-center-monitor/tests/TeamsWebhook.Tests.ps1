@@ -33,7 +33,7 @@ BeforeAll {
 
     $script:cardPath = Join-Path $PSScriptRoot '..' 'templates' 'teams-notification-card.json'
 
-    function New-StandardTokens {
+    function Get-StandardTokens {
         @{
             severity                 = 'High'
             title                    = 'Test message'
@@ -187,7 +187,7 @@ Describe 'Send-McmTeamsWebhook - happy path' {
 
     It 'returns Success=$true on a successful POST' {
         $result = Send-McmTeamsWebhook -WebhookUrl 'https://outlook.office.com/webhook/x' `
-            -CardTokens (New-StandardTokens) `
+            -CardTokens (Get-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath
         $result.Success | Should -BeTrue
         $result.Error | Should -BeNullOrEmpty
@@ -195,7 +195,7 @@ Describe 'Send-McmTeamsWebhook - happy path' {
 
     It 'sends exactly one POST' {
         Send-McmTeamsWebhook -WebhookUrl 'https://outlook.office.com/webhook/x' `
-            -CardTokens (New-StandardTokens) `
+            -CardTokens (Get-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath | Out-Null
         $script:capturedCalls.Count | Should -Be 1
         $script:capturedCalls[0].Method | Should -Be 'Post'
@@ -204,14 +204,14 @@ Describe 'Send-McmTeamsWebhook - happy path' {
     It 'posts to the supplied webhook URL' {
         $url = 'https://outlook.office.com/webhook/abcdef'
         Send-McmTeamsWebhook -WebhookUrl $url `
-            -CardTokens (New-StandardTokens) `
+            -CardTokens (Get-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath | Out-Null
         $script:capturedCalls[0].Uri | Should -Be $url
     }
 
     It 'sends application/json Content-Type header' {
         Send-McmTeamsWebhook -WebhookUrl 'https://outlook.office.com/webhook/x' `
-            -CardTokens (New-StandardTokens) `
+            -CardTokens (Get-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath | Out-Null
         $script:capturedCalls[0].Headers['Content-Type'] | Should -Match 'application/json'
     }
@@ -231,7 +231,7 @@ Describe 'Send-McmTeamsWebhook - payload shape' {
 
     It 'wraps the card in Teams Workflows envelope (type=message, attachments[])' {
         Send-McmTeamsWebhook -WebhookUrl 'https://x' `
-            -CardTokens (New-StandardTokens) `
+            -CardTokens (Get-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath | Out-Null
 
         $body = $script:capturedCalls[0].Body | ConvertFrom-Json
@@ -245,7 +245,7 @@ Describe 'Send-McmTeamsWebhook - payload shape' {
 
     It 'strips the _comment field from the card body' {
         Send-McmTeamsWebhook -WebhookUrl 'https://x' `
-            -CardTokens (New-StandardTokens) `
+            -CardTokens (Get-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath | Out-Null
 
         $body = $script:capturedCalls[0].Body | ConvertFrom-Json
@@ -256,7 +256,7 @@ Describe 'Send-McmTeamsWebhook - payload shape' {
 
     It 'substitutes standard tokens into the rendered card body' {
         Send-McmTeamsWebhook -WebhookUrl 'https://x' `
-            -CardTokens (New-StandardTokens) `
+            -CardTokens (Get-StandardTokens) `
             -AdaptiveCardTemplatePath $script:cardPath | Out-Null
 
         $script:capturedCalls[0].Body | ConvertFrom-Json | Out-Null
@@ -268,14 +268,14 @@ Describe 'Send-McmTeamsWebhook - payload shape' {
         $rawBody | Should -Match 'MC123456'
         $rawBody | Should -Match '11111111-2222-3333-4444-555555555555'
 
-        foreach ($tokenName in (New-StandardTokens).Keys) {
+        foreach ($tokenName in (Get-StandardTokens).Keys) {
             $rawBody | Should -Not -Match ('\{' + [regex]::Escape($tokenName) + '\}') `
                 -Because "token '{$tokenName}' must be substituted in the rendered payload"
         }
     }
 
     It 'handles a title with embedded double quotes safely' {
-        $tokens = New-StandardTokens
+        $tokens = Get-StandardTokens
         $tokens.title = 'Action required: "MC123" outage'
         Send-McmTeamsWebhook -WebhookUrl 'https://x' `
             -CardTokens $tokens `
@@ -293,7 +293,7 @@ Describe 'Send-McmTeamsWebhook - payload shape' {
     }
 
     It 'handles a title with embedded newlines safely' {
-        $tokens = New-StandardTokens
+        $tokens = Get-StandardTokens
         $tokens.title = "Line A`nLine B"
         Send-McmTeamsWebhook -WebhookUrl 'https://x' `
             -CardTokens $tokens `
@@ -318,7 +318,7 @@ Describe 'Send-McmTeamsWebhook - failure handling (no-throw contract)' {
         $result = $null
         try {
             $result = Send-McmTeamsWebhook -WebhookUrl 'https://x' `
-                -CardTokens (New-StandardTokens) `
+                -CardTokens (Get-StandardTokens) `
                 -AdaptiveCardTemplatePath $script:cardPath
         } catch {
             $threw = $true
@@ -340,7 +340,7 @@ Describe 'Send-McmTeamsWebhook - failure handling (no-throw contract)' {
         $result = $null
         try {
             $result = Send-McmTeamsWebhook -WebhookUrl 'https://x' `
-                -CardTokens (New-StandardTokens) `
+                -CardTokens (Get-StandardTokens) `
                 -AdaptiveCardTemplatePath $script:cardPath
         } catch {
             $threw = $true
@@ -359,7 +359,7 @@ Describe 'Send-McmTeamsWebhook - hard failures (throw)' {
         Mock -CommandName Invoke-McmRest -MockWith { return $null }
         $missing = Join-Path $PSScriptRoot 'definitely-not-a-real-template.json'
         { Send-McmTeamsWebhook -WebhookUrl 'https://x' `
-                -CardTokens (New-StandardTokens) `
+                -CardTokens (Get-StandardTokens) `
                 -AdaptiveCardTemplatePath $missing } | Should -Throw
     }
 }

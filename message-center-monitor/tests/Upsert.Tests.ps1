@@ -47,7 +47,7 @@ BeforeAll {
         'fsi_hasattachments'
     )
 
-    function New-FakeRecord {
+    function Get-FakeRecord {
         # Mirrors the $record hashtable built in Invoke-MessageCenterSync.ps1.
         # Deliberately EXCLUDES admin-owned columns - the function under test
         # relies on this contract.
@@ -66,7 +66,7 @@ BeforeAll {
         }
     }
 
-    function New-FakeHeaders {
+    function Get-FakeHeaders {
         @{
             Authorization      = 'Bearer fake'
             'Content-Type'     = 'application/json'
@@ -76,7 +76,7 @@ BeforeAll {
         }
     }
 
-    function New-McmHttpException {
+    function Get-McmHttpException {
         param([int]$Status, [string]$Message)
         # The function under test inspects the exception MESSAGE for status
         # tokens because Invoke-McmRest rethrows wrapped errors with text like
@@ -104,8 +104,8 @@ Describe 'Invoke-McmDvUpsertMessage - create branch (row does not exist)' {
         $r = Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000
 
         $r.Action | Should -Be 'Created'
@@ -119,8 +119,8 @@ Describe 'Invoke-McmDvUpsertMessage - create branch (row does not exist)' {
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $body = $script:capturedCalls[0].Body | ConvertFrom-Json -AsHashtable
@@ -131,8 +131,8 @@ Describe 'Invoke-McmDvUpsertMessage - create branch (row does not exist)' {
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $body = $script:capturedCalls[0].Body | ConvertFrom-Json -AsHashtable
@@ -143,26 +143,26 @@ Describe 'Invoke-McmDvUpsertMessage - create branch (row does not exist)' {
 
     It 'URL uses alternate-key OData syntax with single-quote-escaped id' {
         $tricky = "MC'one"
-        $rec = New-FakeRecord
+        $rec = Get-FakeRecord
         $rec.fsi_messagecenterid = $tricky
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId $tricky `
             -Record $rec `
-            -DataverseHeaders (New-FakeHeaders) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $script:capturedCalls[0].Uri | Should -Match "fsi_messagecenterlogs\(fsi_messagecenterid='MC''one'\)"
     }
 
     It 'does not mutate the caller-provided $Record hashtable' {
-        $rec = New-FakeRecord
+        $rec = Get-FakeRecord
         $beforeKeys = ($rec.Keys | Sort-Object) -join ','
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
             -Record $rec `
-            -DataverseHeaders (New-FakeHeaders) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $afterKeys = ($rec.Keys | Sort-Object) -join ','
@@ -185,7 +185,7 @@ Describe 'Invoke-McmDvUpsertMessage - update branch (row exists, 412)' {
                 Body    = $Body
             })
             if ($script:invocation -eq 1) {
-                throw (New-McmHttpException -Status 412 -Message 'PreconditionFailed')
+                throw (Get-McmHttpException -Status 412 -Message 'PreconditionFailed')
             }
             return $null
         }
@@ -195,8 +195,8 @@ Describe 'Invoke-McmDvUpsertMessage - update branch (row exists, 412)' {
         $r = Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000
 
         $r.Action | Should -Be 'Updated'
@@ -207,8 +207,8 @@ Describe 'Invoke-McmDvUpsertMessage - update branch (row exists, 412)' {
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $script:capturedCalls[1].Headers.ContainsKey('If-None-Match') | Should -BeFalse `
@@ -219,8 +219,8 @@ Describe 'Invoke-McmDvUpsertMessage - update branch (row exists, 412)' {
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $body = $script:capturedCalls[1].Body | ConvertFrom-Json -AsHashtable
@@ -235,8 +235,8 @@ Describe 'Invoke-McmDvUpsertMessage - update branch (row exists, 412)' {
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $body = $script:capturedCalls[1].Body | ConvertFrom-Json -AsHashtable
@@ -249,8 +249,8 @@ Describe 'Invoke-McmDvUpsertMessage - update branch (row exists, 412)' {
         Invoke-McmDvUpsertMessage `
             -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
             -MessageId 'MC123456' `
-            -Record (New-FakeRecord) `
-            -DataverseHeaders (New-FakeHeaders) `
+            -Record (Get-FakeRecord) `
+            -DataverseHeaders (Get-FakeHeaders) `
             -AssessmentNotAssessedValue 100000000 | Out-Null
 
         $script:capturedCalls[0].Uri | Should -Be $script:capturedCalls[1].Uri
@@ -261,30 +261,30 @@ Describe 'Invoke-McmDvUpsertMessage - failure paths' {
 
     It 'throws a helpful error when alternate key is missing (404)' {
         Mock -CommandName Invoke-McmRest -MockWith {
-            throw (New-McmHttpException -Status 404 -Message 'Resource not found for the segment')
+            throw (Get-McmHttpException -Status 404 -Message 'Resource not found for the segment')
         }
 
         {
             Invoke-McmDvUpsertMessage `
                 -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
                 -MessageId 'MC123456' `
-                -Record (New-FakeRecord) `
-                -DataverseHeaders (New-FakeHeaders) `
+                -Record (Get-FakeRecord) `
+                -DataverseHeaders (Get-FakeHeaders) `
                 -AssessmentNotAssessedValue 100000000
         } | Should -Throw -ExpectedMessage '*Alternate key fsi_MessageCenterIdKey not found*'
     }
 
     It 'rethrows on non-412/404 create failures' {
         Mock -CommandName Invoke-McmRest -MockWith {
-            throw (New-McmHttpException -Status 500 -Message 'Internal server error')
+            throw (Get-McmHttpException -Status 500 -Message 'Internal server error')
         }
 
         {
             Invoke-McmDvUpsertMessage `
                 -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
                 -MessageId 'MC123456' `
-                -Record (New-FakeRecord) `
-                -DataverseHeaders (New-FakeHeaders) `
+                -Record (Get-FakeRecord) `
+                -DataverseHeaders (Get-FakeHeaders) `
                 -AssessmentNotAssessedValue 100000000
         } | Should -Throw -ExpectedMessage '*Create failed for MC123456*'
     }
@@ -294,17 +294,17 @@ Describe 'Invoke-McmDvUpsertMessage - failure paths' {
         Mock -CommandName Invoke-McmRest -MockWith {
             $script:invocation++
             if ($script:invocation -eq 1) {
-                throw (New-McmHttpException -Status 412 -Message 'PreconditionFailed')
+                throw (Get-McmHttpException -Status 412 -Message 'PreconditionFailed')
             }
-            throw (New-McmHttpException -Status 500 -Message 'Internal server error')
+            throw (Get-McmHttpException -Status 500 -Message 'Internal server error')
         }
 
         {
             Invoke-McmDvUpsertMessage `
                 -DataverseBaseUrl 'https://x.crm.dynamics.com/api/data/v9.2' `
                 -MessageId 'MC123456' `
-                -Record (New-FakeRecord) `
-                -DataverseHeaders (New-FakeHeaders) `
+                -Record (Get-FakeRecord) `
+                -DataverseHeaders (Get-FakeHeaders) `
                 -AssessmentNotAssessedValue 100000000
         } | Should -Throw -ExpectedMessage '*Update failed for MC123456*'
     }

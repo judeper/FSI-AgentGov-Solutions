@@ -168,7 +168,7 @@ $script:dvBaseUrl  = $null
 
 #region Local script helpers
 
-function New-McmCheckResult {
+function Get-McmCheckResult {
     param(
         [Parameter(Mandatory)] [string]$Name,
         [Parameter(Mandatory)] [ValidateSet('PASS','WARN','FAIL','SKIP')] [string]$Status,
@@ -241,16 +241,16 @@ $checkName = 'PowerShell 7.2+'
 try {
     $psVer = $PSVersionTable.PSVersion
     if ($psVer -ge [version]'7.2') {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' -Detail "v$psVer"))
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' -Detail "v$psVer"))
     }
     else {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint 'Install PowerShell 7.2 or later: winget install Microsoft.PowerShell' `
             -Detail "Installed: v$psVer"))
     }
 }
 catch {
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' -Hint $_.Exception.Message))
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' -Hint $_.Exception.Message))
 }
 
 #endregion
@@ -266,20 +266,20 @@ try {
     $azkeyOk = $null -ne $azkeyMod
 
     if ($msalOk -and $azkeyOk) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' `
             -Detail "MSAL.PS $($msalMod.Version); Az.KeyVault $($azkeyMod.Version)"))
     }
     else {
         $missing = [System.Collections.Generic.List[string]]::new()
         if (-not $msalOk)  { $missing.Add('MSAL.PS >= 4.37.0') }
         if (-not $azkeyOk) { $missing.Add('Az.KeyVault') }
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint 'Install-Module MSAL.PS -MinimumVersion 4.37.0 -Scope CurrentUser -Force; Install-Module Az.KeyVault -Scope CurrentUser -Force' `
             -Detail "Missing: $($missing -join ', ')"))
     }
 }
 catch {
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' -Hint $_.Exception.Message))
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' -Hint $_.Exception.Message))
 }
 
 #endregion
@@ -289,16 +289,16 @@ catch {
 $checkName = 'Key Vault reachable'
 try {
     if (-not $KeyVaultName) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'SKIP' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'SKIP' `
             -Hint 'Supply -KeyVaultName to validate'))
     }
     else {
         Get-AzKeyVault -VaultName $KeyVaultName -ErrorAction Stop | Out-Null
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' -Detail $KeyVaultName))
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' -Detail $KeyVaultName))
     }
 }
 catch {
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint 'Run Connect-AzAccount with credentials that have Reader access to the Key Vault' `
         -Detail $_.Exception.Message))
 }
@@ -316,25 +316,25 @@ try {
         else {
             'Supply -KeyVaultSecretName to validate'
         }
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'SKIP' -Hint $skipHint))
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'SKIP' -Hint $skipHint))
     }
     else {
         $secretPlainText = Get-AzKeyVaultSecret -VaultName $KeyVaultName `
             -Name $KeyVaultSecretName -AsPlainText -ErrorAction Stop
         if ($secretPlainText) {
             $ClientSecret = ConvertTo-SecureString -String $secretPlainText -AsPlainText -Force
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' `
                 -Detail "Secret '$KeyVaultSecretName' retrieved and applied to -ClientSecret"))
         }
         else {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
                 -Hint "Secret '$KeyVaultSecretName' exists but returned an empty value. Verify the secret has a current non-empty version." `
                 -Detail "Vault: $KeyVaultName"))
         }
     }
 }
 catch {
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint 'Run Connect-AzAccount with credentials that have Get access to Key Vault secrets' `
         -Detail $_.Exception.Message))
 }
@@ -348,11 +348,11 @@ try {
     $script:graphToken = Get-McmAccessToken -AuthMode $AuthMode `
         -Scope 'https://graph.microsoft.com/.default' `
         -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' `
         -Detail "Token acquired (expires: $($script:graphToken.ExpiresOn))"))
 }
 catch {
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint 'Verify TenantId/ClientId/ClientSecret are correct and the app exists in the tenant' `
         -Detail $_.Exception.Message))
 }
@@ -364,7 +364,7 @@ catch {
 $checkName = 'ServiceMessage.Read.All consented'
 try {
     if (-not $script:graphToken) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'SKIP' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'SKIP' `
             -Hint 'Graph token unavailable — check 5 (Graph token acquisition) must PASS first'))
     }
     else {
@@ -374,13 +374,13 @@ try {
         }
         $graphUri = 'https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages?$top=1'
         Invoke-McmRest -Uri $graphUri -Headers $graphHeaders -Method Get | Out-Null
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS'))
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS'))
     }
 }
 catch {
     $errMsg = $_.Exception.Message
     if ($errMsg -match 'status=403') {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint ('Grant admin consent for ServiceMessage.Read.All in Entra portal: ' +
                    'https://entra.microsoft.com → Applications → App registrations → <your app> ' +
                    '→ API permissions → Add Microsoft Graph → Application permissions → ' +
@@ -388,12 +388,12 @@ catch {
             -Detail $errMsg))
     }
     elseif ($errMsg -match 'status=401') {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint 'Token was acquired but Graph rejected it (401). Verify the token audience and app registration.' `
             -Detail $errMsg))
     }
     else {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint 'Graph API call failed. Verify connectivity and app registration configuration.' `
             -Detail $errMsg))
     }
@@ -411,11 +411,11 @@ try {
         -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
     $metadataUri = "$($script:dvBaseUrl)/`$metadata"
     Invoke-McmRest -Uri $metadataUri -Headers $script:dvHeaders -Method Get | Out-Null
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' -Detail $DataverseUrl))
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' -Detail $DataverseUrl))
 }
 catch {
     $script:dvHeaders = $null
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint 'Verify DataverseUrl is the environment URL (e.g., https://org.crm.dynamics.com — no trailing /api/data/...)' `
         -Detail $_.Exception.Message))
 }
@@ -427,30 +427,30 @@ catch {
 $checkName = 'fsi_messagecenterlogs entity accessible'
 try {
     if (-not $script:dvHeaders) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'SKIP' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'SKIP' `
             -Hint 'Dataverse connection unavailable — check 7 (Dataverse reachable) must PASS first'))
     }
     else {
         $entityUri = "$($script:dvBaseUrl)/fsi_messagecenterlogs?`$top=1&`$select=fsi_messagecenterid"
         Invoke-McmRest -Uri $entityUri -Headers $script:dvHeaders -Method Get | Out-Null
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS'))
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS'))
     }
 }
 catch {
     $errMsg = $_.Exception.Message
     if ($errMsg -match 'status=404') {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint 'Run python scripts/create_mcm_dataverse_schema.py — the table is missing' `
             -Detail $errMsg))
     }
     elseif ($errMsg -match 'status=401' -or $errMsg -match 'status=403') {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint ("The app registration is not a Dataverse Application User with read access to " +
                    "fsi_messagecenterlog. See README Section 5 'Dataverse Application User'") `
             -Detail $errMsg))
     }
     else {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
             -Hint 'Unexpected error accessing fsi_messagecenterlogs entity set.' `
             -Detail $errMsg))
     }
@@ -463,7 +463,7 @@ catch {
 $checkName = 'Alt-key fsi_MessageCenterIdKey Active'
 try {
     if (-not $script:dvHeaders) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'SKIP' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'SKIP' `
             -Hint 'Dataverse connection unavailable — check 7 (Dataverse reachable) must PASS first'))
     }
     else {
@@ -477,7 +477,7 @@ try {
         }
 
         if (-not $altKey) {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
                 -Hint 'Alt-key not found; re-run create_mcm_dataverse_schema.py'))
         }
         else {
@@ -495,24 +495,24 @@ try {
             }
             switch ($statusLabel) {
                 'Active' {
-                    $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+                    $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' `
                         -Detail "EntityKeyIndexStatus: Active"))
                     break
                 }
                 { $_ -eq 'Pending' -or $_ -eq 'InProgress' } {
-                    $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+                    $results.Add((Get-McmCheckResult -Name $checkName -Status 'WARN' `
                         -Hint 'Alt-key activation in progress — wait 60s and re-run preflight; OR see docs/poc-quickstart.md Step 1.3 wait gate' `
                         -Detail "EntityKeyIndexStatus: $statusLabel"))
                     break
                 }
                 'Failed' {
-                    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+                    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
                         -Hint 'Alt-key activation FAILED — open the table in Power Apps maker portal → Keys → inspect; re-run create_mcm_dataverse_schema.py' `
                         -Detail "EntityKeyIndexStatus: Failed"))
                     break
                 }
                 default {
-                    $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+                    $results.Add((Get-McmCheckResult -Name $checkName -Status 'WARN' `
                         -Hint "Unknown EntityKeyIndexStatus value: $statusLabel. Validate manually in Power Apps maker portal." `
                         -Detail "EntityKeyIndexStatus: $statusLabel"))
                 }
@@ -521,7 +521,7 @@ try {
     }
 }
 catch {
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint 'Failed to query entity key definitions. Verify Dataverse connectivity and app permissions.' `
         -Detail $_.Exception.Message))
 }
@@ -533,7 +533,7 @@ catch {
 $checkName = 'Teams webhook URL'
 try {
     if (-not $TeamsWebhookUrl) {
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'SKIP' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'SKIP' `
             -Hint 'Supply -TeamsWebhookUrl or set $env:MCM_TEAMS_WEBHOOK_URL to validate'))
     }
     else {
@@ -542,7 +542,7 @@ try {
         $isHttps         = ($webhookUri.Scheme -eq 'https')
         $isLoopbackHttp  = ($webhookUri.Scheme -eq 'http' -and $webhookUri.IsLoopback)
         if (-not $isHttps -and -not $isLoopbackHttp) {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
                 -Hint "Webhook URL scheme is '$($webhookUri.Scheme)'; must be 'https' (or 'http' for loopback testing via lab/07)." `
                 -Detail $safeWebhookHost))
         }
@@ -553,13 +553,13 @@ try {
 
             if (-not $PostTestMessage) {
                 $status = if ($isLoopbackHttp) { 'WARN' } else { 'PASS' }
-                $results.Add((New-McmCheckResult -Name $checkName -Status $status `
+                $results.Add((Get-McmCheckResult -Name $checkName -Status $status `
                     -Hint "URL parsed and DNS resolved$loopbackNote; supply -PostTestMessage to also POST a test card" `
                     -Detail $safeWebhookHost))
             }
             else {
                 if (-not (Test-Path -LiteralPath $TeamsCardTemplatePath)) {
-                    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+                    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
                         -Hint "Adaptive card template not found at: $TeamsCardTemplatePath. Verify -TeamsCardTemplatePath or run from the correct working directory."))
                 }
                 else {
@@ -600,7 +600,7 @@ try {
                         Invoke-McmRest -Uri $TeamsWebhookUrl -Headers $webhookHeaders `
                             -Method Post -Body $payloadJson | Out-Null
                         $status = if ($isLoopbackHttp) { 'WARN' } else { 'PASS' }
-                        $results.Add((New-McmCheckResult -Name $checkName -Status $status `
+                        $results.Add((Get-McmCheckResult -Name $checkName -Status $status `
                             -Hint "URL parsed, DNS resolved, and test card POSTed successfully$loopbackNote." `
                             -Detail $safeWebhookHost))
                     }
@@ -611,7 +611,7 @@ try {
                         $postErr     = $_.Exception.Message
                         $statusMatch = $postErr -match 'status=(\d+)'
                         $statusCode  = if ($statusMatch) { $Matches[1] } else { 'unknown' }
-                        $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+                        $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
                             -Hint "Webhook URL was created in Teams Workflows but the POST returned $statusCode; verify the workflow is enabled" `
                             -Detail "host=$safeWebhookHost http=$statusCode"))
                     }
@@ -627,7 +627,7 @@ catch {
     $statusMatch = $errMsg -match 'status=(\d+)'
     $statusCode  = if ($statusMatch) { $Matches[1] } else { 'unknown' }
     $safeHost    = try { ([uri]$TeamsWebhookUrl).Host } catch { '<unparseable>' }
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint "Teams webhook check failed (HTTP $statusCode); verify the URL is reachable and the workflow is enabled." `
         -Detail "host=$safeHost http=$statusCode"))
 }
@@ -659,7 +659,7 @@ try {
         # short-circuited to PASS. The switch still bypasses the Dataverse
         # query (its purpose), but the operator now sees an explicit
         # incomplete-check banner instead of a false all-clear.
-        $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+        $results.Add((Get-McmCheckResult -Name $checkName -Status 'WARN' `
             -Hint ("-AssumePhase1Only skipped the Dataverse query for the Phase 3 " +
                    "environment-variable binding. If Phase 3 is actually deployed in " +
                    "this environment, duplicate Teams alerts will fire on every sync. " +
@@ -707,7 +707,7 @@ try {
         $phase3Stale  = ($phase3DefExists -and -not $phase3HasValue)
 
         if ($phase1Active -and $phase3Active) {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
                 -Hint ("Both Phase 1 webhook (`$env:MCM_TEAMS_WEBHOOK_URL set) AND Phase 3 flow " +
                        "(environment variable $Phase3EnvVarLogicalName has a bound value) are " +
                        "configured. Duplicate Teams alerts will fire. Choose ONE path: clear " +
@@ -716,7 +716,7 @@ try {
                 -Detail 'Both Phase 1 and Phase 3 notification paths active'))
         }
         elseif ($phase1Active -and $phase3Stale) {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'WARN' `
                 -Hint ("Phase 1 webhook active AND a stale Phase 3 env-var DEFINITION " +
                        "($Phase3EnvVarLogicalName) exists in Dataverse, but with no VALUE " +
                        "bound. This is most likely leftover from a prior lab/03 run or a " +
@@ -726,23 +726,23 @@ try {
                 -Detail 'Phase 3 env-var definition leftover (no value bound)'))
         }
         elseif (-not $phase1Active -and -not $phase3Active) {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'WARN' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'WARN' `
                 -Hint ("No notification path configured. Set `$env:MCM_TEAMS_WEBHOOK_URL for Phase 1 " +
                        "OR deploy Phase 3 flow + env vars per docs/flow-configuration.md.") `
                 -Detail 'No notification path active'))
         }
         elseif ($phase1Active) {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' `
                 -Detail 'Phase 1 webhook active; Phase 3 flow not deployed'))
         }
         else {
-            $results.Add((New-McmCheckResult -Name $checkName -Status 'PASS' `
+            $results.Add((Get-McmCheckResult -Name $checkName -Status 'PASS' `
                 -Detail 'Phase 3 flow active; Phase 1 webhook not configured'))
         }
     }
 }
 catch {
-    $results.Add((New-McmCheckResult -Name $checkName -Status 'FAIL' `
+    $results.Add((Get-McmCheckResult -Name $checkName -Status 'FAIL' `
         -Hint 'Failed to query environment variable definitions/values. Verify Dataverse connectivity, or re-run with -AssumePhase1Only to skip this check.' `
         -Detail $_.Exception.Message))
 }

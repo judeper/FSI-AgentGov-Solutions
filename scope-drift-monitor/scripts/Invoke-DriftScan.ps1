@@ -666,6 +666,7 @@ function New-ViolationRecord {
     .SYNOPSIS
         Creates a violation record in Dataverse.
     #>
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
         'PSReviewUnusedParameter', '',
         Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
@@ -742,6 +743,11 @@ function New-ViolationRecord {
 
     $uri = "$Environment/api/data/v9.2/fsi_scopeviolations"
     $body = $violationRecord | ConvertTo-Json -Depth 5
+    $target = if ($Violation.Resource) { $Violation.Resource } else { 'fsi_scopeviolations' }
+
+    if (-not $PSCmdlet.ShouldProcess($target, 'Create scope violation record')) {
+        return $null
+    }
 
     try {
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body
@@ -834,9 +840,9 @@ $totalViolations = 0
 $violationResults = @()
 $agentsScanned = @{}
 
-foreach ($event in $events) {
-    $eventData = Get-CopilotEventData -Event $event
-    $eventAgentId = Get-CopilotAgentId -Event $event
+foreach ($auditEvent in $events) {
+    $eventData = Get-CopilotEventData -Event $auditEvent
+    $eventAgentId = Get-CopilotAgentId -Event $auditEvent
 
     # Skip if we're filtering for a specific agent and this isn't it.
     if ($AgentId -and -not (Test-AgentIdMatch -EventAgentId $eventAgentId -ExpectedAgentId $AgentId)) {
@@ -852,16 +858,16 @@ foreach ($event in $events) {
     $agentsScanned[$eventAgentId] = $true
 
     # Get scope for this agent; blank EnvironmentId acts as wildcard.
-    $eventEnvId = if ($event.EnvironmentId) { $event.EnvironmentId } elseif ($eventData.EnvironmentId) { $eventData.EnvironmentId } else { $null }
+    $eventEnvId = if ($auditEvent.EnvironmentId) { $auditEvent.EnvironmentId } elseif ($eventData.EnvironmentId) { $eventData.EnvironmentId } else { $null }
     $scope = Get-MatchingScope -Scopes $scopes -EventAgentId $eventAgentId -EventEnvironmentId $eventEnvId
 
     # Compare scope vs actual access
-    $violations = Compare-ScopeVsActual -Event $event -Scope $scope
+    $violations = Compare-ScopeVsActual -Event $auditEvent -Scope $scope
 
     # Create violation records
     foreach ($violation in $violations) {
         $scopeId = if ($scope) { $scope.fsi_agentscopeid } else { $null }
-        $auditRecordId = $event.Id
+        $auditRecordId = $auditEvent.Id
 
         $result = New-ViolationRecord `
             -Environment $Environment `
@@ -869,7 +875,7 @@ foreach ($event in $events) {
             -Violation $violation `
             -ScopeId $scopeId `
             -AuditRecordId $auditRecordId `
-            -UserId $event.UserId
+            -UserId $auditEvent.UserId
 
         if ($result) {
             $totalViolations++

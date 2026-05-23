@@ -76,7 +76,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 function New-CanaryEvent {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $false)]
         [string]$CanaryId = [Guid]::NewGuid().ToString(),
@@ -115,6 +115,17 @@ function New-CanaryEvent {
 
         # Set canary value
         $canaryValue = "ACV-Canary-$CanaryId"
+        if (-not $PSCmdlet.ShouldProcess($MailboxIdentity, "Set canary mailbox attribute to '$canaryValue'")) {
+            return [PSCustomObject]@{
+                CanaryId     = $CanaryId
+                Timestamp    = Get-Date -Format "o"
+                Operation    = "Set-Mailbox"
+                Target       = $MailboxIdentity
+                Status       = "Skipped"
+                ErrorMessage = $null
+            }
+        }
+
         Set-Mailbox -Identity $MailboxIdentity -CustomAttribute15 $canaryValue -ErrorAction Stop
 
         Write-Host "Canary event generated successfully." -ForegroundColor Green
@@ -126,13 +137,17 @@ function New-CanaryEvent {
         # Revert to original value (unless SkipRevert is specified)
         if (-not $SkipRevert) {
             if ($originalValue) {
-                Set-Mailbox -Identity $MailboxIdentity -CustomAttribute15 $originalValue -ErrorAction Stop
-                Write-Host "CustomAttribute15 reverted to original value: $originalValue" -ForegroundColor Gray
+                if ($PSCmdlet.ShouldProcess($MailboxIdentity, 'Revert canary mailbox attribute')) {
+                    Set-Mailbox -Identity $MailboxIdentity -CustomAttribute15 $originalValue -ErrorAction Stop
+                    Write-Host "CustomAttribute15 reverted to original value: $originalValue" -ForegroundColor Gray
+                }
             }
             else {
                 # Clear the attribute if it was originally empty
-                Set-Mailbox -Identity $MailboxIdentity -CustomAttribute15 $null -ErrorAction Stop
-                Write-Host "CustomAttribute15 cleared (was originally empty)." -ForegroundColor Gray
+                if ($PSCmdlet.ShouldProcess($MailboxIdentity, 'Clear canary mailbox attribute')) {
+                    Set-Mailbox -Identity $MailboxIdentity -CustomAttribute15 $null -ErrorAction Stop
+                    Write-Host "CustomAttribute15 cleared (was originally empty)." -ForegroundColor Gray
+                }
             }
         }
 

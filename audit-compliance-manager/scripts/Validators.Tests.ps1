@@ -97,11 +97,11 @@ Describe "Validator Confidence value consistency" {
         $content = Get-Content -LiteralPath $Path -Raw
 
         # Find all Confidence assignments (code lines, not comments/docstrings)
-        $matches = [regex]::Matches($content, '(?:Confidence\s*=\s*"([^"]+)"|\$confidence\s*=\s*"([^"]+)")')
+        $confidenceMatches = [regex]::Matches($content, '(?:Confidence\s*=\s*"([^"]+)"|\$confidence\s*=\s*"([^"]+)")')
 
-        $matches.Count | Should -BeGreaterThan 0 -Because "$Name should contain Confidence assignments"
+        $confidenceMatches.Count | Should -BeGreaterThan 0 -Because "$Name should contain Confidence assignments"
 
-        foreach ($match in $matches) {
+        foreach ($match in $confidenceMatches) {
             $value = if ($match.Groups[1].Success) { $match.Groups[1].Value } else { $match.Groups[2].Value }
             ($script:validConfidenceValues -ccontains $value) | Should -BeTrue -Because "Confidence value '$value' in $Name must be title-case (High, Medium, or N/A)"
         }

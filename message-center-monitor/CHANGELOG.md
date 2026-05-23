@@ -33,6 +33,7 @@
 - `docs/graph-powershell-snippet.md` — companion to the removed script above.
 
 ### Changed
+- **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
 - `README.md` — added a top-of-doc fork between the **POC path** (Phase 1, the customer success bar), the **Operationalize path** (Phase 2, Status/Export/Assess), and the **Production flow path** (Phase 3, Power Automate). Each path points at its own runbook.
 - `docs/flow-configuration.md` — added a Phase 3 banner at the top emphasizing that the Power Automate flow is **mutually exclusive** with the Phase 1 PowerShell webhook (run one, not both). Concrete `Remove-Item env:` step included for the migration.
 - `templates/teams-notification-card.json` — updated `_comment` to document that the template is rendered by both the Phase 1 PowerShell sync (via `Send-McmTeamsWebhook`) and the Phase 3 Power Automate flow. Do not rename tokens or restructure the body without coordinating both paths.

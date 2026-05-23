@@ -34,7 +34,7 @@ param()
 BeforeAll {
     . (Join-Path $PSScriptRoot '..' 'scripts' 'governance' '_Common.ps1')
 
-    function New-McmFakeException {
+    function Get-McmFakeException {
         param(
             [int]$Status,
             [hashtable]$ResponseHeaders = @{}
@@ -203,7 +203,7 @@ Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
             Mock -CommandName Start-Sleep -MockWith { }
             Mock -CommandName Invoke-RestMethod -MockWith {
                 $script:n++
-                if ($script:n -lt 3) { throw (New-McmFakeException -Status 429 -ResponseHeaders @{ 'Retry-After' = '1' }) }
+                if ($script:n -lt 3) { throw (Get-McmFakeException -Status 429 -ResponseHeaders @{ 'Retry-After' = '1' }) }
                 return @{ value = 'ok' }
             }
             $r = Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get -BaseDelaySeconds 1 -MaxDelaySeconds 1
@@ -218,7 +218,7 @@ Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
             Mock -CommandName Start-Sleep -MockWith { }
             Mock -CommandName Invoke-RestMethod -MockWith {
                 $script:n++
-                if ($script:n -eq 1) { throw (New-McmFakeException -Status 503) }
+                if ($script:n -eq 1) { throw (Get-McmFakeException -Status 503) }
                 return @{ value = 'ok' }
             }
             Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get -BaseDelaySeconds 1 -MaxDelaySeconds 1 | Out-Null
@@ -229,7 +229,7 @@ Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
             Mock -CommandName Start-Sleep -MockWith { }
             Mock -CommandName Invoke-RestMethod -MockWith {
                 $script:n++
-                if ($script:n -eq 1) { throw (New-McmFakeException -Status 502) }
+                if ($script:n -eq 1) { throw (Get-McmFakeException -Status 502) }
                 return @{ ok = $true }
             }
             Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get -BaseDelaySeconds 1 -MaxDelaySeconds 1 | Out-Null
@@ -239,17 +239,17 @@ Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
 
     Context 'no retry on non-retryable status' {
         It 'does not retry on 400' {
-            Mock -CommandName Invoke-RestMethod -MockWith { throw (New-McmFakeException -Status 400) }
+            Mock -CommandName Invoke-RestMethod -MockWith { throw (Get-McmFakeException -Status 400) }
             { Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get } | Should -Throw
             Should -Invoke Invoke-RestMethod -Times 1 -Exactly
         }
         It 'does not retry on 404' {
-            Mock -CommandName Invoke-RestMethod -MockWith { throw (New-McmFakeException -Status 404) }
+            Mock -CommandName Invoke-RestMethod -MockWith { throw (Get-McmFakeException -Status 404) }
             { Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get } | Should -Throw
             Should -Invoke Invoke-RestMethod -Times 1 -Exactly
         }
         It 'does not retry on 401' {
-            Mock -CommandName Invoke-RestMethod -MockWith { throw (New-McmFakeException -Status 401) }
+            Mock -CommandName Invoke-RestMethod -MockWith { throw (Get-McmFakeException -Status 401) }
             { Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get } | Should -Throw
             Should -Invoke Invoke-RestMethod -Times 1 -Exactly
         }
@@ -258,13 +258,13 @@ Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
     Context 'max-retry termination' {
         It 'gives up after MaxRetries+1 attempts' {
             Mock -CommandName Start-Sleep -MockWith { }
-            Mock -CommandName Invoke-RestMethod -MockWith { throw (New-McmFakeException -Status 503) }
+            Mock -CommandName Invoke-RestMethod -MockWith { throw (Get-McmFakeException -Status 503) }
             { Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get -MaxRetries 2 -BaseDelaySeconds 1 -MaxDelaySeconds 1 } | Should -Throw
             # The retry loop attempts MaxRetries+1 times (initial + MaxRetries retries)
             Should -Invoke Invoke-RestMethod -Times 3 -Exactly
         }
         It 'final error message contains the status code' {
-            Mock -CommandName Invoke-RestMethod -MockWith { throw (New-McmFakeException -Status 503) }
+            Mock -CommandName Invoke-RestMethod -MockWith { throw (Get-McmFakeException -Status 503) }
             { Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get -MaxRetries 0 } | Should -Throw -ExpectedMessage '*status=503*'
         }
     }
@@ -281,7 +281,7 @@ Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
             Mock -CommandName Start-Sleep -MockWith { $script:slept = $Seconds }
             Mock -CommandName Invoke-RestMethod -MockWith {
                 $script:n++
-                if ($script:n -eq 1) { throw (New-McmFakeException -Status 429 -ResponseHeaders @{ 'Retry-After' = '7' }) }
+                if ($script:n -eq 1) { throw (Get-McmFakeException -Status 429 -ResponseHeaders @{ 'Retry-After' = '7' }) }
                 return @{ ok = $true }
             }
             Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get -BaseDelaySeconds 1 | Out-Null
@@ -293,7 +293,7 @@ Describe 'Invoke-McmRest - retry behaviour (H2/H3)' {
             Mock -CommandName Start-Sleep -MockWith { $script:slept = $Seconds }
             Mock -CommandName Invoke-RestMethod -MockWith {
                 $script:n++
-                if ($script:n -eq 1) { throw (New-McmFakeException -Status 503) }
+                if ($script:n -eq 1) { throw (Get-McmFakeException -Status 503) }
                 return @{ ok = $true }
             }
             Invoke-McmRest -Uri 'https://x' -Headers @{} -Method Get -BaseDelaySeconds 3 -MaxDelaySeconds 60 | Out-Null

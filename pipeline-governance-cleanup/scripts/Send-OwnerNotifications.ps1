@@ -226,7 +226,7 @@ function Send-GraphEmail {
         [string]$To,
         [string]$Subject,
         [string]$Body,
-        [string]$Sender = ""
+        [string]$SenderAddress = ""
     )
 
     $message = @{
@@ -250,7 +250,7 @@ function Send-GraphEmail {
     # Determine UserId: explicit sender for application permissions; signed-in account for delegated.
     # Send-MgUserMail does NOT accept the literal "me" alias — the underlying Graph route is
     # /users/{id|upn}/sendMail, which rejects "me". Fall back to the authenticated principal.
-    if ([string]::IsNullOrEmpty($Sender)) {
+    if ([string]::IsNullOrEmpty($SenderAddress)) {
         $ctx = Get-MgContext
         if ($null -eq $ctx -or [string]::IsNullOrEmpty($ctx.Account)) {
             Write-Error "No -SenderEmail provided and no signed-in delegated account on Microsoft Graph context."
@@ -259,7 +259,7 @@ function Send-GraphEmail {
         $userId = $ctx.Account
     }
     else {
-        $userId = $Sender
+        $userId = $SenderAddress
     }
 
     $maxRetries = 3
@@ -457,7 +457,7 @@ You may need to manually add owner information to your inventory before sending 
             }
             else {
                 if ($PSCmdlet.ShouldProcess($record.OwnerEmail, "Send notification email")) {
-                    $success = Send-GraphEmail -To $record.OwnerEmail -Subject $subject -Body $body -Sender $SenderEmail
+                    $success = Send-GraphEmail -To $record.OwnerEmail -Subject $subject -Body $body -SenderAddress $SenderEmail
                     if ($success) {
                         $sent++
                         $status = "Sent"

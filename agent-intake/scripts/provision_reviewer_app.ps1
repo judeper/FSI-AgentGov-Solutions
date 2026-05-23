@@ -228,7 +228,7 @@ function Resolve-AccessToken {
     return $null
 }
 
-function Update-DataverseToken {
+function Get-RefreshedDataverseToken {
     param([Parameter(Mandatory = $true)][string]$ResolvedEnvironmentUrl)
 
     $az = Get-Command az -ErrorAction SilentlyContinue
@@ -326,7 +326,7 @@ function Invoke-DataverseRequest {
     $response = Invoke-WebRequest -Uri $uri -Method $Method -Headers $headers -Body $bodyJson -UseBasicParsing -SkipHttpErrorCheck
     if ($response.StatusCode -eq 401) {
         Write-Info "Dataverse token rejected (HTTP 401); refreshing via Azure CLI and retrying $Method $RelativeUri."
-        $refreshed = Update-DataverseToken -ResolvedEnvironmentUrl $EnvironmentUrl
+        $refreshed = Get-RefreshedDataverseToken -ResolvedEnvironmentUrl $EnvironmentUrl
         if ($refreshed) {
             $headers = Get-DataverseHeaders -Token $refreshed -SolutionUniqueName $SolutionUniqueName
             if ($Body) {
@@ -483,6 +483,7 @@ function Get-ExistingPublisher {
 }
 
 function New-PublisherRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $true)][hashtable]$Spec,
         [Parameter(Mandatory = $true)][string]$Token
@@ -495,6 +496,15 @@ function New-PublisherRecord {
         customizationoptionvalueprefix = [int]$Spec.publisher.customizationOptionValuePrefix
         description                    = $Spec.publisher.description
         supportingwebsiteurl           = 'https://judeper.github.io/FSI-AgentGov-Solutions/'
+    }
+
+    if (-not $PSCmdlet.ShouldProcess($Spec.publisher.uniqueName, 'Create Dataverse publisher')) {
+        return @{
+            publisherid         = '00000000-0000-0000-0000-000000000001'
+            uniquename          = $Spec.publisher.uniqueName
+            friendlyname        = $Spec.publisher.name
+            customizationprefix = $Spec.publisher.prefix
+        }
     }
 
     $response = Invoke-DataverseRequest -Method POST -Token $Token -RelativeUri 'publishers' -Body $body
@@ -548,6 +558,7 @@ function Get-ExistingSolution {
 }
 
 function New-SolutionRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $true)][hashtable]$Spec,
         [Parameter(Mandatory = $true)][string]$Token,
@@ -560,6 +571,15 @@ function New-SolutionRecord {
         version                 = $Spec.solutionVersion
         description             = 'Reviewer model-driven app and reviewer queue metadata for agent-intake Standard and Full routing.'
         'publisherid@odata.bind' = "/publishers($PublisherId)"
+    }
+
+    if (-not $PSCmdlet.ShouldProcess($Spec.solutionName, 'Create Dataverse solution')) {
+        return @{
+            solutionid   = '00000000-0000-0000-0000-000000000002'
+            uniquename   = $Spec.solutionName
+            friendlyname = $Spec.solutionDisplayName
+            version      = $Spec.solutionVersion
+        }
     }
 
     $response = Invoke-DataverseRequest -Method POST -Token $Token -RelativeUri 'solutions' -Body $body
@@ -629,7 +649,12 @@ function Get-ExistingAppRecord {
 }
 
 function New-AppRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param([Parameter(Mandatory = $true)][hashtable]$Spec)
+
+    if (-not $PSCmdlet.ShouldProcess($Spec.appDisplayName, 'Create reviewer model-driven app')) {
+        return
+    }
 
     Invoke-PacCommand -Arguments @(
         'model',
@@ -768,6 +793,7 @@ function ConvertTo-ViewLayoutXml {
 }
 
 function Set-ReviewerView {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $true)][hashtable]$ViewSpec,
         [Parameter(Mandatory = $true)][hashtable]$Spec,
@@ -792,12 +818,16 @@ function Set-ReviewerView {
 
     $existing = Get-ExistingViewRecord -ViewSpec $ViewSpec -Token $Token
     if ($null -eq $existing) {
-        Invoke-DataverseRequest -Method POST -Token $Token -RelativeUri 'savedqueries' -Body $payload -SolutionUniqueName $Spec.solutionName | Out-Null
-        Write-Info "Created system view '$($ViewSpec.name)'."
+        if ($PSCmdlet.ShouldProcess($ViewSpec.name, 'Create reviewer system view')) {
+            Invoke-DataverseRequest -Method POST -Token $Token -RelativeUri 'savedqueries' -Body $payload -SolutionUniqueName $Spec.solutionName | Out-Null
+            Write-Info "Created system view '$($ViewSpec.name)'."
+        }
     }
     else {
-        Invoke-DataverseRequest -Method PATCH -Token $Token -RelativeUri ("savedqueries({0})" -f $existing.savedqueryid) -Body $payload | Out-Null
-        Write-Info "Updated system view '$($ViewSpec.name)'."
+        if ($PSCmdlet.ShouldProcess($ViewSpec.name, 'Update reviewer system view')) {
+            Invoke-DataverseRequest -Method PATCH -Token $Token -RelativeUri ("savedqueries({0})" -f $existing.savedqueryid) -Body $payload | Out-Null
+            Write-Info "Updated system view '$($ViewSpec.name)'."
+        }
     }
 
     if (-not $script:ProvisionedViews.Contains($ViewSpec.name)) {
@@ -826,6 +856,7 @@ function Get-ExistingRoleRecord {
 }
 
 function New-RoleRecord {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [Parameter(Mandatory = $true)][hashtable]$RoleSpec,
         [Parameter(Mandatory = $true)][hashtable]$Spec,
@@ -837,6 +868,15 @@ function New-RoleRecord {
         name                        = $RoleSpec.name
         description                 = $RoleSpec.description
         'businessunitid@odata.bind' = "/businessunits($BusinessUnitId)"
+    }
+
+    if (-not $PSCmdlet.ShouldProcess($RoleSpec.name, 'Create reviewer security role')) {
+        return @{
+            roleid                     = '00000000-0000-0000-0000-000000000003'
+            name                       = $RoleSpec.name
+            '_businessunitid_value'    = $BusinessUnitId
+            roleprivileges_association = @()
+        }
     }
 
     $response = Invoke-DataverseRequest -Method POST -Token $Token -RelativeUri 'roles' -Body $body -SolutionUniqueName $Spec.solutionName

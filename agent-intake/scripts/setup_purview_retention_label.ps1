@@ -143,7 +143,7 @@ function Get-ResolvedAdminUpn {
     return $enteredUpn.Trim()
 }
 
-function New-ComplianceTagCommandText {
+function Get-ComplianceTagCommandText {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -200,7 +200,7 @@ function Add-RetentionLabelResult {
         }
     }
 
-    $commandText = New-ComplianceTagCommandText -Name $Name -RetentionDuration $RetentionDays -Comment $Comment -IsRecordLabel $IsRecordLabel
+    $commandText = Get-ComplianceTagCommandText -Name $Name -RetentionDuration $RetentionDays -Comment $Comment -IsRecordLabel $IsRecordLabel
     if ($DryRun.IsPresent) {
         Write-Host ("[DRY RUN] {0}" -f $commandText)
         return [pscustomobject]@{

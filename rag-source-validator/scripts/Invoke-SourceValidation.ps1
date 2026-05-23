@@ -338,6 +338,7 @@ function Get-KnowledgeSources {
 }
 
 function New-ValidationResult {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param([string]$Environment, [string]$Token, [hashtable]$Result)
 
     $headers = @{
@@ -349,11 +350,15 @@ function New-ValidationResult {
 
     $uri = "$Environment/api/data/v9.2/fsi_validationresults"
     $body = $Result | ConvertTo-Json -Depth 5
+    $target = if ($Result.ContainsKey('fsi_name')) { $Result.fsi_name } else { 'fsi_validationresults' }
 
-    Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    if ($PSCmdlet.ShouldProcess($target, 'Create validation result')) {
+        Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    }
 }
 
 function Update-SourceHash {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [string]$Environment,
         [string]$Token,
@@ -383,10 +388,13 @@ function Update-SourceHash {
     }
     $body = $update | ConvertTo-Json
 
-    Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    if ($PSCmdlet.ShouldProcess($SourceId, 'Update source hash')) {
+        Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    }
 }
 
 function Update-SourceStatus {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [string]$Environment,
         [string]$Token,
@@ -407,10 +415,13 @@ function Update-SourceStatus {
         fsi_lastvalidated = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     } | ConvertTo-Json
 
-    Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    if ($PSCmdlet.ShouldProcess($SourceId, 'Update source status')) {
+        Invoke-RestMethod -Uri $uri -Headers $headers -Method Patch -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    }
 }
 
 function New-SourceChange {
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [string]$Environment,
         [string]$Token,
@@ -444,7 +455,9 @@ function New-SourceChange {
     $uri = "$Environment/api/data/v9.2/fsi_sourcechanges"
     $body = $change | ConvertTo-Json -Depth 5
 
-    Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    if ($PSCmdlet.ShouldProcess($SourceId, 'Create source change record')) {
+        Invoke-RestMethod -Uri $uri -Headers $headers -Method Post -Body $body -MaximumRetryCount 3 -RetryIntervalSec 5 | Out-Null
+    }
 }
 
 # Main script
