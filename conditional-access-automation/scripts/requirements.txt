@@ -1,2 +1,7 @@
 msal>=1.24.0,<2.0.0
 requests>=2.31.0,<3.0.0
+# azure-identity is required by scripts/shared/dataverse_client.py for
+# managed-identity, workload-identity, and certificate auth modes. The shared
+# client lazy-imports it with a clear ImportError when the credential class is
+# selected, but production deployments should install it up front.
+azure-identity>=1.15.0,<2.0.0

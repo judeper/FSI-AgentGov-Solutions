@@ -1,7 +1,7 @@
 id: conditional-access-automation
 name: Conditional Access Automation
 description: Automated deployment and compliance monitoring of Entra ID Conditional Access policies for Microsoft 365 AI workloads (Copilot Studio, Agent Builder, M365 Copilot).
-version: 2.0.1
+version: 2.0.2
 status: live
 domain: access-identity
 tier: '2'

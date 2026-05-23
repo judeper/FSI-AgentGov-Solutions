@@ -48,9 +48,9 @@ Common issues and resolutions when deploying or running the COI Testing Framewor
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| `ZeroDivisionError` in pass-rate calculation | No test results collected | Verify scenarios exist for the specified category; run without `--category` to execute all |
+| `ZeroDivisionError` in pass-rate calculation | No test results collected (historical regression — guarded since v1.1.2 with an explicit `len(self.results) > 0` check before division) | Verify scenarios exist for the specified category; run without `--category` to execute all. Custom callers invoking `generate_report()` on an empty runner now receive `Pass Rate: 0.0%` rather than an error. |
 | JSON report output is truncated | Console buffer limit | Redirect output to a file: `python scripts/run_coi_tests.py --report json --dry-run --allow-skipped > results.json` |
-| ANSI color codes appear in log files | Terminal escape sequences in non-TTY output | Redirect to file and strip codes, or pipe through a tool that removes ANSI sequences |
+| ANSI color codes appear in log files | Terminal escape sequences in non-TTY output | The runner now suppresses color codes automatically when `sys.stderr` is not a TTY (v1.1.2+). For older releases, redirect to file and strip codes, or pipe through a tool that removes ANSI sequences. |
 
 ## Getting Help
 

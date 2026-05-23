@@ -3,7 +3,7 @@
     RootModule = 'conditional-access-automation.psm1'
     
     # Version number of this module
-    ModuleVersion     = '2.0.1'
+    ModuleVersion     = '2.0.2'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -102,6 +102,20 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
+## 2.0.2 - Council review remediation
+
+### Fixed
+- compliance-monitoring.md: removed Teams incoming-webhook sample that contradicted the documented Teams-connector flow approach; replaced with a Teams-connector / environment-variable shape (council review MAJ-02).
+- .ralph-config.json: refreshed stale domain facts about fsi_overallstatus and Get-ZoneClassification column names; both code paths have used the correct logical names since v2.0.0 (council review MAJ-03).
+- templates/CA-RiskBased-Zone3-Block.json: standardised break-glass placeholders to <break-glass-1>/<break-glass-2> to match the other nine baseline templates and added the _metadata block for governance traceability (council review MIN-01, MIN-02).
+- docs/policy-templates.md: removed empty signInRiskLevels/userRiskLevels arrays from the CA-CopilotStudio-Zone3 spec so the doc matches the deployed template (council review MIN-03).
+
+### Changed
+- scripts/requirements.txt: pinned azure-identity for managed-identity / workload-identity / certificate auth modes used by scripts/shared/dataverse_client.py (council review MIN-04).
+
+### Notes
+- Council review MAJ-01 (persistentBrowser missing from CA-AgentBuilder-Zone3.json) is a FALSE POSITIVE; the block has been present since v1.x. No change.
+
 ## 2.0.1 - 2026-Q2 Microsoft Learn refresh
 
 ### Fixed

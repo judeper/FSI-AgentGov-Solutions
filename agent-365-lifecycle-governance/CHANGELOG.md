@@ -4,14 +4,31 @@ All notable changes to the Agent 365 Lifecycle Governance solution.
 
 ## [Unreleased]
 
+## [1.1.5] - 2026-05-23
+
 ### Fixed
 
-- Refreshed Microsoft Agent 365 / Microsoft Entra Agent ID guidance for 2026-Q2: updated Agent Registry automation from stale `/beta/agentRegistry/agents` + `sponsor@odata.bind` patterns to current Graph beta `agentInstances` + `ownerIds` guidance.
-- Replaced hard-coded Agent 365 price and outdated Entra ID Governance P2 wording with current Microsoft Learn licensing language and validation caveats.
-- Corrected sponsor-user lifecycle workflow scope, workload identity Conditional Access caveats, and stale OBO/Frontier service-status wording.
-- Corrected Dataverse zone option-set remapping between `fsi_acv_zone` and `fsi_ALG_governancezone`.
-- Added managed identity, workload identity federation, and certificate auth modes for Python Dataverse helpers; retained client-secret auth only as a legacy dev-only fallback.
-- Bumped generated catalog metadata to v1.1.4 and corrected Tier 2 manifest metadata.
+- **Major**: `docs/flow-configuration.md` Environment Variables Reference section described `fsi_ALG_DeletionHoldDays` and `fsi_ALG_AgentRegistryApiVersion` as future work, but `scripts/create_alg_environment_variables.py` already deploys both (lines 116, 123). Added both rows to the env-var table and rewrote the two stale notes to acknowledge the variables are deployed and document how Flow 4 Step 6b and Flow 1 Step 2 should reference them. (council review MAJ-01)
+- **Major**: `docs/prerequisites.md` Pre-Deployment Checklist said "All 7 API permissions granted and admin-consented" but the API Permissions table lists 8 permissions and `DELIVERY-CHECKLIST.md` Phase 1 says "Grant all 8 API permissions". Aligned the checklist count to 8. (council review MAJ-02)
+- **Major**: `templates/lifecycle-config.sample.json` was missing `fsi_ALG_DeletionHoldDays` and `fsi_ALG_AgentRegistryApiVersion`, which `scripts/create_alg_environment_variables.py` deploys. Added both keys with their script defaults (`30` and `"v1.0"`). (council review MAJ-03)
+- **Minor**: `scripts/Test-LifecycleCompliance.ps1` line 92 comment referenced `fsi_ALG_accessreviewstatus` (used on the lifecycle record), but the query targets `fsi_accessreview.fsi_reviewstatus`, which uses the `fsi_ALG_reviewstatus` option set. The integer value (`100000003` = Overdue) is correct in both option sets, so no runtime impact; corrected the comment to reference the actual option set and added the full value enumeration including `Escalated`. (council review MIN-02)
+- Bumped solution version to v1.1.5 (manifest, README, doc footers, managed solution wrapper version).
+
+### Changed
+
+- **Refresh (rolled up from prior Unreleased)**: Refreshed Microsoft Agent 365 / Microsoft Entra Agent ID guidance for 2026-Q2; updated Agent Registry automation from stale `/beta/agentRegistry/agents` + `sponsor@odata.bind` patterns to current Graph beta `agentInstances` + `ownerIds` guidance.
+- **Refresh (rolled up from prior Unreleased)**: Replaced hard-coded Agent 365 price and outdated Entra ID Governance P2 wording with current Microsoft Learn licensing language and validation caveats.
+- **Refresh (rolled up from prior Unreleased)**: Corrected sponsor-user lifecycle workflow scope, workload identity Conditional Access caveats, and stale OBO/Frontier service-status wording.
+- **Refresh (rolled up from prior Unreleased)**: Corrected Dataverse zone option-set remapping between `fsi_acv_zone` and `fsi_ALG_governancezone`.
+- **Refresh (rolled up from prior Unreleased)**: Added managed identity, workload identity federation, and certificate auth modes for Python Dataverse helpers; retained client-secret auth only as a legacy dev-only fallback.
+- **Refresh (rolled up from prior Unreleased)**: Bumped generated catalog metadata and corrected Tier 2 manifest metadata.
+
+### Notes
+
+- **MIN-03 (deferred)**: Council review recommended adding an explicit "Resolve Agent Application ID" step in Flow 3 (a GET to `/v1.0/servicePrincipals/{objectId}?$select=appId`) before the sign-in log query. Deferred to a future minor release as a standalone Flow 3 documentation section addition (out of scope for a patch bump).
+- **MIN-04 (no action — already advised)**: Council noted the Flow 2 access-review payload (`scope` property) should be validated against the current Microsoft Graph access reviews API. The `DELIVERY-CHECKLIST.md` Phase 3 already requires non-production API validation; no documentation change needed beyond what Phase 3 covers.
+- **MIN-05 (no action — intentional design)**: Council noted `fsi_lifecyclecomplianceevent` uses string `fsi_agentid`/`fsi_agentname` instead of a lookup to `fsi_agentlifecyclerecord`. This is intentional per the schema comment ("stored as string for immutability") so event records survive parent deletion. Confirmed by reviewer as a positive design choice; no change.
+
 
 ## [1.1.4] - 2026-05-04
 

@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Conditional Access Automation
 
-> **Version:** v2.0.1
+> **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 

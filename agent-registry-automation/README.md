@@ -9,7 +9,7 @@ coe_function: enable
 ---
 # Agent Registry Automation
 
-> **Version:** v2.1.0
+> **Version:** v2.1.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -266,4 +266,4 @@ For issues and feature requests, see [FSI-AgentGov-Solutions](https://github.com
 
 ---
 
-*FSI Agent Governance Framework — Agent Registry Automation v2.1.0*
+*FSI Agent Governance Framework — Agent Registry Automation v2.1.1*

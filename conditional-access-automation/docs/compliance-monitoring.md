@@ -371,21 +371,39 @@ Both Power Automate flows use the **Teams connector** (`PostCardToConversation` 
 
 ### Sample Alert Configuration
 
+Alerts are routed via the Teams connector flow (see "Teams Alert Setup" above);
+incoming webhooks are NOT used. Severity-to-channel routing is expressed in
+flow configuration, not in a separate config file. Set one Teams group/channel
+per severity level by populating the corresponding environment variables in
+your Dataverse solution, then add a Switch action in the alert flow that
+selects the channel based on the incoming severity field. Example shape:
+
 ```json
 {
   "alerts": {
     "critical": {
-      "webhook": "<teams-webhook-critical>",
+      "connectionReference": "fsi_cr_teams_conditionalaccessautomation",
+      "teamsGroupIdVar": "fsi_CAA_TeamsGroupId",
+      "teamsChannelIdVar": "fsi_CAA_TeamsChannelId_Critical",
       "events": ["PolicyDisabled", "PolicyDeleted", "BreakGlassUsed"]
     },
     "high": {
-      "webhook": "<teams-webhook-high>",
+      "connectionReference": "fsi_cr_teams_conditionalaccessautomation",
+      "teamsGroupIdVar": "fsi_CAA_TeamsGroupId",
+      "teamsChannelIdVar": "fsi_CAA_TeamsChannelId_High",
       "events": ["ExclusionAdded", "GrantControlWeakened"]
     },
     "medium": {
-      "webhook": "<teams-webhook-ops>",
+      "connectionReference": "fsi_cr_teams_conditionalaccessautomation",
+      "teamsGroupIdVar": "fsi_CAA_TeamsGroupId",
+      "teamsChannelIdVar": "fsi_CAA_TeamsChannelId_Ops",
       "events": ["SessionTimeoutChanged", "ComplianceScoreLow"]
     }
   }
 }
 ```
+
+The per-severity `fsi_CAA_TeamsChannelId_*` environment variables are optional
+overrides for `fsi_CAA_TeamsChannelId`. If you do not need severity-based
+channel routing, leave them unset and the flow falls back to the single
+default channel.

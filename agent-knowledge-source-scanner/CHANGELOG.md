@@ -4,6 +4,24 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-23
+
+### Fixed
+
+- **Major**: Align `Invoke-GraphPermissionScan.ps1` `.NOTES` version banner with the solution version (was `1.2.0`, now matches the solution). `scripts/Invoke-GraphPermissionScan.ps1:47`. (council review MAJ-01)
+
+### Changed
+
+- **Minor**: Document the batch-request ID-to-`ItemIds`-index contract in the Graph scanner so future edits to either side update both. `scripts/Invoke-GraphPermissionScan.ps1:305-317`. (council review MIN-01)
+- **Minor**: Comment the literal `c:0(.s|true` SharePoint claims encoding for "Everyone except external users" so it is not mistaken for a regex or typo. `scripts/Get-KnowledgeSourceItemPermissions.ps1:599-603`. (council review MIN-04)
+- **Minor**: Note in `docs/troubleshooting.md` that `Register-PnPManagementShellAccess` applies only to PnP 2.x releases prior to the September 2024 multi-tenant PnP app retirement; later PnP 2.x point releases require a tenant-specific app registration. (council review MIN-07)
+- **Minor**: Catalog row in root `CLAUDE.md` Solutions table refreshed (was `v1.1.0`, now `v1.1.2`). (council review MIN-06)
+
+### Notes
+
+- Council review MIN-02 (port `Get-ItemRiskScore` to the Graph scanner) and MIN-03 (add `-OutputPath` CSV export to the Graph scanner) are DEFERRED: both are net-new feature work rather than fixes and warrant their own minor bump with paired test coverage. Tracked for a future v1.2.0.
+- Council review MIN-05 (`$IncludeCompliant` accessed via PowerShell dynamic scoping inside `Get-ItemPermissionDetails`) is DEFERRED: council classified this as a style preference, "not a bug"; refactoring to an explicit parameter would touch the function signature and call sites without changing behavior.
+
 ## [1.1.1] - 2026-05-17
 
 ### Added

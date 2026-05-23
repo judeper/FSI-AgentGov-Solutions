@@ -1,7 +1,7 @@
 id: agent-365-lifecycle-governance
 name: Agent 365 Lifecycle Governance
 description: Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds.
-version: 1.1.4
+version: 1.1.5
 status: live
 domain: lifecycle-ops
 tier: '2'
