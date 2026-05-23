@@ -61,12 +61,12 @@ OPTIONSETS = {
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "SessionControls", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "AuthStrength", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "PIMSettings", "LanguageCode": 1033}]}},
-            {"Value": 4, "Label": {"LocalizedLabels": [{"Label": "BreakGlass", "LanguageCode": 1033}]}},
-            {"Value": 5, "Label": {"LocalizedLabels": [{"Label": "ConflictAudit", "LanguageCode": 1033}]}},
-            {"Value": 6, "Label": {"LocalizedLabels": [{"Label": "Orchestrator", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "SessionControls", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "AuthStrength", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "PIMSettings", "LanguageCode": 1033}]}},
+            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "BreakGlass", "LanguageCode": 1033}]}},
+            {"Value": 100000005, "Label": {"LocalizedLabels": [{"Label": "ConflictAudit", "LanguageCode": 1033}]}},
+            {"Value": 100000006, "Label": {"LocalizedLabels": [{"Label": "Orchestrator", "LanguageCode": 1033}]}},
         ],
     },
 }

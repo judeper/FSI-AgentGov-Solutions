@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Session Security Configurator
 
-> **Version:** v1.2.0
+> **Version:** v1.3.0
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
