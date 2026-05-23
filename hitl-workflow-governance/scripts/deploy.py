@@ -16,7 +16,11 @@ import os
 import sys
 import time
 
-from hwg_client import HWGClient
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
+)
+from dataverse_client import DataverseClient  # noqa: E402
+
 from create_hwg_dataverse_schema import create_schema
 from create_hwg_environment_variables import create_environment_variables
 from create_hwg_connection_references import create_connection_references
@@ -56,7 +60,7 @@ Post-Deployment Steps
 
 
 def run_deployment(
-    client: HWGClient,
+    client: DataverseClient,
     dry_run: bool = False,
     schema_only: bool = False,
     env_vars_only: bool = False,
@@ -69,7 +73,8 @@ def run_deployment(
     When a selective flag is provided, only that step runs.
 
     Args:
-        client: Authenticated HWGClient instance
+        client: Authenticated shared DataverseClient instance (constructed in
+            live mode; ``dry_run`` is gated by each step locally)
         dry_run: Preview mode flag
         schema_only: Deploy only Dataverse schema
         env_vars_only: Deploy only environment variables
@@ -262,13 +267,19 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        client = HWGClient(
+        # NOTE: dry_run is deliberately NOT passed to the shared
+        # DataverseClient (canonical reference:
+        # cross-tenant-external-sharing-governance/scripts/
+        #   migrate_ctsg_optionsets_v1_1_0.py lines 238-267). Doing so would
+        # short-circuit READS in every nested step (existence checks,
+        # test_connection, etc.). Writes are gated locally by each create_*
+        # function.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         run_deployment(

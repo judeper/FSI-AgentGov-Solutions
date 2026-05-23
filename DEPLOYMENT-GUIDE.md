@@ -104,7 +104,7 @@ All other solutions operate independently and can be deployed in any order based
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.0 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.1 | personal, team, enterprise |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.2 | personal, team, enterprise |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.1 | team, enterprise |
 | [Message Center Monitor](./message-center-monitor/) | 2 | v2.5.1 | enterprise |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.2.1 | personal, team, enterprise |

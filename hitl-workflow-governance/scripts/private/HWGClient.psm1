@@ -13,7 +13,7 @@
 
 .NOTES
     Module: HWGClient.psm1
-    Version: 1.0.0
+    Version: 1.1.2
     Requires: PowerShell 7.0+
     Author: FSI Agent Governance Team
 #>
@@ -83,25 +83,21 @@ $script:IntToViolationStatus = @{
     100000003 = 'Resolved'
 }
 
-# Action category picklist mapping (classifies the action the HITL checkpoint guards)
-$script:ActionCategoryToInt = @{
-    'Write'              = 100000000
-    'Financial'          = 100000001
-    'ExternalSharing'    = 100000002
-    'PiiProcessing'      = 100000003
-    'CustomerFacing'     = 100000004
-    'InternalReadOnly'   = 100000005
-    'Unknown'            = 100000006
-}
-$script:IntToActionCategory = @{
-    100000000 = 'Write'
-    100000001 = 'Financial'
-    100000002 = 'ExternalSharing'
-    100000003 = 'PiiProcessing'
-    100000004 = 'CustomerFacing'
-    100000005 = 'InternalReadOnly'
-    100000006 = 'Unknown'
-}
+# Action category labels used by Get-ActionCategory for local policy evaluation.
+# Categories are string labels surfaced in PSCustomObject output for policy
+# matching only — they are NOT persisted to Dataverse because no
+# fsi_ActionCategory picklist column exists in the schema. The previous
+# integer-mapping hashtables (ActionCategoryToInt / IntToActionCategory) were
+# removed in v1.1.2 as orphaned code (no schema backing, never written).
+$script:ActionCategoryLabels = @(
+    'Write',
+    'Financial',
+    'ExternalSharing',
+    'PiiProcessing',
+    'CustomerFacing',
+    'InternalReadOnly',
+    'Unknown'
+)
 
 #endregion
 
@@ -902,8 +898,14 @@ function Get-BotHitlSettings {
         }
 
         $baseUrl = $DataverseUrl.TrimEnd('/')
-        $select = "botcomponentid,name,componenttype,content,_parentbotid_value"
-        $filter = "_parentbotid_value eq '$BotId' and statecode eq 0"
+        # M-5: align to _botid_value to match the production scanning scripts
+        # (Get-AgentHitlSettings.ps1 and Test-HitlCheckpointConfiguration.ps1).
+        # The Dataverse botcomponent lookup attribute name has varied across
+        # Copilot Studio platform versions; the active scanning path keys on
+        # _botid_value, so this helper now matches. Verify in your tenant and
+        # switch to _parentbotid_value uniformly if your version requires it.
+        $select = "botcomponentid,name,componenttype,content,_botid_value"
+        $filter = "_botid_value eq '$BotId' and statecode eq 0"
 
         $uri = "$baseUrl/api/data/v9.2/botcomponents?`$select=$select&`$filter=$filter"
 
@@ -1034,7 +1036,7 @@ function Get-BotHitlSettings {
                     $hitlSettings += [PSCustomObject]@{
                         ComponentId       = $component.botcomponentid
                         ComponentName     = $component.name
-                        BotId             = $component._parentbotid_value
+                        BotId             = $component._botid_value
                         ActionName        = $actionName
                         CheckpointType    = $checkpointType
                         HasHitlCheckpoint = $isHitlCheckpoint

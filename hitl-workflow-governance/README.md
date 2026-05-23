@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # HITL Workflow Governance
 
-> **Version:** v1.1.1
+> **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Preview — The Request for Information and Run a Multistage Approval actions remain preview in Microsoft Learn and should be reviewed against preview terms before regulated-data use.
@@ -245,6 +245,7 @@ Zone policy thresholds are configured in `scripts/private/Get-ExpectedHitlPolicy
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.1.2 | May 2026 | Council-review remediation — C-1/C-2 phantom-column fixes, M-1 zone policy alignment, M-2 migration to shared DataverseClient, M-3 ActionCategory cleanup, M-4 flow-level config doc clarification, M-5 botcomponents lookup alignment, m-6 MSAL.PS → Az.Accounts |
 | v1.1.1 | May 2026 | Microsoft Learn 2026-Q2 refresh — current HITL connector operation IDs, secretless auth guidance, Teams card version, exception approval schema/docs |
 | v1.1.0 | April 2026 | Runtime reliability and Dataverse schema alignment fixes |
 | v1.0.0 | April 2026 | Initial release — HITL checkpoint detection, zone-based policy evaluation, evidence export |

@@ -14,7 +14,10 @@ import argparse
 import os
 import sys
 
-from hwg_client import HWGClient
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
+)
+from dataverse_client import DataverseClient  # noqa: E402
 
 
 # =============================================================================
@@ -51,14 +54,18 @@ CONNECTION_REF_DEFINITIONS = [
 
 
 def create_connection_reference(
-    client: HWGClient, definition: dict, dry_run: bool = False,
+    client: DataverseClient, definition: dict, dry_run: bool = False,
 ) -> None:
     """Create a single connection reference in Dataverse.
 
     Checks for existence first -- skips if already present.
 
+    NOTE: ``dry_run`` is **not** passed to the shared DataverseClient
+    constructor; writes are gated locally so that the existence read stays
+    live in preview mode.
+
     Args:
-        client: HWGClient instance
+        client: shared DataverseClient instance
         definition: Dict with logical_name, display_name, connector_id,
                      description
         dry_run: Preview mode flag
@@ -68,12 +75,13 @@ def create_connection_reference(
     connector_id = definition["connector_id"]
     description = definition["description"]
 
-    # Idempotent check — skip if already exists
+    # Idempotent check — shared client returns a list (not a dict-with-value),
+    # and the keyword argument is filter_expr (not filter).
     existing = client.query(
         "connectionreferences",
-        filter=f"connectionreferencelogicalname eq '{logical_name}'",
+        filter_expr=f"connectionreferencelogicalname eq '{logical_name}'",
     )
-    if existing["value"]:
+    if existing:
         print(f"  {logical_name}: already exists, skipping")
         return
 
@@ -85,12 +93,16 @@ def create_connection_reference(
         "description": description,
     }
 
+    if dry_run:
+        print(f"  [DRY RUN] Would create connection reference: {logical_name} ({connector_id})")
+        return
+
     client.create_record("connectionreferences", ref_data)
     print(f"  {logical_name}: created ({connector_id})")
 
 
 def create_connection_references(
-    client: HWGClient, dry_run: bool = False,
+    client: DataverseClient, dry_run: bool = False,
 ) -> None:
     """Deploy all HWG connection references to Dataverse.
 
@@ -193,13 +205,18 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        client = HWGClient(
+        # NOTE: dry_run is deliberately NOT passed to the shared
+        # DataverseClient (canonical reference:
+        # cross-tenant-external-sharing-governance/scripts/
+        #   migrate_ctsg_optionsets_v1_1_0.py lines 238-267). Doing so would
+        # short-circuit the existence READ above, making preview report all
+        # references as "would create". Writes are gated locally instead.
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         create_connection_references(client, dry_run=args.dry_run)

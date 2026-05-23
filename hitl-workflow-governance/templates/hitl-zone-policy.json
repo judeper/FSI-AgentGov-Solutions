@@ -21,7 +21,7 @@
       "sampleRate": 10,
       "slaHours": 24,
       "requiredForActionTypes": ["financial", "externalTransfer", "piiProcessing"],
-      "minimumInputs": 1,
+      "minimumInputs": 0,
       "severity": "High",
       "regulatoryContext": "FINRA Rule 3110(b) recommends structured oversight for shared agent outputs. GLBA Section 501(b) requires safeguards for customer financial information."
     },
