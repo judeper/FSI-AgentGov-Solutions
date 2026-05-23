@@ -423,7 +423,7 @@ After either branch (use a common action after the condition):
 
 - The Parse_Results schema must match the runbook output structure exactly
 - If the runbook output changes (e.g., new fields added), update the schema in the flow
-- Key ACRD schema differences from other solutions: `SourceZone`/`TargetZone` fields per violation, `TargetAgentId`/`TargetAgentName` for communication target, `CommunicationPattern` for the detected pattern type
+- Key ACRD schema differences from other solutions: `SourceZone`/`TargetZone` fields per violation, `TargetAgentId`/`TargetAgentName` for communication target. The detected communication pattern is captured in the per-scan `SkillSnapshot` array inside `fsi_summaryjson` (the legacy top-level `CommunicationPattern` field was removed in v1.1.0; see CHANGELOG).
 
 ### Approval Flow Issues
 
@@ -439,4 +439,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Agent Communication Restriction Detector -- Flow Setup Guide v1.1.1*
+*Agent Communication Restriction Detector -- Flow Setup Guide v1.2.1*

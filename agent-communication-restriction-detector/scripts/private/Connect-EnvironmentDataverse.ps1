@@ -42,7 +42,7 @@
 
 .NOTES
     File: Connect-EnvironmentDataverse.ps1
-    Version: 1.1.0
+    Version: 1.2.1
     Requires: Windows PowerShell 5.1+
 #>
 
@@ -51,7 +51,10 @@
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
 param(
     [Parameter(Mandatory)]
-    [ValidatePattern('^https://.*\.crm.*\.dynamics\.com/?$')]
+    # Accept commercial, GCC, GCC High, DoD (.crm.microsoftdynamics.us), and
+    # Germany (.crm.microsoftdynamics.de) sovereign cloud URLs.
+    # (council review M-4)
+    [ValidatePattern('^https://[a-zA-Z0-9\-]+\.(crm[0-9]*\.dynamics\.com|crm\.microsoftdynamics\.(us|de))/?$')]
     [string]$DataverseUrl,
 
     [Parameter(ParameterSetName = 'ServicePrincipal', Mandatory)]

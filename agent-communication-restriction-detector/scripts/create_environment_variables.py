@@ -18,13 +18,22 @@ Variables consumed by ACRD validation runbook (via ACRDClient):
 Variables for Teams alerting:
   - fsi_ACRD_TeamsGroupId: Teams group GUID for posting alerts
   - fsi_ACRD_TeamsChannelId: Teams channel GUID for posting alerts
+
+Version: 1.2.1
+
+Migrated in v1.2.1 from the solution-local `acrd_client.py` to the shared
+`scripts/shared/dataverse_client.py`. (council review M-1)
 """
 
 import argparse
 import os
 import sys
 
-from acrd_client import ACRDClient
+# Import shared DataverseClient (the local acrd_client.py was retired in v1.2.1).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared")
+)
+from dataverse_client import DataverseClient
 
 
 # =============================================================================
@@ -140,7 +149,7 @@ ENV_VAR_DEFINITIONS = [
 
 
 def create_environment_variable(
-    client: ACRDClient, definition: dict, dry_run: bool = False,
+    client: DataverseClient, definition: dict, dry_run: bool = False,
 ) -> None:
     """Create a single environment variable definition and default value.
 
@@ -149,7 +158,7 @@ def create_environment_variable(
     is specified.
 
     Args:
-        client: ACRDClient instance
+        client: Shared DataverseClient instance
         definition: Dict with schema_name, display_name, type, default_value,
                      description
         dry_run: Preview mode flag
@@ -160,12 +169,13 @@ def create_environment_variable(
     default_value = definition["default_value"]
     description = definition["description"]
 
-    # Idempotent check — skip if already exists
+    # Idempotent check — skip if already exists.
+    # Shared DataverseClient.query() returns a list directly; param is `filter_expr`.
     existing = client.query(
         "environmentvariabledefinitions",
-        filter=f"schemaname eq '{schema_name}'",
+        filter_expr=f"schemaname eq '{schema_name}'",
     )
-    if existing["value"]:
+    if existing:
         print(f"  {schema_name}: already exists, skipping")
         return
 
@@ -195,7 +205,7 @@ def create_environment_variable(
 
 
 def create_environment_variables(
-    client: ACRDClient, dry_run: bool = False,
+    client: DataverseClient, dry_run: bool = False,
 ) -> None:
     """Deploy all ACRD environment variables to Dataverse.
 
@@ -203,7 +213,7 @@ def create_environment_variables(
     values. All operations are idempotent -- safe to re-run.
 
     Args:
-        client: ACRDClient instance
+        client: Shared DataverseClient instance
         dry_run: Preview mode flag
     """
     print("=" * 60)
@@ -264,17 +274,48 @@ def main() -> None:
     parser.add_argument(
         "--client-id",
         default=os.environ.get("ACRD_CLIENT_ID"),
-        help="Service principal app ID (or set ACRD_CLIENT_ID env var)",
+        help="Application (client) ID (or set ACRD_CLIENT_ID env var)",
     )
     parser.add_argument(
         "--client-secret",
         default=os.environ.get("ACRD_CLIENT_SECRET"),
-        help="Service principal secret (or set ACRD_CLIENT_SECRET env var)",
+        # legacy: dev-only — replace with managed identity in production
+        help=(
+            "Service principal secret (or set ACRD_CLIENT_SECRET env var). "
+            "Dev-only fallback; prefer managed identity in production."
+        ),
     )
     parser.add_argument(
         "--environment-url",
         default=os.environ.get("ACRD_ENVIRONMENT_URL"),
         help="Dataverse environment URL (or set ACRD_ENVIRONMENT_URL env var)",
+    )
+    parser.add_argument(
+        "--auth-mode",
+        default=os.environ.get("ACRD_AUTH_MODE"),
+        choices=[
+            "interactive",
+            "managed-identity",
+            "workload-identity",
+            "certificate",
+            "client-secret",
+        ],
+        help="Authentication mode for the shared DataverseClient.",
+    )
+    parser.add_argument(
+        "--certificate-path",
+        default=os.environ.get("ACRD_CERTIFICATE_PATH"),
+        help="Path to PEM/PFX certificate for --auth-mode certificate.",
+    )
+    parser.add_argument(
+        "--certificate-password",
+        default=os.environ.get("ACRD_CERTIFICATE_PASSWORD"),
+        help="Optional certificate password for --auth-mode certificate.",
+    )
+    parser.add_argument(
+        "--access-token",
+        default=os.environ.get("ACRD_ACCESS_TOKEN"),
+        help="Externally-acquired Dataverse bearer token (overrides other auth).",
     )
     parser.add_argument(
         "--interactive",
@@ -290,21 +331,32 @@ def main() -> None:
     args = parser.parse_args()
 
     # Validate required arguments
-    if not args.tenant_id:
-        print("ERROR: --tenant-id or ACRD_TENANT_ID required")
-        sys.exit(1)
     if not args.environment_url:
         print("ERROR: --environment-url or ACRD_ENVIRONMENT_URL required")
         sys.exit(1)
+    if (
+        not args.tenant_id
+        and not args.access_token
+        and args.auth_mode not in ("managed-identity", "workload-identity")
+    ):
+        print(
+            "ERROR: --tenant-id or ACRD_TENANT_ID required "
+            "(not needed for managed-identity / workload-identity / --access-token)"
+        )
+        sys.exit(1)
 
     try:
-        client = ACRDClient(
+        client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
             client_id=args.client_id,
             client_secret=args.client_secret,
+            access_token=args.access_token,
             interactive=args.interactive,
             dry_run=args.dry_run,
+            auth_mode=args.auth_mode,
+            certificate_path=args.certificate_path,
+            certificate_password=args.certificate_password,
         )
 
         create_environment_variables(client, dry_run=args.dry_run)

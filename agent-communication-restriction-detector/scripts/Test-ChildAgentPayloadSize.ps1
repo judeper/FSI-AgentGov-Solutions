@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates child-agent input/output payload sizes against the documented
     Copilot Studio 1 MB limit.
@@ -38,7 +38,7 @@
 
 .NOTES
     File: Test-ChildAgentPayloadSize.ps1
-    Version: 1.2.0
+    Version: 1.2.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 
@@ -53,7 +53,9 @@ function Test-ChildAgentPayloadSize {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter()]
-        [ValidatePattern('^https://[a-zA-Z0-9\-]+\.crm[0-9]*\.dynamics\.com')]
+        # Accept commercial, GCC, GCC High, DoD, and Germany sovereign cloud URLs.
+        # (council review M-4)
+        [ValidatePattern('^https://[a-zA-Z0-9\-]+\.(crm[0-9]*\.dynamics\.com|crm\.microsoftdynamics\.(us|de))/?$')]
         [string]$DataverseUrl,
 
         [ValidateRange(1, 1024)]
@@ -121,7 +123,11 @@ function Test-ChildAgentPayloadSize {
             # ---------------------------------------------------------------
             $apiBase = "$($dvUrl.TrimEnd('/'))/api/data/v9.2"
             try {
-                $token = (Connect-EnvironmentDataverse -EnvironmentUrl $dvUrl).AccessToken
+                # Connect-EnvironmentDataverse returns the bearer token string directly
+                # (not an object wrapper). Accessing .AccessToken yielded $null and produced
+                # HTTP 401 on every Dataverse call. (council review C-3)
+                $token = & (Join-Path $privatePath 'Connect-EnvironmentDataverse.ps1') `
+                    -DataverseUrl $dvUrl
             } catch {
                 Write-Warning "Failed to connect to '$envDisplayName': $_"
                 continue

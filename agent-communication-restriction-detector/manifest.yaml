@@ -1,7 +1,7 @@
 id: agent-communication-restriction-detector
 name: Agent Communication Restriction Detector
 description: Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration.
-version: 1.2.0
+version: 1.2.1
 status: live
 domain: agent-config
 tier: '2'

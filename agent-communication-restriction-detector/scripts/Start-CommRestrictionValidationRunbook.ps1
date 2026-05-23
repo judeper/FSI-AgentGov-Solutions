@@ -92,7 +92,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.2.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
 
@@ -641,7 +641,10 @@ try {
     $output = [PSCustomObject]@{
         RunType            = "CommRestrictionValidation"
         RunId              = $runId
-        Timestamp          = (Get-Date -AsUTC -Format "o")
+        # `Get-Date -AsUTC` requires PowerShell 7.1+; this script declares
+        # `#Requires -Version 5.1`. Use the PS-5.1-compatible idiom.
+        # (council review C-2)
+        Timestamp          = (Get-Date).ToUniversalTime().ToString("o")
         TotalSkills        = $totalSkills
         TotalAgents        = $uniqueAgents
         TotalEnvironments  = $uniqueEnvs
@@ -680,7 +683,8 @@ try {
 
     $errorOutput = [PSCustomObject]@{
         RunType           = "CommRestrictionValidation"
-        Timestamp         = (Get-Date -AsUTC -Format "o")
+        # PS-5.1-compatible UTC timestamp (council review C-2)
+        Timestamp         = (Get-Date).ToUniversalTime().ToString("o")
         TotalSkills       = 0
         TotalAgents       = 0
         TotalEnvironments = 0

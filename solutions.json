@@ -89,7 +89,7 @@
     "agent-communication-restriction-detector": {
       "id": "agent-communication-restriction-detector",
       "name": "Agent Communication Restriction Detector",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",

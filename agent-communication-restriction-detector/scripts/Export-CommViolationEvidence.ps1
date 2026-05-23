@@ -1,8 +1,10 @@
 #Requires -Version 5.1
-# MSAL.PS is used for Dataverse authentication but is deprecated.
-# Microsoft recommends migrating to the Azure.Identity module.
-# See: https://github.com/AzureAD/MSAL.PS/issues/100
-#Requires -Modules MSAL.PS
+# Authentication uses Az.Accounts (Get-AzAccessToken). MSAL.PS was deprecated by
+# the maintainer and is no longer receiving security updates; ACRDClient.psm1 and
+# Connect-EnvironmentDataverse.ps1 already use Az.Accounts. Az.Accounts >= 2.17
+# returns the access token as a SecureString from Get-AzAccessToken, so we detect
+# and unwrap. (council review M-5)
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 <#
 .SYNOPSIS
@@ -118,12 +120,12 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.1.0
+    Version: 1.2.1
     Solution: Agent Communication Restriction Detector (ACRD)
     Control: 2.17 (Multi-Agent Orchestration Limits)
     Requires:
     - Windows PowerShell 5.1 or later
-    - MSAL.PS module for Dataverse authentication
+    - Az.Accounts module (>= 2.17.0) for Dataverse authentication
     - ACRD Dataverse schema deployed (fsi_commscanrun,
       fsi_agentcommviolations, fsi_approvedcommroutes, fsi_commexceptions tables)
 
@@ -226,26 +228,46 @@ Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
 $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
 
+# Helper to unwrap a token that Az.Accounts >= 2.17 returns as a SecureString.
+# Concatenating a SecureString into a Bearer header produces literal
+# 'Bearer System.Security.SecureString' which Dataverse rejects with HTTP 401.
+function Unprotect-AzAccessToken {
+    param([Parameter(Mandatory)] $TokenResult)
+
+    $raw = $TokenResult.Token
+    if ($raw -is [System.Security.SecureString]) {
+        if ($PSVersionTable.PSVersion.Major -ge 7) {
+            return ConvertFrom-SecureString -SecureString $raw -AsPlainText
+        }
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($raw)
+        try {
+            return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        } finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+    return $raw
+}
+
+Import-Module Az.Accounts -ErrorAction Stop
+
 if ($Interactive) {
-    # Interactive browser-based authentication via MSAL.PS
+    # Interactive authentication via Az.Accounts (replaces deprecated MSAL.PS)
     try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $msalParams = @{
-            TenantId    = $TenantId
-            Scopes      = @($dataverseScope)
-            Interactive = $true
+        $existingContext = Get-AzContext -ErrorAction SilentlyContinue
+        if (-not $existingContext -or ($TenantId -and $existingContext.Tenant.Id -ne $TenantId)) {
+            $connectParams = @{ ErrorAction = 'Stop' }
+            if ($TenantId) { $connectParams.TenantId = $TenantId }
+            Connect-AzAccount @connectParams | Out-Null
         }
 
-        if ($ClientId) {
-            $msalParams.ClientId = $ClientId
-        }
-
-        $authResult = Get-MsalToken @msalParams
-        $accessToken = $authResult.AccessToken
+        # Get-AzAccessToken -ResourceUrl wants the bare environment URL (no /.default suffix).
+        # Use the already-trimmed $DataverseUrl directly; do NOT TrimEnd('/.default') on
+        # $dataverseScope — String.TrimEnd(string) treats its argument as a character set,
+        # which strips trailing characters like '.de' from Germany sovereign cloud URLs
+        # (e, d, . are all in the set) and produces an invalid audience.
+        $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -ErrorAction Stop
+        $accessToken = Unprotect-AzAccessToken -TokenResult $tokenResult
     }
     catch {
         Write-Error "Interactive authentication failed: $($_.Exception.Message)"
@@ -253,7 +275,7 @@ if ($Interactive) {
     }
 }
 else {
-    # Service principal authentication with certificate
+    # Service principal authentication with certificate (Az.Accounts)
     if (-not $ClientId) {
         throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
     }
@@ -262,18 +284,16 @@ else {
     }
 
     try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $authResult = Get-MsalToken `
+        Connect-AzAccount `
+            -ServicePrincipal `
             -TenantId $TenantId `
-            -ClientId $ClientId `
-            -ClientCertificate (Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint") `
-            -Scopes @($dataverseScope)
+            -ApplicationId $ClientId `
+            -CertificateThumbprint $CertificateThumbprint `
+            -ErrorAction Stop | Out-Null
 
-        $accessToken = $authResult.AccessToken
+        # See note above on $dataverseScope.TrimEnd('/.default'): use the source URL directly.
+        $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -ErrorAction Stop
+        $accessToken = Unprotect-AzAccessToken -TokenResult $tokenResult
     }
     catch {
         Write-Error "Service principal authentication failed: $($_.Exception.Message)"
@@ -548,14 +568,14 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Agent Communication Restriction Detector"
-    solutionVersion = "1.1.0"
+    solutionVersion = "1.2.1"
     control         = "2.17"
     controlName     = "Multi-Agent Orchestration Limits"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }
     zoneFilter      = $Zone
-    exportVersion   = "1.1.0"
+    exportVersion   = "1.2.1"
     recordCount     = $totalScans
     violationCount  = $totalViolations
     organizationUrl = $DataverseUrl
