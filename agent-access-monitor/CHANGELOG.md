@@ -2,6 +2,19 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [1.1.2] - 2026-05-23
+
+### Fixed
+
+- **Major**: `scripts/private/AAMClient.psm1` module header `Version:` bumped from `1.1.0` to match the solution version, eliminating audit-evidence version-mismatch ambiguity. (council review M-1)
+- **Major**: `scripts/aam_client.py` now lazy-imports `azure.identity` and `azure.core.exceptions` inside `_azure_identity_class()` and `_client_authentication_error_cls()` helpers, mirroring `scripts/shared/dataverse_client.py`. Consumers using only `--access-token` or legacy client-secret authentication no longer require the optional Azure Identity packages at import time. (council review M-2)
+- **Major**: `scripts/aam_client.py` `get_global_optionset()` now lowercases the option-set name before the lookup query, matching the shared client's existing fix and preventing a stale 404 followed by a `SchemaNameisNotUnique` 400 on case-mismatched lookups. (council review M-3)
+
+### Changed
+
+- Version strings synchronized to `1.1.2` across `manifest.yaml`, README, `agent-access-monitor.psd1`, script `.SYNOPSIS Version:` headers, evidence export payloads, `zone-settings-baseline.json`, and `docs/evidence-export.md`.
+- `Start-AccessValidationRunbook.ps1` replaces two pre-existing `Get-Date -AsUTC` invocations with `(Get-Date).ToUniversalTime().ToString("o")` so the script parses and runs on Windows PowerShell 5.1 in addition to PowerShell 7 (style sweep §10).
+
 ## [1.1.1] - 2026-05-13
 
 ### Added

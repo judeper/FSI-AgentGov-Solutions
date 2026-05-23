@@ -79,7 +79,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.1.2
 
     Azure Automation setup:
     1. Import this script as a runbook
@@ -514,7 +514,7 @@ try {
 
     $output = [PSCustomObject]@{
         RunType           = "AccessValidation"
-        Timestamp         = (Get-Date -AsUTC -Format "o")
+        Timestamp         = (Get-Date).ToUniversalTime().ToString("o")
         TotalEnvironments = $scanResult.Summary.TotalEnvironments
         OverallStatus     = $scanResult.OverallStatus
         Reason            = $reason
@@ -542,7 +542,7 @@ try {
 
     $errorOutput = [PSCustomObject]@{
         RunType           = "AccessValidation"
-        Timestamp         = (Get-Date -AsUTC -Format "o")
+        Timestamp         = (Get-Date).ToUniversalTime().ToString("o")
         TotalEnvironments = 0
         OverallStatus     = "Error"
         Reason            = $_.Exception.Message

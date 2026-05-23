@@ -63,7 +63,7 @@
     Boolean - $true if hash matches (file integrity verified), $false if mismatch.
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.1.2
     Requires PowerShell 5.1 or later (Get-FileHash cmdlet availability).
 
     SHA-256 companion file format:
