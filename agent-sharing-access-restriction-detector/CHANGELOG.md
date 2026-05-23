@@ -4,6 +4,27 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-05-23
+
+### Fixed
+
+- **Major**: Regenerated `docs/dataverse-schema.md` so it now includes the three admission gate columns on `fsi_approvedsecuritygrouppolicy` (`fsi_SecurityEnabled`, `fsi_MailEnabled`, `fsi_GroupTypes`). The docs file was stale; the schema script defined the columns but `--output-docs` had not been re-run after they were added. (council review M1)
+
+### Changed
+
+- **Major**: `Export-SharingComplianceEvidence.ps1` no longer depends on the archived MSAL.PS module. Authentication now uses direct OAuth 2.0 REST calls to the `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/{token,devicecode}` endpoints, matching the pattern already established in `Invoke-SharingComplianceScan.ps1`. `-Interactive` now drives a device-code flow (user pastes a one-time code into https://microsoft.com/devicelogin); unattended runs take `-ClientSecret` (SecureString) for client_credentials. Client secrets remain flagged as a legacy dev-only fallback per the managed-identity-first authentication standard. (council review M2)
+- **Minor**: Clarified `Test-AgentSharingCompliance.ps1 -DataverseToken` parameter as `[RESERVED — unused in this version]` in the comment-based help, and removed the misleading `-DataverseToken $token` usage from the `.EXAMPLE` block. The parameter was accepted but never forwarded to the scan script; behavior unchanged. (council review m2)
+- **Minor**: Clarified `asard_group_admission.py --access-token` argparse help text as `[RESERVED — unused in this version]`. The script validates only locally-loaded JSON today; live Graph API lookup is reserved for a future enhancement. (council review m5)
+
+### Removed
+
+- **Major (BREAKING for callers using cert-based auth)**: `Export-SharingComplianceEvidence.ps1 -CertificateThumbprint` is removed in 2.0.2. The certificate-based service-principal path required the archived MSAL.PS module. Passing this parameter now throws a terminating error explaining the migration. Affected callers should switch to `-ClientSecret` (legacy dev-only) or migrate to a managed-identity-backed token-acquisition wrapper. The parameter declaration is retained only so the error message reaches callers that still pass it; it will be deleted in a future minor.
+
+### Notes
+
+- **m1 (Minor) DEFERRED**: Council recommendation to add a clarifying comment to `scripts/shared/Get-ZoneClassification.ps1` about ELM vs ASARD option set value drift. The shared script is owned by the shared-utilities lane (Wave 5 E6) and is explicitly out of scope for per-solution PRs per the orchestrator refinement; deferred for cross-solution coordination.
+- **m4 (Minor) DEFERRED**: Council recommendation to bump `adaptive-card-asard-remediation-approval.json` from schema version 1.4 to 1.5 for parity with the result card. The council confirmed there is no functional issue — the approval card does not use `isVisible` on actions (the 1.5 feature that required the result card bump). Pure-cosmetic version sync is deferred per the Wave 3 minor-finding deferral rubric.
+
 ## [2.0.1] — 2026-05-17
 
 ### Fixed

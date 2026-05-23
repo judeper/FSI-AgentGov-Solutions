@@ -1,7 +1,7 @@
 id: agent-sharing-access-restriction-detector
 name: Agent Sharing Access Restriction Detector
 description: Detects and remediates agent sharing configurations that violate zone-based security group policies.
-version: 2.0.1
+version: 2.0.2
 status: live
 domain: access-identity
 tier: '2'

@@ -1,7 +1,7 @@
 # Flow Configuration Guide
 
 > **Solution:** Agent Sharing Access Restriction Detector (ASARD)
-> **Version:** v2.0.1
+> **Version:** v2.0.2
 
 This document provides an overview of the two Power Automate cloud flows required by the ASARD solution. For detailed step-by-step build instructions, see the [README](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-sharing-access-restriction-detector/README.md) and the [ASARD Deployment Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) in FSI-AgentGov.
 

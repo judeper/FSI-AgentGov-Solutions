@@ -266,7 +266,13 @@ def main() -> None:
     )
     parser.add_argument(
         "--access-token",
-        help="Microsoft Graph access token (for live API queries)",
+        help=(
+            "[RESERVED — unused in this version] Microsoft Graph access token. "
+            "Reserved for a future enhancement that will fetch group properties "
+            "directly from the /v1.0/groups/{id} endpoint when --group-id is "
+            "supplied. Today the script validates only locally-loaded JSON via "
+            "--groups-file."
+        ),
     )
     parser.add_argument(
         "--verbose", "-v",
