@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Exports CA policy compliance evidence with SHA-256 integrity hashing.
 

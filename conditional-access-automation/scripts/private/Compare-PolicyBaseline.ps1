@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Compares two Conditional Access policy baseline snapshots to detect drift.
 

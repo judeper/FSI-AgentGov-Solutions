@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Registers a newly provisioned environment in ACV's environment registry.
 

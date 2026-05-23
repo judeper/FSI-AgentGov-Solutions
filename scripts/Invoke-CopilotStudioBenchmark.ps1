@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Runs 10 Copilot Studio governance benchmark checks and produces a unified report.
 

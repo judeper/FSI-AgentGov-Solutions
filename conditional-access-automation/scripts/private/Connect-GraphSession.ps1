@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Establishes or reuses a Microsoft Graph session for Conditional Access operations.
 

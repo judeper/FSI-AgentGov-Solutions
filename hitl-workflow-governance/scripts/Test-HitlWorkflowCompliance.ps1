@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates HITL checkpoint configuration for all Copilot Studio agents
     against zone-specific governance requirements.

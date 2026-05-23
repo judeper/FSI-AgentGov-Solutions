@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 <#
 .SYNOPSIS
     End-to-end smoke test orchestrator for message-center-monitor lab dry-run.

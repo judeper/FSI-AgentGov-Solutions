@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates agent-to-agent communication against zone-specific governance
     requirements for multi-agent orchestration limits.

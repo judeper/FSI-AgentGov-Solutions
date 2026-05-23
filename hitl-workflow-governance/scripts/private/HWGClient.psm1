@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     HITL Workflow Governance Dataverse client module.
 

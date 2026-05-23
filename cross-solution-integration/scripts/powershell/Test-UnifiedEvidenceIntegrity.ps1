@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Verifies the integrity of a unified compliance evidence export package.
 

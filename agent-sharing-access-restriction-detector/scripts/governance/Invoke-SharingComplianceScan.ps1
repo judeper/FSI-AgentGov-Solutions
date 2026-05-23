@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Detects agents with sharing configurations that violate zone-based access policies.
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Conditional Access Automation Dataverse client module.
 

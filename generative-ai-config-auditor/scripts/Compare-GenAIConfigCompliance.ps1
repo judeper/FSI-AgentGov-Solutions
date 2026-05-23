@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Compares agent generative AI configuration against zone-specific policies.
 

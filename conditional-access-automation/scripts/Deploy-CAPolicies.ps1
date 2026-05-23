@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Deploys Conditional Access policy templates for AI workloads.
 

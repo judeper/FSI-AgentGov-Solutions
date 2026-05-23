@@ -1,4 +1,4 @@
-@{
+﻿@{
     # Script module or binary module file associated with this manifest
     RootModule = 'conditional-access-automation.psm1'
     

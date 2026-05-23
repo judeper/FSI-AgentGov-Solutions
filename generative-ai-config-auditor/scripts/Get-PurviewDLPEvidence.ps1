@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Collects Purview DLP and sensitivity label evidence for generative AI
     configurations.

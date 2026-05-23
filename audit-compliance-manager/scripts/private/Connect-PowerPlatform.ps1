@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+﻿#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
 # NOTE: MSAL.PS is archived and no longer maintained. Plan migration to
 # Az.Accounts (Get-AzAccessToken) or Microsoft.Identity.Client.

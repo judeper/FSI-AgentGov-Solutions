@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates agent sharing configuration for all Copilot Studio agents against
     zone-specific governance requirements.

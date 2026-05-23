@@ -1,4 +1,4 @@
-#Requires -Version 7.4
+﻿#Requires -Version 7.4
 
 # Import GACClient module for Invoke-DataverseRequest (retry/backoff on 429/5xx)
 Import-Module (Join-Path $PSScriptRoot 'GACClient.psm1') -Force

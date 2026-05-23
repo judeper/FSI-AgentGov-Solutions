@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 <#
 .SYNOPSIS
     Rebuilds lab-state.json by detecting cloud resources that the lab scripts

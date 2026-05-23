@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Deploy Azure Monitor Workbook ARM templates for Agent Observability Foundation.
 

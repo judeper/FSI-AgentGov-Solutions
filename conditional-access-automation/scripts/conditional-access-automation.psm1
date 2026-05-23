@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Root module for conditional-access-automation — loads private helpers.
 

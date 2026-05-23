@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Orchestrates a full agent sharing compliance scan and evaluates overall posture.
 

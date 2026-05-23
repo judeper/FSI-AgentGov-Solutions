@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves expected agent sharing policy and violation severity for a governance zone.
 

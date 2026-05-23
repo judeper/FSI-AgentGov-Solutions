@@ -1,4 +1,4 @@
-@{
+﻿@{
     # Module manifest for AuditComplianceHelpers
     # Audit Logging Compliance Automation (ALCA) - Shared helper module
 

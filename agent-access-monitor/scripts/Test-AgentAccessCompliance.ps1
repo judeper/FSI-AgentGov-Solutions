@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Orchestrates agent access compliance scanning across Power Platform environments.
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates that Copilot Studio agent flows have proper HITL checkpoint
     configuration per zone governance requirements.

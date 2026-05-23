@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Queries CAA validation data from Dataverse via OData Web API.
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Per-environment Dataverse authentication helper.
 

@@ -1,4 +1,4 @@
-#Requires -Version 7.0
+﻿#Requires -Version 7.0
 
 # Import CMMClient module for Invoke-DataverseRequest (retry/backoff on 429/5xx)
 Import-Module (Join-Path $PSScriptRoot 'CMMClient.psm1') -Force

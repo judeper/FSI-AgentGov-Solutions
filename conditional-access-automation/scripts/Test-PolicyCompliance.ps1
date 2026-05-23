@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Tests Conditional Access policy compliance, coverage, and session controls.
 
