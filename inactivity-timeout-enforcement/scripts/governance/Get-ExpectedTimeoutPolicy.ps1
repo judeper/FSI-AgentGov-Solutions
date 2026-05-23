@@ -49,7 +49,7 @@
     Uses the returned policy object to drive compliance evaluation logic.
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.1.2
     Solution: Inactivity Timeout Enforcement (ITE)
     Controls: 2.22 (Inactivity Timeout), 1.23 (Session Security), 3.7/3.8 (Monitoring)
     Regulations: GLBA Section 501(b), SOX Section 302, FINRA Rule 4511(a), NIST 800-53 AC-11/AC-12
@@ -84,7 +84,7 @@ $policies = @{
             'GLBA Section 501(b) (Safeguards Rule)'
             'NIST 800-53 AC-11 (Session Lock)'
             'NIST 800-53 AC-12 (Session Termination)'
-            'FINRA Rule 4511 (Books and Records)'
+            'FINRA Rule 4511(a) (Books and Records)'
         )
     }
     Zone3 = [PSCustomObject]@{
@@ -96,7 +96,7 @@ $policies = @{
             'GLBA Section 501(b) (Safeguards Rule)'
             'SOX Section 302 (Corporate Responsibility)'
             'SOX Section 404 (Internal Controls)'
-            'FINRA Rule 4511 (Books and Records)'
+            'FINRA Rule 4511(a) (Books and Records)'
             'NIST 800-53 AC-11 (Session Lock)'
             'NIST 800-53 AC-12 (Session Termination)'
         )
@@ -110,7 +110,7 @@ $policies = @{
             'GLBA Section 501(b) (Safeguards Rule)'
             'SOX Section 302 (Corporate Responsibility)'
             'SOX Section 404 (Internal Controls)'
-            'FINRA Rule 4511 (Books and Records)'
+            'FINRA Rule 4511(a) (Books and Records)'
             'NIST 800-53 AC-11 (Session Lock)'
             'NIST 800-53 AC-12 (Session Termination)'
         )
@@ -119,6 +119,6 @@ $policies = @{
 
 $policy = $policies[$Zone]
 
-Write-Verbose "Zone policy loaded: $Zone — Required=$($policy.TimeoutRequired), MaxMinutes=$($policy.MaxDurationMinutes), Severity=$($policy.ViolationSeverity)"
+Write-Verbose "Zone policy loaded: $Zone -- Required=$($policy.TimeoutRequired), MaxMinutes=$($policy.MaxDurationMinutes), Severity=$($policy.ViolationSeverity)"
 
 return $policy

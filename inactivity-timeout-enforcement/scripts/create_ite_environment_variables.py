@@ -36,13 +36,10 @@ ENV_VARIABLES = [
         "type": "Decimal",
         "defaultvalue": "24",
     },
-    {
-        "schemaname": "fsi_ITE_DataverseUrl",
-        "displayname": "ITE - Dataverse URL",
-        "description": "Dataverse environment URL for API calls",
-        "type": "String",
-        "defaultvalue": "",
-    },
+    # Note: fsi_ITE_DataverseUrl was removed in v1.0.1 (the flow uses the
+    # Dataverse connection reference instead) and is intentionally NOT
+    # provisioned here. Do not re-add without first confirming the flow
+    # actually reads it.
 ]
 
 
@@ -136,7 +133,8 @@ Environment variables created:
   - fsi_ITE_NotificationRecipients (semicolon-separated emails)
   - fsi_ITE_BapApiBaseUrl (https://api.bap.microsoft.com)
   - fsi_ITE_ScanFrequencyHours (24 hours)
-  - fsi_ITE_DataverseUrl
+  # Note: fsi_ITE_DataverseUrl removed in v1.1.2 -- Power Automate flow uses
+  # the Dataverse connection reference; the variable was never consumed.
 
 Examples:
   # Interactive authentication
