@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Deny Event Correlation Report
 
-> **Version:** v2.0.3
+> **Version:** v2.0.4
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -173,4 +173,4 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ---
 
-*Deny Event Correlation Report v2.0.3 - 2026*
+*Deny Event Correlation Report v2.0.4 - 2026*

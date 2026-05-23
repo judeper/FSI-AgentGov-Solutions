@@ -93,7 +93,6 @@ param(
     [string]$OutputFormat = 'Table',
 
     [Parameter()]
-    [Parameter()]
     [bool]$ExcludeSandbox = $true,
 
     [Parameter()]

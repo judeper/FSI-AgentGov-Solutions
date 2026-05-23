@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Credential Oversharing Detector
 
-> **Version:** v2.1.0
+> **Version:** v2.1.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Preview — Copilot Studio credential-oversharing detection is currently listed by Microsoft for public preview and should be validated in a non-production tenant before regulated production use.
@@ -197,6 +197,8 @@ See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v2.1.1 | May 2026 | AI Council review fixes: Dataverse-scoped token for v2.1.0 persistence (was using Graph audience), `fsi_description` column name corrections, GUID suffix on new violation IDs, `Get-MgApplicationFederatedIdentityCredential` parameter fix, `Unclassified` zone added to policy chain, severity label normalization, PS 5.1 compatibility cleanup. See CHANGELOG. |
+| v2.1.0 | May 2026 | Added Workload Identity CA policy detection, certificate/MI auth detection, and name-level OAuth scope baseline comparison. |
 | v2.0.1 | May 2026 | Microsoft Learn 2026-Q2 refresh: release-plan dates, module prerequisites, service-principal setup, Dataverse option-set corrections, and Teams connector wording. |
 | v2.0.0 | April 2026 | BREAKING: AI Council review fixes — switch→bool params, JSON-only return, single scan-record write, V2 PP connector, sovereign-cloud, multi-connector evaluation, regulatory citation accuracy. See CHANGELOG. |
 | v1.0.1 | April 2026 | Full solution release: scanning scripts, Dataverse schema, zone policies, evidence export, documentation, and templates |
