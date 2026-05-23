@@ -21,9 +21,9 @@
     FINRA Rule 4511, SEC Rule 17a-4, and SOX Section 302/404.
 
     This script supports FSI-AgentGov Controls:
-    - 2.16 (RAG Source Integrity) — evidence integrity verification
-    - 1.7 (Audit Logging) — audit trail tamper detection
-    - 2.13 (Documentation) — compliance documentation integrity
+    - 2.16 (RAG Source Integrity) -- evidence integrity verification
+    - 1.7 (Audit Logging) -- audit trail tamper detection
+    - 2.13 (Documentation) -- compliance documentation integrity
 
 .PARAMETER EvidenceFilePath
     Full path to the JSON evidence file to verify.

@@ -110,7 +110,7 @@ All other solutions operate independently and can be deployed in any order based
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.2.1 | personal, team, enterprise |
 | [Model Risk Management Automation](./model-risk-management-automation/) | 2 | v1.0.4 | enterprise |
 | [Pipeline Governance Cleanup](./pipeline-governance-cleanup/) | 2 | v1.2.1 | team, enterprise |
-| [RAG Source Validator](./rag-source-validator/) | 2 | v1.3.0 | personal, team, enterprise |
+| [RAG Source Validator](./rag-source-validator/) | 2 | v1.3.1 | personal, team, enterprise |
 | [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.1 | personal, team, enterprise |
 | [Segregation of Duties Detector](./segregation-detector/) | 2 | v1.2.0 | team, enterprise |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.1 | team, enterprise |
