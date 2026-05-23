@@ -105,7 +105,7 @@ ENV_VAR_DEFINITIONS = [
         "default_value": "",
         "description": (
             "Target Dataverse environment URL "
-            "(e.g., https://contoso.crm.dynamics.com) for API operations."
+            "(e.g., https://example.crm.dynamics.com) for API operations."
         ),
     },
     {

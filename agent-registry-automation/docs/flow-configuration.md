@@ -231,7 +231,7 @@ Use the `fsi_agentid` + `fsi_environmentid` business key to avoid duplicates whi
 - `fsi_lastscannedat`: `@{utcNow()}`
 - `fsi_rawjson`: body from Step 5a for this agent
 
-> **Important:** The alternate key `fsi_ak_agentinventory_agentenv` must be in **Active** status before using alternate-key upsert patterns. Dataverse Web API upsert can create rows when the key is absent, so create payloads must include every required non-key column.
+> **Important:** The alternate key `fsi_AgentEnvUniqueKey` (logical: `fsi_agentenvuniquekey`) must be in **Active** status before using alternate-key upsert patterns. Dataverse Web API upsert can create rows when the key is absent, so create payloads must include every required non-key column.
 
 ##### Step 5d-iii: Check If New Record
 
@@ -587,4 +587,4 @@ Add a **Scope** around Steps 3–5 with **Configure Run After** on failure:
 
 ---
 
-*Agent Registry Automation v2.1.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.1.1 — FSI Agent Governance Framework*

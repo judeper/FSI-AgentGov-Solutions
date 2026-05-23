@@ -83,7 +83,7 @@ Common issues and resolutions for the Agent Registry Automation solution.
 
 1. Navigate to **Power Apps** > **Tables** > **Agent Inventory**
 2. Select **Keys** from the left navigation
-3. Verify `fsi_ak_agentinventory_agentenv` shows status **Active**
+3. Verify `fsi_AgentEnvUniqueKey` (logical: `fsi_agentenvuniquekey`) shows status **Active**
 4. If status is **Failed**, delete and recreate the key
 
 > **Note:** If the alternate key repeatedly fails to activate, it may indicate duplicate data in the key columns. Query the table for duplicate `fsi_agentid` + `fsi_environmentid` combinations and resolve them before recreating the key.
@@ -348,4 +348,4 @@ $response.value | Format-Table fsi_agentname, fsi_approvalstatus, fsi_sladeadlin
 
 ---
 
-*Agent Registry Automation v2.1.0 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.1.1 — FSI Agent Governance Framework*
