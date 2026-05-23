@@ -54,10 +54,10 @@ jobs:
 
       - name: Verify manifest.yaml.version matches CHANGELOG most-recent release
         working-directory: solutions
-        run: python scripts/lint-version-drift.py
-        continue-on-error: true   # REPORT-ONLY initial mode (flip to --strict in follow-up PR after baseline)
+        run: python scripts/lint-version-drift.py --strict
+        # Strict mode enabled in PR #204 (Wave 5 close-out) — baseline cleaned by PR #203.
 
       - name: Lint Dataverse Picklist option-set value ranges
         working-directory: solutions
-        run: python scripts/lint-optionset-values.py
-        continue-on-error: true   # REPORT-ONLY initial mode (flip to --strict in follow-up PR after baseline)
+        run: python scripts/lint-optionset-values.py --strict
+        # Strict mode enabled in PR #204 (Wave 5 close-out) — baseline is clean (0 findings).
