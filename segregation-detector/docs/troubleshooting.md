@@ -115,33 +115,6 @@ Common issues and solutions for the Segregation of Duties Detector.
 
 ---
 
-## Flow Issues (Planned)
-
-> **Note:** Power Automate flows are not yet implemented. The current solution uses PowerShell scripts for detection. This section documents planned flow-based capabilities.
-
-### Detection flow not triggering
-
-**Possible Causes:**
-1. Flow disabled
-2. Connection expired
-3. Schedule misconfigured
-
-**Solutions:**
-1. Check flow status in Power Automate
-2. Re-authenticate connections
-3. Verify trigger schedule
-
-### Alerts not sending
-
-**Cause:** Notification connection issues.
-
-**Solutions:**
-1. Verify email/Teams connections valid
-2. Check recipient addresses
-3. Review flow run history for errors
-
----
-
 ## Performance Issues
 
 ### Slow role enumeration
@@ -185,4 +158,4 @@ For additional help:
 
 ---
 
-*Segregation of Duties Detector v1.2.0*
+*Segregation of Duties Detector v1.2.1*

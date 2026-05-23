@@ -97,7 +97,7 @@ function Invoke-WithRetry {
             if ($_.Exception.Response) {
                 $statusCode = [int]$_.Exception.Response.StatusCode
             }
-            # Retry on 429, 408, 5xx, and transient network errors (not 401 — same credentials won't help)
+            # Retry on 429, 408, 5xx, and transient network errors (not 401 -- same credentials won't help)
             $isTransientNetwork = -not $statusCode -and $_.Exception.InnerException -is [System.Net.Sockets.SocketException]
             if ($statusCode -eq 429 -or $statusCode -eq 408 -or ($statusCode -and $statusCode -ge 500) -or $isTransientNetwork) {
                 $delay = $BaseDelaySeconds * [Math]::Pow(2, $attempt - 1)
@@ -206,7 +206,7 @@ function Get-ClientSecretAccessToken {
         [Parameter(Mandatory = $true)][string]$Scope
     )
 
-    # legacy: dev-only — replace with managed identity in production
+    # legacy: dev-only -- replace with managed identity in production
     $loginEndpoint = Get-LoginEndpoint -Scope $Scope
     $tokenUrl = "$loginEndpoint/$TenantId/oauth2/v2.0/token"
 

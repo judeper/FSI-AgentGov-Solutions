@@ -4,7 +4,24 @@ All notable changes to the Segregation of Duties Detector.
 
 ---
 
-## [Unreleased] — 2026-Q2 Microsoft Learn refresh
+## [1.2.1] - 2026-05-23
+
+### Fixed
+
+- **Minor**: Replaced non-ASCII em/en dashes and smart quotes with ASCII equivalents across `Import-ConflictRules.ps1`, `Invoke-SoDScan.ps1`, and `SoDShared.ps1` to satisfy the repository non-ASCII punctuation sweep. (council review style §17)
+- **Minor**: Removed the "Flow Issues (Planned)" section from `docs/troubleshooting.md`; planned-flow troubleshooting now lives in a future-capabilities note instead of mixing with currently-functional guidance. (council review m5)
+- **Minor**: Finalized the previously-unreleased v1.2.0 CHANGELOG heading with its actual release date for traceability. (council review m3)
+
+### Notes
+
+- **M1 (Python `--deploy` mode) -- DEFERRED.** Adding a `--deploy` mode that calls the shared `DataverseClient` for ~4 tables, ~40 columns, and 8 option sets is a net-new feature (~200 LOC plus tests) that exceeds the council-review remediation scope. The alternative recommendation in the review report -- documenting manual creation steps in README Quick Start -- is already in place: `README.md` Quick Start (line 121) and Known Limitations (line 322) direct operators to `docs/dataverse-schema.md` for manual table creation. Tracked for a future minor version.
+- **M2 (BAP token scope) -- FALSE POSITIVE.** `$bapBaseUrl/.default` is the documented Microsoft pattern: the BAP API resource ID equals the API base URL across commercial, GCC High, DoD, and China clouds (verified via `Get-BapApiBaseUrl` in `SoDShared.ps1` lines 276-287). The reviewer's own recommendation was only "add a comment confirming."
+- **M3 (`activeOpenCount` semantics) -- FALSE POSITIVE.** `activeOpenCount = $existingViolations.Count + $newViolations.Count` is correct: every detected new violation represents a real open conflict regardless of persistence outcome, and the audit log at line 734 already distinguishes `$newViolations.Count new violations ($persistedCount persisted)`. Subtracting `$failedCount` would under-report active conflicts.
+- **m1, m2, m4, m6, m7 -- FALSE POSITIVE / NO ACTION / DEFERRED.** m1/m2/m6/m7 flagged by the reviewer as documented limitations or "implementation is correct" upon closer inspection. m4 (clarifying YAML front-matter comment) is DEFERRED because the `# v1.6.0 CAPE alignment metadata` line is regex-matched by `scripts/build-manifest.py` (`README_CAPE_VERSION_RE`); rewording would require coordinated build-script changes outside this PR's scope.
+
+---
+
+## [1.2.0] - 2026-05-12
 
 ### Changed
 
