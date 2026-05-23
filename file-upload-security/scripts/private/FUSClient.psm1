@@ -8,7 +8,7 @@
 
 .NOTES
     Module: FUSClient.psm1
-    Version: 1.1.1
+    Version: 1.1.2
     Author: FSI Agent Governance Team
     Solution: File Upload Security Configurator (v8)
 #>

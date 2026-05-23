@@ -20,7 +20,7 @@ Automated validation of Copilot Studio agent file upload settings against govern
 |-----------|-------|
 | **Control** | 1.14 — Data Minimization and Agent Scope Control |
 | **Solution Type** | Tier 2 — Automated Validation with Drift Detection |
-| **Version** | 1.1.1 |
+| **Version** | 1.1.2 |
 | **Zone Model** | Zone 1: Allowed · Zone 2: Restricted · Zone 3: Disabled |
 | **Regulatory** | FINRA Regulatory Notice 25-07, FINRA Rule 4511, SEC Rule 17a-3, GLBA 501(b), Interagency Guidelines Establishing Information Security Standards (12 CFR 30 App. B) |
 

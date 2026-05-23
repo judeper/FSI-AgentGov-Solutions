@@ -75,7 +75,7 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.1.2
     Part of FSI Agent Governance Framework - File Upload Security Configurator
     Control: 1.14 - Data Minimization and Agent Scope Control
 
