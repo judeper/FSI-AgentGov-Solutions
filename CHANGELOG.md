@@ -70,6 +70,23 @@ Tracking summary: 6 triage aggregate issues #124, #125, #126, #127, #129, #130. 
 
 ---
 
+---
+
+## [Unreleased] - 2026-Q2 — CI tooling
+
+### Added — scripts/lint-optionset-values.py REPORT-ONLY linter
+
+- New `scripts/lint-optionset-values.py` detects `fsi_*` Picklist option-set definitions that use Value entries below the Dataverse `100000000` floor (the root cause of the cross-solution-integration `IntegrationConfig.psm1` zone-normalization bug class, where solution A defines a set 0-based while solution B reads it as 100000000+).
+- Three layered allowlists suppress known-legitimate 0-based cases:
+  - TwoOption / Boolean attributes (Dataverse contract — `TrueOption: {Value: 1}` / `FalseOption: {Value: 0}`).
+  - `style-decisions.md` §9 shared sets (`fsi_acv_zone`, `fsi_acv_severity`) — deferred for a coordinated cross-solution migration.
+  - Solution-internally-consistent sets: `compliance-dashboard` (8 picklists), `rag-source-validator` (6 picklists), `dr-testing-framework` (`fsi_drt_teststatus`, deferred to v2.1.0 per its CHANGELOG).
+- User-managed allowlist at `scripts/.optionset-values-allowlist.txt` (one logical name per line, `#` comments allowed) for ad-hoc additions without editing the linter.
+- Integrated into `.github/workflows/manifest-check.yml` as a new step with `continue-on-error: true` (REPORT-ONLY initial mode — flip to `--strict` in a follow-up PR once any new findings are triaged). Baseline scan across all 36 solutions is currently clean.
+- 16-test unit suite at `scripts/tests/test_lint_optionset_values.py` covers Boolean exclusion, above-floor / below-floor / default-type detection, all three allowlist tiers, file-loading edge cases, and the three schema-script naming conventions.
+
+---
+
 ## [Unreleased] - 2026-Q2 — Schema 1.5.0 (BREAKING)
 
 ### Changed (BREAKING)

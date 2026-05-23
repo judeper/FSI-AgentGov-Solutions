@@ -1,0 +1,15 @@
+# scripts/.optionset-values-allowlist.txt
+#
+# User-managed allowlist for `scripts/lint-optionset-values.py`.
+# One option-set logical name per line (lowercase). `#` line comments allowed.
+#
+# Add an entry when a `fsi_*` Picklist option set is intentionally 0-based AND
+# every consumer (PowerShell, Python, KQL, docs, flows) reads the same low
+# values. Hard-coded allowlists inside the linter cover known cases:
+#   * §9 shared sets (`fsi_acv_zone`, `fsi_acv_severity`) — deferred for a
+#     coordinated cross-solution migration.
+#   * Solution-internally-consistent sets (compliance-dashboard,
+#     rag-source-validator, dr-testing-framework).
+#
+# Boolean / TwoOption attributes auto-detect via OptionSetType and are never
+# flagged — do NOT add them here.
