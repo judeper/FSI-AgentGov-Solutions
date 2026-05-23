@@ -42,9 +42,9 @@ Post-Deployment Steps
    - Configure 7-year retention policy for regulatory compliance
    - This supports record-keeping requirements (FINRA 4511, SEC 17a-4)
 
-3. ALTERNATE KEY \u2014 Verify fsi_agent_env_uniquekey status:
+3. ALTERNATE KEY \u2014 Verify fsi_AgentEnvUniqueKey status:
    - Navigate to Power Platform admin center > Tables > Agent Inventory > Keys
-   - Confirm fsi_agent_env_uniquekey status is Active
+   - Confirm fsi_AgentEnvUniqueKey (logical: fsi_agentenvuniquekey) status is Active
    - Key activation may take a few minutes after creation
 
 4. CONNECTIONS \u2014 Bind connection references in Power Automate:

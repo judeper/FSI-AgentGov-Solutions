@@ -167,6 +167,12 @@ INTAKE_OPTIONSETS = {
         ],
     },
     "fsi_intake_auditeventtype": {
+        # NOTE: This option set is intentionally defined as a reference catalog
+        # but is NOT deployed by deploy.ps1 (the `fsi_eventtype` column on
+        # `fsi_intakeauditevent` is a String, not a Picklist, to let customers
+        # extend the event vocabulary without schema changes). Keep the inventory
+        # here so reviewers and flow authors share one canonical list of event
+        # codes; do not add this name to `deploy.ps1`'s `OptionSetNameList`.
         "name": "fsi_intake_auditeventtype",
         "options": [
             ("RouterDecided", 100000000),

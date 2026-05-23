@@ -18,6 +18,10 @@ SOLUTION_ROOT = REPO_ROOT / "agent-intake"
 SCHEMA_SCRIPT = SOLUTION_ROOT / "scripts" / "create_fsi_intake_dataverse_schema.py"
 
 EXPECTED_QUESTION_COUNTS: dict[str, int] = {
+    # Counts derived from the corresponding docs/intake-questions-<path>.md
+    # catalog (each table row prefixed with "| <ID>" is one question). Update
+    # this dict whenever a question is added to or removed from a catalog file;
+    # the validator's `_count_questions` helper enforces the floor at runtime.
     "express": 13,
     "standard": 22,
     "full": 35,

@@ -580,7 +580,7 @@
                   "type": "object",
                   "properties": {
                     "role": {
-                      "const": "Compliance"
+                      "const": "Privacy"
                     }
                   },
                   "required": [

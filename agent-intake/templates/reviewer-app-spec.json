@@ -42,7 +42,9 @@
       "Escalated": 100000007,
       "AutoApproved": 100000008,
       "DeferredOutOfScope": 100000009,
-      "SponsorTimeout": 100000010
+      "SponsorTimeout": 100000010,
+      "InReview": 100000011,
+      "LiveTracking": 100000012
     },
     "fsi_intake_reviewerrole": {
       "InfoSec": 100000000,
@@ -830,6 +832,13 @@
             "Read"
           ],
           "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeretentionrecord",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
         }
       ]
     },
@@ -893,6 +902,13 @@
         },
         {
           "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeretentionrecord",
           "rights": [
             "Read"
           ],
@@ -964,6 +980,13 @@
             "Read"
           ],
           "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeretentionrecord",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
         }
       ]
     },
@@ -1027,6 +1050,13 @@
         },
         {
           "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeretentionrecord",
           "rights": [
             "Read"
           ],
@@ -1098,6 +1128,13 @@
             "Read"
           ],
           "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeretentionrecord",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
         }
       ]
     },
@@ -1163,6 +1200,13 @@
         },
         {
           "table": "fsi_intakedecisionlog",
+          "rights": [
+            "Read"
+          ],
+          "depth": "Global"
+        },
+        {
+          "table": "fsi_intakeretentionrecord",
           "rights": [
             "Read"
           ],

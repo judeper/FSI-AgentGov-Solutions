@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import html
 import json
 import logging
 import os
@@ -425,14 +426,19 @@ class COITestRunner:
         for scenario in scenarios:
             _log(f"\n  [{scenario['id']}] {scenario['name']}")
             result = self.execute_test(scenario, verbose)
-            status_color = {
-                "PASS": "\033[92m",
-                "FAIL": "\033[91m",
-                "SKIPPED": "\033[96m",
-                "WARN": "\033[93m",
-                "ERROR": "\033[91m"
-            }.get(result["status"], "")
-            _log(f"    Result: {status_color}{result['status']}\033[0m")
+            use_color = sys.stderr.isatty()
+            status_color = ""
+            reset = ""
+            if use_color:
+                status_color = {
+                    "PASS": "\033[92m",
+                    "FAIL": "\033[91m",
+                    "SKIPPED": "\033[96m",
+                    "WARN": "\033[93m",
+                    "ERROR": "\033[91m"
+                }.get(result["status"], "")
+                reset = "\033[0m" if status_color else ""
+            _log(f"    Result: {status_color}{result['status']}{reset}")
 
         return self.results
 
@@ -483,27 +489,47 @@ class COITestRunner:
             except Exception as e:
                 _log(f"  Warning: Error saving result for scenario '{result.get('scenario_id', 'unknown')}': {e}")
 
-    def generate_report(self, format: str = "text") -> str:
-        """Generate test report."""
+    def generate_report(self, report_format: str = "text") -> str:
+        """Generate test report.
+
+        Args:
+            report_format: One of ``"text"``, ``"json"``, or ``"html"``. Named
+                ``report_format`` (not ``format``) to avoid shadowing the
+                Python built-in.
+        """
+        total = len(self.results)
         passed = sum(1 for r in self.results if r["status"] == "PASS")
         failed = sum(1 for r in self.results if r["status"] == "FAIL")
         warnings = sum(1 for r in self.results if r["status"] == "WARN")
         errors = sum(1 for r in self.results if r["status"] == "ERROR")
         skipped = sum(1 for r in self.results if r["status"] == "SKIPPED")
+        pass_rate = (passed / total * 100) if total > 0 else 0.0
 
-        if format == "json":
+        if report_format == "json":
             return json.dumps(self.results, indent=2, default=str)
-        elif format == "html":
-            html = "<html><body><h1>COI Test Results</h1>"
-            html += f"<p>Execution Time: {_now_iso()}</p>"
-            html += f"<p>Total: {len(self.results)} | Pass: {passed} | Fail: {failed} | Skipped: {skipped} | Warn: {warnings} | Error: {errors}</p>"
-            html += "<table border='1'><tr><th>Test</th><th>Status</th><th>Details</th></tr>"
+        elif report_format == "html":
+            rows = []
             for r in self.results:
-                html += f"<tr><td>{r.get('scenario_id','')} - {r.get('scenario_name','')}</td>"
-                html += f"<td>{r.get('status','')}</td>"
-                html += f"<td>FINRA {r.get('finra_rule','N/A')}</td></tr>"
-            html += "</table></body></html>"
-            return html
+                scenario_id = html.escape(str(r.get("scenario_id", "")))
+                scenario_name = html.escape(str(r.get("scenario_name", "")))
+                status = html.escape(str(r.get("status", "")))
+                finra_rule = html.escape(str(r.get("finra_rule", "N/A")))
+                rows.append(
+                    f"<tr><td>{scenario_id} - {scenario_name}</td>"
+                    f"<td>{status}</td>"
+                    f"<td>FINRA {finra_rule}</td></tr>"
+                )
+            execution_time = html.escape(_now_iso())
+            html_report = "<html><body><h1>COI Test Results</h1>"
+            html_report += f"<p>Execution Time: {execution_time}</p>"
+            html_report += (
+                f"<p>Total: {total} | Pass: {passed} | Fail: {failed} | "
+                f"Skipped: {skipped} | Warn: {warnings} | Error: {errors}</p>"
+            )
+            html_report += "<table border='1'><tr><th>Test</th><th>Status</th><th>Details</th></tr>"
+            html_report += "".join(rows)
+            html_report += "</table></body></html>"
+            return html_report
 
         report = f"""
 ========================================
@@ -511,7 +537,7 @@ class COITestRunner:
 ========================================
 
 Execution Time: {_now_iso()}
-Total Scenarios: {len(self.results)}
+Total Scenarios: {total}
 
 Results:
   PASS:    {passed}
@@ -520,7 +546,7 @@ Results:
   WARN:    {warnings}
   ERROR:   {errors}
 
-Pass Rate: {(passed / len(self.results) * 100) if self.results else 0:.1f}%
+Pass Rate: {pass_rate:.1f}%
 
 """
         if failed > 0:

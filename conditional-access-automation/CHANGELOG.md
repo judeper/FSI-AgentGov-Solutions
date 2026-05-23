@@ -4,6 +4,27 @@ All notable changes to the Conditional Access Automation solution are documented
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-05-23
+
+### Fixed
+
+- **Major**: Replaced Teams incoming-webhook sample in `docs/compliance-monitoring.md` Sample Alert Configuration block (lines 372-391) with a Teams-connector / environment-variable shape so the example matches the documented routing approach. (council review MAJ-02)
+- **Major**: Refreshed `.ralph-config.json` domain facts #2 and #3 to reflect the current state of the code. `fsi_overallseverity` has been the canonical column since v2.0.0 (CAAClient.psm1 retains only a backward-compat fallback), and `Get-ZoneClassification.ps1` has been querying the correct ELM logical names (`fsi_environmentid`, `fsi_zone` on `fsi_environmentrequests`) since v1.2.2. (council review MAJ-03)
+- **Minor**: Standardised break-glass exclusion placeholders in `templates/CA-RiskBased-Zone3-Block.json` to `<break-glass-1>` / `<break-glass-2>` so the optional risk-based template matches the nine baseline templates. (council review MIN-01)
+- **Minor**: Added `_metadata` block (schemaVersion, lastValidated, targetControl) to `templates/CA-RiskBased-Zone3-Block.json` for consistency with the other ten templates. (council review MIN-02)
+- **Minor**: Removed empty `signInRiskLevels: []` and `userRiskLevels: []` arrays from the CA-CopilotStudio-Zone3 spec in `docs/policy-templates.md` so the doc spec matches the deployed template. (council review MIN-03)
+
+### Changed
+
+- **Minor**: Pinned `azure-identity>=1.15.0,<2.0.0` in `scripts/requirements.txt` with a comment explaining the dependency on `scripts/shared/dataverse_client.py` for managed-identity / workload-identity / certificate auth. (council review MIN-04)
+- **Minor**: `Deploy-CAPolicies.ps1` log-timestamp helper now uses `(Get-Date).ToUniversalTime().ToString(...)` instead of `Get-Date -Format ... -AsUTC` so the script parses and runs on Windows PowerShell 5.1 as well as PowerShell 7. (style-decisions §10 sweep finding)
+
+### Notes
+
+- **MAJ-01 (FALSE POSITIVE)** — Council finding "CA-AgentBuilder-Zone3 template missing persistentBrowser session control" is stale. The `persistentBrowser` block (`mode: never`, `isEnabled: true`) is present in `templates/CA-AgentBuilder-Zone3.json` at lines 24-27. Verified with `view` of the file at HEAD `1ef88bb`. No change applied.
+
+## [2.0.1] - 2026-Q2
+
 ### Fixed
 
 - Microsoft Learn 2026-Q2 refresh: managed identity-first runbook guidance, authentication-strength-aware validation/drift checks, CAE documentation caveats, and Power Platform Conditional Access scope notes.

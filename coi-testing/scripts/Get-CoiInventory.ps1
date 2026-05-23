@@ -95,10 +95,17 @@ function Invoke-PacCommand {
     <#
     .SYNOPSIS
         Execute a PAC CLI command and return parsed JSON output.
+
+    .DESCRIPTION
+        Accepts the PAC CLI argument list as a string array so individual
+        arguments (e.g., a filter value containing spaces) are passed through
+        to pac.exe verbatim. Earlier revisions accepted a single string and
+        split on space, which silently broke any argument that legitimately
+        contained whitespace.
     #>
     param(
         [Parameter(Mandatory)]
-        [string]$Command,
+        [string[]]$Command,
 
         [Parameter(Mandatory)]
         [string]$Description,
@@ -106,15 +113,16 @@ function Invoke-PacCommand {
         [switch]$DryRun
     )
 
-    Write-Info "Running: pac $Command"
+    $commandDisplay = ($Command -join ' ')
+    Write-Info "Running: pac $commandDisplay"
 
     if ($DryRun) {
-        Write-Info "[DRY RUN] Would execute: pac $Command"
+        Write-Info "[DRY RUN] Would execute: pac $commandDisplay"
         return @()
     }
 
     try {
-        $raw = & pac $Command.Split(' ') 2>&1
+        $raw = & pac @Command 2>&1
         $exitCode = $LASTEXITCODE
 
         if ($exitCode -ne 0) {
@@ -174,7 +182,7 @@ function Main {
 
     # ── Environments ─────────────────────────────────────────────────────
     Write-Info 'Enumerating environments...'
-    $envs = Invoke-PacCommand -Command 'admin list --json' -Description 'Environment list' -DryRun:$DryRun
+    $envs = Invoke-PacCommand -Command @('admin','list','--json') -Description 'Environment list' -DryRun:$DryRun
 
     if ($EnvironmentFilter -and $envs.Count -gt 0) {
         $envs = @($envs | Where-Object {
@@ -189,14 +197,14 @@ function Main {
 
     # ── Solutions ────────────────────────────────────────────────────────
     Write-Info 'Enumerating solutions in connected environment...'
-    $solutions = Invoke-PacCommand -Command 'solution list --json' -Description 'Solution list' -DryRun:$DryRun
+    $solutions = Invoke-PacCommand -Command @('solution','list','--json') -Description 'Solution list' -DryRun:$DryRun
     $inventory.solutions = @($solutions)
     Write-Info "Found $($solutions.Count) solution(s)"
 
     # ── Connections (optional) ───────────────────────────────────────────
     if ($IncludeConnections) {
         Write-Info 'Enumerating connections...'
-        $connections = Invoke-PacCommand -Command 'connection list --json' -Description 'Connection list' -DryRun:$DryRun
+        $connections = Invoke-PacCommand -Command @('connection','list','--json') -Description 'Connection list' -DryRun:$DryRun
         $inventory.connections = @($connections)
         Write-Info "Found $($connections.Count) connection(s)"
     }

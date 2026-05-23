@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.1] - 2026-05-23
+
+### Fixed
+
+- **Major**: Replaced `contoso.crm.dynamics.com` with `example.crm.dynamics.com` (RFC 2606) in `fsi_ARA_DataverseEnvironmentUrl` description. `scripts/create_environment_variables.py:108`. (council review M2)
+- **Major**: Unified alternate key references to canonical schema name `fsi_AgentEnvUniqueKey` (logical: `fsi_agentenvuniquekey`). Previously `scripts/deploy.py:45` used `fsi_agent_env_uniquekey` and `docs/flow-configuration.md:234` + `docs/troubleshooting.md:86` used `fsi_ak_agentinventory_agentenv`; none matched the deployed key. (council review M3)
+- **Minor**: PowerShell 5.1 compatibility — replaced `Get-Date -Format ... -AsUTC` (PS 7-only parameter) with `(Get-Date).ToUniversalTime().ToString(...)` in `Deploy-AgentRegistry-Baseline.ps1:106` and `Test-AgentRegistryCompliance.ps1:108`. (style §10 sweep)
+- **Minor**: Updated `DELIVERY-CHECKLIST.md` release date from April 2026 to May 2026 to match the v2.1.x release window. (council review m5)
+- **Minor**: Updated CHANGELOG footer reference from v1.0.2 to v2.1.1 to match current version. (council review m6)
+
+### Notes
+
+- Version-string headers across `README.md`, `DELIVERY-CHECKLIST.md`, `docs/prerequisites.md`, `docs/troubleshooting.md`, `docs/flow-configuration.md`, and `templates/agent-registry-config.sample.json` were bumped from v2.1.0 to v2.1.1.
+- Council review minors deferred to a future minor bump (out of scope for this patch): M1 shared-client refactor (`ara_client.py` → `scripts/shared/dataverse_client.py`; would touch >10 files, REFINEMENT 4); m1 picklist option-set label extraction in `_col_type_label` (doc-quality only, standalone); m2/m3/m4 `fsi_ARA_IncludeSandboxEnvironments` feature gap (requires new env var + new PS parameter); m7 Flow 2 Step 6 ambiguity (doc-only clarification).
+
+---
+
 ## [2.1.0] - 2026-05-04
 
 ### Changed
@@ -123,4 +140,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-*Agent Registry Automation v1.0.2 — FSI Agent Governance Framework*
+*Agent Registry Automation v2.1.1 — FSI Agent Governance Framework*

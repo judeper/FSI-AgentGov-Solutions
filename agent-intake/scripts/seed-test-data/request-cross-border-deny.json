@@ -15,6 +15,7 @@
     "auditorUpn": "audit-intake@contoso.example"
   },
   "expectedClassification": {
+    "_comment": "pathUsed = Standard depends on the default audience_to_zone mapping in templates/policy-lookup-tables.yaml ('My team' -> Zone 2). If a customer remaps 'My team' to Zone 1, the classifier routes this fixture to Full instead. Pin or override the policy before re-asserting this expectation under non-default audience_to_zone.",
     "pathUsed": "Standard",
     "decisionPath": "DefaultDeny",
     "riskTier": "Tier 2 (Medium)",

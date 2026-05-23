@@ -64,7 +64,7 @@
 
 .NOTES
     File: Deploy-CAPolicies.ps1
-    Version: 2.0.1
+    Version: 2.0.2
     Supports compliance with FINRA 4511, SEC 17a-4, and OCC 2011-12
     through auditable, zone-based Conditional Access deployment.
 #>
@@ -114,7 +114,7 @@ function Write-AuditLog {
         [string]$Level = "INFO",
         [string]$CorrelationId = $script:CorrelationId
     )
-    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
+    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     Write-Output "[$timestamp] [$Level] [$CorrelationId] $Message"
 }
 $script:CorrelationId = [guid]::NewGuid().ToString("N").Substring(0,8)

@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Agent Knowledge Source Scanner
 
-> **Version:** v1.1.1
+> **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -320,4 +320,4 @@ This solution supports compliance with these regulations by providing auditable 
 
 ---
 
-*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.1.1*
+*FSI Agent Governance Framework — Agent Knowledge Source Scanner v1.1.2*

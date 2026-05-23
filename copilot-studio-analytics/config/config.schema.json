@@ -69,10 +69,15 @@
         },
         "environment_url": {
           "type": "string",
-          "description": "Dataverse environment URL",
+          "description": "Dataverse environment URL. Accepts commercial (.dynamics.com) and sovereign clouds: US Gov (.dynamics.us, .crm.dynamics.us), Germany (.microsoftdynamics.de), and China (.crm.dynamics.cn). Pattern mirrors the validation in scripts/sync_dataverse_sessions.py.",
           "format": "uri",
-          "pattern": "^https://.+\\.dynamics\\.com$",
-          "examples": ["https://org.crm.dynamics.com"]
+          "pattern": "^https://[a-zA-Z0-9._-]+\\.(dynamics\\.com|dynamics\\.us|crm\\.dynamics\\.us|microsoftdynamics\\.de|crm\\.dynamics\\.cn)$",
+          "examples": [
+            "https://org.crm.dynamics.com",
+            "https://org.crm.dynamics.us",
+            "https://org.crm.microsoftdynamics.de",
+            "https://org.crm.dynamics.cn"
+          ]
         },
         "client_id": {
           "type": "string",
