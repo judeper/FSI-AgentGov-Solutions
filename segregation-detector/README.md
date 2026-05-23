@@ -335,8 +335,8 @@ Microsoft has introduced new [REST API endpoints for RBAC role assignments](http
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.2.1 | 2026-05-22 | Council-review remediation: ASCII punctuation sweep, doc cleanup, CHANGELOG finalization (see CHANGELOG) |
-| 1.2.0 | 2026-05-22 | Microsoft Learn refresh: managed-identity-first auth, Graph PIM schedule instances, schema source of truth |
+| 1.2.1 | 2026-05-23 | Council-review remediation: ASCII punctuation sweep, doc cleanup, CHANGELOG finalization (see CHANGELOG) |
+| 1.2.0 | 2026-05-12 | Microsoft Learn refresh: managed-identity-first auth, Graph PIM schedule instances, schema source of truth |
 | 1.1.0 | April 2026 | Council review fixes |
 | 1.0.0 | February 2026 | Initial release |
 

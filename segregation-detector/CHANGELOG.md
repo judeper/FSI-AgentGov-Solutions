@@ -4,7 +4,7 @@ All notable changes to the Segregation of Duties Detector.
 
 ---
 
-## [1.2.1] - 2026-05-22
+## [1.2.1] - 2026-05-23
 
 ### Fixed
 
@@ -21,7 +21,7 @@ All notable changes to the Segregation of Duties Detector.
 
 ---
 
-## [1.2.0] - 2026-05-22
+## [1.2.0] - 2026-05-12
 
 ### Changed
 
