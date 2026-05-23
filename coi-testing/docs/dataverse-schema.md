@@ -1,8 +1,10 @@
 # COI Testing — Dataverse Schema
 
 This solution does not yet ship a `create_coi_dataverse_schema.py` generator;
-the table can be created manually from the column list below or via the
-[shared Dataverse client](../../scripts/shared/dataverse_client.py).
+create the `fsi_coitestresult` table manually from the column list below.
+The shared `scripts/shared/dataverse_client.py` library can be used to script
+table creation programmatically, but no turnkey generator is provided in this
+solution today.
 
 ## Table: `fsi_coitestresult`
 
