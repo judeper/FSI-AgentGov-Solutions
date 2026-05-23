@@ -9,7 +9,6 @@ choice fields, and relationships.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from elm_client import ELMClient
 

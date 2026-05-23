@@ -37,7 +37,6 @@ Seed Data:
 import argparse
 import os
 import sys
-from typing import Optional
 
 from alca_client import ALCAClient
 

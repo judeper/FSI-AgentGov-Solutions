@@ -9,7 +9,6 @@ choice fields, and supporting option sets.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from acv_client import ACVClient
 

@@ -97,7 +97,7 @@ def scan_file(path: Path) -> list[tuple[int, str, str]]:
         contexts: list[tuple[str, str]] = []  # (snippet, label)
 
         for m in ODATA_QUERY_KV.finditer(line):
-            contexts.append((m.group(1), f"$query"))
+            contexts.append((m.group(1), "$query"))
         for m in ODATA_PATH.finditer(line):
             contexts.append((m.group(1), "Web API path"))
         for m in LOGICAL_NAME_JSON.finditer(line):

@@ -6,10 +6,9 @@ Uses MSAL for interactive/client-secret authentication and Azure Identity for ma
 """
 
 import argparse
-import json
 import os
 import sys
-from typing import Any, Optional
+from typing import Optional
 from urllib.parse import urljoin
 
 import msal
@@ -217,10 +216,14 @@ class DataverseClient:
             print(f"  [DRY RUN] Would query: {entity_set}")
             return []
         params = {}
-        if select: params["$select"] = ",".join(select)
-        if filter_expr: params["$filter"] = filter_expr
-        if orderby: params["$orderby"] = orderby
-        if top: params["$top"] = str(top)
+        if select:
+            params["$select"] = ",".join(select)
+        if filter_expr:
+            params["$filter"] = filter_expr
+        if orderby:
+            params["$orderby"] = orderby
+        if top:
+            params["$top"] = str(top)
         results = []
         url = urljoin(self.api_url, entity_set)
         headers = self._get_headers()
@@ -276,11 +279,13 @@ class DataverseClient:
             return None
         try:
             response = self._session.get(urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')"), headers=self._get_headers())
-            if response.status_code == 404: return None
+            if response.status_code == 404:
+                return None
             response.raise_for_status()
             return response.json()
         except requests.HTTPError as e:
-            if e.response.status_code == 404: return None
+            if e.response.status_code == 404:
+                return None
             raise
 
     def create_entity(self, entity_metadata):
@@ -293,7 +298,8 @@ class DataverseClient:
         entity_id = response.headers.get("OData-EntityId", "")
         if entity_id:
             get_response = self._session.get(entity_id, headers=self._get_headers())
-            if get_response.ok: return get_response.json()
+            if get_response.ok:
+                return get_response.json()
         return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
 
     def create_attribute(self, entity_logical_name, attribute_metadata):
@@ -311,11 +317,13 @@ class DataverseClient:
             return None
         try:
             response = self._session.get(urljoin(self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes(LogicalName='{attribute_logical_name}')"), headers=self._get_headers())
-            if response.status_code == 404: return None
+            if response.status_code == 404:
+                return None
             response.raise_for_status()
             return response.json()
         except requests.HTTPError as e:
-            if e.response.status_code == 404: return None
+            if e.response.status_code == 404:
+                return None
             raise
 
     def create_global_optionset(self, optionset_metadata):
@@ -340,11 +348,13 @@ class DataverseClient:
         lookup_name = name.lower()
         try:
             response = self._session.get(urljoin(self.api_url, f"GlobalOptionSetDefinitions(Name='{lookup_name}')"), headers=self._get_headers())
-            if response.status_code == 404: return None
+            if response.status_code == 404:
+                return None
             response.raise_for_status()
             return response.json()
         except requests.HTTPError as e:
-            if e.response.status_code == 404: return None
+            if e.response.status_code == 404:
+                return None
             raise
 
     def check_table_exists(self, logical_name):
@@ -353,18 +363,21 @@ class DataverseClient:
     def create_table(self, table_metadata):
         schema_name = table_metadata.get("SchemaName", "")
         logical_name = schema_name.lower()
-        if self.check_table_exists(logical_name): return None
+        if self.check_table_exists(logical_name):
+            return None
         return self.create_entity(table_metadata)
 
     def create_option_set(self, optionset_metadata):
         name = optionset_metadata.get("Name", "")
-        if self.get_global_optionset(name): return None
+        if self.get_global_optionset(name):
+            return None
         return self.create_global_optionset(optionset_metadata)
 
     def create_column(self, entity_logical_name, column_metadata):
         schema_name = column_metadata.get("SchemaName", "")
         col_logical_name = schema_name.lower()
-        if self.get_attribute_metadata(entity_logical_name, col_logical_name): return None
+        if self.get_attribute_metadata(entity_logical_name, col_logical_name):
+            return None
         return self.create_attribute(entity_logical_name, column_metadata)
 
     def create_relationship(self, relationship_metadata):
@@ -476,8 +489,8 @@ def main():
             print("Testing Dataverse connection...")
             org = client.test_connection()
             if not args.dry_run:
-                print(f"  Token acquired: ✓")
-                print(f"  API accessible: ✓")
+                print("  Token acquired: ✓")
+                print("  API accessible: ✓")
                 print(f"  Organization: {org.get('name', 'Unknown')}")
                 print("\nConnection test: PASSED")
             sys.exit(0)

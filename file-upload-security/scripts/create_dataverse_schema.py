@@ -14,7 +14,6 @@ Usage:
 
 import argparse
 import os
-import sys
 
 from fus_client import FUSClient
 
@@ -191,7 +190,7 @@ def _create_table(
     print(f"{'='*60}")
 
     if client.check_table_exists(logical_name):
-        print(f"  Table already exists — checking columns...")
+        print("  Table already exists — checking columns...")
     else:
         # Dataverse requires a primary name attribute; declare it inline so the entity
         # can be created in a single call. Code throughout the solution writes/reads `fsi_name`.
@@ -221,7 +220,7 @@ def _create_table(
         client.create_entity(definition)
         print(f"  Table created ({ownership}) with primary attribute fsi_name")
 
-    print(f"  Adding columns:")
+    print("  Adding columns:")
     for col_name, col_type, col_factory in columns:
         try:
             client.create_column(logical_name, col_name, col_type, col_factory())

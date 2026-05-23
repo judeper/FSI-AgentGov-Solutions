@@ -14,11 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/dependency-review-action@v4
-        # Soft-gate: this action requires the Dependency graph feature to be
-        # enabled at the repo level. Until that is enabled, surface findings
-        # but do not block the PR. Track enabling at:
-        # https://github.com/judeper/FSI-AgentGov-Solutions/settings/security_analysis
-        continue-on-error: true
+        # Hard gate (Wave 6 P6 — 2026-05-23): vulnerability alerts are now
+        # enabled at the repo level, so the dependency graph feeds real
+        # advisory data into this action. PRs with high-severity
+        # vulnerabilities or incompatible licenses now block.
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure

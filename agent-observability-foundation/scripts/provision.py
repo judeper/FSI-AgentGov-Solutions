@@ -212,7 +212,7 @@ def preflight_check(
         list(resource_client.resource_groups.list())
         print(f"    Subscription {subscription_id[:8]}... ✓")
     except ClientAuthenticationError as e:
-        print(f"    Authentication failed ✗")
+        print("    Authentication failed ✗")
         print(f"    Error: {e.message}")
         print()
         print("    Run one of the following to authenticate:")
@@ -222,7 +222,7 @@ def preflight_check(
         print("      - Set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (legacy dev-only fallback)")
         return False
     except HttpResponseError as e:
-        print(f"    Subscription access failed ✗")
+        print("    Subscription access failed ✗")
         print(f"    Error: {e.message}")
         return False
 
@@ -230,7 +230,7 @@ def preflight_check(
     print()
     print("  Checking resource group...")
     try:
-        rg = resource_client.resource_groups.get(resource_group)
+        resource_client.resource_groups.get(resource_group)
         print(f"    {resource_group}: exists ✓")
     except ResourceNotFoundError:
         print(f"    {resource_group}: not found, will be created ○")
@@ -297,14 +297,14 @@ def ensure_resource_group(
     resource_client = ResourceManagementClient(credential, subscription_id)
 
     try:
-        rg = resource_client.resource_groups.get(resource_group)
+        resource_client.resource_groups.get(resource_group)
         print(f"  Resource group {resource_group}: exists ○")
     except ResourceNotFoundError:
         if dry_run:
             print(f"  Resource group {resource_group}: would be created (dry-run)")
         else:
             print(f"  Creating resource group {resource_group}...")
-            rg = resource_client.resource_groups.create_or_update(
+            resource_client.resource_groups.create_or_update(
                 resource_group,
                 {"location": location, "tags": tags},
             )
@@ -495,7 +495,7 @@ def create_storage_account(
         print(f"  Storage account {account_name}: would be created (dry-run)")
         print(f"    - Kind: {account_kind}")
         print(f"    - Replication: {replication}")
-        print(f"    - Hierarchical namespace: DISABLED (required for diagnostic settings)")
+        print("    - Hierarchical namespace: DISABLED (required for diagnostic settings)")
         return None
 
     # Check if exists
@@ -599,7 +599,7 @@ def create_diagnostic_settings(
         logs=logs,
     )
 
-    result = monitor_client.diagnostic_settings.create_or_update(
+    monitor_client.diagnostic_settings.create_or_update(
         resource_uri=app_insights_id,
         name=ds_name,
         parameters=ds_params,
@@ -664,7 +664,7 @@ def create_rbac_assignments(
         assignment_name = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{role_name}-{principal_id}-{scope}"))
 
         try:
-            existing = auth_client.role_assignments.get(
+            auth_client.role_assignments.get(
                 scope=scope,
                 role_assignment_name=assignment_name,
             )
@@ -682,7 +682,7 @@ def create_rbac_assignments(
         )
 
         try:
-            result = auth_client.role_assignments.create(
+            auth_client.role_assignments.create(
                 scope=scope,
                 role_assignment_name=assignment_name,
                 parameters=assignment_params,

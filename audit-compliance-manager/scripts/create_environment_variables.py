@@ -8,7 +8,6 @@ Environment variables store configurable zone thresholds and operational paramet
 import argparse
 import os
 import sys
-from typing import Optional
 
 from acv_client import ACVClient
 

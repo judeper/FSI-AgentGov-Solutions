@@ -9,7 +9,6 @@ development fallback.
 """
 
 import argparse
-import os
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Optional

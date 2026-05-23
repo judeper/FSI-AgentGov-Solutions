@@ -417,11 +417,11 @@ def main() -> None:
         output_dir = script_dir / "sample-data"
         result = export_sample_data(controls, output_dir)
 
-        print(f"\nExported sample data:")
+        print("\nExported sample data:")
         print(f"  Assessments: {result['assessments']} records")
         print(f"  Daily Scores: {result['scores']} records")
         print(f"  Exceptions: {result['exceptions']} records")
-        print(f"\nFiles created:")
+        print("\nFiles created:")
         for file_path in result['files']:
             print(f"  {file_path}")
         return

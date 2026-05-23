@@ -36,7 +36,6 @@ Usage:
 import argparse
 import os
 import sys
-from typing import Optional
 
 from elm_client import ELMClient
 from create_dataverse_schema import create_schema

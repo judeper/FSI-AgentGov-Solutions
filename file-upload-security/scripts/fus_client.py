@@ -6,11 +6,10 @@ schema, environment variables, and connection reference operations.
 Follows the proven CMMClient pattern with FUS_ environment variable prefix.
 """
 
-import json
 import os
 import sys
 import time
-from typing import Any, Optional
+from typing import Optional
 
 try:
     import msal

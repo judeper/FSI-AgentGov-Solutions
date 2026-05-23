@@ -14,7 +14,6 @@ Usage:
 """
 
 import argparse
-import json
 import os
 import re
 import sys
@@ -288,8 +287,8 @@ def deploy_security_roles(client: DataverseClient, dry_run: bool = False) -> Non
 
         # Note: Security role creation via Web API is complex
         # In production, use XrmTooling or solution import
-        print(f"  Security role creation requires manual setup or solution import")
-        print(f"  See docs/security-roles.md for privilege matrix")
+        print("  Security role creation requires manual setup or solution import")
+        print("  See docs/security-roles.md for privilege matrix")
 
 
 def deploy_default_configs(client: DataverseClient, dry_run: bool = False) -> int:

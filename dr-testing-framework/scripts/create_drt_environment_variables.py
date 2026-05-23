@@ -141,9 +141,9 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                         f"{schemaname}: {val_err}"
                     )
                     print(
-                        f"  Note: Environment variable definition was created "
-                        f"but has no default value. Set the value manually in "
-                        f"Power Apps."
+                        "  Note: Environment variable definition was created "
+                        "but has no default value. Set the value manually in "
+                        "Power Apps."
                     )
 
                 print(f"  {schemaname}: created")

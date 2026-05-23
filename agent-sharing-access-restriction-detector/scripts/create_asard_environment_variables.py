@@ -9,7 +9,6 @@ BAP Admin API integration, approval timeouts, and governance lead contacts.
 import argparse
 import os
 import sys
-from typing import Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "shared"))
 from dataverse_client import DataverseClient

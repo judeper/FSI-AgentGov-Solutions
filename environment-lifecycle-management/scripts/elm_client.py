@@ -9,10 +9,9 @@ where supported.
 """
 
 import argparse
-import json
 import os
 import sys
-from typing import Any, Optional
+from typing import Optional
 from urllib.parse import unquote, urljoin
 from xml.sax.saxutils import quoteattr
 
@@ -788,8 +787,8 @@ def main():
         if args.test_connection:
             print("Testing Dataverse connection...")
             org = client.test_connection()
-            print(f"  Token acquired: ✓")
-            print(f"  API accessible: ✓")
+            print("  Token acquired: ✓")
+            print("  API accessible: ✓")
             print(f"  Organization: {org.get('name', 'Unknown')}")
             print("\nConnection test: PASSED")
             sys.exit(0)

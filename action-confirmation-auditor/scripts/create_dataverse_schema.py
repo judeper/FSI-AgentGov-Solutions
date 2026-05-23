@@ -15,7 +15,6 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 from aca_client import ACAClient
 
@@ -621,7 +620,6 @@ def create_schema(client: ACAClient, dry_run: bool = False) -> None:
         )
 
     # Summary
-    all_optionsets = {**SHARED_OPTIONSETS, **ACA_OPTIONSETS}
     print("\n" + "=" * 60)
     if dry_run:
         print("DRY RUN COMPLETE - Review output above")

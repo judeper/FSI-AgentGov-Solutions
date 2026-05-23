@@ -9,7 +9,6 @@ Office 365, Teams, and Azure Automation for session validation and alerting.
 import argparse
 import os
 import sys
-from typing import Optional
 
 from ssc_client import SSCClient
 

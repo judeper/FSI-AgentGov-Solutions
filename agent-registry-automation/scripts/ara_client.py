@@ -704,8 +704,8 @@ def main() -> None:
             print("Testing connection...")
             org = client.test_connection()
             if not args.dry_run:
-                print(f"  Token acquired: OK")
-                print(f"  API accessible: OK")
+                print("  Token acquired: OK")
+                print("  API accessible: OK")
                 print(f"  Organization: {org.get('name', 'Unknown')}")
             print("Connection successful!")
             sys.exit(0)

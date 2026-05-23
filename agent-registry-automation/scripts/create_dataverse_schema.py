@@ -15,7 +15,6 @@ Tables:
 import argparse
 import os
 import sys
-from typing import Optional
 
 from ara_client import ARAClient
 
@@ -627,7 +626,7 @@ def create_schema(client: ARAClient, dry_run: bool = False) -> None:
     print(f"  Tables: {len(TABLES)}")
     total_cols = sum(len(t["columns"]) for t in TABLES.values())
     print(f"  Columns: {total_cols}")
-    print(f"  Alternate keys: 1")
+    print("  Alternate keys: 1")
     print("=" * 60)
 
 
@@ -680,7 +679,7 @@ def write_schema_docs(path: str) -> None:
         lines.append(f"- **Schema name:** `{tdef['schema_name']}`")
         lines.append(f"- **Entity set name (OData):** `{entity_set}`")
         lines.append(f"- **Ownership:** {tdef['ownership']}")
-        lines.append(f"- **Primary name attribute:** `fsi_name` (ApplicationRequired, String(500))")
+        lines.append("- **Primary name attribute:** `fsi_name` (ApplicationRequired, String(500))")
         lines.append(f"- **Description:** {tdef['description']}")
         lines.append("")
         lines.append("| Logical name | Schema name | Type | Required | Description |")
