@@ -1,7 +1,7 @@
 id: finra-supervision-workflow
 name: FINRA Supervision Workflow
 description: Automated retrospective supervision workflow for AI agent outputs to support FINRA Rule 3110 compliance in financial services organizations. This solution provides a post-delivery review queue, SLA tracking, escalation, and append-only Dataverse audit logging and WORM-ready evidence export fed by Microsoft Purview Communication Compliance.
-version: 1.1.0
+version: 1.1.1
 status: live
 domain: compliance-audit
 tier: '2'

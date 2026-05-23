@@ -35,7 +35,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | dr-testing-framework | v2.0.1 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
 | environment-lifecycle-management | v1.2.2 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
 | file-upload-security | v1.1.1 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
-| finra-supervision-workflow | v1.1.0 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
+| finra-supervision-workflow | v1.1.1 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.2.1 | 2.24 | GenAI feature enablement governance per zone |
 | hallucination-tracker | v1.2.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
 | hitl-workflow-governance | v1.1.2 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |

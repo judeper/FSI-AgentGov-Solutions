@@ -619,7 +619,7 @@
     "finra-supervision-workflow": {
       "id": "finra-supervision-workflow",
       "name": "FINRA Supervision Workflow",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",
