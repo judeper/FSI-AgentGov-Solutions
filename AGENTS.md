@@ -418,7 +418,7 @@ An autonomous multi-agent council review (GPT-5.4 + Claude Opus 4.6) audited all
    - Snake_case in docs (`fsi_compliance_status`) that should be logical name (`fsi_compliancestatus`)
    - **Rule:** Always verify column names against `create_*_dataverse_schema.py` before writing OData queries
 
-2. **"Azure AD" Product Naming** — Found in ~60 files across ~20 solutions. Most common in Python `argparse` help text (`help="Azure AD tenant ID"`) and PowerShell `.PARAMETER` descriptions.
+2. **Microsoft Entra ID Product Naming** — Legacy tenant-identity branding was found in ~60 files across ~20 solutions. Most common in Python `argparse` help text for tenant IDs and PowerShell `.PARAMETER` descriptions.
 
 3. **Compliance Language Violations** — "ensures", "guarantees", "enforces" found in ~25 locations across ~15 solutions. Most common in SOLUTION-DOCUMENTATION.md files, flow-configuration.md, and README feature descriptions.
 
@@ -439,7 +439,7 @@ The council review created `.ralph-config.json` files for 8 solutions to capture
 ### Validation Priority for Future Reviews
 
 1. Run `create_*_dataverse_schema.py --output-docs` to regenerate schema docs
-2. Grep for "Azure AD" (should be zero hits outside CHANGELOG historical entries)
+2. Grep for legacy tenant-identity branding (should be zero hits outside CHANGELOG historical entries)
 3. Grep for "ensures|guarantees|will prevent|eliminates risk" in *.md files
 4. Compare script `$select`/`$filter` columns against schema definitions
 5. Verify option set values in flow docs match `create_*_dataverse_schema.py`

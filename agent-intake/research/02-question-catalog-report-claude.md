@@ -315,7 +315,7 @@ json
         "displayName": "Dev - Jane Smith",
         "environmentSku": "Developer",
         "provisioningState": "Succeeded",
-        "createdBy": { "userId": "aad-guid", "userPrincipalName": "jane@firm.com" }
+        "createdBy": { "userId": "entra-guid", "userPrincipalName": "jane@firm.com" }
       }
     }
   ]
@@ -366,7 +366,7 @@ json
     {
       "properties": {
         "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/64702f94-...",
-        "principalId": "aad-guid",
+        "principalId": "entra-guid",
         "scope": "/subscriptions/.../workspaces/my-foundry-project"
       }
     }
