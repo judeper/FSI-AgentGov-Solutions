@@ -42,7 +42,7 @@ ODATA_FSI_TOKEN = re.compile(r"(?<![A-Za-z0-9])_?fsi_[a-z0-9_]+(?:_value)?\b", r
 # Existing scripts/lint-odata-columns.py owns these spell-check findings. E4
 # skips them when they are not otherwise declared to avoid duplicate reports.
 SNAKE_FSI_TOKEN = re.compile(r"\bfsi_[a-z][a-z0-9]*(?:_[a-z][a-z0-9]*)+\b", re.IGNORECASE)
-LOOKUP_VALUE_TOKEN = re.compile(r"^_fsi_([a-z0-9]+)_value$", re.IGNORECASE)
+LOOKUP_VALUE_TOKEN = re.compile(r"^_fsi_([a-z0-9_]+)_value$", re.IGNORECASE)
 SCHEMA_FSI_TOKEN = re.compile(r"(?<![A-Za-z0-9_])fsi_[A-Za-z0-9_]+")
 
 # OData query parameters: capture the key=value pair so we can scan the value.
@@ -141,7 +141,17 @@ def schema_scripts(solution: Path) -> list[Path]:
     scripts_dir = solution / "scripts"
     if not scripts_dir.is_dir():
         return []
-    return sorted(scripts_dir.glob("create_*_dataverse_schema.py"))
+    # Three naming conventions exist across the catalog:
+    #   create_<slug>_dataverse_schema.py  (most solutions, e.g. create_alg_dataverse_schema.py)
+    #   create_<slug>_schema.py            (audit-compliance-manager: create_audit_compliance_schema.py)
+    #   create_dataverse_schema.py         (slugless: action-confirmation-auditor, agent-access-monitor,
+    #                                       environment-lifecycle-management, etc. — 10 solutions)
+    # Python's `*` requires at least one character between literal underscores, so
+    # `create_*_schema.py` matches the first two forms but not the slugless third.
+    matches: set[Path] = set()
+    matches.update(scripts_dir.glob("create_*_schema.py"))
+    matches.update(scripts_dir.glob("create_dataverse_schema.py"))
+    return sorted(matches)
 
 
 def _resolve_string_node(node: ast.AST, constants: dict[str, str]) -> str | None:
@@ -248,13 +258,26 @@ def _pluralize_dataverse_name(logical_name: str) -> str:
 
 
 def _with_entity_set_variants(tokens: Iterable[str]) -> set[str]:
-    """Add likely entity-set names to the schema token set."""
+    """Add likely entity-set names and primary-key columns to the schema token set.
+
+    Dataverse auto-generates:
+      - Entity-set plural for every table (`fsi_drtestresult` → `fsi_drtestresults`)
+      - Primary-key column `<tablelogicalname>id` for every table
+        (`fsi_drtestresult` → `fsi_drtestresultid`)
+
+    The schema script does NOT explicitly declare the primary key column, so the
+    linter must infer it. We can't reliably distinguish table tokens from column
+    tokens here, so we add the `id`-suffixed variant for every fsi_* token. This
+    is loose but safe — the alternative (parsing TABLES dict structure) would be
+    fragile across the 28 schema scripts that all use slightly different shapes.
+    """
     expanded: set[str] = set()
     for token in tokens:
         lowered = token.lower()
         expanded.add(lowered)
         if lowered.startswith("fsi_"):
             expanded.add(_pluralize_dataverse_name(lowered))
+            expanded.add(f"{lowered}id")
     return expanded
 
 

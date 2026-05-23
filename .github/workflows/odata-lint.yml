@@ -29,5 +29,7 @@ jobs:
 
       # TODO(post-baseline): flip to `python scripts/lint-odata-existence.py --strict`
       # after false-positive findings are triaged and the baseline is clean.
-      - run: python scripts/lint-odata-existence.py
+      # --cross-solution-ok accepts column tokens declared in any solution's
+      # schema (intentional cross-solution couplings like ARA → all agents, CAA → ELM).
+      - run: python scripts/lint-odata-existence.py --cross-solution-ok
         continue-on-error: true

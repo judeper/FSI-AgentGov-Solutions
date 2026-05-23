@@ -62,6 +62,81 @@ TABLES = {
         findings = self._findings("$select=fsi_agent_id")
         self.assertEqual([], findings)
 
+    def test_primary_key_column_resolves_via_table_name(self) -> None:
+        """Dataverse auto-generates <tablelogicalname>id as the primary key column.
+
+        The schema script declares the table but not the PK column; the linter
+        must add the `id`-suffixed variant for every fsi_* token.
+        """
+        schema_tokens = lint_odata_existence.collect_schema_tokens_from_text(
+            """
+PUBLISHER_PREFIX = "fsi"
+TABLES = {
+    "fsi_DRTestResult": {
+        "SchemaName": "fsi_DRTestResult",
+        "Attributes": [],
+    }
+}
+"""
+        )
+        context_tokens = lint_odata_existence.scan_text_for_odata_tokens(
+            "$select=fsi_drtestresultid"
+        )
+        findings = lint_odata_existence.find_unknown_tokens(context_tokens, schema_tokens)
+        self.assertEqual([], findings)
+
+    def test_multi_segment_lookup_value_resolves(self) -> None:
+        """Multi-segment lookup _value (with underscores in base name) resolves correctly."""
+        schema_tokens = lint_odata_existence.collect_schema_tokens_from_text(
+            """
+PUBLISHER_PREFIX = "fsi"
+TABLES = {
+    "fsi_ModelInventory": {
+        "SchemaName": "fsi_ModelInventory",
+        "Attributes": [
+            {"SchemaName": "fsi_ModelInventory_Lookup"},
+        ],
+    }
+}
+"""
+        )
+        context_tokens = lint_odata_existence.scan_text_for_odata_tokens(
+            "$select=_fsi_modelinventory_lookup_value"
+        )
+        findings = lint_odata_existence.find_unknown_tokens(context_tokens, schema_tokens)
+        self.assertEqual([], findings)
+
+
+class SchemaScriptsGlobTests(unittest.TestCase):
+    """Validate that schema_scripts() finds both naming conventions."""
+
+    def test_glob_matches_slugless_schema_script(self) -> None:
+        """All three naming conventions must be discovered:
+            - create_<slug>_dataverse_schema.py  (most solutions)
+            - create_<slug>_schema.py            (audit-compliance-manager)
+            - create_dataverse_schema.py         (slugless: ELM, ARA, ...)
+        """
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scripts = root / "scripts"
+            scripts.mkdir()
+            (scripts / "create_xyz_dataverse_schema.py").write_text("# slug form")
+            (scripts / "create_xyz_schema.py").write_text("# acm-style form")
+            (scripts / "create_dataverse_schema.py").write_text("# slugless form")
+            (scripts / "create_xyz_environment_variables.py").write_text("# unrelated")
+            found = lint_odata_existence.schema_scripts(root)
+            found_names = sorted(p.name for p in found)
+            self.assertEqual(
+                [
+                    "create_dataverse_schema.py",
+                    "create_xyz_dataverse_schema.py",
+                    "create_xyz_schema.py",
+                ],
+                found_names,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
