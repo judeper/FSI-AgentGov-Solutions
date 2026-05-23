@@ -1,8 +1,8 @@
 # Agent Intake
 
-> **Status:** Preview (v0.2.0-preview) — Express path only. Standard and Full paths remain on the roadmap.
+> **Status:** Preview (v1.0.0-preview) — Express, Standard, and Full paths all ship. Suitable for pilot validation; not for broad production rollout without customer governance sign-off.
 
-A pre-build user intake workflow for AI agent requests. Captures business case, classifies risk, routes for sponsor approval, and hands off to `agent-registry-automation` once approved.
+A pre-build user intake workflow for AI agent requests. Captures business case, classifies risk into Express / Standard / Full paths, routes for sponsor or reviewer approval, and hands off to `agent-registry-automation` once approved.
 
 ## Why this solution exists
 
@@ -17,18 +17,23 @@ Without a structured intake, those decisions can happen in chat threads, in tick
 
 ## Status and external next steps
 
-This solution is **self-deployable preview** content at v0.2.0-preview. It is suitable for pilot validation, not broad production rollout without customer governance sign-off.
+This solution is **self-deployable preview** content at v1.0.0-preview. It is suitable for pilot validation, not broad production rollout without customer governance sign-off.
 
-**What is shipped:**
+**What is shipped (v1.0.0-preview):**
 
 | Layer | Status |
 |---|---|
 | Manifest, README, CHANGELOG, ADR | ✅ Shipped |
-| 9-table Dataverse schema + auto-generated docs | ✅ Shipped |
-| Power Pages form spec, sponsor card, flow build instructions | ✅ Shipped |
-| Classification engine + auto-detect scripts | ✅ Shipped |
-| Handoff scripts (Microsoft Entra Agent ID, Purview retention) | ✅ Shipped |
-| Smoke test, pilot deployment runbook, onboarding docs | ✅ Shipped |
+| 9-table Dataverse schema with three-path routing columns + auto-generated docs | ✅ Shipped |
+| Express / Standard / Full question catalogs (10 / 22 / 35 questions) | ✅ Shipped |
+| Power Pages multistep form with progressive disclosure | ✅ Shipped |
+| Sponsor adaptive card + 12 documented Power Automate flows (build instructions only) | ✅ Shipped |
+| Classification engine (Express + Standard + Full) and auto-detect scripts | ✅ Shipped |
+| Model-driven reviewer queues app + ADR-011 packaging exception | ✅ Shipped |
+| Handoff scripts (Microsoft Entra Agent ID blueprint, Purview retention, MRM bridge) | ✅ Shipped |
+| `deploy.ps1` orchestrator with `-Teardown`, `-SeedTestData`, `-DryRun`; 5 deterministic fixtures; extended smoke test with `-PathScope` | ✅ Shipped |
+| Pilot deployment runbook, onboarding docs, full enablement suite | ✅ Shipped |
+| CI: 4 validators + 42 pytest cases | ✅ Shipped |
 | Catalog registration + generated site artifacts | ✅ Shipped |
 
 **External gates before scaling beyond pilot:**
@@ -38,20 +43,17 @@ This solution is **self-deployable preview** content at v0.2.0-preview. It is su
 3. Customer admin consent for Microsoft Graph permissions documented in [`docs/onboarding-checklist.md`](docs/onboarding-checklist.md).
 4. Purview retention label (`FSI-AgentIntake-7yr`) created in the Purview portal or via Security & Compliance PowerShell; Graph beta create is preview/delegated-only guidance.
 5. 30-day InfoSec sample-audit shows no undetected high-risk requests passed through Express.
-6. v0.3 Standard path shipped for team and Tier-2 requests this preview defers.
+6. Live-tenant verification of the Microsoft Entra Agent ID `fsiReviewerAttestations` open-type field (carried over as a v1.1 closure item).
 
-## What v0.2.0-preview ships (Express path only)
+## What v1.0.0-preview ships (Express, Standard, and Full paths)
 
-The MVP supports the **Express path** — for low-risk personal-agent requests where the answers to all six trigger questions are "No" and the resulting classification is Tier 3 / Zone 3. For these requests:
+The MVP supports three intake paths whose work effort is proportional to risk:
 
-- Maker fills out the Power Pages intake form.
-- System auto-classifies tier, zone, retention, and recommended environment.
-- Sponsor receives a Teams adaptive card with attestation language and approves with one click.
-- On approval the request is approved with an immutable decision-pack record retained 7 years.
-- Handoff script provisions the Microsoft Entra Agent ID service principal and creates the entry in `agent-registry-automation`.
-- InfoSec gets a passive notification logged for a 10% sample audit.
+- **Express path** — for low-risk personal-agent requests where T1–T6 are all "No" and auto-classification lands at Tier 3 / Zone 3. Maker fills out the Power Pages form; system auto-classifies; sponsor receives a Teams adaptive card with FINRA 3110 attestation language and approves with one click; system auto-provisions the Microsoft Entra Agent ID and writes the registry entry; InfoSec gets a passive 10% sample-audit notification.
+- **Standard path** — for mid-risk team-scope requests. Maker answers the 22-question Standard catalog (in addition to Express); the request is routed to a conditional reviewer who can approve, request changes, or escalate.
+- **Full path** — for high-risk customer-facing or supervised-activity requests. Maker answers the 35-question Full catalog; the request enters a parallel-board reviewer queue with quorum tracking and (when applicable) an MRM handoff to `model-risk-management-automation`.
 
-Higher-risk or wider-audience requests are captured with `DeferredOutOfScope` status and routed to the customer's existing full-review workflow until the Standard/Full paths ship.
+All three paths share the same immutable decision-log table (`fsi_intakedecisionlog`) with a 7-year retention label, the same drift-handoff payload schema for downstream monitoring, and the same Microsoft Entra Agent ID provisioning flow on approval.
 
 ## Architecture
 
@@ -142,6 +144,17 @@ See [`docs/pilot-deployment-runbook.md`](docs/pilot-deployment-runbook.md) for t
 | `templates/sponsor-approval-card.json` | Teams adaptive card template |
 | `templates/policy-lookup-tables.yaml` | Customer-overridable policy defaults |
 | `research/` | Historical research artifacts; current implementation guidance is in `docs/` and `scripts/` |
+
+### Enablement & demo
+
+| Path | Audience | Purpose |
+|------|----------|---------|
+| `docs/enablement-overview.md` | All audiences | Entry point that links the enablement set by role |
+| `docs/maker-guide.md` | Makers | Plain-English guide to Express, Standard, Full, denial, appeal, and post-approval expectations |
+| `docs/sponsor-guide.md` | Sponsors | Teams-card walkthrough, sponsor accountability, denial handling, and audit-trail summary |
+| `docs/reviewer-cheat-sheet.md` | Reviewer board | Quorum mechanics, per-role attestation guidance, SLA, escalation, and recusal rules |
+| `docs/admin-onboarding-guide.md` | Customer admins | End-to-end deployment, policy hydration, flow build, smoke testing, operations, and troubleshooting |
+| `docs/demo-script.md` | Demo operators | 20-25 minute customer architecture demo narrative with seeded scenarios and teardown |
 
 ## Related solutions
 

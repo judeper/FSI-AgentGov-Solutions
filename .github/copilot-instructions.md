@@ -14,7 +14,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
 | action-confirmation-auditor | v1.2.0 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
-| agent-intake | v0.2.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express path MVP) with sponsor 1-click approval and Entra Agent ID handoff |
+| agent-intake | v1.0.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
 | agent-365-lifecycle-governance | v1.1.4 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.1.1 | 3.8 | Automated detection of overly permissive agent access configurations |
 |  | 2.17 | Inter-agent communication restriction validation |
@@ -72,6 +72,16 @@ FSI-AgentGov-Solutions/
 │   └── templates/             # JSON samples, schemas
 └── CHANGELOG.md
 ```
+
+## Per-Solution AGENTS.md (Context Cascade)
+
+Some solutions carry a per-solution `AGENTS.md` at their root (e.g., `agent-intake/AGENTS.md`). When working on a solution that has one, **read it first** — it captures dev/AI-agent context: active development status, resume-on-new-machine workflow, auth quirks specific to that solution, pending polish items, and recent design decisions. Per-solution `AGENTS.md` files are **not** customer-facing (that's `README.md`); they exist so a new session or a new machine picks up exactly where the previous one left off.
+
+Active per-solution `AGENTS.md` files:
+
+- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · PR #142 open
+
+When you add a per-solution `AGENTS.md`, list it here and link to it from the solution's README.
 
 ## Solution Content Policy (CRITICAL)
 

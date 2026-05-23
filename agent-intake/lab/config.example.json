@@ -1,0 +1,41 @@
+{
+  "$schema": "./config.schema.json",
+  "_comment": "Template for lab/config.local.json. Copy to config.local.json (gitignored) and fill in. Never commit secrets — auth tokens stay in az login / pac auth profile.",
+  "environment": {
+    "url": "https://<org-id>.crm.dynamics.com/",
+    "name": "FSI-AgentIntake-Lab",
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "environmentId": "00000000-0000-0000-0000-000000000000",
+    "type": "Trial",
+    "region": "unitedstates"
+  },
+  "auth": {
+    "mode": "AzCli",
+    "_modeOptions": ["AzCli", "ManagedIdentity", "ServicePrincipal"],
+    "_note": "AzCli mode reads credentials from 'az login' user profile. Service principal (legacy) reads from env vars AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID — never store in this file."
+  },
+  "pac": {
+    "profileName": "",
+    "_note": "Optional. If set, Invoke-Deploy.ps1 will run 'pac auth select --name <profileName>' before deploy. Leave empty to use the currently active pac profile."
+  },
+  "deploy": {
+    "seedTestData": true,
+    "skipSmoke": false,
+    "pathScopeForSmoke": "All",
+    "_pathScopeOptions": ["Express", "Standard", "Full", "All"]
+  },
+  "billing": {
+    "policyId": "",
+    "policyName": "",
+    "allowedEnvironmentType": "Sandbox,Production",
+    "_note": "Power Platform PayAsYouGo billing policy that the lab env will be attached to so Copilot/AI Builder credits draw from your Azure subscription. Discover policies via GET https://api.powerplatform.com/licensing/billingPolicies?api-version=2022-03-01-preview. Trial/Developer/Teams envs cannot be attached — keep allowedEnvironmentType at 'Sandbox,Production' to fail fast on env-type mismatch."
+  },
+  "purview": {
+    "operatorUpn": "admin@<tenant>.onmicrosoft.com",
+    "_note": "Operator UPN must have Security & Compliance admin role for retention label creation."
+  },
+  "entraAgentId": {
+    "featureFlagEnabled": false,
+    "_note": "Set true if Microsoft Entra Agent ID is enabled in the tenant. If false, blueprint creation falls back to notes-only and smoke test warns instead of failing."
+  }
+}

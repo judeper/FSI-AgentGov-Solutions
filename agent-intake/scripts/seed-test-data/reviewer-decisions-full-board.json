@@ -1,0 +1,49 @@
+{
+  "decisions": [
+    {
+      "role": "InfoSec",
+      "upn": "infosec-full@contoso.example",
+      "decision": "Approved",
+      "notes": "Identity, logging, and tenant controls match the planned enterprise pilot boundary.",
+      "conditionsText": "",
+      "decisionMethod": "ReviewerApp",
+      "quorumWeight": 1
+    },
+    {
+      "role": "Privacy",
+      "upn": "privacy-full@contoso.example",
+      "decision": "Approved",
+      "notes": "Declared data residency and privacy evidence are aligned to the enterprise deployment target.",
+      "conditionsText": "",
+      "decisionMethod": "ReviewerApp",
+      "quorumWeight": 1
+    },
+    {
+      "role": "Compliance",
+      "upn": "compliance-full@contoso.example",
+      "decision": "Approved",
+      "notes": "The decision pack and retention evidence support supervisory review for the pilot.",
+      "conditionsText": "",
+      "decisionMethod": "ReviewerApp",
+      "quorumWeight": 1
+    },
+    {
+      "role": "Legal",
+      "upn": "legal-full@contoso.example",
+      "decision": "Recused",
+      "notes": "No additional legal decision was required for the seeded lab scenario.",
+      "conditionsText": "",
+      "decisionMethod": "ReviewerApp",
+      "quorumWeight": 1
+    },
+    {
+      "role": "MRM",
+      "upn": "mrm-full@contoso.example",
+      "decision": "Recused",
+      "notes": "The seeded scenario validates the handoff contract while leaving the final MRM record in queue-ready state.",
+      "conditionsText": "",
+      "decisionMethod": "ReviewerApp",
+      "quorumWeight": 1
+    }
+  ]
+}

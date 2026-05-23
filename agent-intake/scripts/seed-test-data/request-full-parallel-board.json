@@ -1,0 +1,73 @@
+{
+  "scenario": "full-parallel-board",
+  "sponsorRole": "LineOfBusinessSponsor",
+  "reviewers": {
+    "InfoSec": "infosec-full@contoso.example",
+    "Privacy": "privacy-full@contoso.example",
+    "Compliance": "compliance-full@contoso.example",
+    "Legal": "legal-full@contoso.example",
+    "MRM": "mrm-full@contoso.example"
+  },
+  "seedArtifacts": {
+    "syntheticEntraAgentId": "cccccccc-3333-4333-8333-cccccccccccc",
+    "registryRecordId": "cccc0000-3333-4333-8333-cccccccccccc",
+    "mrmOfficerUpn": "mrm-officer@contoso.example",
+    "auditorUpn": "audit-intake@contoso.example"
+  },
+  "expectedClassification": {
+    "pathUsed": "Full",
+    "decisionPath": "Full",
+    "riskTier": "Tier 1 (High)",
+    "zone": "Zone 1 (Enterprise)",
+    "quorumRequired": 3
+  },
+  "expectedOutcome": {
+    "decisionOutcome": "Approved",
+    "reviewerCount": 5,
+    "agentIdExpected": true,
+    "mrmExpected": true,
+    "driftPayloadExpected": true
+  },
+  "fsi_intakerequest": {
+    "fsi_requestid": "33333333-3333-4333-8333-333333333333",
+    "fsi_agentdisplayname": "Enterprise Suitability Analyst",
+    "fsi_agenttype": "Custom Engine Agent",
+    "fsi_businessoutcome": "Support enterprise-wide suitability analysis with restricted research inputs and formal governance evidence.",
+    "fsi_businessjustification": "The bank needs a governed assistant for broad internal users with high-risk data-handling controls and documented reviewer decisions.",
+    "fsi_makerupn": "jordan.maker@contoso.example",
+    "fsi_makerdepartment": "Wealth Management",
+    "fsi_makercountry": "US",
+    "fsi_makerdisplayname": "Jordan Maker",
+    "fsi_makerjobtitle": "Wealth Strategy Director",
+    "fsi_sponsorupn": "riley.sponsor@contoso.example",
+    "fsi_intendedaudience": "Anyone in the firm",
+    "fsi_t1initiatesfinancialtxn": "Yes",
+    "fsi_t2customerfacing": "Yes",
+    "fsi_t3autonomousunmonitored": "No",
+    "fsi_t4handlesnpi": "Yes",
+    "fsi_t5handlesmnpi": "Yes",
+    "fsi_t6crossborderdata": "No",
+    "fsi_makerattestation": true,
+    "fsi_dataresidencycountry": "US",
+    "fsi_privacyoverride": false
+  },
+  "dataSources": [
+    {
+      "name": "Suitability Research Lake",
+      "type": "AzureDataLake",
+      "classification": "Restricted",
+      "isCustomerData": true,
+      "isRestricted": true,
+      "dataResidencyCountry": "US"
+    },
+    {
+      "name": "Enterprise Policy Library",
+      "type": "SharePoint",
+      "classification": "Confidential",
+      "isCustomerData": false,
+      "isRestricted": false,
+      "dataResidencyCountry": "US"
+    }
+  ]
+}
+

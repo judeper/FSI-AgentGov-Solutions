@@ -1,0 +1,66 @@
+{
+  "scenario": "cross-border-deny",
+  "sponsorRole": "LineOfBusinessSponsor",
+  "reviewers": {
+    "InfoSec": "infosec-crossborder@contoso.example",
+    "Privacy": "privacy-crossborder@contoso.example",
+    "Compliance": "compliance-crossborder@contoso.example",
+    "Legal": "legal-crossborder@contoso.example",
+    "MRM": "mrm-crossborder@contoso.example"
+  },
+  "seedArtifacts": {
+    "syntheticEntraAgentId": "dddddddd-4444-4444-8444-dddddddddddd",
+    "registryRecordId": "dddd0000-4444-4444-8444-dddddddddddd",
+    "mrmOfficerUpn": "mrm-officer@contoso.example",
+    "auditorUpn": "audit-intake@contoso.example"
+  },
+  "expectedClassification": {
+    "pathUsed": "Standard",
+    "decisionPath": "DefaultDeny",
+    "riskTier": "Tier 2 (Medium)",
+    "zone": "Zone 2 (Team)",
+    "quorumRequired": 2,
+    "routingReason": "cross_border_data"
+  },
+  "expectedOutcome": {
+    "decisionOutcome": "Denied",
+    "reviewerCount": 0,
+    "agentIdExpected": false,
+    "mrmExpected": false,
+    "driftPayloadExpected": false
+  },
+  "fsi_intakerequest": {
+    "fsi_requestid": "44444444-4444-4444-8444-444444444444",
+    "fsi_agentdisplayname": "Cross-Border Advisor Draft",
+    "fsi_agenttype": "Declarative Agent (M365 Copilot)",
+    "fsi_businessoutcome": "Explore a cross-border advisory assistant for a named desk.",
+    "fsi_businessjustification": "The desk wants to review a possible assistant, but the declared data residency remains outside the approved maker country.",
+    "fsi_makerupn": "morgan.maker@contoso.example",
+    "fsi_makerdepartment": "Advisory",
+    "fsi_makercountry": "US",
+    "fsi_makerdisplayname": "Morgan Maker",
+    "fsi_makerjobtitle": "Advisory Manager",
+    "fsi_sponsorupn": "quinn.sponsor@contoso.example",
+    "fsi_intendedaudience": "My team",
+    "fsi_t1initiatesfinancialtxn": "No",
+    "fsi_t2customerfacing": "No",
+    "fsi_t3autonomousunmonitored": "No",
+    "fsi_t4handlesnpi": "No",
+    "fsi_t5handlesmnpi": "No",
+    "fsi_t6crossborderdata": "Yes",
+    "fsi_makerattestation": true,
+    "fsi_dataresidencycountry": "CA",
+    "fsi_privacyoverride": false
+  },
+  "dataSources": [
+    {
+      "name": "Canadian Customer Advisory Extract",
+      "type": "Dataverse",
+      "classification": "Confidential",
+      "isCustomerData": true,
+      "isRestricted": false,
+      "dataResidencyCountry": "CA"
+    }
+  ]
+}
+
