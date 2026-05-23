@@ -21,7 +21,7 @@
 
 .NOTES
     File: Test-ActionConfirmationCompliance.ps1
-    Version: 1.1.0
+    Version: 1.2.1
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -168,7 +168,7 @@ function Test-ActionConfirmationCompliance {
     $runId = [guid]::NewGuid().ToString()
 
     Write-Verbose "========================================="
-    Write-Verbose "Action Confirmation Auditor v1.1.0"
+    Write-Verbose "Action Confirmation Auditor v1.2.1"
     Write-Verbose "RunId: $runId"
     Write-Verbose "========================================="
 

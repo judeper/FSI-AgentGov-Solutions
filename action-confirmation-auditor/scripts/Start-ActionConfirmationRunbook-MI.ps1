@@ -21,7 +21,7 @@
       Automation account
     - User-assigned MI allows sharing identity across multiple Automation
       accounts
-    - No certificate rotation required — Azure manages the credentials
+    - No certificate rotation required -- Azure manages the credentials
 
     Reference: https://learn.microsoft.com/azure/automation/learn/powershell-runbook-managed-identity
 
@@ -40,7 +40,7 @@
 
 .NOTES
     File: Start-ActionConfirmationRunbook-MI.ps1
-    Version: 1.2.0
+    Version: 1.2.1
     Solution: Action Confirmation Auditor (ACA)
     Controls: 2.12, 1.10
 
@@ -59,8 +59,9 @@
     5. Remove the certificate-based app registration if no longer needed
 #>
 
-#Requires -Version 7.1
-#Requires -Modules Az.Accounts, Az.Automation
+#Requires -Version 5.1
+#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '2.17.0' }
+#Requires -Modules Az.Automation
 
 param(
     [Parameter(Mandatory)]
@@ -113,9 +114,26 @@ try {
 # ===================================================================
 Write-Verbose "Acquiring tokens for Graph and Dataverse..."
 
+# Helper: convert SecureString token (Az.Accounts >= 2.17) to plain string
+# while preserving compatibility with earlier versions that returned a String.
+function ConvertFrom-AzAccessTokenValue {
+    param([Parameter(Mandatory)]$TokenValue)
+    if ($TokenValue -is [System.Security.SecureString]) {
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($TokenValue)
+        try {
+            return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        } finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+    return [string]$TokenValue
+}
+
 try {
-    $graphToken = (Get-AzAccessToken -ResourceUrl 'https://graph.microsoft.com').Token
-    $dvToken = (Get-AzAccessToken -ResourceUrl "$($DataverseUrl.TrimEnd('/'))").Token
+    $graphTokenResult = Get-AzAccessToken -ResourceUrl 'https://graph.microsoft.com'
+    $dvTokenResult    = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/')
+    $graphToken = ConvertFrom-AzAccessTokenValue -TokenValue $graphTokenResult.Token
+    $dvToken    = ConvertFrom-AzAccessTokenValue -TokenValue $dvTokenResult.Token
 } catch {
     $errorOutput = @{
         Status   = 'Error'
@@ -134,7 +152,7 @@ Write-Verbose "Connecting to Power Platform admin APIs..."
 try {
     Add-PowerAppsAccount -AccessToken $graphToken -ErrorAction Stop
 } catch {
-    Write-Warning "Power Platform admin connection: $_ — continuing with Graph-only mode."
+    Write-Warning "Power Platform admin connection: $_ -- continuing with Graph-only mode."
 }
 
 # ===================================================================
@@ -152,16 +170,23 @@ $scanParams = @{
     OutputFormat = 'Object'
 }
 
-if ($Zone -ne 'All') {
-    $scanParams['Zone'] = $Zone
-}
-
-if ($IncludeSandbox) {
-    $scanParams['IncludeSandbox'] = $true
+# NOTE: Test-ActionConfirmationCompliance does not expose a -Zone parameter
+# (it scans all zones and includes the zone in each result row). The -Zone
+# runbook parameter is recorded in the output envelope below and may be used
+# by callers to post-filter; we do not splat it into the scanner.
+if (-not $IncludeSandbox) {
+    $scanParams['ExcludeSandbox'] = $true
 }
 
 Write-Verbose "Starting action confirmation compliance scan..."
 $scanResults = Test-ActionConfirmationCompliance @scanParams
+
+# Post-scan zone filter (Test-ActionConfirmationCompliance returns all zones;
+# the runbook -Zone parameter narrows the output envelope).
+if ($Zone -ne 'All') {
+    $zoneLabel = "Zone$Zone"
+    $scanResults = @($scanResults | Where-Object { $_.Zone -eq $zoneLabel })
+}
 
 # ===================================================================
 # Step 5: Build structured output
@@ -169,7 +194,7 @@ $scanResults = Test-ActionConfirmationCompliance @scanParams
 $output = @{
     Status                    = 'OK'
     RunType                   = 'ManagedIdentity'
-    Timestamp                 = (Get-Date -AsUTC -Format 'o')
+    Timestamp                 = (Get-Date).ToUniversalTime().ToString('o')
     AuthenticationMethod      = if ($ManagedIdentityClientId) { 'UserAssignedMI' } else { 'SystemAssignedMI' }
     Zone                      = $Zone
     TotalAgents               = ($scanResults | Measure-Object).Count
