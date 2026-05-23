@@ -73,9 +73,9 @@ These solutions operate independently but can be wired into the Compliance Dashb
 
 | Solution | Version | Controls |
 |----------|---------|----------|
-| [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.1 | 3.8 |
+| [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.2 | 3.8 |
 | [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.5 | 1.7 |
-| [Conditional Access Automation](./conditional-access-automation/) | v2.0.1 | 1.11, 1.23, 1.18 |
+| [Conditional Access Automation](./conditional-access-automation/) | v2.0.2 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.2 | 1.27, 1.8 |
 | [File Upload Security](./file-upload-security/) | v1.1.1 | 1.14, 1.8, 1.4 |
 | [Session Security Configurator](./session-security-configurator/) | v1.3.0 | 1.23, 1.11 |
@@ -87,14 +87,14 @@ All other solutions operate independently and can be deployed in any order based
 | Solution | Tier | Version | Zones |
 |----------|------|---------|-------|
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.2.0 | personal, team, enterprise |
-| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.4 | enterprise |
+| [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.5 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.2.1 | team, enterprise |
-| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.1 | personal, team, enterprise |
-| [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.0 | personal, team, enterprise |
+| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.2 | personal, team, enterprise |
+| [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.1 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.1 | team, enterprise |
-| [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.1 | team, enterprise |
+| [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.2 | team, enterprise |
 | [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.5 | enterprise |
-| [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.1 | personal, team, enterprise |
+| [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.2 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.0 | personal, team, enterprise |
 | [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.3 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.1.0 | enterprise |

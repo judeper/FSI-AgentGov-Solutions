@@ -1147,9 +1147,11 @@ All flows reference these solution-level environment variables. Schema names are
 | `fsi_ALG_InactivityThresholdZone1` | InactivityThresholdZone1 | Decimal | Days of inactivity before flagging (Zone 1 default: `180`) |
 | `fsi_ALG_InactivityThresholdZone2` | InactivityThresholdZone2 | Decimal | Days of inactivity before flagging (Zone 2 default: `90`) |
 | `fsi_ALG_InactivityThresholdZone3` | InactivityThresholdZone3 | Decimal | Days of inactivity before flagging (Zone 3 default: `30`) |
+| `fsi_ALG_DeletionHoldDays` | DeletionHoldDays | Decimal | Grace period in days before agent deletion executes after deactivation approval (default: `30`). Zone 3 agents typically extend to 90 days; flows apply zone-specific overrides from the zone applicability table. |
+| `fsi_ALG_AgentRegistryApiVersion` | AgentRegistryApiVersion | String | Microsoft Graph API version for Agent Registry (`agentInstances`) calls (default: `v1.0`). Pin to a known-good version to avoid breaking changes during preview-to-GA transitions. |
 
-> **Note:** Deletion-hold day counts (default 30, Zone 3 90) are currently hard-coded in Flow 4 Step 6b. To make them configurable, add `fsi_ALG_DeletionHoldDaysDefault` and `fsi_ALG_DeletionHoldDaysZone3` to `scripts/create_alg_environment_variables.py` before referencing them in flows.
-> **Note:** The Graph API version for the Agent 365 agent registry is currently hard-coded as `beta`; Microsoft Learn documents Agent Registry/Package APIs as beta/preview and includes May 2026 convergence notices. To make it configurable, add `fsi_ALG_AgentRegistryApiVersion` to the environment-variables script.
+> **Note:** `fsi_ALG_DeletionHoldDays` is deployed by `scripts/create_alg_environment_variables.py` with a default of `30` days. Flow 4 Step 6b currently uses a hard-coded value (default 30, Zone 3 90); to consume the deployed variable instead, replace the hard-coded constant with a Get-environment-variable action referencing `fsi_ALG_DeletionHoldDays` and apply the Zone 3 override (90 days) from the zone applicability table.
+> **Note:** `fsi_ALG_AgentRegistryApiVersion` is deployed by `scripts/create_alg_environment_variables.py` with a default of `v1.0`. Flow 1 Step 2 currently constructs the Agent Registry URI with a hard-coded `beta` segment; to consume the deployed variable instead, replace the hard-coded segment with a Get-environment-variable action referencing `fsi_ALG_AgentRegistryApiVersion`. Microsoft Learn documents Agent Registry / package-management APIs as beta/preview and includes May 2026 convergence notices, so leave the default at `v1.0` for production and use `beta` only for non-production validation.
 
 ---
 
@@ -1180,7 +1182,7 @@ All components should be developed inside a Dataverse solution container for man
 | Display Name | Agent 365 Lifecycle Governance |
 | Unique Name | `fsi_Agent365LifecycleGovernance` |
 | Publisher | FSI Publisher (`fsi`) |
-| Version | `1.1.4.0` |
+| Version | `1.1.5.0` |
 
 ### Components to Include
 

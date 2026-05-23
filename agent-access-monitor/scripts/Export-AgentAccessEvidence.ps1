@@ -103,7 +103,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.1.1
+    Version: 1.1.2
     Requires:
     - PowerShell 7.0 or later
     - MSAL.PS module for Dataverse authentication
@@ -427,12 +427,12 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Agent Access Governance Monitor"
-    solutionVersion = "1.1.1"
+    solutionVersion = "1.1.2"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     runId           = if ($RunId) { $RunId } else { $null }
     zoneFilter      = $Zone
-    exportVersion   = "1.1.1"
+    exportVersion   = "1.1.2"
     recordCount     = $totalScans
     violationCount  = $totalViolations
     organizationUrl = $DataverseUrl

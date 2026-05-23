@@ -54,7 +54,7 @@
 
 .NOTES
     File: Register-ServicePrincipal.ps1
-    Version: 2.0.1
+    Version: 2.0.2
     Supports compliance with FINRA 4511 and SEC 17a-4 by establishing
     auditable, least-privilege service identities for CA automation.
 #>

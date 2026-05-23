@@ -103,7 +103,7 @@ function Write-AuditLog {
         [string]$Level = "INFO"
     )
 
-    $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffZ" -AsUTC
+    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     $color = switch ($Level) {
         "INFO"  { "Gray" }
         "WARN"  { "Yellow" }

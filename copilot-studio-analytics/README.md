@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Copilot Studio Analytics
 
-> **Version:** v2.0.1
+> **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -190,7 +190,7 @@ This solution supports the following FSI-AgentGov framework control:
 
 ## Version
 
-**v2.0.1** -- 2026-Q2
+**v2.0.2** -- 2026-Q2
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 

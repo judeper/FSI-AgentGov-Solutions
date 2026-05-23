@@ -75,7 +75,7 @@
 
 .NOTES
     File: Test-AgentAccessCompliance.ps1
-    Version: 1.1.1
+    Version: 1.1.2
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 
     Part of FSI Agent Governance Framework
@@ -127,7 +127,7 @@ $scriptRoot = $PSScriptRoot
 
 # Banner
 Write-Verbose "========================================="
-Write-Verbose "Agent Access Governance Monitor v1.1.1"
+Write-Verbose "Agent Access Governance Monitor v1.1.2"
 Write-Verbose "========================================="
 
 #endregion

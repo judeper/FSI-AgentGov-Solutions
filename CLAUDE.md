@@ -38,11 +38,11 @@ git rev-parse --show-toplevel
 | [action-confirmation-auditor](./action-confirmation-auditor/) | HITL confirmation step validation in Copilot Studio agent topics | PowerShell/Python | v1.1.0 |
 | [agent-intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | PowerShell/Python/Docs | v1.0.0-preview |
 | [agent-365-lifecycle-governance](./agent-365-lifecycle-governance/) | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance | PowerShell/Python | v1.1.3 |
-| [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.0 |
+| [agent-access-monitor](./agent-access-monitor/) | Automated detection of overly permissive agent access configurations | PowerShell/Python | v1.1.2 |
 | [agent-communication-restriction-detector](./agent-communication-restriction-detector/) | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration | PowerShell/Python | v1.2.1 |
 | [agent-knowledge-source-scanner](./agent-knowledge-source-scanner/) | Item-level permission scanning for agent knowledge source SharePoint libraries | PowerShell | v1.1.0 |
 | [agent-observability-foundation](./agent-observability-foundation/) | Foundational observability infrastructure for agent monitoring and diagnostics | KQL/Docs | v1.2.2 |
-| [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v2.0.0 |
+| [agent-registry-automation](./agent-registry-automation/) | Automated discovery, registration, approval, and lifecycle governance of AI agents | PowerShell/Python | v2.1.1 |
 | [agent-sharing-access-restriction-detector](./agent-sharing-access-restriction-detector/) | Zone-based agent sharing policy enforcement with approval workflows | PowerShell/Python | v2.0.0 |
 | [audit-compliance-manager](./audit-compliance-manager/) | Unified audit compliance — validates configs, detects gaps, remediates | PowerShell/Python | v1.0.5 |
 | [coi-testing](./coi-testing/) | Conflict of interest testing for agent recommendations | Python/Docs | v1.1.0 |
@@ -149,7 +149,8 @@ Some solutions carry a per-solution `AGENTS.md` at their root (e.g., `agent-inta
 
 Active per-solution `AGENTS.md` files:
 
-- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · PR #142 open
+- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · merged via PR #142
+- [`message-center-monitor/AGENTS.md`](message-center-monitor/AGENTS.md) — v2.5.1 · POC dry-run in progress (PR #141)
 
 When you add a per-solution `AGENTS.md`, list it here and link to it from the solution's README.
 

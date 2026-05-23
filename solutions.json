@@ -35,7 +35,7 @@
     "agent-365-lifecycle-governance": {
       "id": "agent-365-lifecycle-governance",
       "name": "Agent 365 Lifecycle Governance",
-      "version": "1.1.4",
+      "version": "1.1.5",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",
@@ -65,7 +65,7 @@
     "agent-access-monitor": {
       "id": "agent-access-monitor",
       "name": "Agent Access Governance Monitor",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",
@@ -144,7 +144,7 @@
     "agent-knowledge-source-scanner": {
       "id": "agent-knowledge-source-scanner",
       "name": "Agent Knowledge Source Scanner",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "domain": "content-data",
       "tier": "2",
       "status": "live",
@@ -200,7 +200,7 @@
     "agent-registry-automation": {
       "id": "agent-registry-automation",
       "name": "Agent Registry Automation",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",
@@ -280,7 +280,7 @@
     "coi-testing": {
       "id": "coi-testing",
       "name": "Conflict of Interest Testing",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",
@@ -296,7 +296,7 @@
         "security-admin": "Entra app registration and admin consent for Dataverse API access.",
         "power-platform-admin": "Power Platform/Dataverse admin for the fsi_coitestresults table, flow setup, and scheduled runner deployment."
       },
-      "verification": "Confirm run_coi_tests.py writes a row to fsi_coitestresults when executed with --allow-skipped.",
+      "verification": "Confirm run_coi_tests.py writes a row to fsi_coitestresults when executed with --allow-skipped (without --dry-run, which intentionally skips Dataverse persistence).",
       "zones": [
         "team",
         "enterprise"
@@ -337,7 +337,7 @@
     "conditional-access-automation": {
       "id": "conditional-access-automation",
       "name": "Conditional Access Automation",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",
@@ -390,7 +390,7 @@
     "copilot-studio-analytics": {
       "id": "copilot-studio-analytics",
       "name": "Copilot Studio Analytics",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",

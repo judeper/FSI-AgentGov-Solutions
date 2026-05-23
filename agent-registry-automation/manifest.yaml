@@ -1,7 +1,7 @@
 id: agent-registry-automation
 name: Agent Registry Automation
 description: Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform.
-version: 2.1.0
+version: 2.1.1
 status: live
 domain: lifecycle-ops
 tier: '2'
