@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Parameter validation helpers for Conditional Access Automation scripts.
 

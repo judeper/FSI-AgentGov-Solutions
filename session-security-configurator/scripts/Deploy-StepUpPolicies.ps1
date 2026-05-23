@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Deploys zone-specific step-up session security policies.
 

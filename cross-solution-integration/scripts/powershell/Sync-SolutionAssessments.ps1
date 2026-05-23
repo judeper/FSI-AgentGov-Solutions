@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Syncs Tier 2 governance solution validation results into Compliance Dashboard assessments.
 

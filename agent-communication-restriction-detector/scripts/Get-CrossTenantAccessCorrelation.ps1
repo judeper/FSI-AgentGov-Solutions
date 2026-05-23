@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Correlates cross-tenant agent communication findings with Microsoft Entra ID
     cross-tenant access policies.

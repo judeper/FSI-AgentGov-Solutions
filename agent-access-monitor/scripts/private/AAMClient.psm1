@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Agent Access Monitor Dataverse client module.
 

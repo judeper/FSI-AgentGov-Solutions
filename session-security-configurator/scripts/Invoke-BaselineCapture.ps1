@@ -1,4 +1,4 @@
-#Requires -Version 7.1
+﻿#Requires -Version 7.1
 #Requires -Modules Microsoft.Graph.Identity.SignIns, MSAL.PS
 
 <#

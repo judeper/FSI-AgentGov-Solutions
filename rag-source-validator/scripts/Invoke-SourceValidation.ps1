@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates RAG knowledge source integrity.
 

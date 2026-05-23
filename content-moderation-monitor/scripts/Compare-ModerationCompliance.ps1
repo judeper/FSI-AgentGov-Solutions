@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Compares agent content moderation levels against zone-specific requirements.
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Registers an Entra ID service principal for Conditional Access policy automation.
 

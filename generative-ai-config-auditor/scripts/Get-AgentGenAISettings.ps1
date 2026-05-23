@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves generative AI configuration settings for all Copilot Studio agents
     across Power Platform environments.

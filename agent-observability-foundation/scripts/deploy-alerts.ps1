@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Deploy alert infrastructure for FSI Agent Observability Foundation.
 

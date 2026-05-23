@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Captures and exports a Conditional Access policy baseline snapshot to JSON.
 

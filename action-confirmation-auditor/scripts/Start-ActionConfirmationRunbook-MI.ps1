@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Sample Azure Automation runbook demonstrating managed identity authentication
     for action confirmation validation.

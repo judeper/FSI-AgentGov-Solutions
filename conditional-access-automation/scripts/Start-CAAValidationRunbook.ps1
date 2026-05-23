@@ -1,4 +1,4 @@
-#Requires -Version 7.1
+﻿#Requires -Version 7.1
 #Requires -Modules @{ ModuleName = "Microsoft.Graph.Identity.SignIns"; ModuleVersion = "2.0.0" }
 #Requires -Modules @{ ModuleName = "Az.Accounts"; ModuleVersion = "3.0.0" }
 

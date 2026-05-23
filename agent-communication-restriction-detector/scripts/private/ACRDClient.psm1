@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Agent Communication Restriction Detector Dataverse client module.
 

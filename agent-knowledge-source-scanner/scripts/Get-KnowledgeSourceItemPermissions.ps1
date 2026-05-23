@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Enumerates item-level permissions in agent knowledge source SharePoint libraries.
 

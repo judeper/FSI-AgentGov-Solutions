@@ -1,4 +1,4 @@
-# MSAL.PS is required only for Interactive and legacy ServicePrincipal authentication.
+﻿# MSAL.PS is required only for Interactive and legacy ServicePrincipal authentication.
 
 <#
 .SYNOPSIS

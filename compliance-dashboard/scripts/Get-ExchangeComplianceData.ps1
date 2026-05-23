@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Collects Exchange Online compliance signals via Microsoft Graph API.
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Content Moderation Monitor Dataverse client module.
 

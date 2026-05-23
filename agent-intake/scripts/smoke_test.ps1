@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Extended smoke test for the agent-intake solution.
 

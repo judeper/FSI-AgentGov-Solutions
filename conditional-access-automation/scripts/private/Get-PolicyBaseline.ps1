@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves a normalized baseline snapshot of Conditional Access policies
     matching FSI governance naming patterns.

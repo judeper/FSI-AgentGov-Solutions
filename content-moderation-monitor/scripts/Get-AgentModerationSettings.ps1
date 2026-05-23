@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves content moderation settings for all Copilot Studio agents across
     Power Platform environments.

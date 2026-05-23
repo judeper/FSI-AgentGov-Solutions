@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Verifies SHA-256 integrity of ASARD sharing compliance evidence files.
 

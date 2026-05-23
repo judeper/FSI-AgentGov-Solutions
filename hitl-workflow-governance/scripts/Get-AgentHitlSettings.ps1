@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves Human-in-the-Loop checkpoint configuration for all Copilot
     Studio agents across Power Platform environments.

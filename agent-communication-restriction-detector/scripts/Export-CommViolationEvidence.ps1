@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 # Authentication uses Az.Accounts (Get-AzAccessToken). MSAL.PS was deprecated by
 # the maintainer and is no longer receiving security updates; ACRDClient.psm1 and
 # Connect-EnvironmentDataverse.ps1 already use Az.Accounts. Az.Accounts >= 2.17

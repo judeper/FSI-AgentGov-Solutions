@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves expected generative AI policy and severity classification for a zone.
 

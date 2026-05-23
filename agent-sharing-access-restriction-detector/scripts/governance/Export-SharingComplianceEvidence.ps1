@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Exports ASARD sharing compliance evidence from Dataverse to JSON with SHA-256 integrity hashing.
 

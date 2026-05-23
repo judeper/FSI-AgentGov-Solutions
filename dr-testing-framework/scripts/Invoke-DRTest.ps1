@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Runs post-recovery validation checks against an AI agent's Dataverse environment and writes structured evidence to Dataverse.
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves expected HITL checkpoint policy and severity for a zone.
 

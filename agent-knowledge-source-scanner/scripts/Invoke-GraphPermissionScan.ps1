@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Scans item-level permissions via Microsoft Graph v1.0 with JSON batching.
 

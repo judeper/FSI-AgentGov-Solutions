@@ -1,4 +1,4 @@
-#Requires -Version 7.1
+﻿#Requires -Version 7.1
 #Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#

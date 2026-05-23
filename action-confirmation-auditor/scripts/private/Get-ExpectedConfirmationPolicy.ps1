@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Retrieves expected action confirmation policy and severity for a zone.
 

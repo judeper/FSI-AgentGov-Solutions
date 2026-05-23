@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Detects drift between a saved Conditional Access policy baseline and the
     current live tenant state.

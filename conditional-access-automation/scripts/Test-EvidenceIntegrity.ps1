@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Verifies the SHA-256 integrity of a CAA compliance evidence file.
 

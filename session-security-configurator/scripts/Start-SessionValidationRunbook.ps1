@@ -1,4 +1,4 @@
-#Requires -Version 7.1
+﻿#Requires -Version 7.1
 #Requires -Modules @{ ModuleName="Microsoft.Graph.Identity.SignIns"; ModuleVersion="2.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
 
 <#

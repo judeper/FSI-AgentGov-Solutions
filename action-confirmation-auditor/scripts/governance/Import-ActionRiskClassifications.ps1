@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Imports action risk classification rules from CSV (v1.1 feature).
 
