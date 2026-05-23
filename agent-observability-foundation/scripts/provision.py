@@ -467,8 +467,8 @@ def create_storage_account(
     Create or update Storage account for diagnostic settings export.
 
     IMPORTANT: Creates StorageV2 WITHOUT hierarchical namespace.
-    Diagnostic settings export does NOT support ADLS Gen2 with hierarchical
-    namespace enabled. (Pitfall #1 from research)
+    Diagnostic settings export does NOT support StorageV2 with hierarchical
+    namespace enabled (sometimes referred to as ADLS Gen2). (Pitfall #1 from research)
 
     Args:
         config: Configuration dictionary
@@ -513,7 +513,7 @@ def create_storage_account(
     print(f"  Creating storage account {account_name}...")
 
     # CRITICAL: Do NOT enable hierarchical namespace
-    # Diagnostic settings export to ADLS Gen2 with HNS enabled is NOT supported
+    # Diagnostic settings export to StorageV2 with HNS enabled is NOT supported
     storage_params = StorageAccountCreateParameters(
         location=location,
         sku=Sku(name=replication),
