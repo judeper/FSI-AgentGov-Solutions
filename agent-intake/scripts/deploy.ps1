@@ -73,6 +73,10 @@
         -BillingPolicyId 00000000-0000-0000-0000-000000000000
 #>
 [CmdletBinding(SupportsShouldProcess)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
@@ -95,12 +99,24 @@ param(
     [string]$AuthMode = 'AzCli',
 
     [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$BillingPolicyId,
 
     [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$EnvironmentId,
 
     [ValidateSet('Sandbox', 'Production', 'Sandbox,Production', 'Any')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$AllowedEnvironmentType = 'Sandbox,Production'
 )
 

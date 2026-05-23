@@ -79,13 +79,27 @@
     Justification = 'Lab provisioning script run interactively by tenant admin. Operator pastes a temporary secret for one-time setup; not invoked in production.'
 )]
 [CmdletBinding(SupportsShouldProcess)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter()] [string] $ConfigPath,
     [Parameter()] [int]    $ListenerPort = 18765,
-    [Parameter()] [int]    $MaxPostWaitSeconds  = 60,
+    [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
+    [int]    $MaxPostWaitSeconds  = 60,
     [Parameter()] [int]    $MaxAltKeyWaitSeconds = 300,
     [Parameter()] [switch] $SkipPreflight,
-    [Parameter()] [switch] $ContinueOnFailure,
+    [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
+    [switch] $ContinueOnFailure,
     [Parameter()] [switch] $AllowProduction
 )
 

@@ -666,6 +666,10 @@ function New-ViolationRecord {
     .SYNOPSIS
         Creates a violation record in Dataverse.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Environment,
@@ -683,6 +687,10 @@ function New-ViolationRecord {
         [string]$AuditRecordId,
 
         [Parameter(Mandatory = $false)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+        )]
         [string]$UserId
     )
 

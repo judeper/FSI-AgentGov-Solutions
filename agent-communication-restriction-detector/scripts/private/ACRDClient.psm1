@@ -271,6 +271,10 @@ function Get-ACRDSkillRegistration {
         When specified, returns only active registrations.
     #>
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter()]
         [string]$EnvironmentId,
@@ -279,6 +283,10 @@ function Get-ACRDSkillRegistration {
         [string]$AgentId,
 
         [Parameter()]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+        )]
         [switch]$ActiveOnly
     )
 

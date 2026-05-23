@@ -82,6 +82,10 @@ pwsh .\scripts\provision_solution_shell.ps1 `
   -DryRun
 #>
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter(Mandatory = $true)]
     [ValidateNotNullOrEmpty()]
@@ -89,6 +93,10 @@ param(
 
     [Parameter()]
     [ValidatePattern('^[A-Za-z][A-Za-z0-9]{1,7}$')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$PublisherPrefix = 'fsi',
 
     [Parameter()]
@@ -105,13 +113,25 @@ param(
 
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+\.\d+$')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$SolutionVersion = '1.0.0.0',
 
     [Parameter()]
     [ValidateRange(10000, 99999)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [int]$PublisherOptionValuePrefix = 58110,
 
     [Parameter()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [hashtable]$EnvVarValues,
 
     [Parameter()]

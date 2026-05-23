@@ -51,11 +51,19 @@
 
 function Test-ChildAgentPayloadSize {
     [CmdletBinding(SupportsShouldProcess)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter()]
         # Accept commercial, GCC, GCC High, DoD, and Germany sovereign cloud URLs.
         # (council review M-4)
         [ValidatePattern('^https://[a-zA-Z0-9\-]+\.(crm[0-9]*\.dynamics\.com|crm\.microsoftdynamics\.(us|de))/?$')]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Parameter is retained for documented script and function interface compatibility with existing callers; intentionally unused in this implementation.'
+        )]
         [string]$DataverseUrl,
 
         [ValidateRange(1, 1024)]

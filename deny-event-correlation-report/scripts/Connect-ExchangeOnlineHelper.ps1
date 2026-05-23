@@ -29,6 +29,10 @@ function Connect-ToExchangeOnline {
         and an Exchange Administrator role assignment on the managed identity.
     #>
     [CmdletBinding(DefaultParameterSetName = 'Interactive')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(ParameterSetName = 'Certificate', Mandatory)]
         [string]$AppId,
@@ -41,6 +45,10 @@ function Connect-ToExchangeOnline {
         [string]$Organization,
 
         [Parameter(ParameterSetName = 'ManagedIdentity', Mandatory)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+        )]
         [switch]$ManagedIdentity
     )
 

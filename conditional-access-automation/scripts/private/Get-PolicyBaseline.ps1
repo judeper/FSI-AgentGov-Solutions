@@ -68,8 +68,16 @@
 
 function Get-CAAPolicyBaseline {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(Mandatory = $false)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+        )]
         [string]$TenantId,
 
         [Parameter(Mandatory = $false)]

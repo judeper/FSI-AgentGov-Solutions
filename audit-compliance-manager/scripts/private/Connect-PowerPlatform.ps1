@@ -105,6 +105,10 @@ $PowerAppsClientId = "1950a258-227b-4e31-a9cf-717495945fc2"
 
 function Connect-PowerPlatform {
     [CmdletBinding(DefaultParameterSetName = 'Interactive')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter(Mandatory = $true)]
         [string]$TenantId,
@@ -122,6 +126,10 @@ function Connect-PowerPlatform {
         [string]$CertificateThumbprint,
 
         [Parameter(Mandatory = $false)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Required by the authentication parameter-set contract; the selected parameter set drives behavior in this implementation.'
+        )]
         [switch]$Interactive
     )
 

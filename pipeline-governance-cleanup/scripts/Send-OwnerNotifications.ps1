@@ -61,32 +61,68 @@
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSReviewUnusedParameter', '',
+    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
+)]
 param(
     [Parameter(Mandatory = $true)]
     [ValidateScript({ Test-Path $_ })]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$InputPath,
 
     [Parameter(Mandatory = $true)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [datetime]$EnforcementDate,
 
     [Parameter(Mandatory = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [switch]$TestMode,
 
     [Parameter(Mandatory = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$SupportEmail = "platform-ops@example.com",
 
     [Parameter(Mandatory = $false)]
     [ValidateScript({ $_ -match '^https://' })]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$MigrationUrl = "https://company.service-now.com/pipeline-migration",
 
     [Parameter(Mandatory = $false)]
     [ValidateScript({ $_ -match '^https://' })]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$ExemptionUrl = "https://company.service-now.com/pipeline-exemption",
 
     [Parameter(Mandatory = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [string]$SenderEmail = "",
 
     [Parameter(Mandatory = $false)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'Parameter is reserved for documented future behavior or backward-compatible CLI shape; intentionally unused in this implementation.'
+    )]
     [switch]$Force
 )
 

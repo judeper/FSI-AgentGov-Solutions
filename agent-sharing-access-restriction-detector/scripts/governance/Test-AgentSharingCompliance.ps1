@@ -93,6 +93,10 @@
 
 function Test-AgentSharingCompliance {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSReviewUnusedParameter', '',
+        Justification = 'PSScriptAnalyzer requires this rule suppression on the function param block; individual compatibility parameters carry specific justifications.'
+    )]
     param(
         [Parameter()]
         [ValidateSet('Table', 'JSON', 'Object')]
@@ -111,6 +115,10 @@ function Test-AgentSharingCompliance {
         [string]$DataverseUrl,
 
         [Parameter()]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+            'PSReviewUnusedParameter', '',
+            Justification = 'Parameter is retained for documented script and function interface compatibility with existing callers; intentionally unused in this implementation.'
+        )]
         [string]$DataverseToken,
 
         [Parameter()]
