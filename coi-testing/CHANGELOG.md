@@ -6,6 +6,31 @@ All notable changes to the COI Testing Framework.
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-23
+
+### Fixed
+
+- **Major**: Hardened `generate_report()` pass-rate calculation against external callers invoking it on an empty runner. The denominator is now guarded by `total > 0` (where `total = len(self.results)`) extracted into a local variable before division, and the result is stored in `pass_rate` rather than computed inline. `scripts/run_coi_tests.py:492`. (council review M-1)
+- **Minor**: HTML report generator now applies `html.escape()` to `scenario_id`, `scenario_name`, `status`, `finra_rule`, and the execution timestamp before f-string interpolation. Defense-in-depth against custom scenarios whose names could contain `<`, `>`, or `&`. `scripts/run_coi_tests.py:492`. (council review m-3)
+- **Minor**: ANSI color escape sequences in per-scenario status output are now suppressed when `sys.stderr` is not a TTY. Eliminates color noise in log-file captures. `scripts/run_coi_tests.py:430`. (council review m-7)
+
+### Changed
+
+- **Minor**: Renamed the `generate_report(format=...)` parameter to `report_format` to avoid shadowing the Python built-in `format()` (ruff A002). Existing positional call sites are unaffected. `scripts/run_coi_tests.py:492`. (council review m-1)
+- **Minor**: `Invoke-PacCommand` in `Get-CoiInventory.ps1` now accepts the PAC CLI argument list as a `[string[]]` array and splats it with `& pac @Command` instead of splitting a single string on space. Future arguments that contain whitespace are now passed through verbatim. All three call sites updated to the array form. `scripts/Get-CoiInventory.ps1:94`. (council review m-2 — note: the council report cited `scripts/run_coi_tests.py:117`, which was a file-name transposition; the actual defect was in `Get-CoiInventory.ps1`.)
+- **Minor**: Clarified `docs/dataverse-schema.md` shared-client reference. The shared library can be used to script table creation programmatically, but no turnkey `create_coi_dataverse_schema.py` generator exists in this solution. (council review m-4)
+- **Minor**: Tightened `manifest.yaml` verification statement to call out that `--dry-run` intentionally skips Dataverse persistence; persistence verification requires running without `--dry-run`. (council review m-5)
+- **Minor**: Annotated v1.0.0 changelog entry below to flag the aspirational items that were corrected in v1.1.0 (council review m-6).
+- **Minor**: Updated `docs/troubleshooting.md` to reflect the M-1 and m-7 fixes shipped in this release.
+
+### Notes
+
+No false positives. All eight findings (1 Major, 7 Minor) verified against the live tree at base commit `1ef88bb` before fixing. No critical findings were raised by the council.
+
+The council report's m-2 entry mis-cited `scripts/run_coi_tests.py:117`; the live defect was `scripts/Get-CoiInventory.ps1:117`. Fix applied to the actual location.
+
+---
+
 ## [1.1.1] - 2026-05-17
 
 ### Changed
@@ -56,6 +81,14 @@ All notable changes to the COI Testing Framework.
 ---
 
 ## [1.0.0] - 2026-02-15
+
+> **Historical note (added in v1.1.2):** Several "Added" bullets below describe
+> aspirational features that did not ship in v1.0.0 — specifically *Scheduled
+> and on-demand execution*, *Finding tracking*, and *Supervision workflow
+> integration*. These were corrected in v1.1.0 (see the v1.1.0 *Fixed* block
+> above for the accurate status). The entry is preserved verbatim for audit
+> traceability; treat the "Added" list as the original release notes, not as
+> the actual implemented surface.
 
 ### Added
 
