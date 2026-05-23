@@ -111,12 +111,12 @@
     - Agents: Array of captured agent summaries
 
 .NOTES
-    Version: 1.0.1
+    Version: 1.1.2
 
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module
     - MSAL.PS module v4.37.0 or later (for Dataverse token)
-    - PowerShell 5.1 or later
+    - PowerShell 7.0 or later
     - Power Platform admin permissions
 
     Baseline management:
