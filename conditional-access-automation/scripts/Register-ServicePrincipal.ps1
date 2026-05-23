@@ -59,6 +59,10 @@
     auditable, least-privilege service identities for CA automation.
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Dev-only credential bootstrap path. Values are wrapped immediately for Set-AzKeyVaultSecret and persisted only in Key Vault; production automation should use managed identity or certificate auth per AGENTS.md "Authentication standard".'
+)]
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High', DefaultParameterSetName = 'Secret')]
 param(
     [Parameter(Mandatory = $true)]

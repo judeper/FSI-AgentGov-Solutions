@@ -71,6 +71,10 @@
     - AuthMethod (string): "Interactive", "ServicePrincipal-Secret", or "ServicePrincipal-Certificate"
 #>
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Dev-only legacy auth path. Production deployments use managed identity via scripts/shared/dataverse_client.py per AGENTS.md "Authentication standard". Plaintext secret here is wrapped immediately into SecureString and never persisted.'
+)]
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
 param(
     [Parameter(Mandatory = $true)]

@@ -33,6 +33,10 @@
     Application Administrator (or Global Administrator) for admin consent.
     Solution: message-center-monitor v2.5.0+
 #>
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Lab provisioning script run interactively by tenant admin. Operator pastes a temporary secret for one-time setup; not invoked in production.'
+)]
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter()] [string] $ConfigPath,
