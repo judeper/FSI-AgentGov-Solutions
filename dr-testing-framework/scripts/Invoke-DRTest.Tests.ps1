@@ -4,6 +4,10 @@
     'PSAvoidUsingInvokeExpression', '',
     Justification = 'Pester test harness: extracts FunctionDefinitionAst nodes from production script and evaluates them in test scope via Invoke-Expression. The input is a verified AST .Extent.Text from a trusted file under source control, NOT untrusted user input. This is the standard pattern for testing nested helper functions that are not exported from their parent script.'
 )]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
+    Justification = 'Pester test fixture credential — never used against production. Required to exercise SecureString-accepting code paths.'
+)]
 param()
 
 <#
@@ -14,12 +18,6 @@ param()
     Validates environment URL regex, parameter validation, and Save-TestResult
     error handling logic.
 #>
-
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
-    'PSAvoidUsingConvertToSecureStringWithPlainText', '',
-    Justification = 'Pester test fixture credential — never used against production. Required to exercise SecureString-accepting code paths.'
-)]
-param()
 
 BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot 'Invoke-DRTest.ps1'
