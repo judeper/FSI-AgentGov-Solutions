@@ -60,7 +60,7 @@
 **Resolution:**
 1. Search `fsi_externalsharefindings` for existing records matching the agent and tenant combination
 2. If an open finding already exists, it should be remediated or closed before a new detection creates a fresh record
-3. If the existing finding was remediated but the violation recurred, verify the previous finding status was set to one of the terminal states (Remediated, Approved Exception, or False Positive) — only terminal-status findings allow new detections for the same combination. Valid `fsi_findingstatus` values: Open (0), Under Review (1), Remediated (2), Approved Exception (3), False Positive (4)
+3. If the existing finding was remediated but the violation recurred, verify the previous finding status was set to one of the terminal states (Remediated, Approved Exception, or False Positive) — only terminal-status findings allow new detections for the same combination. Valid `fsi_findingstatus` values: Open (100000000), Under Review (100000001), Remediated (100000002), Approved Exception (100000003), False Positive (100000004)
 
 ### Tenant Isolation Disabled Cannot Be Auto-Remediated
 
@@ -94,9 +94,9 @@
 
 **Resolution:**
 1. Open the solution's `create_ctsg_dataverse_schema.py` and locate the option set definitions
-2. Confirm the integer values for each option (e.g., Approval Status: Pending = 0, Approved = 1, Expired = 2)
+2. Confirm the integer values for each option. All `fsi_ctsg_*` option sets use the Dataverse-default 100000000-based encoding (e.g., Approval Status: Pending=100000000, Approved=100000001, Expired=100000002). The shared `fsi_acv_zone` option set retains 0-based values (Unclassified=0, Zone 1=1, Zone 2=2, Zone 3=3); see the schema script SHARED_OPTIONSETS comment for cross-solution rationale.
 3. Update flow expressions to use the correct integer values
-4. If the solution was imported over an existing schema, check for option set value conflicts
+4. If the solution was imported over an existing schema, check for option set value conflicts (the v1.1.0 release migrated `fsi_ctsg_*` values from 0-based to 100000000-based — see CHANGELOG migration notes)
 
 ### Entity Set Name Not Found
 

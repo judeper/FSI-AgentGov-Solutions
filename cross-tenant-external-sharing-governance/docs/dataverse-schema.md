@@ -89,6 +89,8 @@
 | fsi_PartnerSnapshot | fsi_partnersnapshot | Memo(100000) | Yes | JSON array of partner policy entries |  |
 | fsi_ComplianceStatus | fsi_compliancestatus | Picklist | Yes | CTA compliance assessment result | `fsi_ctsg_ctacompliancestatus` |
 | fsi_FindingsCreated | fsi_findingscreated | Integer | Yes | Number of findings created during this audit run |  |
+| fsi_AutomaticUserConsentSettings | fsi_automaticuserconsentsettings | Memo(10000) | No | JSON snapshot of crossTenantAccessPolicyConfiguration automaticUserConsentSettings for this partner — captures inboundAllowed and outboundAllowed consent flags |  |
+| fsi_InboundTrust | fsi_inboundtrust | Memo(10000) | No | JSON snapshot of crossTenantAccessPolicyConfiguration inboundTrust settings for this partner — captures isMfaAccepted, isCompliantDeviceAccepted, and isHybridAzureADJoinedDeviceAccepted flags |  |
 
 ### fsi_CrossTenantComplianceEvent (`fsi_crosstenantcomplianceevent`)
 
@@ -118,147 +120,147 @@
 
 | Label | Value |
 |---|---|
-| Subsidiary | 0 |
-| Partner | 1 |
-| Vendor | 2 |
-| Regulator | 3 |
-| Auditor | 4 |
-| Other | 5 |
+| Subsidiary | 100000000 |
+| Partner | 100000001 |
+| Vendor | 100000002 |
+| Regulator | 100000003 |
+| Auditor | 100000004 |
+| Other | 100000005 |
 
 ### `fsi_ctsg_approvalstatus`
 
 | Label | Value |
 |---|---|
-| Pending | 0 |
-| Approved | 1 |
-| Expired | 2 |
-| Suspended | 3 |
-| Revoked | 4 |
+| Pending | 100000000 |
+| Approved | 100000001 |
+| Expired | 100000002 |
+| Suspended | 100000003 |
+| Revoked | 100000004 |
 
 ### `fsi_ctsg_risktier`
 
 | Label | Value |
 |---|---|
-| Low | 0 |
-| Medium | 1 |
-| High | 2 |
+| Low | 100000000 |
+| Medium | 100000001 |
+| High | 100000002 |
 
 ### `fsi_ctsg_ppisolationdirection`
 
 | Label | Value |
 |---|---|
-| Inbound | 0 |
-| Outbound | 1 |
-| Both | 2 |
-| None | 3 |
+| Inbound | 100000000 |
+| Outbound | 100000001 |
+| Both | 100000002 |
+| None | 100000003 |
 
 ### `fsi_ctsg_guestdetectionmethod`
 
 | Label | Value |
 |---|---|
-| EXT# Parsing | 0 |
-| Mail Field | 1 |
-| CreationType | 2 |
-| Multi-Method Agreed | 3 |
-| Unresolved | 4 |
+| EXT# Parsing | 100000000 |
+| Mail Field | 100000001 |
+| CreationType | 100000002 |
+| Multi-Method Agreed | 100000003 |
+| Unresolved | 100000004 |
 
 ### `fsi_ctsg_findingtype`
 
 | Label | Value |
 |---|---|
-| Unapproved Tenant Isolation Exception | 0 |
-| Unapproved Guest Share | 1 |
-| Unapproved B2B Access | 2 |
-| Tenant Isolation Disabled | 3 |
-| Approved Tenant - Review Required | 4 |
+| Unapproved Tenant Isolation Exception | 100000000 |
+| Unapproved Guest Share | 100000001 |
+| Unapproved B2B Access | 100000002 |
+| Tenant Isolation Disabled | 100000003 |
+| Approved Tenant - Review Required | 100000004 |
 
 ### `fsi_ctsg_governancelayer`
 
 | Label | Value |
 |---|---|
-| Layer 1 (Tenant Isolation) | 0 |
-| Layer 2 (Entra CTA) | 1 |
-| Layer 3 (Agent Share) | 2 |
+| Layer 1 (Tenant Isolation) | 100000000 |
+| Layer 2 (Entra CTA) | 100000001 |
+| Layer 3 (Agent Share) | 100000002 |
 
 ### `fsi_ctsg_severity`
 
 | Label | Value |
 |---|---|
-| Critical | 0 |
-| High | 1 |
-| Medium | 2 |
-| Low | 3 |
+| Critical | 100000000 |
+| High | 100000001 |
+| Medium | 100000002 |
+| Low | 100000003 |
 
 ### `fsi_ctsg_findingstatus`
 
 | Label | Value |
 |---|---|
-| Open | 0 |
-| Under Review | 1 |
-| Remediated | 2 |
-| Approved Exception | 3 |
-| False Positive | 4 |
+| Open | 100000000 |
+| Under Review | 100000001 |
+| Remediated | 100000002 |
+| Approved Exception | 100000003 |
+| False Positive | 100000004 |
 
 ### `fsi_ctsg_remediationstatus`
 
 | Label | Value |
 |---|---|
-| Pending | 0 |
-| Approved for Auto-Remediation | 1 |
-| Manually Remediated | 2 |
-| Deferred | 3 |
+| Pending | 100000000 |
+| Approved for Auto-Remediation | 100000001 |
+| Manually Remediated | 100000002 |
+| Deferred | 100000003 |
 
 ### `fsi_ctsg_isolationcompliancestatus`
 
 | Label | Value |
 |---|---|
-| Compliant | 0 |
-| Non-Compliant - Isolation Disabled | 1 |
-| Non-Compliant - Unapproved Entries | 2 |
+| Compliant | 100000000 |
+| Non-Compliant - Isolation Disabled | 100000001 |
+| Non-Compliant - Unapproved Entries | 100000002 |
 
 ### `fsi_ctsg_ctacompliancestatus`
 
 | Label | Value |
 |---|---|
-| Compliant | 0 |
-| Non-Compliant - Permissive Defaults | 1 |
-| Non-Compliant - Unapproved Partners | 2 |
+| Compliant | 100000000 |
+| Non-Compliant - Permissive Defaults | 100000001 |
+| Non-Compliant - Unapproved Partners | 100000002 |
 
 ### `fsi_ctsg_eventtype`
 
 | Label | Value |
 |---|---|
-| Tenant Isolation Validated | 0 |
-| Tenant Isolation Violation | 1 |
-| External Share Detected | 2 |
-| External Share Remediated | 3 |
-| Entra CTA Audited | 4 |
-| Entra CTA Violation | 5 |
-| Tenant Onboarding Initiated | 6 |
-| Tenant Approved | 7 |
-| Tenant Expired | 8 |
-| Tenant Suspended | 9 |
-| Tenant Revoked | 10 |
-| Annual Review Due | 11 |
-| Annual Review Overdue | 12 |
-| Annual Review Completed | 13 |
-| Remediation Approved | 14 |
-| Remediation Rejected | 15 |
-| API Schema Validation Failed | 16 |
-| Feature Flag Skip | 17 |
-| Flow Error | 18 |
-| Duplicate Remediation Skipped | 19 |
-| Critical Finding Manual Remediation Required | 20 |
+| Tenant Isolation Validated | 100000000 |
+| Tenant Isolation Violation | 100000001 |
+| External Share Detected | 100000002 |
+| External Share Remediated | 100000003 |
+| Entra CTA Audited | 100000004 |
+| Entra CTA Violation | 100000005 |
+| Tenant Onboarding Initiated | 100000006 |
+| Tenant Approved | 100000007 |
+| Tenant Expired | 100000008 |
+| Tenant Suspended | 100000009 |
+| Tenant Revoked | 100000010 |
+| Annual Review Due | 100000011 |
+| Annual Review Overdue | 100000012 |
+| Annual Review Completed | 100000013 |
+| Remediation Approved | 100000014 |
+| Remediation Rejected | 100000015 |
+| API Schema Validation Failed | 100000016 |
+| Feature Flag Skip | 100000017 |
+| Flow Error | 100000018 |
+| Duplicate Remediation Skipped | 100000019 |
+| Critical Finding Manual Remediation Required | 100000020 |
 
 ### `fsi_ctsg_complianceimpact`
 
 | Label | Value |
 |---|---|
-| None | 0 |
-| Low | 1 |
-| Medium | 2 |
-| High | 3 |
-| Critical | 4 |
+| None | 100000000 |
+| Low | 100000001 |
+| Medium | 100000002 |
+| High | 100000003 |
+| Critical | 100000004 |
 
 ## Alternate Keys
 

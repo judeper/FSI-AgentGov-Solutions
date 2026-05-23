@@ -26,41 +26,41 @@
 
 .PARAMETER FindingStatusOpen
     OptionSet integer value for Open finding status.
-    WARNING: Confirm against deployed solution XML. Default assumes 0.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000000.
 
 .PARAMETER FindingStatusResolved
     OptionSet integer value for Resolved finding status.
-    WARNING: Confirm against deployed solution XML. Default assumes 2.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000002.
 
 .PARAMETER SeverityCritical
     OptionSet integer value for Critical severity.
-    WARNING: Confirm against deployed solution XML. Default assumes 0.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000000.
 
 .PARAMETER SeverityHigh
     OptionSet integer value for High severity.
-    WARNING: Confirm against deployed solution XML. Default assumes 1.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000001.
 
 .PARAMETER SeverityMedium
     OptionSet integer value for Medium severity.
-    WARNING: Confirm against deployed solution XML. Default assumes 2.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000002.
 
 .PARAMETER SeverityLow
     OptionSet integer value for Low severity.
-    WARNING: Confirm against deployed solution XML. Default assumes 3.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000003.
 
 .PARAMETER ApprovalStatusApproved
     OptionSet integer value for Approved status on approved tenants.
-    WARNING: Confirm against deployed solution XML. Default assumes 1.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000001.
 
 .PARAMETER ApprovalStatusExpired
     OptionSet integer value for Expired status on onboarding requests.
-    WARNING: Confirm against deployed solution XML. Default assumes 2.
+    WARNING: Confirm against deployed solution XML. Default assumes 100000002.
 
 .EXAMPLE
     .\Test-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com"
 
 .EXAMPLE
-    .\Test-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com" -SeverityCritical 0 -SeverityHigh 1
+    .\Test-CrossTenantCompliance.ps1 -DataverseEnvironmentUrl "https://myorg.crm.dynamics.com" -SeverityCritical 100000000 -SeverityHigh 100000001
 
 .NOTES
     FSI Agent Governance Framework - Cross-Tenant External Sharing Governance
@@ -84,28 +84,28 @@ param(
     [string]$OutputPath,
 
     [Parameter()]
-    [int]$FindingStatusOpen = 0,
+    [int]$FindingStatusOpen = 100000000,
 
     [Parameter()]
-    [int]$FindingStatusResolved = 2,
+    [int]$FindingStatusResolved = 100000002,
 
     [Parameter()]
-    [int]$SeverityCritical = 0,
+    [int]$SeverityCritical = 100000000,
 
     [Parameter()]
-    [int]$SeverityHigh = 1,
+    [int]$SeverityHigh = 100000001,
 
     [Parameter()]
-    [int]$SeverityMedium = 2,
+    [int]$SeverityMedium = 100000002,
 
     [Parameter()]
-    [int]$SeverityLow = 3,
+    [int]$SeverityLow = 100000003,
 
     [Parameter()]
-    [int]$ApprovalStatusApproved = 1,
+    [int]$ApprovalStatusApproved = 100000001,
 
     [Parameter()]
-    [int]$ApprovalStatusExpired = 2
+    [int]$ApprovalStatusExpired = 100000002
 )
 
 $ErrorActionPreference = "Stop"

@@ -44,14 +44,15 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
   - `fsi_tenantisolationrecords`: _______________
   - `fsi_entractarecords`: _______________
   - `fsi_crosstenantcomplianceevents`: _______________
-- [ ] All OptionSet integer values confirmed against `docs/dataverse-schema.md` (auto-generated from `scripts/create_ctsg_dataverse_schema.py` — the source of truth; this solution does not ship an exported solution package per repo content policy)
-  - `fsi_ctsg_approvalstatus`: Pending=0, Approved=1, Expired=2, Suspended=3, Revoked=4
-  - `fsi_ctsg_findingstatus`: Open=0, Under Review=1, Remediated=2, Approved Exception=3, False Positive=4
-  - `fsi_ctsg_severity`: Critical=0, High=1, Medium=2, Low=3
-  - `fsi_ctsg_guestdetectionmethod`: EXT# Parsing=0, Mail Field=1, CreationType=2, Multi-Method Agreed=3, Unresolved=4
-  - `fsi_ctsg_ppisolationdirection`: Inbound=0, Outbound=1, Both=2, None=3
-  - `fsi_ctsg_isolationcompliancestatus`: Compliant=0, Non-Compliant - Isolation Disabled=1, Non-Compliant - Unapproved Entries=2
-  - `fsi_ctsg_eventtype`: Tenant Isolation Validated=0, Tenant Isolation Violation=1, External Share Detected=2, External Share Remediated=3, Entra CTA Audited=4, Entra CTA Violation=5, Tenant Onboarding Initiated=6, Tenant Approved=7, Tenant Expired=8, Tenant Suspended=9, Tenant Revoked=10, Annual Review Due=11, Annual Review Overdue=12, Annual Review Completed=13, Remediation Approved=14, Remediation Rejected=15, API Schema Validation Failed=16, Feature Flag Skip=17, Flow Error=18, Duplicate Remediation Skipped=19, Critical Finding Manual Remediation Required=20
+- [ ] All OptionSet integer values confirmed against `docs/dataverse-schema.md` (auto-generated from `scripts/create_ctsg_dataverse_schema.py` — the source of truth; this solution does not ship an exported solution package per repo content policy). All `fsi_ctsg_*` option sets use the Dataverse-default 100000000-based encoding (v1.1.0 [BREAKING DEPLOY] migration; see CHANGELOG migration notes for re-key instructions).
+  - `fsi_ctsg_approvalstatus`: Pending=100000000, Approved=100000001, Expired=100000002, Suspended=100000003, Revoked=100000004
+  - `fsi_ctsg_findingstatus`: Open=100000000, Under Review=100000001, Remediated=100000002, Approved Exception=100000003, False Positive=100000004
+  - `fsi_ctsg_severity`: Critical=100000000, High=100000001, Medium=100000002, Low=100000003
+  - `fsi_ctsg_guestdetectionmethod`: EXT# Parsing=100000000, Mail Field=100000001, CreationType=100000002, Multi-Method Agreed=100000003, Unresolved=100000004
+  - `fsi_ctsg_ppisolationdirection`: Inbound=100000000, Outbound=100000001, Both=100000002, None=100000003
+  - `fsi_ctsg_isolationcompliancestatus`: Compliant=100000000, Non-Compliant - Isolation Disabled=100000001, Non-Compliant - Unapproved Entries=100000002
+  - `fsi_ctsg_eventtype`: Tenant Isolation Validated=100000000, Tenant Isolation Violation=100000001, External Share Detected=100000002, External Share Remediated=100000003, Entra CTA Audited=100000004, Entra CTA Violation=100000005, Tenant Onboarding Initiated=100000006, Tenant Approved=100000007, Tenant Expired=100000008, Tenant Suspended=100000009, Tenant Revoked=100000010, Annual Review Due=100000011, Annual Review Overdue=100000012, Annual Review Completed=100000013, Remediation Approved=100000014, Remediation Rejected=100000015, API Schema Validation Failed=100000016, Feature Flag Skip=100000017, Flow Error=100000018, Duplicate Remediation Skipped=100000019, Critical Finding Manual Remediation Required=100000020
+  - `fsi_acv_zone` (SHARED option set — retains legacy 0-based encoding): Unclassified=0, Zone 1=1, Zone 2=2, Zone 3=3 — see `create_ctsg_dataverse_schema.py` SHARED_OPTIONSETS comment for cross-solution rationale
 
 ## Adjacent Control Validation
 
