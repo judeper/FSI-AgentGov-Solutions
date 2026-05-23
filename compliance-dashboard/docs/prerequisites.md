@@ -177,14 +177,14 @@ If Conditional Access policies restrict API access:
 
 | Solution | Minimum Version | Purpose |
 |----------|-----------------|---------|
-| Environment Lifecycle Management | v1.1.3 | Zone classification data |
+| Environment Lifecycle Management | v1.2.1+ | Zone classification data |
 
 ### Optional
 
 | Solution | Version | Purpose |
 |----------|---------|---------|
 | FINRA Supervision Workflow | v1.1.0 | Supervision queue metrics |
-| Deny Event Correlation Report | v2.0.1 | DLP violation data |
+| Deny Event Correlation Report | v2.0.3 | DLP violation data |
 
 ---
 
@@ -213,4 +213,4 @@ Once prerequisites are met:
 
 ---
 
-*Compliance Dashboard v1.0.4*
+*Compliance Dashboard v1.0.5*

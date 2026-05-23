@@ -1,6 +1,6 @@
 {
-  "version": "1.0.4",
-  "description": "Configuration for Exchange Online compliance data collection. NOTE: scanScope and riskThresholds are reserved for future configurability — the v1.0.4 script does not yet branch on these values; risk levels are emitted as documented in the Get-ExchangeComplianceData.ps1 OUTPUTS section.",
+  "version": "1.0.5",
+  "description": "Configuration for Exchange Online compliance data collection. NOTE: scanScope and riskThresholds are reserved for future configurability — the v1.0.5 script does not yet branch on these values; risk levels are emitted as documented in the Get-ExchangeComplianceData.ps1 OUTPUTS section.",
   "scanScope": {
     "includeUserMailboxes": true,
     "includeSharedMailboxes": true,

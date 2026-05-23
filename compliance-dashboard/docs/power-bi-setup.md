@@ -226,8 +226,13 @@ Score Change 30D =
 VAR CurrentScore = [Overall Score]
 VAR PriorScore =
     CALCULATE(
-        [Overall Score],
-        DATEADD(DateTable[Date], -30, DAY)
+        AVERAGE(ComplianceScore[fsi_overallscore]),
+        DATESINPERIOD(
+            DateTable[Date],
+            MAX(ComplianceScore[fsi_scoredate]) - 30,
+            1,
+            DAY
+        )
     )
 RETURN
     CurrentScore - PriorScore
@@ -368,4 +373,4 @@ Recommended custom visuals:
 
 ---
 
-*Compliance Dashboard v1.0.4*
+*Compliance Dashboard v1.0.5*
