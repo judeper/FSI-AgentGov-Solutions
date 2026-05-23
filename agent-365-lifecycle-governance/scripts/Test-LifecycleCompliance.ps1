@@ -89,7 +89,7 @@ Write-Host "Agent instances without owners:  $($noSponsor.Count)" `
     -ForegroundColor $(if ($noSponsor.Count -gt 0) { "Red" } else { "Green" })
 
 # Query Dataverse for overdue access reviews
-# fsi_ALG_accessreviewstatus option set: Not Started=100000000, In Progress=100000001, Completed=100000002, Overdue=100000003
+# fsi_ALG_reviewstatus option set (used by fsi_accessreview.fsi_reviewstatus): Pending=100000000, In Progress=100000001, Completed=100000002, Overdue=100000003, Escalated=100000004
 $overdueValue = 100000003
 $entitySetName = "fsi_accessreviews"
 
