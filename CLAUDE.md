@@ -56,8 +56,8 @@ git rev-parse --show-toplevel
 | [deny-event-correlation-report](./deny-event-correlation-report/) | Daily deny event correlation across Purview, DLP, App Insights | PowerShell/KQL | v2.0.4 |
 | [dr-testing-framework](./dr-testing-framework/) | Automated disaster recovery testing for AI agent infrastructure | PowerShell/Python | v2.0.1 |
 | [environment-lifecycle-management](./environment-lifecycle-management/) | Power Platform environment provisioning with zone-based governance | Python/Docs | v1.2.2 |
-| [file-upload-security](./file-upload-security/) | Per-agent file upload validation against zone governance policies | PowerShell/Python | v1.1.1 |
-| [finra-supervision-workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | PowerShell/Docs | v1.1.1 |
+| [file-upload-security](./file-upload-security/) | Per-agent file upload validation against zone governance policies | PowerShell/Python | v1.1.2 |
+| [finra-supervision-workflow](./finra-supervision-workflow/) | Automated supervision queue for AI agent outputs (FINRA 3110) | PowerShell/Docs | v1.1.0 |
 | [generative-ai-config-auditor](./generative-ai-config-auditor/) | GenAI feature configuration validation per zone governance policy | PowerShell/Python | v1.2.1 |
 | [hallucination-tracker](./hallucination-tracker/) | Feedback aggregation for hallucination pattern analysis | Python/Docs | v1.2.0 |
 | [hitl-workflow-governance](./hitl-workflow-governance/) | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows | PowerShell/Python | v1.1.2 |
