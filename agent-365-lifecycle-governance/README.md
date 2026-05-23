@@ -9,7 +9,7 @@ coe_function: enable
 ---
 # Agent 365 Lifecycle Governance
 
-> **Version:** v1.1.4
+> **Version:** v1.1.5
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — Microsoft Agent 365 is generally available for commercial tenants, but Agent Registry and package-management APIs remain preview and should be validated before the feature flag is enabled.
@@ -218,7 +218,7 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 ## Version
 
-1.1.4
+1.1.5
 
 ## License
 

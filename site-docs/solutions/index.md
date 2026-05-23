@@ -75,7 +75,7 @@ Solutions for environment provisioning, agent lifecycle, and operational testing
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Agent 365 Lifecycle Governance](agent-365-lifecycle-governance/index.md) | Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds. | v1.1.4 | live | enterprise | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
+| [Agent 365 Lifecycle Governance](agent-365-lifecycle-governance/index.md) | Automated Agent 365 lifecycle governance for sponsor assignment, reviews, inactivity, deactivation, and deletion holds. | v1.1.5 | live | enterprise | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 |
 | [Agent Intake](agent-intake/index.md) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | v1.0.0-preview | preview | personal, team, enterprise | 1.2, 1.7, 2.1, 2.13, 3.1 |
 | [Agent Registry Automation](agent-registry-automation/index.md) | Automated discovery, registration, approval, and lifecycle governance of AI agents across Power Platform. | v2.1.0 | live | personal, team, enterprise | 1.2, 1.7, 2.1, 2.13 |
 | [Conflict of Interest Testing](coi-testing/index.md) | Automated conflict-of-interest testing for AI agent recommendations in financial services. | v1.1.1 | live | team, enterprise | 2.18, 2.11, 2.5 |
