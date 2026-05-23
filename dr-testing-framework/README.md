@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # DR Readiness Validation Framework (DR-Testing-Framework)
 
-> **Version:** v2.0.1
+> **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -444,4 +444,4 @@ For issues, see [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov
 
 ---
 
-*FSI Agent Governance Framework - DR Testing Framework v2.0.1*
+*FSI Agent Governance Framework - DR Testing Framework v2.0.2*

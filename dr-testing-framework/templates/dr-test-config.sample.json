@@ -1,6 +1,6 @@
 {
   "$schema": "dr-test-config",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Sample post-recovery validation configuration for AI agent infrastructure",
   "environment": "https://contoso.crm.dynamics.com",
   "tenantId": "00000000-0000-0000-0000-000000000000",

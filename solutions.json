@@ -539,7 +539,7 @@
     "dr-testing-framework": {
       "id": "dr-testing-framework",
       "name": "DR Testing Framework",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",

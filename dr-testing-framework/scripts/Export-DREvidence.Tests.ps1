@@ -89,7 +89,7 @@ Describe 'Export-DREvidence TestRunId Validation' {
     }
 
     It 'Accepts alphanumeric TestRunId with hyphens' {
-        # Should not throw on validation — will proceed to evidence export logic
+        # Should not throw on validation - will proceed to evidence export logic
         # Use a project-local disposable output dir to avoid writing to default location
         $tempDir = Join-Path $PSScriptRoot "..\.test-output\dr-evidence-test-$(Get-Random)"
         try {

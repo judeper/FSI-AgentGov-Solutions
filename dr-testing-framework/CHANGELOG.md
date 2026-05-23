@@ -6,6 +6,26 @@ All notable changes to the DR Readiness Validation Framework.
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-05-22
+
+### Fixed
+
+- **Major**: `Get-EvidenceAccessToken` now clears `$body['client_secret']` in the `finally` block to prevent plaintext secret retention in process memory. `scripts/Export-DREvidence.ps1:76-99`. (council review M-1)
+- **Major**: Replaced O(n^2) `$rawResults += ...` array concatenation in the Dataverse pagination loop with `[System.Collections.Generic.List[object]]::Add()` for evidence exports >5000 rows. `scripts/Export-DREvidence.ps1:163-181`. (council review M-2)
+
+### Changed
+
+- **Minor**: Corrected regulatory reference in `docs/emergency-access-drill.md` from "OCC 2011-12" (which governs model risk management, not operational resilience) to "OCC Heightened Standards". (council review m-3)
+- **Minor**: `create_drt_connection_references.py` and `create_drt_environment_variables.py` no longer pass `dry_run=` to the `DataverseClient` constructor; dry-run is now gated only by the function parameter, eliminating the dual-flag divergence risk. (council review m-5)
+- **Minor**: `queries/rpo-rto-measurement.kql` now extracts the Dataverse entity name from request URLs using `extract(@"/api/data/v\d+\.\d+/(\w+)", 1, url)` instead of `parse_url(url).Path` for clearer evidence labels. (council review m-6)
+- **Minor**: Added clarifying comment near `$finalResult.MinutesSinceLastResult` in `Invoke-DRTest.ps1` to document the internal hours-to-minutes conversion. (council review m-2)
+
+### Notes
+
+- Replaced `Get-Date -AsUTC` (PS 7.1+) with `(Get-Date).ToUniversalTime().ToString(...)` in `Write-AuditLog` so the script parses identically on Windows PowerShell 5.1 and PowerShell 7. (self-discovered during dual-runtime sweep)
+- Normalized non-ASCII punctuation (em/en dashes, smart quotes, ellipsis) in all `*.ps1` files to ASCII equivalents per repo style §17. (self-discovered during punctuation sweep)
+- M-3 (option-set values `fsi_drt_teststatus` 1/2 -> 100000000+) is deferred to v2.1.0 [BREAKING DEPLOY]: option-set migrations carry cross-tenant migration risk and are out of scope for a patch bump per repo patch-scope policy. See council review M-3.
+
 ## [2.0.1] - 2026-05-17
 
 ### Changed

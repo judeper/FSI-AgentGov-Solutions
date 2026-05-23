@@ -85,7 +85,7 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
         schemaname = var["schemaname"]
         try:
             # Check if variable already exists
-            if not dry_run and not client.dry_run:
+            if not dry_run:
                 existing = client.query(
                     "environmentvariabledefinitions",
                     filter_expr=f"schemaname eq '{schemaname}'",
@@ -94,11 +94,11 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                     print(f"  {schemaname}: already exists, skipping")
                     results["skipped"] += 1
                     continue
-            elif dry_run or client.dry_run:
+            else:
                 print(f"  [DRY RUN] {schemaname}: would check if exists")
 
             # Create variable
-            if dry_run or client.dry_run:
+            if dry_run:
                 print(f"  [DRY RUN] {schemaname}: would create")
                 print(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
                 results["created"] += 1
@@ -245,6 +245,9 @@ Examples:
             client_secret = getpass.getpass("Client secret: ")
 
     try:
+        # NOTE: We deliberately do NOT pass dry_run to DataverseClient ctor -
+        # dry-run is gated downstream in create_environment_variables() instead
+        # to avoid divergent dual flags (see council review m-5).
         client = DataverseClient(
             tenant_id=args.tenant_id,
             environment_url=args.environment_url,
@@ -252,7 +255,6 @@ Examples:
             client_secret=client_secret,
             access_token=args.access_token,
             interactive=args.interactive,
-            dry_run=args.dry_run,
         )
 
         results = create_environment_variables(client, dry_run=args.dry_run)
