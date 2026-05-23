@@ -565,10 +565,6 @@ function Deploy-AlertRules {
     Write-Host ""
 }
 
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
-    'PSReviewUnusedParameter', '',
-    Justification = 'PSScriptAnalyzer honors this rule at script or function scope; flagged compatibility parameters below include individual justifications.'
-)]
 function Show-DeploymentSummary {
     <#
     .SYNOPSIS
