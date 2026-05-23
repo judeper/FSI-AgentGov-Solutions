@@ -120,8 +120,6 @@ The default templates use `builtInControls: ["mfa"]` for broad compatibility. Fo
     "applications": {
       "includeApplications": ["<copilot-studio-app-id>"]
     },
-    "signInRiskLevels": [],
-    "userRiskLevels": [],
     "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"]
   },
   "grantControls": {
