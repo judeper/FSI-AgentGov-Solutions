@@ -150,7 +150,7 @@ The lifecycle governance flows require these connectors in the Business/Non-Bloc
 - [ ] `FSI-AllAgentIdentities` security group created
 - [ ] `FSI-Zone3-Agents` security group created for inventory/reporting
 - [ ] Zone 3 service principals assigned directly to workload identity Conditional Access policy
-- [ ] All 7 API permissions granted and admin-consented
+- [ ] All 8 API permissions granted and admin-consented
 - [ ] Lifecycle Workflow 1 created — workflow ID recorded
 - [ ] Lifecycle Workflow 2 created — workflow ID recorded
 - [ ] Conditional Access policy created (Zone 3)
