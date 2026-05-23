@@ -40,13 +40,14 @@ jobs:
 
       - name: PSScriptAnalyzer
         shell: pwsh
-        # Soft-gate: report findings but do not break the build until the
-        # baseline is cleaned up. Flip continue-on-error to false (and remove
-        # the trailing print) once existing PSAvoidUsingConvertToSecureStringWithPlainText
-        # and similar findings are remediated.
+        # Soft-gate (Wave 6 P1): we now load the project-level
+        # PSScriptAnalyzerSettings.psd1 so the baseline reflects the actual
+        # policy (PSAvoidUsingWriteHost + PSUseSingularNouns excluded with
+        # documented rationale). The gate stays soft until Wave 6 P6 flips
+        # `-Severity` to `Error,Warning` and removes `continue-on-error`.
         continue-on-error: true
         run: |
-          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error -Settings ./PSScriptAnalyzerSettings.psd1
           $results | Format-Table -AutoSize
           if ($results.Count -gt 0) {
             Write-Host "::warning::PSScriptAnalyzer reported $($results.Count) Error-severity findings (soft-gated)."
