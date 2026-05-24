@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "cross-solution-integration",
+  "solutionName": "Cross-Solution Integration",
+  "solutionVersion": "2.0.3",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.7",
+      "coverage": "full"
+    },
+    {
+      "id": "1.23",
+      "coverage": "full"
+    },
+    {
+      "id": "1.11",
+      "coverage": "full"
+    },
+    {
+      "id": "3.8",
+      "coverage": "full"
+    },
+    {
+      "id": "1.8",
+      "coverage": "full"
+    },
+    {
+      "id": "1.14",
+      "coverage": "full"
+    },
+    {
+      "id": "1.18",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 7
+}

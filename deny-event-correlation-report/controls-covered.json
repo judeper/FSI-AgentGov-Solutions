@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "deny-event-correlation-report",
+  "solutionName": "Deny Event Correlation Report",
+  "solutionVersion": "2.0.4",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.5",
+      "coverage": "full"
+    },
+    {
+      "id": "1.7",
+      "coverage": "full"
+    },
+    {
+      "id": "1.8",
+      "coverage": "full"
+    },
+    {
+      "id": "3.4",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 4
+}

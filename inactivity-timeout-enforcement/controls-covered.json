@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "inactivity-timeout-enforcement",
+  "solutionName": "Inactivity Timeout Enforcement",
+  "solutionVersion": "1.1.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.22",
+      "coverage": "full"
+    },
+    {
+      "id": "1.23",
+      "coverage": "full"
+    },
+    {
+      "id": "3.7",
+      "coverage": "full"
+    },
+    {
+      "id": "3.8",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 4
+}

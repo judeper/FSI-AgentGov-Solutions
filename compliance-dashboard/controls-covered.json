@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "compliance-dashboard",
+  "solutionName": "Compliance Dashboard",
+  "solutionVersion": "1.0.5",
+  "status": "live",
+  "controls": [
+    {
+      "id": "3.3",
+      "coverage": "full"
+    },
+    {
+      "id": "3.1",
+      "coverage": "full"
+    },
+    {
+      "id": "3.2",
+      "coverage": "full"
+    },
+    {
+      "id": "3.4",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 4
+}

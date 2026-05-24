@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "mime-type-restrictions",
+  "solutionName": "MIME Type Restrictions for File Uploads",
+  "solutionVersion": "1.2.1",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.5",
+      "coverage": "full"
+    },
+    {
+      "id": "1.13",
+      "coverage": "full"
+    },
+    {
+      "id": "1.25",
+      "coverage": "full"
+    },
+    {
+      "id": "3.3",
+      "coverage": "full"
+    },
+    {
+      "id": "3.7",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 5
+}

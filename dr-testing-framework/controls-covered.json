@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "dr-testing-framework",
+  "solutionName": "DR Testing Framework",
+  "solutionVersion": "2.0.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.4",
+      "coverage": "full"
+    },
+    {
+      "id": "2.1",
+      "coverage": "full"
+    },
+    {
+      "id": "1.9",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}

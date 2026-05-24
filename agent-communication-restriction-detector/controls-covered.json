@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "agent-communication-restriction-detector",
+  "solutionName": "Agent Communication Restriction Detector",
+  "solutionVersion": "1.2.1",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.17",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 1
+}

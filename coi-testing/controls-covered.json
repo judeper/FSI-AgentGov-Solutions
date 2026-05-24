@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "coi-testing",
+  "solutionName": "Conflict of Interest Testing",
+  "solutionVersion": "1.1.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.18",
+      "coverage": "full"
+    },
+    {
+      "id": "2.11",
+      "coverage": "full"
+    },
+    {
+      "id": "2.5",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}

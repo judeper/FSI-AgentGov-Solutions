@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "action-confirmation-auditor",
+  "solutionName": "Action Confirmation Auditor",
+  "solutionVersion": "1.2.1",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.12",
+      "coverage": "full"
+    },
+    {
+      "id": "1.10",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 2
+}

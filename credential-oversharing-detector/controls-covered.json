@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "credential-oversharing-detector",
+  "solutionName": "Credential Oversharing Detector",
+  "solutionVersion": "2.1.1",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.14",
+      "coverage": "full"
+    },
+    {
+      "id": "1.4",
+      "coverage": "full"
+    },
+    {
+      "id": "1.18",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}
