@@ -12,6 +12,7 @@ paths = [
   '''site-docs/.*''',
   '''\.squad/templates/.*''',
   '''\.squad/skills/.*''',
+  '''\.copilot/skills/.*''',
 ]
 regexes = [
   # Sample/placeholder identifiers used in docs and templates.
