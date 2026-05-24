@@ -1,4 +1,4 @@
-# sync-mesh.ps1 — Materialize remote squad state locally
+﻿# sync-mesh.ps1 — Materialize remote squad state locally
 #
 # Reads mesh.json, fetches remote squads into local directories.
 # Run before agent reads. No daemon. No service. ~40 lines.
