@@ -447,9 +447,9 @@ See [docs/troubleshooting.md](./docs/troubleshooting.md) for complete error reco
 
 This solution supports:
 
-- [Control 1.11: Conditional Access and MFA](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.11-conditional-access-and-mfa.md)
-- [Control 1.23: Step-Up Authentication](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.23-step-up-authentication-for-high-risk-operations.md)
-- [Control 1.18: Application-Level RBAC](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.18-application-level-rbac.md)
+- [Control 1.11: Conditional Access and Phishing-Resistant MFA](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa.md)
+- [Control 1.23: Step-Up Authentication for Agent Operations](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.23-step-up-authentication-for-agent-operations.md)
+- [Control 1.18: Application-Level Authorization and RBAC](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac.md)
 
 ## Playbook Reference
 

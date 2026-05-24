@@ -290,9 +290,9 @@ The CSV report includes these columns:
 
 | Control | Description | Relationship |
 |---------|-------------|--------------|
-| [4.3 - SharePoint Oversharing Prevention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-4-sharepoint/4.3-sharepoint-oversharing-prevention-for-agents.md) | Prevent agents from accessing overshared content | Primary |
-| [1.4 - Data Boundary Enforcement](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-data-boundary-enforcement.md) | Enforce data boundaries for agent access | Related |
-| [1.5 - DLP Policy Application](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-dlp-policy-application.md) | Apply DLP policies to agent data access | Related |
+| [4.3 - Site and Document Retention Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-4-sharepoint/4.3-site-and-document-retention-management.md) | Prevent agents from accessing overshared content | Primary |
+| [1.4 - Advanced Connector Policies (ACP)](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-advanced-connector-policies-acp.md) | Enforce data boundaries for agent access | Related |
+| [1.5 - DLP and Sensitivity Labels](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md) | Apply DLP policies to agent data access | Related |
 
 ## Regulatory Context
 

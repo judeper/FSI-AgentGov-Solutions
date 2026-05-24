@@ -207,9 +207,9 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 | Control | Relationship |
 |---------|--------------|
 | [1.2 — Agent Registry and Integrated Apps Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.2-agent-registry-and-integrated-apps-management.md) | Primary — centralized agent inventory |
-| [1.7 — Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-monitoring.md) | Secondary — immutable compliance event log |
-| [2.1 — Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.1-managed-environments-for-power-platform.md) | Secondary — environment governance |
-| [2.13 — Documentation and Record Keeping](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-governance/2.13-documentation-and-record-keeping.md) | Secondary — ownership and lifecycle records |
+| [1.7 — Comprehensive Audit Logging and Compliance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Secondary — immutable compliance event log |
+| [2.1 — Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md) | Secondary — environment governance |
+| [2.13 — Documentation and Record Keeping](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.13-documentation-and-record-keeping.md) | Secondary — ownership and lifecycle records |
 
 ## Platform Update Notes
 

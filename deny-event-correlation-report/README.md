@@ -158,7 +158,7 @@ This solution implements the [Deny Event Correlation Report](https://github.com/
 
 - [Control 1.5: DLP and Sensitivity Labels](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md)
 - [Control 1.7: Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md)
-- [Control 1.8: Content Moderation](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.8-content-moderation-and-responsible-ai.md)
+- [Control 1.8: Runtime Protection and External Threat Detection](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.8-runtime-protection-and-external-threat-detection.md)
 - [Control 3.4: Incident Reporting](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.4-incident-reporting-and-root-cause-analysis.md)
 
 ## Support

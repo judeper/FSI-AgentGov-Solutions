@@ -293,7 +293,7 @@ For supervision queue assignments:
 
 | Control | Relationship |
 |---------|--------------|
-| [2.8 - Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-segregation-of-duties.md) | Primary — role conflict detection supporting Maker/Checker controls |
+| [2.8 - Access Control and Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties.md) | Primary — role conflict detection supporting Maker/Checker controls |
 | [2.1 - Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md) | Environment role context |
 | [2.3 - Change Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md) | Pipeline integration |
 

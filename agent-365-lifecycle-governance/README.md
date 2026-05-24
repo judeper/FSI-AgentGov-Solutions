@@ -208,13 +208,13 @@ FSI organizations should use the Agentic CoE for tenant-level visibility and gen
 
 ## Related Controls
 
-- [Control 2.3 — Change Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/2.3-change-management.md)
-- [Control 1.2 — Agent Registry](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/1.2-agent-registry.md)
-- [Control 1.11 — Conditional Access](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/1.11-conditional-access.md)
-- [Control 2.1 — Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/2.1-managed-environments.md)
-- [Control 2.8 — Access Control](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/2.8-access-control.md)
-- [Control 2.12 — Supervision](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/2.12-supervision.md)
-- [Control 3.1 — Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/3.1-audit-logging.md)
+- [Control 2.3 — Change Management and Release Planning](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.3-change-management-and-release-planning.md)
+- [Control 1.2 — Agent Registry and Integrated Apps Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.2-agent-registry-and-integrated-apps-management.md)
+- [Control 1.11 — Conditional Access and Phishing-Resistant MFA](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa.md)
+- [Control 2.1 — Managed Environments](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.1-managed-environments.md)
+- [Control 2.8 — Access Control and Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties.md)
+- [Control 2.12 — Supervision and Oversight (FINRA Rule 3110)](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-supervision-and-oversight-finra-rule-3110.md)
+- [Control 3.1 — Agent Inventory and Metadata Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md)
 
 ## Version
 
