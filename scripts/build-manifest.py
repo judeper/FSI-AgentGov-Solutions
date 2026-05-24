@@ -9,6 +9,11 @@ deterministic artifacts from a single source of truth:
   inventory counts (`counts.total`, `counts.live`, `counts.preview`) plus
   per-solution control coverage (`solutions.<solution-id>.controls`) so
   downstream consumers never have to parse generated prose.
+* `<slug>/controls-covered.json` — per-solution control-coverage export
+  listing each framework control ID with its coverage level (`full` or
+  `partial`). Schema: `scripts/controls-covered.schema.json`. Consumed by
+  the framework `solutions-lock.json` as the canonical per-solution contract
+  (issue #163 / finding U-050).
 * `README.md` solutions table inside `<!-- BEGIN:SOLUTIONS -->` /
   `<!-- END:SOLUTIONS -->` markers.
 * `site-docs/solutions/index.md` — Solutions Catalog grouped by domain.
@@ -125,6 +130,7 @@ SITE_DOCS = ROOT / "site-docs"
 SOLUTIONS_OUT = SITE_DOCS / "solutions"
 SCHEMA_PATH = ROOT / "scripts" / "manifest.schema.json"
 SOLUTIONS_JSON = ROOT / "solutions.json"
+CONTROLS_COVERED_SCHEMA = ROOT / "scripts" / "controls-covered.schema.json"
 README = ROOT / "README.md"
 SITE_INDEX = SITE_DOCS / "index.md"
 CONTROL_MAPPING = SITE_DOCS / "reference" / "control-mapping.md"
@@ -531,6 +537,25 @@ def emit_solutions_json(
         },
     }
     # Pretty + stable: 2-space indent, sorted top keys preserved by insertion.
+    return json.dumps(out, indent=2, ensure_ascii=False) + "\n"
+
+
+def emit_controls_covered_json(slug: str, m: dict) -> str:
+    """Return the per-solution controls-covered.json content."""
+    controls = [
+        {"id": ctrl, "coverage": "full"}
+        for ctrl in m.get("controls", [])
+    ]
+    out = {
+        "schemaVersion": "1.0.0",
+        "generatedBy": "scripts/build-manifest.py",
+        "solutionId": m["id"],
+        "solutionName": m["name"],
+        "solutionVersion": m["version"],
+        "status": m.get("status", "live"),
+        "controls": controls,
+        "controlCount": len(controls),
+    }
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"
 
 
@@ -1158,6 +1183,11 @@ def run(check: bool) -> int:
     # 1. solutions.json
     sj = emit_solutions_json(manifests)
     record(SOLUTIONS_JSON, sj, drift)
+
+    # 1b. Per-solution controls-covered.json
+    for slug, m in manifests.items():
+        cc = emit_controls_covered_json(slug, m)
+        record(ROOT / slug / "controls-covered.json", cc, drift)
 
     # 2. README table block
     if README.is_file():

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "hallucination-tracker",
+  "solutionName": "Hallucination Feedback Tracker",
+  "solutionVersion": "1.2.0",
+  "status": "live",
+  "controls": [
+    {
+      "id": "3.10",
+      "coverage": "full"
+    },
+    {
+      "id": "2.9",
+      "coverage": "full"
+    },
+    {
+      "id": "2.12",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}

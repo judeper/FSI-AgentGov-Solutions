@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "message-center-monitor",
+  "solutionName": "Message Center Monitor",
+  "solutionVersion": "2.5.1",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.3",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 1
+}

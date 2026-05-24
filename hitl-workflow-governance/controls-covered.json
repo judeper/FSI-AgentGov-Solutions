@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "hitl-workflow-governance",
+  "solutionName": "HITL Workflow Governance",
+  "solutionVersion": "1.1.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.12",
+      "coverage": "full"
+    },
+    {
+      "id": "2.17",
+      "coverage": "full"
+    },
+    {
+      "id": "1.10",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}

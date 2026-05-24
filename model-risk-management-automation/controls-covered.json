@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "model-risk-management-automation",
+  "solutionName": "Model Risk Management Automation",
+  "solutionVersion": "1.0.4",
+  "status": "live",
+  "controls": [
+    {
+      "id": "2.6",
+      "coverage": "full"
+    },
+    {
+      "id": "2.5",
+      "coverage": "full"
+    },
+    {
+      "id": "2.9",
+      "coverage": "full"
+    },
+    {
+      "id": "2.11",
+      "coverage": "full"
+    },
+    {
+      "id": "2.13",
+      "coverage": "full"
+    },
+    {
+      "id": "3.1",
+      "coverage": "full"
+    },
+    {
+      "id": "1.2",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 7
+}

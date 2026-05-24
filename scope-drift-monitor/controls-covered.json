@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "scope-drift-monitor",
+  "solutionName": "Scope Drift Monitor",
+  "solutionVersion": "1.2.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.14",
+      "coverage": "full"
+    },
+    {
+      "id": "1.4",
+      "coverage": "full"
+    },
+    {
+      "id": "1.5",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}

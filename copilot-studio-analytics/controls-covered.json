@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "copilot-studio-analytics",
+  "solutionName": "Copilot Studio Analytics",
+  "solutionVersion": "2.0.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "3.2",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 1
+}

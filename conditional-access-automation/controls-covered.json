@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "conditional-access-automation",
+  "solutionName": "Conditional Access Automation",
+  "solutionVersion": "2.0.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.11",
+      "coverage": "full"
+    },
+    {
+      "id": "1.23",
+      "coverage": "full"
+    },
+    {
+      "id": "1.18",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}

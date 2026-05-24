@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "unrestricted-agent-sharing-detector",
+  "solutionName": "Unrestricted Agent Sharing Detector",
+  "solutionVersion": "2.0.1",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.1",
+      "coverage": "full"
+    },
+    {
+      "id": "3.8",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 2
+}

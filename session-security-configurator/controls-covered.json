@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "session-security-configurator",
+  "solutionName": "Session Security Configurator",
+  "solutionVersion": "1.3.0",
+  "status": "live",
+  "controls": [
+    {
+      "id": "1.23",
+      "coverage": "full"
+    },
+    {
+      "id": "1.11",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 2
+}

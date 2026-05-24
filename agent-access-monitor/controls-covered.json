@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "agent-access-monitor",
+  "solutionName": "Agent Access Governance Monitor",
+  "solutionVersion": "1.1.2",
+  "status": "live",
+  "controls": [
+    {
+      "id": "3.8",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 1
+}
