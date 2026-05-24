@@ -237,8 +237,8 @@ If Denied: Remediate Access → Close Violation
 
 | Control | Relationship |
 |---------|--------------|
-| [1.14 - Data Loss Prevention](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.14-data-loss-prevention.md) | Detective scope-drift monitoring complements preventive DLP policy enforcement |
-| [1.4 - Advanced Connector Policies](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-advanced-connector-policies-for-copilot-studio.md) | Provides monitoring evidence for connector classification (this solution does not block connectors) |
+| [1.14 - Data Minimization and Agent Scope Control](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.14-data-minimization-and-agent-scope-control.md) | Detective scope-drift monitoring complements preventive DLP policy enforcement |
+| [1.4 - Advanced Connector Policies (ACP)](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-advanced-connector-policies-acp.md) | Provides monitoring evidence for connector classification (this solution does not block connectors) |
 | [1.5 - DLP and Sensitivity Labels](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md) | Provides monitoring evidence for sensitive-data access (row-level / column-level enforcement is not implemented) |
 
 ## Known Limitations

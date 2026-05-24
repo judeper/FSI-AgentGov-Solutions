@@ -224,9 +224,9 @@ Review and complete all items in [DELIVERY-CHECKLIST.md](DELIVERY-CHECKLIST.md) 
 
 | Control | Relationship |
 |---------|--------------|
-| [2.6 — Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management.md) | Primary — model inventory, risk scoring, validation workflow |
+| [2.6 — Model Risk Management (SR 26-2)](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Primary — model inventory, risk scoring, validation workflow |
 | [2.5 — Testing, Validation, and Quality Assurance](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.5-testing-validation-and-quality-assurance.md) | Secondary — independent validation cycles |
-| [2.9 — Agent Performance Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-agent-performance-monitoring.md) | Secondary — ongoing monitoring with threshold detection |
+| [2.9 — Agent Performance Monitoring and Optimization](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-agent-performance-monitoring-and-optimization.md) | Secondary — ongoing monitoring with threshold detection |
 | [2.11 — Bias Testing and Fairness Assessment](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.11-bias-testing-and-fairness-assessment.md) | Secondary — finding category includes Bias/Fairness |
 | [2.13 — Documentation and Record Keeping](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.13-documentation-and-record-keeping.md) | Secondary — Agent Cards and immutable compliance events |
 | [3.1 — Agent Inventory and Metadata Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.1-agent-inventory-and-metadata-management.md) | Secondary — fsi_modelinventory + fsi_mrmcomplianceevent provide MRM-scoped inventory and metadata |
