@@ -272,7 +272,7 @@ Locked WORM storage has cost implications:
 
 - [verify_worm.py](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-observability-foundation/scripts/verify_worm.py) - Verification script (read-only)
 - [Azure Immutable Storage Overview](https://learn.microsoft.com/azure/storage/blobs/immutable-storage-overview)
-- [SEC 17a-4 Compliance Assessment](https://learn.microsoft.com/azure/compliance/offerings/offering-sec-17a-4)
+- [SEC 17a-4 Compliance Assessment](https://learn.microsoft.com/en-us/compliance/regulatory/offering-SEC-docs)
 - [Cohasset Compliance Assessment](https://servicetrust.microsoft.com)
 
 ---

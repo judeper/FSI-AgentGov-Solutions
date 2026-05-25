@@ -116,7 +116,7 @@ Error: Access denied to table fsi_HitlCheckpointResult
 **Cause:** The **Request for Information** action entered public preview in July 2025. The `advancedapprovals` connector schema may change before general availability. Microsoft may update action parameter names, add new required fields, or modify the bot component representation.
 
 **Resolution:**
-1. Check the [Copilot Studio release notes](https://learn.microsoft.com/en-us/microsoft-copilot-studio/release-notes) for recent connector changes
+1. Check the [Copilot Studio release notes](https://learn.microsoft.com/en-us/microsoft-copilot-studio/whats-new) for recent connector changes
 2. Compare current `botcomponent` content against the expected patterns in `Test-HitlWorkflowCompliance.ps1`
 3. If the connector schema has changed:
    - Update the scan script's action detection patterns to match the new schema
