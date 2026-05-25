@@ -2,7 +2,7 @@
 
 Requirements for deploying the HITL Workflow Governance solution.
 
-> **Preview Notice:** The Human in the Loop connector actions — **Request for Information** (RFI) and **Run a Multistage Approval** — are currently in public preview. RFI entered public preview in July 2025. The connector reference labels both actions as "(preview)." Preview features may change before general availability. This solution provides governance tooling, but administrators should monitor the [Copilot Studio release notes](https://learn.microsoft.com/en-us/microsoft-copilot-studio/release-notes) and connector reference for changes that may affect behavior.
+> **Preview Notice:** The Human in the Loop connector actions — **Request for Information** (RFI) and **Run a Multistage Approval** — are currently in public preview. RFI entered public preview in July 2025. The connector reference labels both actions as "(preview)." Preview features may change before general availability. This solution provides governance tooling, but administrators should monitor the [Copilot Studio release notes](https://learn.microsoft.com/en-us/microsoft-copilot-studio/whats-new) and connector reference for changes that may affect behavior.
 
 ---
 

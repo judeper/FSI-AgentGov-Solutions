@@ -250,7 +250,7 @@ Allow 24-48 hours for report-only data collection.
 > is part of the Microsoft Graph beta surface and is subject to change without
 > notice. Do not depend on its response shape in production runbooks; treat
 > it as an interactive validation aid only. Track changes in the
-> [Microsoft Graph beta changelog](https://learn.microsoft.com/graph/changelog).
+> [Microsoft Graph changelog](https://learn.microsoft.com/en-us/graph/whats-new-overview).
 
 ```powershell
 # Test Zone 3 user accessing Copilot Studio

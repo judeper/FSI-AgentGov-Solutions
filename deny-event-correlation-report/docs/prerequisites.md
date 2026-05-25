@@ -242,7 +242,7 @@ union isfuzzy=true
 
 ### Reference
 
-- [Azure Monitor deprecation announcement](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/deprecation)
+- [Azure Monitor API migration guide](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/migrate-batch-and-beta)
 - [Entra ID authentication for Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/access-api)
 
 ---

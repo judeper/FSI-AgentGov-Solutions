@@ -221,7 +221,7 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 
 ### Microsoft Learn Resources
 - **[Power BI DirectQuery](https://learn.microsoft.com/power-bi/connect-data/desktop-directquery-about)** - DirectQuery concepts and limitations
-- **[Azure Data Explorer Connector](https://learn.microsoft.com/power-bi/connect-data/desktop-connect-azure-data-explorer)** - ADX connector documentation
+- **[Azure Data Explorer Connector](https://learn.microsoft.com/en-us/azure/data-explorer/power-bi-data-connector)** - ADX connector documentation
 - **[Log Analytics Workspace](https://learn.microsoft.com/azure/azure-monitor/logs/log-analytics-workspace-overview)** - Workspace concepts and query optimization
 
 ---
