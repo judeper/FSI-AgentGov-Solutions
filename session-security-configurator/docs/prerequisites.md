@@ -31,6 +31,8 @@ The following PowerShell modules are required for SSC scripts:
 - `Microsoft.Graph.Beta.Identity.SignIns` (optional — required for Zone 3 risky-user policy in Deploy-StepUpPolicies.ps1)
 - `MSAL.PS` (for evidence export with service principal)
 
+> ⚠️ **MSAL.PS deprecation notice:** The [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) repository was archived in September 2023 and receives no further updates or security patches. It remains functional but is not officially supported by Microsoft. For new deployments, consider acquiring Dataverse tokens via `Az.Accounts` (`Get-AzAccessToken -ResourceUrl`) or the Microsoft Graph PowerShell SDK instead. A future release of this solution will migrate off MSAL.PS; in the interim, the existing scripts continue to work with the archived module.
+
 Install all required modules:
 
 ```powershell
@@ -81,7 +83,7 @@ For scheduled validation via Azure Automation:
 
 - Azure Automation Account with PowerShell 7.2+ runtime
 - Certificate uploaded to Automation Account Certificates blade
-- Modules installed: `Microsoft.Graph.Identity.SignIns`, `Microsoft.Graph.Groups`, `Microsoft.Graph.Identity.Governance`, `MSAL.PS`
+- Modules installed: `Microsoft.Graph.Identity.SignIns`, `Microsoft.Graph.Groups`, `Microsoft.Graph.Identity.Governance`, `MSAL.PS` (see [MSAL.PS deprecation notice](prerequisites.md#powershell-module-requirements))
 - App registration with the following Microsoft Graph application permissions:
 
 **Required for validation (`Test-SessionCompliance.ps1`, `Start-SessionValidationRunbook.ps1`):**
