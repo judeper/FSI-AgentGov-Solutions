@@ -71,6 +71,8 @@ The Python deployment client uses `DefaultAzureCredential` when `--client-secret
 | `Az.Accounts` | 5.0+ | Managed identity, certificate, and interactive Azure token acquisition |
 | `MSAL.PS` | 4.37+ | Certificate-based token acquisition in `Start-HitlValidationRunbook.ps1` |
 
+> ⚠️ **MSAL.PS deprecation notice:** The [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) repository was archived in September 2023 and receives no further updates. The rest of this solution migrated to `Az.Accounts` in v1.1.2 (m-6); `Start-HitlValidationRunbook.ps1` retains the dependency for certificate-based Azure Automation token acquisition. For new runbook deployments, consider using `Az.Accounts` `Connect-AzAccount -CertificateThumbprint` instead.
+
 Install with:
 ```powershell
 Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser -Force
@@ -239,4 +241,4 @@ Administrators should avoid spaces in RFI input names because Microsoft Learn no
 
 ---
 
-*HITL Workflow Governance v1.1.1*
+*HITL Workflow Governance v1.1.2*

@@ -23,7 +23,7 @@ Before creating the flow, ensure you have:
 - [ ] **Azure Automation Account** with:
   - Start-SessionValidationRunbook.ps1 imported as a PowerShell 7.2 runbook
   - Certificate uploaded (Certificates blade)
-  - Modules installed: Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Groups, Microsoft.Graph.Identity.Governance, MSAL.PS
+  - Modules installed: Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns, Microsoft.Graph.Groups, Microsoft.Graph.Identity.Governance, MSAL.PS (see [MSAL.PS deprecation notice](prerequisites.md#powershell-module-requirements))
   - Application permissions granted: Policy.Read.All, GroupMember.Read.All, RoleManagement.Read.Directory
 - [ ] **Dataverse environment** with SSC schema deployed (run `python scripts/deploy.py`)
 - [ ] **Managed Identity** configured for Dataverse access:
@@ -140,7 +140,7 @@ This avoids Azure Automation load spikes and makes debugging easier.
 After the flow is running, capture the initial baseline for drift detection:
 
 ```powershell
-# Run from PowerShell 7 with Graph SDK and MSAL.PS installed
+# Run from PowerShell 7 with Graph SDK and MSAL.PS installed (MSAL.PS is archived; see prerequisites for alternatives)
 
 .\Invoke-BaselineCapture.ps1 `
     -Zone Zone3 `
@@ -376,7 +376,7 @@ The flow routes alerts based on validation status and drift detection:
 
 ---
 
-**Version:** 1.1.1
-**Last Updated:** 2026-05-04
+**Version:** 1.3.0
+**Last Updated:** 2026-05-25
 **Solution:** Session Security Configurator
 **Phase:** 3 - Automation and Alerting

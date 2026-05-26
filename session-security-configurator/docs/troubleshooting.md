@@ -121,6 +121,8 @@ Get-Module Microsoft.Graph* -ListAvailable | Select-Object Name, Version
 Get-Module MSAL.PS -ListAvailable | Select-Object Name, Version
 ```
 
+> **Note:** `MSAL.PS` is archived and no longer updated. See [Prerequisites](prerequisites.md) for migration guidance.
+
 ### Verify Graph Permissions
 
 ```powershell
