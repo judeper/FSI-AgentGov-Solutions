@@ -3,6 +3,8 @@
 This guide provides step-by-step instructions for manually building two Power Apps that support the MRM automation solution. These apps are designed to help meet institution-specific model risk management requirements for AI agents governed by Copilot Studio, using OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) terminology and Fed SR 26-2 (formerly Fed SR 11-7) principles where applicable.
 
 > **Important:** This guide describes how to build apps in the Power Apps designer. No exported app packages are provided. Administrators should adapt screen layouts, branding, and field placement to their organization's standards.
+>
+> **Column naming note:** The Dataverse column `fsi_sr117pillar` and its display label "SR 11-7 Pillar" retain the original SR 11-7 name for backward compatibility with existing deployments. The current superseding guidance is Fed SR 26-2 (formerly Fed SR 11-7). Do not rename the column in existing environments.
 
 ---
 
@@ -87,7 +89,7 @@ Displays agents from `fsi_agentinventory` that are registered but do not yet hav
      |---------|---------|------|-------|
      | `txtBusinessFunction` | `fsi_businessfunction` | Multi-line text | Declared use case — drives MRM tier assignment |
      | `txtDataInputs` | `fsi_datainputs` | Multi-line text | Input data sources description |
-     | `txtKnownLimitations` | `fsi_knownlimitations` | Multi-line text | Documented limitations per SR 11-7 |
+     | `txtKnownLimitations` | `fsi_knownlimitations` | Multi-line text | Documented limitations per Fed SR 26-2 (formerly SR 11-7) |
      | `txtIntendedUsers` | `fsi_intendedusers` | Single-line text | Target user population |
 
 5. **Add a Submit button:**

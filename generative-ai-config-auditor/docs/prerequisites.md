@@ -44,7 +44,7 @@ A Microsoft Entra ID app registration is required for both interactive and non-i
 
 ### Registration Steps
 
-1. Navigate to [Azure Portal](https://portal.azure.com) > **Entra ID** > **App registrations**
+1. Navigate to [Azure Portal](https://portal.azure.com) > **Microsoft Entra ID** > **App registrations**
 2. Click **New registration**
 3. Name: `GAC-GenAIConfigAuditor` (or your organization's naming convention)
 4. Supported account types: **Single tenant**

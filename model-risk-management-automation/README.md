@@ -11,6 +11,7 @@ coe_function: govern
 > **Version:** v1.0.4
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+> **Last Verified:** 2026-05-25
 
 Automated model risk management workflows for AI agents deployed on Power Platform, aligned to OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) and Fed SR 26-2 (formerly Fed SR 11-7) principles where applicable. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation.
 
