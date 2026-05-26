@@ -77,7 +77,7 @@ Power Automate flows and Canvas apps are built manually using the instructions i
 
 ### Native Agent Sharing Rules (GA May 2025)
 
-Microsoft introduced native admin controls in the Power Platform admin center to [block and limit sharing for Copilot Studio agents](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules-preview). These controls allow administrators to:
+Microsoft introduced native admin controls in the Power Platform admin center to [block and limit sharing for Copilot Studio agents](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules). These controls allow administrators to:
 
 - Allow or block makers from sharing agents with individuals as editors
 - Allow or block makers from sharing agents with viewers (individuals and security groups)

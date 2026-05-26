@@ -534,7 +534,7 @@ The `List_Validation_Records` operations in both flows use `$top: 1` to retrieve
 
 ## Version
 
-2.0.1 - 2026-Q2 Microsoft Learn refresh
+2.0.2 — May 2026
 
 See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
