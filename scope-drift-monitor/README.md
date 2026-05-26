@@ -259,7 +259,7 @@ Microsoft is introducing [sensitivity label visibility in Copilot Studio](https:
 | 1.2.2 | May 2026 | PS 5.1 compatibility fix for `Get-Date -AsUTC`; non-ASCII em-dashes replaced |
 | 1.2.1 | May 2026 | Microsoft Learn 2026-Q2 refresh: Copilot audit schema parsing, managed identity-first scripts, and updated Purview/Graph guidance |
 | 1.1.2 | April 2026 | Fixed Write-Output pipeline contamination, prohibited language, PnP 3.x compatibility |
-| 1.1.1 | July 2026 | Removed exported Dataverse solution package per content policy |
+| 1.1.1 | March 2026 | Removed exported Dataverse solution package per content policy |
 | 1.1.0 | February 2026 | Production release with flows, scripts, and full documentation |
 | 1.0.0 | February 2026 | Initial schema and concept |
 

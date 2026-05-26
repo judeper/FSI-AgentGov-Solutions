@@ -93,4 +93,4 @@ Use managed identity for Azure-hosted production automation:
 
 ---
 
-*Scope Drift Monitor v1.2.1*
+*Scope Drift Monitor v1.2.2*

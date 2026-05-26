@@ -311,4 +311,4 @@ Update-DataverseRecord -EntityName "fsi_agentscope" -RecordId $scopeId -Data @{
 
 ---
 
-*Scope Drift Monitor v1.2.1*
+*Scope Drift Monitor v1.2.2*
