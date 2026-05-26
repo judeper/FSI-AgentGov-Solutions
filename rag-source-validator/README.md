@@ -11,6 +11,7 @@ coe_function: govern
 > **Version:** v1.3.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+> **Last Verified:** 2026-05-25
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
