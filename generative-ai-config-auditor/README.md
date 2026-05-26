@@ -10,6 +10,7 @@ coe_function: govern
 > **Version:** v1.2.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+> **Last Verified:** 2026-05-25
 
 Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Work IQ / semantic search) for Copilot Studio agents against zone-specific governance policies.
 

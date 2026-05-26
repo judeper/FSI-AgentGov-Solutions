@@ -1,6 +1,6 @@
 # Solution Documentation — Model Risk Management Automation
 
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Solution Name:** `model-risk-management-automation`
 **Repository:** FSI-AgentGov-Solutions
 

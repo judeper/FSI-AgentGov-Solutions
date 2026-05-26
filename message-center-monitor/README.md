@@ -11,6 +11,7 @@ coe_function: scale
 > **Version:** v2.5.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+> **Last Verified:** 2026-05-25
 >
 > **For AI agents and engineers** working in this solution: see [`AGENTS.md`](AGENTS.md)
 > for current operational state, cross-machine resume runbook, and
