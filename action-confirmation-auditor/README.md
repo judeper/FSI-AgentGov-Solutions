@@ -11,6 +11,7 @@ coe_function: govern
 > **Version:** v1.2.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+> **Last Verified:** 2026-05-25
 
 Validates that Copilot Studio agent topics include user confirmation steps before executing actions (connector calls, cloud flows, plugins, HTTP requests), with zone-based policy enforcement for financial services governance.
 

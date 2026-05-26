@@ -12,6 +12,7 @@ coe_function: govern
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Preview — Copilot Studio credential-oversharing detection is currently listed by Microsoft for public preview and should be validated in a non-production tenant before regulated production use.
+> **Last Verified:** 2026-05-25
 
 >
 > ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, which the Microsoft release plan currently lists for public preview in July 2026 and general availability in September 2026. Verify current feature status at the [Microsoft release plan](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing) before production deployment.

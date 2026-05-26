@@ -11,6 +11,7 @@ coe_function: optimize
 > **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+> **Last Verified:** 2026-05-25
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 

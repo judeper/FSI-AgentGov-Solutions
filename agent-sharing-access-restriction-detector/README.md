@@ -11,6 +11,7 @@ coe_function: govern
 > **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
+> **Last Verified:** 2026-05-25
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 

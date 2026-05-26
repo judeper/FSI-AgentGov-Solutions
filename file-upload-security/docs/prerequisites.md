@@ -107,4 +107,4 @@ Unclassifiable environments default to Zone 3 (most restrictive) for fail-safe g
 
 ---
 
-*File Upload Security Configurator — Prerequisites*
+*File Upload Security Configurator — Prerequisites — Last Verified: 2026-05-25*
