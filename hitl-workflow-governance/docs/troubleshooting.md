@@ -269,6 +269,7 @@ Error: Method not found: 'Void Microsoft.IdentityModel.Clients.ActiveDirectory..
    Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force -AllowClobber
    Install-Module -Name MSAL.PS -Force -AllowClobber
    ```
+   > **Note:** `MSAL.PS` is archived and no longer updated. See [Prerequisites](prerequisites.md) for migration guidance.
 4. If running in Azure Automation, update modules through the Automation Account > Modules blade
 
 ---

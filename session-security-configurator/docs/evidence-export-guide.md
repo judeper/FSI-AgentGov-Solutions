@@ -12,7 +12,7 @@ Each export produces:
 ## Prerequisites
 
 - PowerShell 7.0 or later
-- `MSAL.PS` module (for service principal authentication)
+- `MSAL.PS` module (for service principal authentication — [archived](https://github.com/AzureAD/MSAL.PS); see [Prerequisites](prerequisites.md) for migration guidance)
 - Dataverse environment with SSC schema deployed
 - Read access to `fsi_ValidationHistory` table
 
@@ -66,9 +66,10 @@ Use interactive authentication for ad-hoc exports during audits.
 
 ## Service Principal Mode
 
-Use service principal authentication for scheduled or automated exports.
+Use service principal authentication for scheduled or automated exports. For production automation, prefer managed identity where supported (see [Prerequisites](prerequisites.md)). Client-secret mode is a legacy dev-only fallback.
 
 ```powershell
+# legacy: dev-only — prefer managed identity for production
 $clientSecret = ConvertTo-SecureString "your-client-secret" -AsPlainText -Force
 
 .\scripts\Export-SessionSecurityEvidence.ps1 `

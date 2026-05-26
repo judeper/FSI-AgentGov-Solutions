@@ -46,6 +46,8 @@ Install-Module Microsoft.Graph.Authentication, `
     MSAL.PS -Scope CurrentUser
 ```
 
+> ⚠️ **MSAL.PS deprecation notice:** The `MSAL.PS` module repository was archived in September 2023 and receives no updates. See [Prerequisites](docs/prerequisites.md) for migration guidance.
+
 ## What This Solution Does
 
 - **Deploys** authentication contexts (c1-c5) for zone-based session control
