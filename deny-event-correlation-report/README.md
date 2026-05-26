@@ -43,6 +43,10 @@ This solution supports compliance evidence for:
   monitoring of access denials on customer NPI.
 - **FINRA Regulatory Notice 24-09** - Generative AI governance
   (supervisory guidance, not an enforceable rule)
+- **FINRA Regulatory Notice 25-07** - AI supervision and modern
+  workplaces (supervisory guidance, not an enforceable rule; extends
+  Rule 3110 supervision requirements to AI systems including
+  documentation and audit trail obligations)
 - **OCC 2011-12 / Fed SR 11-7** - Model risk management (supervisory
   guidance, not enforceable rules)
 

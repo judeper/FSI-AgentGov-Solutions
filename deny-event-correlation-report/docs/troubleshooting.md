@@ -44,7 +44,7 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 >
 > See [Authentication Migration](prerequisites.md#authentication-migration) for complete migration steps.
 >
-> *Last verified: February 2, 2026*
+> *Last verified: 2026-05-25*
 
 **Symptoms:**
 - REST API returns 401/403 error
