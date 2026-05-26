@@ -148,4 +148,4 @@ If ELM is not deployed, zone classification defaults to Zone 3 (most restrictive
 
 ---
 
-*Action Confirmation Auditor v1.2.1*
+*Action Confirmation Auditor v1.2.1 — Last Verified: 2026-05-25*
