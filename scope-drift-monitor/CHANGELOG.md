@@ -46,7 +46,7 @@ All notable changes to the Scope Drift Monitor.
 
 ---
 
-## [1.1.1] - 2026-07-15
+## [1.1.1] - 2026-03-15
 
 ### Removed
 
