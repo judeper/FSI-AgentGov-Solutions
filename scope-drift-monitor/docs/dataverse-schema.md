@@ -324,4 +324,4 @@ Retention period should align with your organization's audit requirements (e.g.,
 
 ---
 
-*Scope Drift Monitor v1.2.1*
+*Scope Drift Monitor v1.2.2*

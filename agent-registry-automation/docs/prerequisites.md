@@ -25,7 +25,7 @@ Install or update the supporting admin tooling on workstations used for validati
 ```powershell
 Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -RequiredVersion 2.0.217 -Scope CurrentUser
 Install-Module -Name Microsoft.PowerApps.PowerShell -RequiredVersion 1.0.45 -AllowClobber -Scope CurrentUser
-Install-Module -Name Microsoft.Graph -RequiredVersion 2.36.1 -Scope CurrentUser
+Install-Module -Name Microsoft.Graph -RequiredVersion 2.37.0 -Scope CurrentUser
 Install-Module -Name Az.Accounts -RequiredVersion 5.3.4 -Scope CurrentUser
 pac --version
 ```
