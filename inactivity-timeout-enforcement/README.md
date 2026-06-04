@@ -74,7 +74,7 @@ inactivity-timeout-enforcement/
 
 ## Microsoft Learn 2026-Q2 scope notes
 
-- This solution monitors Power Platform environment **Privacy + Security** inactivity timeout settings surfaced through the Business Application Platform (BAP) admin API and Dataverse evidence tables.
+- This solution monitors Power Platform environment **Privacy + Security** inactivity timeout settings. The **authoritative source** for the inactivity timeout value is the Dataverse `organization` table (`inactivitytimeoutenabled` Boolean / `inactivitytimeoutinmins` Integer minutes; see the [Organization table/entity reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/organization)). The standalone PowerShell scanner reads this value per environment; the BAP Admin API governanceConfiguration shape is retained only as an unverified fallback (see `LAB-VALIDATION.md`).
 - Power Platform **session timeout** is a server-side maximum session length; **inactivity timeout** is a client-side sign-out decision after inactivity. Microsoft Learn notes that Power Apps canvas apps are excluded from the customer engagement app inactivity timeout setting.
 - Microsoft Entra Conditional Access sign-in frequency, persistent browser, app-enforced restrictions, Defender for Cloud Apps session controls, and Continuous Access Evaluation (CAE) are complementary identity/session controls. They are not substitutes for the Power Platform environment inactivity timeout setting scanned here.
 - Copilot Studio agent inactivity handling should be implemented with agent/topic lifecycle patterns such as the Teams channel inactivity trigger; those agent conversation resets are outside this environment-level scanner.

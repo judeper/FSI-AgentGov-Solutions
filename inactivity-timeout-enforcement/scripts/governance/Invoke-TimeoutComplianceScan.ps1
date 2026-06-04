@@ -13,10 +13,14 @@
 
     For each environment the script:
     1. Authenticates to Power Platform Admin API via managed identity by default, with legacy client-secret fallback for development
-    2. Enumerates environments (with optional sandbox exclusion and name filtering)
+    2. Enumerates environments (with optional sandbox exclusion and name filtering), capturing each environment's Dataverse instance URL
     3. Classifies each environment into a governance zone via ELM lookup or naming convention
-    4. Retrieves privacy/governance settings from BAP Admin API
-    5. Parses inactivity timeout configuration (enabled state and ISO 8601 duration)
+    4. Retrieves the inactivity timeout setting -- preferring the authoritative
+       Dataverse organization table (inactivitytimeoutenabled / inactivitytimeoutinmins),
+       and falling back to the BAP Admin API governanceConfiguration endpoint
+       only when the organization table cannot be read
+    5. Normalizes the inactivity timeout to whole minutes (organization table values
+       are already integer minutes; BAP fallback values are parsed from ISO 8601)
     6. Loads zone policy via Get-ExpectedTimeoutPolicy
     7. Evaluates compliance:
        - Compliant: enabled AND duration within zone maximum
@@ -420,10 +424,19 @@ function Invoke-TimeoutComplianceScan {
                 $displayName = if ($props.displayName) { $props.displayName } elseif ($item.displayName) { $item.displayName } else { $envId }
                 $environmentType = if ($props.environmentSku) { $props.environmentSku } elseif ($props.environmentType) { $props.environmentType } elseif ($item.environmentType) { $item.environmentType } else { '' }
 
+                # Dataverse instance (organization) URL for the linked environment.
+                # This is the authoritative source for the inactivity timeout
+                # System Setting (organization.inactivitytimeoutenabled /
+                # organization.inactivitytimeoutinmins). Environments without a
+                # provisioned Dataverse database expose no instance URL.
+                $linked = $props.linkedEnvironmentMetadata
+                $instanceUrl = if ($linked.instanceUrl) { $linked.instanceUrl } elseif ($linked.instanceApiUrl) { $linked.instanceApiUrl } else { $null }
+
                 [void]$allEnvironments.Add([PSCustomObject]@{
                     EnvironmentName = $envId
                     DisplayName     = $displayName
                     EnvironmentType = $environmentType
+                    InstanceUrl     = $instanceUrl
                 })
             }
 
@@ -451,6 +464,91 @@ function Invoke-TimeoutComplianceScan {
     }
 
     Write-Host "  Found $($environments.Count) environment(s) to scan (of $($allEnvironments.Count) total)"
+
+    #endregion
+
+    #region Authoritative Inactivity Timeout Source (Dataverse organization table)
+
+    # Per-resource Dataverse token cache so repeated organization reads across
+    # environments reuse a single token per instance host.
+    $dvResourceTokenCache = @{}
+
+    function Get-DataverseResourceToken {
+        param([Parameter(Mandatory = $true)][string]$ResourceUrl)
+
+        $key = $ResourceUrl.TrimEnd('/')
+        if ($dvResourceTokenCache.ContainsKey($key)) {
+            return $dvResourceTokenCache[$key]
+        }
+
+        $token = $null
+        if ($useManagedIdentityAuth) {
+            $token = Get-IteManagedIdentityToken `
+                -ResourceUrl $key `
+                -TenantId $TenantId `
+                -ManagedIdentityClientId $ManagedIdentityClientId
+        }
+        else {
+            # legacy: dev-only -- replace with managed identity in production
+            $body = @{
+                grant_type    = 'client_credentials'
+                client_id     = $ClientId
+                client_secret = $plainSecret
+                scope         = "$key/.default"
+            }
+            $resp = Invoke-RestMethod `
+                -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
+                -Method Post `
+                -ContentType 'application/x-www-form-urlencoded' `
+                -Body $body `
+                -ErrorAction Stop
+            $token = $resp.access_token
+        }
+
+        $dvResourceTokenCache[$key] = $token
+        return $token
+    }
+
+    function Get-OrganizationInactivityTimeout {
+        <#
+        .SYNOPSIS
+            Reads the authoritative inactivity timeout System Setting from a
+            Dataverse environment's organization table.
+        .DESCRIPTION
+            The inactivity timeout that administrators configure under Power
+            Platform admin center > Environment > Settings > Product >
+            Privacy + Security is persisted on the Dataverse organization
+            table as inactivitytimeoutenabled (Boolean) and
+            inactivitytimeoutinmins (Integer minutes). This is the documented
+            source of truth -- the value is stored in whole minutes, not as an
+            ISO 8601 duration. See:
+            https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/organization
+        .OUTPUTS
+            PSCustomObject with Enabled (bool) and Minutes (int; -1 when
+            disabled or unset).
+        #>
+        param([Parameter(Mandatory = $true)][string]$InstanceUrl)
+
+        $base = $InstanceUrl.TrimEnd('/')
+        $token = Get-DataverseResourceToken -ResourceUrl $base
+        $headers = @{
+            'Authorization'    = "Bearer $token"
+            'Accept'           = 'application/json'
+            'OData-MaxVersion' = '4.0'
+            'OData-Version'    = '4.0'
+        }
+        $url = "$base/api/data/v9.2/organizations?`$select=inactivitytimeoutenabled,inactivitytimeoutinmins"
+        $resp = Invoke-RestMethod -Uri $url -Headers $headers -Method Get -ErrorAction Stop
+        $org = @($resp.value)[0]
+
+        $enabled = [bool]$org.inactivitytimeoutenabled
+        $minutes = if ($enabled -and $null -ne $org.inactivitytimeoutinmins) { [int]$org.inactivitytimeoutinmins } else { -1 }
+
+        return [PSCustomObject]@{
+            Enabled = $enabled
+            Minutes = $minutes
+        }
+    }
 
     #endregion
 
@@ -505,12 +603,41 @@ function Invoke-TimeoutComplianceScan {
 
         $policy = & $policyScript -Zone $zone
 
-        # Retrieve governance configuration from BAP Admin API
+        # Retrieve inactivity timeout configuration.
         $timeoutEnabled = $null
         $timeoutDuration = $null
         $timeoutMinutes = -1
         $apiError = $null
+        $dataSource = 'None'
 
+        # Primary (authoritative): read the inactivity timeout System Setting
+        # directly from the environment's Dataverse organization table. The
+        # value is stored as inactivitytimeoutenabled (Boolean) and
+        # inactivitytimeoutinmins (Integer minutes) -- no ISO 8601 parsing is
+        # required. See Get-OrganizationInactivityTimeout for the citation.
+        if ($environment.InstanceUrl) {
+            try {
+                $orgTimeout = Get-OrganizationInactivityTimeout -InstanceUrl $environment.InstanceUrl
+                $timeoutEnabled = $orgTimeout.Enabled
+                if ($orgTimeout.Enabled -and $orgTimeout.Minutes -ge 0) {
+                    $timeoutMinutes  = $orgTimeout.Minutes
+                    $timeoutDuration = "PT$($orgTimeout.Minutes)M"
+                }
+                $dataSource = 'DataverseOrganization'
+                Write-Verbose "  Inactivity timeout read from Dataverse organization table (enabled=$($orgTimeout.Enabled), minutes=$($orgTimeout.Minutes))"
+            }
+            catch {
+                Write-Verbose "  Organization-table read failed for $envName; falling back to BAP governanceConfiguration: $($_.Exception.Message)"
+            }
+        }
+
+        # Fallback (unverified across tenants): the BAP Admin API
+        # governanceConfiguration endpoint. Microsoft has not documented
+        # inactivity timeout fields on this endpoint, so this path is retained
+        # only as a best-effort fallback for environments where the Dataverse
+        # organization table could not be read. Validate against a live tenant
+        # before relying on it. See LAB-VALIDATION.md.
+        if ($dataSource -ne 'DataverseOrganization') {
         try {
             $govConfigUrl = "$($BapApiBaseUrl.TrimEnd('/'))/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/$envId/governanceConfiguration?api-version=2021-04-01"
 
@@ -520,10 +647,7 @@ function Invoke-TimeoutComplianceScan {
                 -Method Get `
                 -ErrorAction Stop
 
-            # Parse governance settings for inactivity timeout. The
-            # `governanceConfiguration` API exposes inactivity timeouts under
-            # `properties.settings` as `inactivityTimeoutEnabled` (boolean) and
-            # `inactivityTimeoutDuration` (ISO 8601 duration). Older responses
+            # Parse governance settings for inactivity timeout. Older responses
             # may use `sessionTimeoutEnabled` / `sessionTimeoutInactivityDuration`,
             # so we accept either to be resilient across API versions.
             $privacySettings = $govResponse.properties.settings
@@ -542,6 +666,7 @@ function Invoke-TimeoutComplianceScan {
                 if ($timeoutEnabled -and $timeoutDuration) {
                     $timeoutMinutes = ConvertFrom-Iso8601Duration -Duration $timeoutDuration
                 }
+                $dataSource = 'BapGovernanceConfiguration'
             }
         }
         catch {
@@ -571,6 +696,7 @@ function Invoke-TimeoutComplianceScan {
                 ErrorTime       = (Get-Date -Format 'o')
             })
         }
+        } # end BAP governanceConfiguration fallback
 
         # Evaluate compliance
         $complianceStatus = 'Unknown'
@@ -624,6 +750,7 @@ function Invoke-TimeoutComplianceScan {
             Severity               = if ($complianceStatus -eq 'NonCompliant') { $policy.ViolationSeverity } elseif ($complianceStatus -eq 'Unknown') { 'Warning' } else { 'Info' }
             RegulatoryContext      = ($policy.RegulatoryContext -join '; ')
             Details                = $details
+            DataSource             = $dataSource
             ScanTime               = $scanStartTime
         }
 

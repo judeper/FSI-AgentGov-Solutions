@@ -158,10 +158,12 @@ Environments are classified into governance zones with tailored maximum timeout 
      - Extract environment name (canonical ID) and display name
      - Resolve policy from cached array by environment ID
      - **If policy exists:**
-       - Call the BAP **Governance Configuration** API:
-       `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/{environmentName}/governanceConfiguration?api-version=2021-04-01`
-     - Parse `properties.settings.inactivityTimeoutEnabled` (boolean) and `properties.settings.inactivityTimeoutDuration` (ISO 8601). For backward compatibility with older API responses, also accept `sessionTimeoutEnabled` / `sessionTimeoutInactivityDuration`.
-       - Convert ISO 8601 duration to minutes (handles `PT60M`, `PT2H`, `PT1H30M` formats)
+       - Determine the inactivity timeout for the environment. **Authoritative source:** the inactivity timeout that administrators configure under Power Platform admin center > Environment > Settings > Product > **Privacy + Security** is persisted on the Dataverse **organization** table as `inactivitytimeoutenabled` (Boolean) and `inactivitytimeoutinmins` (Integer minutes). Reference: [Organization table/entity reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/organization). The value is stored in **whole minutes** -- no ISO 8601 parsing is required.
+       - The standalone PowerShell scanner reads this organization-table value directly per environment. A single centralized cloud flow uses one Dataverse connection bound to one environment, so reading every environment's organization table from one flow requires either (a) a per-environment Dataverse connection, or (b) Microsoft Graph / admin tooling that surfaces the setting tenant-wide.
+       - **Unverified fallback:** the BAP **Governance Configuration** API
+       (`https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/{environmentName}/governanceConfiguration?api-version=2021-04-01`)
+       is documented for Managed Environment governance settings. Microsoft has **not** documented inactivity timeout fields (`inactivityTimeoutEnabled` / `inactivityTimeoutDuration`) on this endpoint; treat it as best-effort and validate against a live tenant before relying on it. See `LAB-VALIDATION.md`.
+       - Convert any ISO 8601 duration to minutes (handles `PT60M`, `PT2H`, `PT1H30M` formats) when reading the BAP fallback shape; organization-table values are already in minutes.
        - **Evaluate compliance:**
          - If timeout not explicitly enabled (disabled or null) → **Non-Compliant**
          - If timeout enabled but duration is null (indeterminate) → **Unknown**
@@ -199,7 +201,7 @@ Microsoft Learn distinguishes several session-control layers that are complement
 | Control layer | Current Microsoft guidance | ITE treatment |
 |---------------|----------------------------|---------------|
 | **Power Platform session timeout** | Server-side maximum session length for customer engagement apps. Defaults include a 1,440-minute maximum session length and a 60-minute minimum session length. | Adjacent absolute timeout. Use PPAC **Privacy + Security** settings for maximum session length; this solution focuses on inactivity timeout evidence. |
-| **Power Platform inactivity timeout** | Client-side sign-out decision after inactivity. Default behavior doesn't enforce inactivity timeout, and Microsoft Learn lists exclusions such as Power Apps canvas apps. | Primary scanned setting through BAP governance configuration (`inactivityTimeoutEnabled` / `inactivityTimeoutDuration`). |
+| **Power Platform inactivity timeout** | Client-side sign-out decision after inactivity. Default behavior doesn't enforce inactivity timeout, and Microsoft Learn lists exclusions such as Power Apps canvas apps. | Primary scanned setting. **Authoritative source:** Dataverse `organization` table (`inactivitytimeoutenabled` Boolean / `inactivitytimeoutinmins` Integer minutes). The BAP governanceConfiguration shape (`inactivityTimeoutEnabled` / `inactivityTimeoutDuration`) is retained only as an unverified fallback. |
 | **Microsoft 365 idle session timeout** | Tenant-wide idle timeout for supported Microsoft 365 web apps; it doesn't affect Microsoft 365 desktop or mobile apps and can be paired with app-enforced restrictions for unmanaged devices. | Complementary evidence source; not scanned by this solution. |
 | **Conditional Access sign-in frequency** | Absolute reauthentication frequency, with `frequencyInterval` values such as `timeBased` and `everyTime` in Microsoft Graph. It isn't an idle timer. | Complementary Conditional Access posture; not a substitute for Power Platform inactivity timeout. |
 | **Conditional Access session controls** | Microsoft Graph v1.0 exposes `signInFrequency`, `persistentBrowser`, `cloudAppSecurity`, `applicationEnforcedRestrictions`, and `disableResilienceDefaults` under `/identity/conditionalAccess/policies`. | Future companion scanner candidate; no current ITE writes or reads from Conditional Access policy objects. |
@@ -743,7 +745,7 @@ Notes: Inactivity timeout is enabled but duration is null — indeterminate stat
 
 ## Appendix: ISO 8601 Duration Parsing
 
-The solution parses ISO 8601 duration strings from the BAP Privacy Settings API response (`inactivityTimeoutDuration` field) and converts them to minutes for compliance evaluation.
+The solution parses ISO 8601 duration strings only when reading the **unverified BAP governanceConfiguration fallback** shape (`inactivityTimeoutDuration` field) and converts them to minutes for compliance evaluation. When reading the authoritative Dataverse `organization` table, the value (`inactivitytimeoutinmins`) is already an integer number of minutes and requires no parsing.
 
 **Supported Formats:**
 

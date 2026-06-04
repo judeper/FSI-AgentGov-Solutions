@@ -4,6 +4,15 @@ All notable changes to Inactivity Timeout Enforcement are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- **Major (lab-validation):** Inactivity timeout is now read from its authoritative source — the Dataverse `organization` table (`inactivitytimeoutenabled` Boolean / `inactivitytimeoutinmins` **Integer minutes**) — in `Invoke-TimeoutComplianceScan.ps1`. The previous source (BAP Admin API `governanceConfiguration` returning an ISO 8601 `inactivityTimeoutDuration`) is undocumented by Microsoft and is retained only as a clearly-labelled, `try/catch`-guarded fallback. Enumeration now captures each environment's Dataverse instance URL; new `Get-DataverseResourceToken` (per-resource token cache) and `Get-OrganizationInactivityTimeout` helpers perform the read. Result objects gain a `DataSource` field. Source: [Organization table/entity reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/organization). See `LAB-VALIDATION.md`.
+
+### Changed
+- **Doc:** `docs/flow-configuration.md` and `README.md` now document the Dataverse `organization` table as the authoritative inactivity timeout source (integer minutes, no ISO 8601 parsing) and reframe the BAP `governanceConfiguration` shape as an unverified fallback, including the single-Dataverse-connection constraint for a centralized flow.
+
+### Added
+- `LAB-VALIDATION.md` — static lab-readiness validation report with authoritative source citations, the central BAP-vs-organization-table finding, fixes, and runtime-only caveats.
+
 ## [1.1.2] - 2026-05-23
 
 ### Fixed
