@@ -32,7 +32,7 @@ pac --version
 
 Install or update the Power Platform CLI using the current Microsoft Learn installation path for your workstation, then verify with `pac --version`.
 
-Use `Get-AdminPowerApp`, `Get-AdminFlow`, and `pac copilot list --environment <environmentId-or-url>` as supplementary validation checks. The primary automated discovery path remains the Power Platform API because tenant-wide Copilot Studio agent inventory requires API-based environment enumeration.
+Use `Get-AdminPowerApp`, `Get-AdminFlow`, and `pac copilot list --environment <environmentId-or-url>` as supplementary validation checks. The primary automated discovery path enumerates environments via the BAP admin API and then reads each environment's Dataverse `bot` table, because tenant-wide Copilot Studio agent inventory requires per-environment Dataverse access.
 
 ---
 
@@ -42,15 +42,16 @@ Use `Get-AdminPowerApp`, `Get-AdminFlow`, and `pac copilot list --environment <e
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Admin** | Environment enumeration and Bots API access |
-| **Entra Global Admin** or **Application Administrator** | Service principal registration and API permission grants |
+| **Power Platform Admin** | Environment enumeration via the BAP admin API |
+| **Entra Global Admin** or **Application Administrator** | Service principal registration and Graph API permission grants |
 
 ### Power Platform Roles
 
 | Role | Required For |
 |------|--------------|
-| **System Administrator** | Dataverse table creation and schema deployment |
+| **System Administrator** | Dataverse table creation and schema deployment in the registry environment |
 | **Environment Maker** | Power Automate flow creation |
+| **Dataverse `bot`-table read** | A security role with read access to the `bot` table in **each** environment to be scanned (agent discovery). The Power Platform Admin role provides this in environments where the identity is an administrator; otherwise assign an application user with a read role per environment. |
 
 ---
 
@@ -62,13 +63,13 @@ Register a Microsoft Entra ID application with the following permissions:
 
 | Permission | Type | API | Purpose |
 |------------|------|-----|---------|
-| `Environment.Read.All` | Application | Power Platform API | Enumerate environments for discovery |
-| `Bot.Read.All` | Application | Power Platform API | Read bot registrations via Bots API |
+| Power Platform Admin role | Directory role | BAP admin API | Enumerate environments via `scopes/admin/environments`. Environment enumeration is authorized by the Power Platform Admin role, not a Graph application permission. |
+| `bot`-table read (Dataverse) | Dataverse security role | Dataverse Web API | Read agent rows from each environment's `bot` table for discovery. |
 | `User.Read.All` | Application | Microsoft Graph | Check owner account status for orphan detection |
 | `Directory.Read.All` | Application | Microsoft Graph | Read user department and manager information |
 | `AuditLog.Read.All` | Application | Microsoft Graph | Read sign-in activity for inactivity detection |
 
-> **Note:** All permissions require **admin consent** from an Entra Global Admin.
+> **Note:** The Microsoft Graph application permissions require **admin consent** from an Entra Global Admin. Environment enumeration and `bot`-table access are governed by Power Platform/Dataverse role assignments rather than Graph consent.
 
 ### Microsoft Entra Agent ID API (Optional — Flow 3)
 
@@ -175,10 +176,10 @@ The following connectors are used by the solution's Power Automate flows. Verify
 
 | Endpoint | Protocol | Purpose |
 |----------|----------|---------|
-| `api.powerplatform.com` | HTTPS (443) | Bots API and environment enumeration |
+| `api.bap.microsoft.com` | HTTPS (443) | Business Application Platform admin API — environment enumeration |
 | `graph.microsoft.com` | HTTPS (443) | User status checks and Microsoft Entra Agent ID |
 | `login.microsoftonline.com` | HTTPS (443) | OAuth 2.0 authentication |
-| `*.crm.dynamics.com` | HTTPS (443) | Dataverse API operations |
+| `*.crm.dynamics.com` | HTTPS (443) | Dataverse API operations — registry tables and per-environment `bot` table |
 
 > **Note:** For GCC, GCC High, and DoD environments, substitute the appropriate sovereign cloud endpoints.
 

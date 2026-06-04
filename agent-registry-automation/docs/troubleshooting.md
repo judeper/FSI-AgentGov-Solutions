@@ -6,49 +6,48 @@ Common issues and resolutions for the Agent Registry Automation solution.
 
 ## Discovery Issues (Flow 1)
 
-### Bots API Returns 401 Unauthorized
+### Environment enumeration returns 401 Unauthorized
 
-**Symptoms:** Flow 1 fails when calling the Bots API with a 401 error.
+**Symptoms:** Flow 1 fails when calling the BAP admin environments API with a 401 error.
 
 **Possible causes:**
 
 | Cause | Resolution |
 |-------|------------|
-| Token expired | Re-authorize the `fsi_cr_http_agentregistry` connection reference |
-| Missing API permissions | Grant `Environment.Read.All` and `Bot.Read.All` on Power Platform API |
-| Admin consent not granted | Navigate to Entra ID > App registrations > API permissions > Grant admin consent |
-| Wrong resource URI | Verify connection reference uses `https://api.powerplatform.com` as the resource URI |
+| Token expired | Re-authorize the `fsi_cr_http_agentregistry` connection reference used for the BAP call |
+| Wrong resource URI | Verify the connection's resource URI is `https://service.powerapps.com/` (the BAP admin audience), not the Graph or Dataverse audience |
+| Insufficient role | The identity must hold the **Power Platform Admin** role to use `scopes/admin/environments` |
 
 **Verify connection reference:**
 
 1. Navigate to **Power Apps** > **Solutions** > **Agent Registry Automation**
 2. Select **Connection References** > `fsi_cr_http_agentregistry`
-3. Verify **Base Resource URL** is `https://api.powerplatform.com`
+3. Verify the **Resource URI** for the BAP enumeration connection is `https://service.powerapps.com/`
 4. Click **Edit** and re-select or re-create the connection
 
-### Bots API Returns 403 Forbidden
+### `bot`-table query returns 401/403 Forbidden
 
-**Symptoms:** Flow 1 receives a 403 error for specific environments.
-
-**Possible causes:**
-
-| Cause | Resolution |
-|-------|------------|
-| Insufficient role | The service principal or user must have Power Platform Admin |
-| Environment-level restriction | Some environments may restrict API access — verify environment security settings |
-| Sovereign cloud mismatch | GCC/GCC High environments use different API endpoints |
-
-### Bots API Returns 404 Not Found
-
-**Symptoms:** Flow 1 receives a 404 for the Bots API endpoint.
+**Symptoms:** Flow 1 receives a 401/403 error when listing rows from the `bot` table in specific environments.
 
 **Possible causes:**
 
 | Cause | Resolution |
 |-------|------------|
-| API version change | The `2022-03-01-preview` API version may have been deprecated — check Power Platform API documentation |
-| Environment does not support Bots API | Not all environment types expose the Bots API — the flow should skip these gracefully |
-| Incorrect environment ID format | Verify the environment ID from the environment list matches the expected format |
+| No Dataverse access | The identity needs a Dataverse security role with **read** on the `bot` table in that environment. Add an application user or assign a read role per environment. |
+| Environment-level restriction | Some environments restrict cross-environment connections — verify tenant isolation / DLP settings |
+| Sovereign cloud mismatch | GCC/GCC High environments use different endpoints |
+
+### `bot`-table query returns 404 Not Found
+
+**Symptoms:** Flow 1 receives a 404 when querying an environment's Dataverse `bot` table.
+
+**Possible causes:**
+
+| Cause | Resolution |
+|-------|------------|
+| Environment has no Dataverse | Environments without a linked Dataverse instance have no `instanceUrl`; the flow should skip these gracefully |
+| Wrong instance URL | Verify `properties.linkedEnvironmentMetadata.instanceUrl` from the environment list is used as the Dataverse base URL |
+| Table not present | Confirm the environment provisions Copilot Studio (the `bot` table exists where Copilot Studio is enabled) |
 
 ### No Agents Discovered
 
@@ -60,8 +59,8 @@ Common issues and resolutions for the Agent Registry Automation solution.
 |-------|------------|
 | No agents deployed | Expected behavior if no AI agents exist in scanned environments |
 | Sandbox environments excluded | Set `fsi_ARA_IncludeSandboxEnvironments` to `true` if needed |
-| Developer environments filtered | Developer SKU environments are excluded by default — this is intentional |
-| Parse JSON schema mismatch | Verify the Parse JSON schema matches the actual Bots API response structure |
+| Developer environments filtered | Developer SKU environments are excluded by your filter — this is intentional |
+| `bot`-table read access missing | Confirm the identity can read the `bot` table in each environment |
 
 ---
 
@@ -153,7 +152,7 @@ This connector is **required** for the solution to function. Work with your DLP 
 1. Classify `HTTP with Microsoft Entra ID` in the **Business** connector group
 2. If organization-wide reclassification is not possible, create an environment-specific DLP policy that allows this connector in the governance environment
 
-> **Note:** The HTTP with Microsoft Entra ID connector is used for Bots API (Flow 1), Microsoft Entra Agent ID (Flow 3), and Graph API (Flow 4) calls. Without it, these flows cannot operate.
+> **Note:** The HTTP with Microsoft Entra ID connector is used for BAP environment enumeration (Flow 1), Microsoft Entra Agent ID (Flow 3), and Graph API (Flow 4) calls. Without it, these flows cannot operate. Per-environment agent discovery (Flow 1) uses the Dataverse connector against each environment's `bot` table.
 
 ---
 
@@ -185,14 +184,14 @@ This connector is **required** for the solution to function. Work with your DLP 
 
 ## Rate Limiting (429 Errors)
 
-### Bots API Rate Limiting
+### Discovery Rate Limiting
 
 **Symptoms:** Flow 1 receives 429 (Too Many Requests) responses during environment scanning.
 
 **Resolution:**
 
 1. The flow should be configured with concurrency set to **1** (sequential) for the environment loop
-2. If 429 errors persist, add a **Delay** action (e.g., 2 seconds) between Bots API calls
+2. If 429 errors persist, add a **Delay** action (e.g., 2 seconds) between per-environment `bot`-table queries
 3. For large tenants with 50+ environments, consider splitting the scan across multiple flow runs
 
 ### Graph API Rate Limiting

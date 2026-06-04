@@ -30,7 +30,7 @@
 ## Phase 2: Environment Preparation
 
 - [ ] Verify target environment is Managed Environment
-- [ ] Register Microsoft Entra ID application for Bots API and Graph API access
+- [ ] Register Microsoft Entra ID application for BAP environment enumeration, Dataverse, and Graph API access
 - [ ] Grant required API permissions and admin consent (see `docs/prerequisites.md`)
 - [ ] Configure managed identity, workload identity federation, or certificate authentication; use client secrets only for legacy development fallback
 - [ ] Verify Dataverse capacity is sufficient for agent inventory and compliance events
@@ -76,7 +76,7 @@
 - [ ] Run `scripts/create_connection_references.py` to deploy connection references
 - [ ] Bind each connection reference to an active connection:
   - `fsi_cr_dataverse_agentregistry` — Dataverse
-  - `fsi_cr_http_agentregistry` — HTTP with Microsoft Entra ID (Bots API + Graph API)
+  - `fsi_cr_http_agentregistry` — HTTP with Microsoft Entra ID (BAP environment enumeration + Graph API)
   - `fsi_cr_teams_agentregistry` — Microsoft Teams
   - `fsi_cr_office365_agentregistry` — Office 365
 
@@ -88,7 +88,7 @@ Follow the step-by-step instructions in `docs/flow-configuration.md` for each fl
 
 - [ ] **Flow 1: Discover-UnregisteredAgents-Daily**
   - Build trigger (Recurrence — daily)
-  - Build environment enumeration (HTTP with Microsoft Entra ID → Bots API)
+  - Build environment enumeration (HTTP with Microsoft Entra ID → BAP admin API) and per-environment Dataverse `bot` table reads
   - Build Dataverse upsert logic (alternate key)
   - Build Zone 3 auto-quarantine branch
   - Build compliance event logging
@@ -123,7 +123,7 @@ Follow the step-by-step instructions in `docs/flow-configuration.md` for each fl
 - [ ] Run `scripts/Deploy-AgentRegistry-Baseline.ps1` to seed the agent inventory
 - [ ] Review baseline export output for accuracy
 - [ ] Verify agent records appear in Dataverse with correct zone classifications
-- [ ] Confirm agent count matches expected number from Bots API
+- [ ] Confirm agent count matches the expected number of rows in each environment's Dataverse `bot` table
 
 ---
 
@@ -154,9 +154,15 @@ Follow the step-by-step instructions in `docs/flow-configuration.md` for each fl
 
 ## Pre-Handoff Notes
 
-### BotFrameworkEndpoint Field Name
+### Agent Endpoint URL Field
 
-The `properties.botFrameworkEndpoint` field path in the Bots API response has been documented based on API specification review. **Confirm the exact field path** against a live API response in the customer's environment before enabling Flow 1 in production. The flow includes error handling for missing or renamed fields.
+The Dataverse `bot` table has no Bot Framework endpoint column, so
+`fsi_agentendpointurl` is left blank during discovery. If your governance
+process requires an endpoint URL, populate it later from the agent's channel
+configuration. The flow includes error handling for missing or renamed fields
+on the `bot` table (for example, owner-expand columns that vary by Dataverse
+version) — confirm the exact column availability against a live environment
+before enabling Flow 1 in production.
 
 ### Office 365 Users Connector (DLP Consideration)
 

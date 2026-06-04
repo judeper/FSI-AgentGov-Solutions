@@ -17,10 +17,10 @@ The Agent Registry Automation uses 4 Power Automate flows to manage the agent li
 
 ```
 ┌─────────────────────────────┐
-│  Flow 1: Daily Discovery    │──── Bots API ────┐
-│  (Recurrence — daily)       │                   │
-└──────────────┬──────────────┘                   │
-               │ Upsert                           │
+│  Flow 1: Daily Discovery    │── BAP env list + ──┐
+│  (Recurrence — daily)       │   Dataverse `bot`  │
+└──────────────┬──────────────┘   table per env    │
+               │ Upsert                            │
                ▼                                  ▼
 ┌─────────────────────────────┐      ┌────────────────────┐
 │  fsi_agentinventory         │      │  Power Platform    │
@@ -52,7 +52,7 @@ Configure these connection references before building the flows.
 | Connection Reference | Connector | Purpose |
 |---------------------|-----------|---------|
 | `fsi_cr_dataverse_agentregistry` | Dataverse | Read/write agent inventory and compliance events |
-| `fsi_cr_http_agentregistry` | HTTP with Microsoft Entra ID | Bots API, Graph API, and Microsoft Entra Agent ID calls |
+| `fsi_cr_http_agentregistry` | HTTP with Microsoft Entra ID | BAP environment enumeration (Flow 1), Graph API (Flow 4), and Microsoft Entra Agent ID calls (Flow 3) |
 | `fsi_cr_teams_agentregistry` | Microsoft Teams | Post adaptive cards and notifications |
 | `fsi_cr_office365_agentregistry` | Office 365 | Business day calculation for SLA deadlines |
 
@@ -62,8 +62,8 @@ Configure these connection references before building the flows.
 2. Select **Connection References**
 3. For each reference, click **Edit** and select or create an active connection
 4. For `fsi_cr_http_agentregistry`:
-   - **Base Resource URL:** `https://api.powerplatform.com`
-   - **Microsoft Entra ID Resource URI:** `https://api.powerplatform.com`
+   - **Base Resource URL / Microsoft Entra ID Resource URI:** `https://service.powerapps.com/` for the BAP environment-enumeration call in Flow 1.
+   - **Graph calls (Flow 4) and Agent ID calls (Flow 3)** use a different audience (`https://graph.microsoft.com`). A single HTTP with Microsoft Entra ID connection authenticates against one resource URI, so create a **separate** HTTP with Microsoft Entra ID connection per audience (one for `https://service.powerapps.com/`, one for `https://graph.microsoft.com`).
 
 ---
 
@@ -96,7 +96,9 @@ Configure these values before enabling the flows.
 
 ### Purpose
 
-Scans all Power Platform environments daily using the Bots API to discover AI agents. Creates or updates agent inventory records using an alternate-key upsert. Agents discovered in Zone 3 environments without prior registration are automatically quarantined.
+Scans all Power Platform environments daily, discovering AI agents by querying each environment's Dataverse `bot` table. Creates or updates agent inventory records using an alternate-key upsert. Agents discovered in Zone 3 environments without prior registration are automatically quarantined.
+
+> **Discovery mechanism:** Copilot Studio agents are stored as rows in the Dataverse [`bot` table](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot) (entity set `bots`). Environment enumeration uses the [Business Application Platform (BAP) admin API](https://learn.microsoft.com/rest/api/power-platform/). There is no Power Platform "Bots API" route for agent enumeration.
 
 ### Trigger
 
@@ -130,48 +132,49 @@ Add these **Initialize variable** actions:
 
 #### Step 3: Get Environment List
 
-Add **HTTP with Microsoft Entra ID** action:
+Add **HTTP with Microsoft Entra ID** action (using the connection scoped to the `https://service.powerapps.com/` resource):
 
 - **Method:** GET
-- **URI:** `https://api.powerplatform.com/appmanagement/environments?api-version=2022-03-01-preview&$filter=properties/environmentSku ne 'Developer'`
-- **Authentication:** Use `fsi_cr_http_agentregistry` connection reference
+- **URI:** `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2020-10-01`
+- **Authentication:** Use `fsi_cr_http_agentregistry` connection reference (resource URI `https://service.powerapps.com/`)
 - **Headers:**
   - `Content-Type`: `application/json`
 
-> **Note:** This filters out Developer-type environments. To include sandbox environments, remove the `$filter` parameter or set the `fsi_ARA_IncludeSandboxEnvironments` environment variable.
+> **Note:** This is the documented BAP admin route for tenant-wide environment enumeration. To exclude Developer/sandbox environments, filter the parsed results in Step 5 on `properties.environmentSku` (for example, skip `Developer`), or set the `fsi_ARA_IncludeSandboxEnvironments` environment variable per your governance policy.
 
 #### Step 4: Parse Environment Response
 
 Add **Parse JSON** action:
 
 - **Content:** Body from Step 3
-- **Schema:** Use the schema from a sample Bots API environments response. Key fields: `value[].id`, `value[].name`, `value[].properties.displayName`, `value[].properties.environmentSku`
+- **Schema:** Use the schema from a sample BAP environments response. Key fields: `value[].name` (environment GUID), `value[].properties.displayName`, `value[].properties.environmentSku`, and `value[].properties.linkedEnvironmentMetadata.instanceUrl` (the environment's Dataverse organization URL used for bot discovery).
 
 #### Step 5: Loop Through Environments
 
 Add **Apply to each** action on the `value` array from Step 4.
 
-> **⚠ Concurrency:** Set concurrency control to **1** (sequential). The Bots API may rate-limit parallel requests.
+> **⚠ Concurrency:** Set concurrency control to **1** (sequential) to avoid Dataverse throttling across environments.
 
 Inside the loop:
 
-##### Step 5a: Get Bots for Environment
+##### Step 5a: Get Agents for Environment
 
-Add **HTTP with Microsoft Entra ID** action:
+Add **Dataverse — List rows** action, targeting **this environment's** Dataverse (use the Dataverse connector's **Environment** parameter set to `@{items('Apply_to_each')?['name']}`, or the environment's `instanceUrl` from Step 4). See [Connect to other environments using the Microsoft Dataverse connector](https://learn.microsoft.com/power-automate/dataverse/connect-other-environments).
 
-- **Method:** GET
-- **URI:** `https://api.powerplatform.com/appmanagement/environments/@{items('Apply_to_each')?['name']}/bots?api-version=2022-03-01-preview`
-- **Configure Run After:** Set to run on **success** and **failure** (some environments may not have Bots API access)
+- **Table name:** `bots` (the Dataverse `bot` table that stores Copilot Studio agents)
+- **Select columns:** `botid,name,statecode,_ownerid_value`
+- **Expand Query:** `owninguser($select=domainname,internalemailaddress)`
+- **Configure Run After:** Set to run on **success** and **failure** (the identity may lack `bot` read access in some environments)
+
+> **Note:** The Dataverse `bot` table has no `botFrameworkEndpoint` column. The `fsi_agentendpointurl` field is left blank during discovery; populate it later from channel configuration if your governance process requires it.
 
 ##### Step 5b: Check for Successful Response
 
-Add **Condition** — check if `outputs('Get_Bots')?['statusCode']` equals `200`.
+Add **Condition** — check that the List rows action in Step 5a succeeded (run-after status `Succeeded`).
 
-##### Step 5c: Parse Bots Response (Yes Branch)
+##### Step 5c: Loop Through Agents (Yes Branch)
 
-Add **Parse JSON** on the body from Step 5a. Key fields: `value[].name`, `value[].properties.displayName`, `value[].properties.botFrameworkEndpoint`
-
-> **Note:** The exact field path for `botFrameworkEndpoint` needs live API confirmation. The flow includes error handling if this field is missing.
+The List rows `value` array returns one row per agent. Key fields: `value[].botid` (durable GUID), `value[].name` (display name), and the expanded `value[].owninguser.domainname` (owner UPN).
 
 ##### Step 5d: Loop Through Bots
 
@@ -201,35 +204,33 @@ if(
 
 Use the `fsi_agentid` + `fsi_environmentid` business key to avoid duplicates while preserving approval workflow state on rediscovery.
 
-1. Add **Dataverse — List rows** on Agent Inventories (`fsi_agentinventories`):
-   - **Filter rows:** `fsi_agentid eq '@{items('Apply_to_each_Bot')?['name']}' and fsi_environmentid eq '@{items('Apply_to_each')?['name']}'`
+1. Add **Dataverse — List rows** on Agent Inventories (`fsi_agentinventories`) in the **registry** environment:
+   - **Filter rows:** `fsi_agentid eq '@{items('Apply_to_each_Bot')?['botid']}' and fsi_environmentid eq '@{items('Apply_to_each')?['name']}'`
    - **Top count:** 1
 2. Add a **Condition** on whether the list returned a row.
 
 **Existing row branch:** update only discovery-tracking columns:
 
-- `fsi_name`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
-- `fsi_agentname`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
+- `fsi_name`: `@{items('Apply_to_each_Bot')?['name']}`
+- `fsi_agentname`: `@{items('Apply_to_each_Bot')?['name']}`
 - `fsi_environmentname`: `@{items('Apply_to_each')?['properties']?['displayName']}`
-- `fsi_agentendpointurl`: `@{items('Apply_to_each_Bot')?['properties']?['botFrameworkEndpoint']}`
 - `fsi_lastscannedat`: `@{utcNow()}`
-- `fsi_rawjson`: body from Step 5a for this agent
+- `fsi_rawjson`: the agent row from Step 5a
 
 **Missing row branch:** add a new Agent Inventory row with all `ApplicationRequired` columns:
 
-- `fsi_name`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
-- `fsi_agentid`: `@{items('Apply_to_each_Bot')?['name']}`
-- `fsi_agentname`: `@{items('Apply_to_each_Bot')?['properties']?['displayName']}`
+- `fsi_name`: `@{items('Apply_to_each_Bot')?['name']}`
+- `fsi_agentid`: `@{items('Apply_to_each_Bot')?['botid']}`
+- `fsi_agentname`: `@{items('Apply_to_each_Bot')?['name']}`
 - `fsi_environmentid`: `@{items('Apply_to_each')?['name']}`
 - `fsi_environmentname`: `@{items('Apply_to_each')?['properties']?['displayName']}`
-- `fsi_agentendpointurl`: `@{items('Apply_to_each_Bot')?['properties']?['botFrameworkEndpoint']}`
 - `fsi_registrationstatus`: `100000000` (Unregistered)
-- `fsi_publishedstatus`: `100000001` (Draft) unless the API returns a mapped published status
+- `fsi_publishedstatus`: `100000001` (Draft) — the `bot` table does not expose a Copilot Studio published-lifecycle value; the registration flow governs published state from here
 - `fsi_zone`: Zone value from Step 5d-i
-- `fsi_ownerupn`: owner UPN from the API, or `unknown@unassigned.local` when unavailable
+- `fsi_ownerupn`: `@{items('Apply_to_each_Bot')?['owninguser']?['domainname']}`, or `unknown@unassigned.local` when unavailable
 - `fsi_isorphaned`: `true` when owner UPN is unavailable; otherwise `false`
 - `fsi_lastscannedat`: `@{utcNow()}`
-- `fsi_rawjson`: body from Step 5a for this agent
+- `fsi_rawjson`: the agent row from Step 5a
 
 > **Important:** The alternate key `fsi_AgentEnvUniqueKey` (logical: `fsi_agentenvuniquekey`) must be in **Active** status before using alternate-key upsert patterns. Dataverse Web API upsert can create rows when the key is absent, so create payloads must include every required non-key column.
 
@@ -251,10 +252,10 @@ Add **Condition** — if zone equals `100000003` AND `fsi_registrationstatus` eq
 ##### Step 5d-vi: Log Compliance Event
 
 Add **Dataverse — Add a new row** to `fsi_agentcomplianceevents`:
-- `fsi_name`: `Agent Discovered — @{items('Apply_to_each_Bot')?['properties']?['displayName']}`
+- `fsi_name`: `Agent Discovered — @{items('Apply_to_each_Bot')?['name']}`
 - `fsi_eventtype`: `100000000` (Discovered) — or `100000004` (Quarantined) if quarantined
 - `fsi_actorupn`: `system@example.com`
-- `fsi_agentid`: `@{items('Apply_to_each_Bot')?['name']}`
+- `fsi_agentid`: `@{items('Apply_to_each_Bot')?['botid']}`
 - `fsi_environmentid`: `@{items('Apply_to_each')?['name']}`
 - `fsi_zone`: Zone value from Step 5d-i
 - `fsi_details`: `{"correlationId":"@{variables('varDiscoveryCorrelationId')}","quarantined":@{variables('varQuarantined')}}`
@@ -578,8 +579,9 @@ Add a **Scope** around Steps 3–5 with **Configure Run After** on failure:
 
 ## Known Limitations
 
-- **Bots API preview:** The `2022-03-01-preview` API version may change at GA. Monitor the [Power Platform API documentation](https://learn.microsoft.com/en-us/rest/api/power-platform/) for updates.
-- **BotFrameworkEndpoint field:** The exact field path in the Bots API response needs live API confirmation. The flow includes null-check error handling for this field.
+- **Environment enumeration (BAP admin API):** Flow 1 lists environments via `https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2020-10-01`. Monitor the [Power Platform REST API documentation](https://learn.microsoft.com/rest/api/power-platform/) for version changes.
+- **Agent discovery (Dataverse `bot` table):** Flow 1 enumerates agents from each environment's [`bot` table](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot) (entity set `bots`). The runtime identity needs `bot`-table read access in each scanned environment. The owner-expand path (`owninguser.domainname`) and `statecode` semantics should be confirmed against the live table in your tenant.
+- **Agent endpoint URL:** The `bot` table does not expose a Bot Framework endpoint column, so `fsi_agentendpointurl` is not populated during discovery.
 - **Office 365 Users connector:** Used for time zone lookup in SLA calculations. If blocked by DLP policies, configure `fsi_ARA_DefaultTimeZone` as a fallback.
 - **Microsoft Entra Agent ID API:** Flow 3 is disabled by default. The API endpoint and required permissions are subject to change.
 - **Graph signInActivity:** Requires Microsoft Entra ID P1/P2 license for the `signInActivity` property in the Graph API response. Without this license, the inactive-owner detection in Flow 4 is limited to account-enabled checks only.
