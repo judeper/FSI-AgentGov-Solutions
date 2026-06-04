@@ -4,6 +4,10 @@ All notable changes to the Content Moderation Monitor.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Major**: `correlate_purview_events.py` passed invalid `recordTypeFilters` values (`CopilotInteraction`, `PowerPlatform`) to the Microsoft Graph `auditLogQuery` API. Neither is a valid `microsoft.graph.security.auditLogRecordType` enum member, so the query would be rejected. Copilot interactions are now selected via `operationFilters: ["CopilotInteraction"]` (unified audit log RecordType 261), the documented way to target Copilot interaction events. Added `operation_filters` support to `create_audit_log_query` and updated the README correlation description. (lab-readiness validation)
+
 ## [1.1.2] - 2026-05-22
 
 ### Fixed
