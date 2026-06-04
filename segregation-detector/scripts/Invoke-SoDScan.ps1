@@ -29,6 +29,12 @@
 .PARAMETER ClientSecret
     Legacy dev-only client secret. If not specified, uses FSI_CLIENT_SECRET or AZURE_CLIENT_SECRET when AuthMode is ClientSecret.
 
+.PARAMETER BapResource
+    Optional override for the OAuth resource (audience) used to acquire the Power Platform BAP admin
+    REST API token. When omitted, the documented audience is derived (https://service.powerapps.com/
+    for commercial). Set this (or FSI_BAP_RESOURCE) if BAP token acquisition fails with AADSTS500011,
+    or for sovereign clouds where the resource identifier URI differs.
+
 .PARAMETER DryRun
     Run scan without creating violation records.
 
@@ -75,6 +81,12 @@ param(
 
     [Parameter(Mandatory = $false)]
     [switch]$DryRun,
+
+    [Parameter(Mandatory = $false)]
+    # Override the OAuth resource (audience) used for the Power Platform BAP admin REST API token.
+    # When empty, Get-BapResource derives the documented audience (https://service.powerapps.com/
+    # for commercial). Set this if BAP token acquisition fails with AADSTS500011 in your cloud.
+    [string]$BapResource = $env:FSI_BAP_RESOURCE,
 
     [Parameter(Mandatory = $false)]
     # When set, allow the scan to continue even if Power Platform BAP role enumeration fails for
@@ -520,7 +532,11 @@ foreach ($dr in $directoryRoles) { $directoryRoleLookup[$dr.id] = $dr }
 Write-Host ""
 Write-Host "Querying Power Platform role assignments..." -ForegroundColor Gray
 $bapBaseUrl = Get-BapApiBaseUrl -EnvironmentUrl $Environment
-$ppToken = Get-AccessToken @tokenParams -Scope "$bapBaseUrl/.default"
+# The BAP request host is not the token audience. Resolve the documented OAuth resource
+# (https://service.powerapps.com/ for commercial) unless explicitly overridden via -BapResource.
+$bapResource = if ($BapResource) { $BapResource } else { Get-BapResource -EnvironmentUrl $Environment -BapApiBaseUrl $bapBaseUrl }
+Write-Verbose "Power Platform BAP token audience: $bapResource (request host: $bapBaseUrl)"
+$ppToken = Get-AccessToken @tokenParams -Scope "$bapResource/.default"
 $ppRoleAssignments = Get-PowerPlatformRoleAssignments -Token $ppToken -EnvironmentUrl $Environment
 Write-Host "  Found $($ppRoleAssignments.Count) Power Platform role assignments" -ForegroundColor Green
 

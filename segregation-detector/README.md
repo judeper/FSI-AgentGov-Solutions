@@ -158,7 +158,7 @@ Review scan output for detected conflicts. A Power Apps dashboard for visual rev
 | `scripts/Invoke-SoDScan.ps1` | Scans for SoD violations across Entra ID, Power Platform, and Dataverse |
 | `scripts/Import-ConflictRules.ps1` | Imports conflict rule sets into Dataverse |
 | `scripts/create_sd_dataverse_schema.py` | Generates the Dataverse schema reference used as the table and choice-value source of truth |
-| `scripts/SoDShared.ps1` | Shared helper module (`Invoke-WithRetry`, `Get-AccessToken`, `Get-LoginEndpoint`, `Get-GraphEndpoint`, `Get-BapApiBaseUrl`) dot-sourced by both scripts |
+| `scripts/SoDShared.ps1` | Shared helper module (`Invoke-WithRetry`, `Get-AccessToken`, `Get-LoginEndpoint`, `Get-GraphEndpoint`, `Get-BapApiBaseUrl`, `Get-BapResource`) dot-sourced by both scripts |
 
 ## Detection Process
 

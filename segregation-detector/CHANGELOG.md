@@ -6,6 +6,10 @@ All notable changes to the Segregation of Duties Detector.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Invoke-SoDScan.ps1` / `SoDShared.ps1` — Power Platform BAP token audience (supersedes v1.2.1 M2 "false positive"):** the scanner requested the BAP admin REST API token with audience `https://api.bap.microsoft.com/.default`, which is not a documented Microsoft Entra resource identifier URI and can fail token acquisition with `AADSTS500011` (resource principal not found). Per Microsoft's [Power Platform programmability authentication](https://learn.microsoft.com/en-us/power-platform/admin/programmability-authentication) docs, the documented audience for the BAP / Power Platform admin REST surface is the first-party **Power Apps Service** resource `https://service.powerapps.com/` (App ID `475226c6-020e-4fb2-8a90-7a972cbfc1d4`) — the same resource targeted by `New-PowerAppManagementApp` and `Microsoft.PowerApps.Administration.PowerShell`. Added `Get-BapResource` to derive the documented audience (commercial defaults to `https://service.powerapps.com/`; the BAP *request host* is unchanged and remains derived by `Get-BapApiBaseUrl`). Sovereign clouds retain the prior base-URL audience pending in-tenant verification. Added a `-BapResource` parameter / `FSI_BAP_RESOURCE` environment variable to override the audience. The earlier M2 conclusion that `$bapBaseUrl/.default` was "the documented Microsoft pattern" is not supported by authoritative documentation and is hereby corrected.
+
 ### Changed
 
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.

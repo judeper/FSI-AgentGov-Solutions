@@ -142,6 +142,7 @@ Common issues and solutions for the Segregation of Duties Detector.
 | Error | Cause | Solution |
 |-------|-------|----------|
 | "AADSTS700016" | App not found in tenant | Verify client ID |
+| "AADSTS500011" | BAP token resource/audience not found | The Power Platform BAP admin REST API token audience is `https://service.powerapps.com/` (Power Apps Service, App ID `475226c6-020e-4fb2-8a90-7a972cbfc1d4`), not the request host. The scanner derives this automatically; if it still fails (e.g., sovereign cloud), pass `-BapResource` or set `FSI_BAP_RESOURCE`. |
 | "AADSTS7000215" | Invalid client secret in legacy dev-only mode | Prefer ManagedIdentity or WorkloadIdentity; rotate local dev secret if ClientSecret mode is unavoidable |
 | "403 Forbidden" | Insufficient permissions | Grant required permissions |
 | "Resource not found" | Wrong environment URL | Verify Dataverse URL |
