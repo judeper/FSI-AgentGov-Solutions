@@ -34,8 +34,10 @@
     Tests email delivery only via Microsoft Graph.
 
 .NOTES
-    Teams incoming webhooks retired March 31, 2026.
-    Use Power Automate workflows for production deployments.
+    Teams Office 365 connectors (incoming webhooks) are being retired. Microsoft's
+    progressive rollout disables them in 2026 (rollout completing May 22, 2026), and
+    creation of new incoming webhooks has been blocked since August 2024.
+    Use Power Automate Workflows for production deployments.
     Email delivery uses Send-MgUserMail (Microsoft Graph). Requires
     Microsoft.Graph.Users.Actions module and Mail.Send permission.
 #>
@@ -297,7 +299,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Retirement warning for Teams webhooks
-Write-Warning "Teams incoming webhooks retired March 31, 2026. Use Power Automate for production alerts."
+Write-Warning "Teams Office 365 connectors (incoming webhooks) are being retired (Microsoft rollout completing May 22, 2026). Use Power Automate Workflows for production alerts."
 Write-Host ""
 
 Write-Host "Channel: $Channel"
