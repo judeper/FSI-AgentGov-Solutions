@@ -34,7 +34,7 @@ documented roadmap items.
 | Power Platform BAP role-assignment API host + token audience | Authoritative Power Platform admin docs | Host verified; **audience corrected** |
 | Dataverse `systemuser` query columns | Authoritative SystemUser entity reference | Verified |
 | Choice/option-set values (100000000+) | `SoDShared.ps1` vs `docs/conflict-rules.md` vs schema | Consistent (no 0/1/2 drift) |
-| Regulatory language rules | grep `ensures|guarantees|will prevent|eliminates risk` (excl. CHANGELOG) | 0 hits |
+| Regulatory language rules | grep for the FSI-prohibited compliance-absolute phrases (per `fsi-language-rules.instructions.md`, excl. CHANGELOG) | 0 hits |
 | Managed-identity-first auth | Reviewed `Get-AccessToken` flow ordering | Compliant |
 
 ## 3. Authoritative sources cited
