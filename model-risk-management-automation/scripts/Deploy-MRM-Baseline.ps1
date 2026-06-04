@@ -40,7 +40,12 @@ $ErrorActionPreference = 'Stop'
 # Authenticate via Managed Identity
 Connect-AzAccount -Identity
 
-$dvToken = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl).Token
+# Az.Accounts 5.0.0+ returns the token as a SecureString by default; request it
+# explicitly and convert for the Authorization header so this works on both the
+# legacy (plain String) and current (SecureString) module versions.
+# Ref: https://learn.microsoft.com/powershell/azure/protect-secrets
+$secureToken = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl -AsSecureString).Token
+$dvToken = [System.Net.NetworkCredential]::new('', $secureToken).Password
 
 $dvHeaders = @{ Authorization = "Bearer $dvToken"; "Content-Type" = "application/json" }
 
@@ -49,9 +54,11 @@ Write-Warning "DELIVERY-CHECKLIST ITEM: Confirm entity set name 'fsi_agentinvent
 
 # Query agent inventory from agent-registry-automation
 $agentEntitySet = "fsi_agentinventories"
+# Backtick-escape the OData $filter/$select tokens so PowerShell does not treat
+# them as variable interpolation inside the double-quoted strings.
 $agentQuery = "$DataverseEnvironmentUrl/api/data/v9.2/$agentEntitySet" +
-              "?$filter=fsi_registrationstatus eq 100000002" +     # 100000002 = Registered (option set fsi_ara_registrationstatus is 0-based: NotRegistered=100000000, PendingApproval=100000001, Registered=100000002, Quarantined=100000003)
-              "&$select=fsi_agentid,fsi_agentname,fsi_environmentid," +
+              "?`$filter=fsi_registrationstatus eq 100000002" +     # 100000002 = Registered (option set fsi_ara_registrationstatus is 0-based: NotRegistered=100000000, PendingApproval=100000001, Registered=100000002, Quarantined=100000003)
+              "&`$select=fsi_agentid,fsi_agentname,fsi_environmentid," +
               "fsi_ownerupn,fsi_zone,fsi_lastscannedat"    # agent-registry-automation columns: fsi_zone (not fsi_governancezone); fsi_lastscannedat (no fsi_lastactivitydate column exists)
 
 try {

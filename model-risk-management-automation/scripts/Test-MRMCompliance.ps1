@@ -64,7 +64,12 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 Connect-AzAccount -Identity
-$dvToken = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl).Token
+# Az.Accounts 5.0.0+ returns the token as a SecureString by default; request it
+# explicitly and convert for the Authorization header so this works on both the
+# legacy (plain String) and current (SecureString) module versions.
+# Ref: https://learn.microsoft.com/powershell/azure/protect-secrets
+$secureToken = (Get-AzAccessToken -ResourceUrl $DataverseEnvironmentUrl -AsSecureString).Token
+$dvToken = [System.Net.NetworkCredential]::new('', $secureToken).Password
 $dvHeaders = @{ Authorization = "Bearer $dvToken"; "Content-Type" = "application/json" }
 
 # OptionSet dependency warning
