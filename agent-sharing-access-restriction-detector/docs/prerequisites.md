@@ -34,7 +34,7 @@ A Microsoft Entra app registration or managed identity is required for the detec
 
 ## Dataverse Tables
 
-The following tables must be created before deploying the flows. Use the schema creation script in the companion FSI-AgentGov repository:
+The following tables must be created before deploying the flows. Use the schema creation script in this solution's `scripts/` folder (run from the solution root):
 
 ```bash
 python scripts/create_asard_dataverse_schema.py
@@ -76,7 +76,7 @@ Key columns on `fsi_agentsharingcompliance`:
 
 ## Python Dependencies (Detection and Remediation Scripts)
 
-The supporting scripts in the companion FSI-AgentGov repository require:
+The supporting scripts in this solution's `scripts/` folder require:
 
 - Python 3.9+
 - `msal` — Microsoft Authentication Library for token acquisition

@@ -43,6 +43,14 @@ agent-sharing-access-restriction-detector/
 ├── docs/
 │   ├── flow-configuration.md                              # Flow build instructions and overview
 │   └── prerequisites.md                                   # Licenses, roles, connections, network
+├── scripts/
+│   ├── asard_zone_rules.py                                # Zone policy engine (Python)
+│   ├── asard_group_admission.py                           # Entra group-type admission gate
+│   ├── create_asard_dataverse_schema.py                  # Dataverse tables/columns + --output-docs
+│   ├── create_asard_environment_variables.py            # Solution environment variables
+│   ├── create_asard_connection_references.py            # Solution connection references
+│   ├── requirements.txt                                  # Python dependencies
+│   └── governance/                                        # Operational PowerShell scripts
 └── templates/
     ├── adaptive-card-asard-alert.json                     # Violation alert card
     ├── adaptive-card-asard-remediation-approval.json      # Remediation approval card

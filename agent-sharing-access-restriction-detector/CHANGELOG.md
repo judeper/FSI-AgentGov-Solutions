@@ -8,6 +8,12 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 
 - `Invoke-SharingComplianceScan.ps1 -ExcludeSandbox` now uses standard switch semantics (default `$false`); callers that want to omit sandbox environments should pass `-ExcludeSandbox`.
 
+### Documentation
+
+- Corrected `docs/prerequisites.md` to point to this solution's own `scripts/` folder for the schema-creation and supporting scripts (previously mislabeled as the companion FSI-AgentGov repository).
+- Added the `scripts/` subtree to the README Components listing so the Python and PowerShell automation is discoverable from the directory map.
+- Added `LAB-VALIDATION.md` documenting static lab-readiness validation, authoritative Microsoft Learn source verification (Dataverse `bot.accesscontrolpolicy`/`authorizedsecuritygroupids`, Managed Environment sharing limits, 28-day approval wait, Power Apps admin cmdlets), and runtime-only caveats.
+
 ## [2.0.2] — 2026-05-23
 
 ### Fixed
