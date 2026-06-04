@@ -1193,7 +1193,7 @@ All components should be developed inside a Dataverse solution container for man
 | Security Roles | ALG Administrator, ALG Reviewer, ALG Read Only |
 | Cloud Flows | Flow 1–6 (all six lifecycle flows) |
 | Connection References | Dataverse, HTTP with Microsoft Entra ID, Microsoft Teams, Approvals, Power Platform for Admins V2 |
-| Environment Variables | All 14 variables listed above |
+| Environment Variables | All 16 variables listed above |
 
 ---
 

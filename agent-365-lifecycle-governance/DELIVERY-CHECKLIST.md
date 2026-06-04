@@ -54,7 +54,7 @@ Pre-deployment validation and post-deployment verification tasks. Complete each 
 
 - [ ] Validate Agent 365 `agentInstances` owner PATCH body schema (`ownerIds` collection) — confirm owner is actually set after the PATCH by calling GET
 - [ ] Validate supported OData filter syntax for ownerless agent instances — document whether server-side filter works or client-side filtering is required
-- [ ] Validate access review creation with `principalScopes` + `resourceScopes` returns 201 for agent service principals
+- [ ] Validate access review creation with the Flow 2 `accessReviewQueryScope` (`scope.query` = `/servicePrincipals/{id}`, `scope.queryType` = `MicrosoftGraph`) returns 201 for agent service principals
 - [ ] Validate PPAC Bots API (`api-version=2022-03-01-preview`) returns `lastModifiedTime` and `publishedOn` for Copilot Studio agents
 - [ ] Validate Entra Lifecycle Workflow activation uses sponsor-user subjects, not agent service principals
 - [ ] Document confirmed working API patterns in this section

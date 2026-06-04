@@ -9,7 +9,7 @@ Common issues and resolutions for the Agent 365 Lifecycle Governance solution.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Owner PATCH returns 200 but owner not set | Wrong body format — used UPN string or stale `sponsor@odata.bind` | Use `ownerIds` with sponsor user Object IDs for `agentInstance` PATCH |
-| Access review creation returns 400 | Missing `principalScopes` or `resourceScopes` | Both scopes are required — verify payload matches Flow 2 specification |
+| Access review creation returns 400 | Malformed `scope` on the access review definition | Flow 2 uses an `accessReviewQueryScope` — supply `scope` with `query` (e.g. `/servicePrincipals/{id}`) and `queryType` (`MicrosoftGraph`), plus a `reviewers` collection. The `principalScopes`/`resourceScopes` properties apply only to the `principalResourceMembershipsScope` shape and are not used by Flow 2. Verify the payload matches the Flow 2 specification. |
 | Flow terminates immediately without processing | Feature flag `IsAgent365LifecycleEnabled` is `"false"` | Set to `"true"` after confirming Agent 365 licensing and validating beta Graph API behavior |
 | Sign-in log query returns 403 | `AuditLog.Read.All` permission not granted or tenant restriction | Grant permission or accept fallback to PPAC-only activity data |
 | Agent not added to security group | Group ID environment variable empty or incorrect | Verify `FSIAllAgentIdentitiesGroupId` and `FSIZone3AgentsGroupId` values |
