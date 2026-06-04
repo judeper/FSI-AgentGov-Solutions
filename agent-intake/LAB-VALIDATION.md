@@ -87,8 +87,8 @@ Agent ID on approval before handing off to `agent-registry-automation`.
   (tenant feature availability, beta retention-label surface, delegated-only scopes).
 - **Dataverse column naming** — no snake_case column violations; option-set and connection-
   reference names are correctly distinguished from logical column names.
-- **FSI language rules** — no prohibited phrases ("ensures compliance", "guarantees",
-  "will prevent", "eliminates risk") in customer-facing docs/scripts/templates. (The only matches
+- **FSI language rules** — no FSI-prohibited compliance-absolute phrases
+  (per `fsi-language-rules.instructions.md`) in customer-facing docs/scripts/templates. (The only matches
   are in `research/` historical artifacts quoting external sources, and in AGENTS.md where the rule
   itself is stated — both intentionally preserved.)
 - **OCC Bulletin 2026-13 citation** is real and correctly characterized in `docs/decisions.md`
