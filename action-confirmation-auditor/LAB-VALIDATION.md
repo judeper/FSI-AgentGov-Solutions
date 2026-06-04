@@ -29,8 +29,8 @@ action type, and supports exception management with Maker/Checker gating.
 - **API usage:** Microsoft Graph audit log query API, `Invoke-MgGraphRequest`,
   `Get-AzAccessToken` SecureString behavior, Power Platform admin token audience,
   Dataverse Web API `v9.2` endpoints.
-- **Language rules:** grep for prohibited phrases (`ensures compliance`,
-  `guarantees`, `will prevent`, `eliminates risk`) outside CHANGELOG — zero hits.
+- **Language rules:** grep for the FSI-prohibited compliance-absolute phrases
+  (per `fsi-language-rules.instructions.md`) outside CHANGELOG — zero hits.
 
 ## Authoritative Sources Cited
 
