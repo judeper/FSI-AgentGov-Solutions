@@ -4,6 +4,11 @@ All notable changes to the File Upload Security Configurator will be documented 
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs (lab-readiness validation):** README "Copilot Studio file input limits" note re-verified against the current [Allow file input from users](https://learn.microsoft.com/microsoft-copilot-studio/image-input-analysis) Microsoft Learn page. Added DOCX to the supported user-upload types and the XLSX/PPTX experimental caveat; replaced the stale per-format limits (4 MB DirectLine cap, 40-page PDF, 180 KB TXT/CSV) with the currently documented limits (15 MB individual file size; 30,000-character text limit without code interpreter, no limit with code interpreter); clarified that knowledge-source uploads are a separate 512 MB feature.
+- **Docs:** Added `LAB-VALIDATION.md` capturing static-validation evidence, authoritative Microsoft sources, verified script/API claims, and runtime-only caveats (undocumented `bot.configuration` JSON schema, MSAL.PS deprecation, runbook certificate-only auth).
+
 ## [1.1.2] - 2026-05-23
 
 AI Council technical-accuracy review (council-review/file-upload-security-review.md). Verbose-summary completeness, runbook version requirement, and version-header alignment.
