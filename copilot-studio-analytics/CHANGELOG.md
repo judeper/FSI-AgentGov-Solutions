@@ -4,6 +4,17 @@ All notable changes to this solution are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Critical — Dataverse column names did not match the official `msdyn_botsession` schema.** The sync `$select`/`$filter`/`$orderby` and all session reads used `msdyn_sessioncreatedon`, `msdyn_sessionclosedon`, `msdyn_sessionoutcome`, and `msdyn_sessionoutcomereason`. Per the official entity reference (https://learn.microsoft.com/en-us/dynamics365/developer/reference/entities/msdyn_botsession) the attribute logical names are `msdyn_startedon`, `msdyn_endedon`, `msdyn_outcome`, and `msdyn_outcomereason` (the `msdyn_sessionoutcome*` strings are the *global choice* names, not column logical names). The prior names would cause Dataverse Web API `$select` to reject the query (HTTP 400). Corrected in `sync_dataverse_sessions.py`, `architecture.md`, `docs/dataverse-data-sources.md`, `docs/agent-assisted-hours-methodology.md`, `docs/viva-insights-parity-matrix.md`, and `tests/test_sync_dataverse_sessions.py`. The v1.1.1 change that aligned docs *to the script* propagated the script's incorrect names; this corrects both to the authoritative schema.
+- **Critical — Session-outcome option-set integers were wrong.** `SESSION_OUTCOMES`/`SESSION_OUTCOME_REASONS` used the `192350001..192350004` / `192350100..192350106` series, which appears in no Microsoft entity reference. The documented values are `419550000` (none) / `419550001` (resolved) / `419550002` (escalated) / `419550003` (abandoned) for `msdyn_outcome`, and `419560000..419560008` for `msdyn_outcomereason`. With the old integers every outcome mapped to "Unknown" against real data. Maps and the `dataverse-data-sources.md` option-set tables corrected; the downstream KQL friendly-label contract (`Resolved`/`Escalated`/`Abandoned`/`Success`/`Failure`) is unchanged.
+- **`msdyn_channelid` / `msdyn_conversationid` are not columns on `msdyn_botsession`.** Both were referenced in the `$select` and docs. `msdyn_botsession` exposes no channel column in its documented schema, so channel-derived `usageType` (Internal/External) is not derivable in Tier 1; the invalid columns were removed from the query, `usageType` now emits `"Unknown"`, and `classify_usage_type()` / docs note this Tier 2 limitation honestly.
+
+### Notes
+
+- This is a corrections-only change validated by static + authoritative-source review (no live tenant). Hard-coded option-set integers remain Microsoft-managed; operators should still verify against their environment's metadata. See `LAB-VALIDATION.md` for the full evidence report and cited sources.
+- Maintainers cutting the next release should bump to **v2.0.3** across the root catalog files (`README.md`, `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`) and `manifest.yaml`.
+
 ## [2.0.2] - 2026-05-22
 
 ### Fixed

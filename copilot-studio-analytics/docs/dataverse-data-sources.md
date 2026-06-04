@@ -24,44 +24,53 @@ The primary data source for session outcome analytics. Each record represents on
 
 | Column (Logical Name) | Type | Description | Notes |
 |------------------------|------|-------------|-------|
-| msdyn_botsessionid | Uniqueidentifier | Primary key | Used as operation_Id for deduplication |
-| msdyn_botid | Lookup (bot) | Reference to the agent | Foreign key to bot table |
-| msdyn_sessionoutcome | OptionSet | Session result | See outcome values below |
+| msdyn_botsessionid | Uniqueidentifier | Primary key | Used as session ID for deduplication |
+| msdyn_botid | Lookup (bot) | Reference to the agent | Foreign key to bot table (`_msdyn_botid_value`) |
+| msdyn_outcome | OptionSet | Session result | Global choice `msdyn_sessionoutcome`; see outcome values below |
+| msdyn_outcomereason | OptionSet | Reason for session outcome | Global choice `msdyn_sessionoutcomereason`; see reason values below |
 | msdyn_csatscore | Integer | Customer satisfaction score | 1-5 scale; null if survey not enabled |
-| msdyn_sessioncreatedon | DateTime | Session start timestamp | UTC |
-| msdyn_sessionclosedon | DateTime | Session end timestamp | UTC; used as event timestamp |
-| msdyn_conversationid | String | Conversation identifier | Links to conversationtranscript |
-| msdyn_channelid | String | Channel identifier | Teams, Web, etc. |
-| msdyn_sessionoutcomereason | String | Reason for session outcome | e.g., escalation reason, resolution detail |
+| msdyn_startedon | DateTime | Session start timestamp | UTC; used for the lookback filter and `$orderby` |
+| msdyn_endedon | DateTime | Session end timestamp | UTC; used as event timestamp (falls back to start) |
 | msdyn_isengaged | Boolean | Whether the user engaged with the agent | Filters out non-interactive sessions |
 | msdyn_topicname | String | Topic name associated with the session | Primary topic that handled the session |
-| modifiedon | DateTime | Last modified timestamp | Used for watermark-based sync |
+| msdyn_convtranscriptid | Lookup | Conversation transcript reference | Reserved for Tier 2 transcript parsing |
+| modifiedon | DateTime | Last modified timestamp | |
 | createdon | DateTime | Record creation timestamp | |
 
-**Session Outcome Values (msdyn_sessionoutcome):**
+> **No channel column:** `msdyn_botsession` does not expose a channel identifier in its
+> documented schema, so channel-derived `usageType` (Internal/External) is not available
+> in Tier 1. The sync emits `usageType = "Unknown"`; channel classification is planned for
+> Tier 2 (conversation-transcript parsing). Source of truth for this table's columns is the
+> [official `msdyn_botsession` entity reference](https://learn.microsoft.com/en-us/dynamics365/developer/reference/entities/msdyn_botsession).
 
-The following integer optionset values are what the sync code (`scripts/sync_dataverse_sessions.py` `SESSION_OUTCOMES`) reads and what Microsoft Customer Service / Copilot Studio actually emit:
+**Session Outcome Values (`msdyn_outcome`, global choice `msdyn_sessionoutcome`):**
 
-| Value | Label | Description |
-|-------|-------|-------------|
-| 192350001 | Resolved | Session completed successfully -- user's intent was addressed |
-| 192350002 | Escalated | Session transferred to a human agent |
-| 192350003 | Abandoned | User left the session without resolution |
-| 192350004 | Unengaged | Session started but no meaningful interaction occurred |
+The following integer optionset values are documented in the official `msdyn_botsession`
+entity reference and are what the sync code (`scripts/sync_dataverse_sessions.py`
+`SESSION_OUTCOMES`) reads:
 
-**Session Outcome Reason Values (msdyn_sessionoutcomereason):**
+| Value | Label (Microsoft) | Mapped label | Description |
+|-------|-------------------|--------------|-------------|
+| 419550000 | none | Unengaged | No outcome recorded -- typically an unengaged session |
+| 419550001 | resolved | Resolved | Session completed successfully -- user's intent was addressed |
+| 419550002 | escalated | Escalated | Session transferred to a human agent |
+| 419550003 | abandoned | Abandoned | User left the session without resolution |
 
-| Value | Label |
-|-------|-------|
-| 192350100 | TopicResolved |
-| 192350101 | UserEndedConversation |
-| 192350102 | HandoffInitiated |
-| 192350103 | AgentTransfer |
-| 192350104 | Timeout |
-| 192350105 | UserAbandoned |
-| 192350106 | NoEngagement |
+**Session Outcome Reason Values (`msdyn_outcomereason`, global choice `msdyn_sessionoutcomereason`):**
 
-> **Note:** Optionset values may vary slightly across Copilot Studio releases. Verify against your environment's option set metadata using `GET /api/data/v9.2/EntityDefinitions(LogicalName='msdyn_botsession')/Attributes(LogicalName='msdyn_sessionoutcome')/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$expand=OptionSet`.
+| Value | Label (Microsoft) |
+|-------|-------------------|
+| 419560000 | noError |
+| 419560001 | userError |
+| 419560002 | systemError |
+| 419560003 | userExit |
+| 419560004 | agentTransferWithoutError |
+| 419560005 | agentTransferRequestedByUser |
+| 419560006 | resolved |
+| 419560007 | agentTransferConfiguredByAuthor |
+| 419560008 | agentTransferFromQuestionMaxAttempts |
+
+> **Note:** Optionset values are Microsoft-managed and may change across Copilot Studio releases. Verify against your environment's option set metadata using `GET /api/data/v9.2/EntityDefinitions(LogicalName='msdyn_botsession')/Attributes(LogicalName='msdyn_outcome')/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$expand=OptionSet`.
 
 ### bot
 
@@ -118,7 +127,7 @@ Per-topic session data. Each record represents the execution of a specific topic
 | msdyn_botsessionid | Lookup (msdyn_botsession) | Parent session | Join key to session table |
 | msdyn_botcomponentid | Lookup (botcomponent) | Topic/dialog executed | |
 | msdyn_topicname | String | Topic display name | |
-| msdyn_sessionoutcome | OptionSet | Topic-level outcome | Same option set as session outcome |
+| msdyn_outcome | OptionSet | Topic-level outcome | Global choice `msdyn_sessionoutcome` (verify per environment) |
 | msdyn_startedon | DateTime | Topic start timestamp | |
 | msdyn_endedon | DateTime | Topic end timestamp | |
 | createdon | DateTime | Record creation timestamp | |
@@ -136,7 +145,7 @@ Full conversation content in JSON format. Contains message-level detail includin
 |------------------------|------|-------------|-------|
 | conversationtranscriptid | Uniqueidentifier | Primary key | |
 | name | String | Transcript display name | |
-| conversationid | String | Conversation identifier | Links to msdyn_botsession.msdyn_conversationid |
+| conversationid | String | Conversation identifier | Correlate via `msdyn_botsession.msdyn_convtranscriptid` lookup |
 | content | Memo (large text) | JSON conversation content | Requires JSON parsing -- see schema below |
 | schematype | String | Content schema identifier | Indicates JSON structure version |
 | createdon | DateTime | Transcript creation timestamp | Subject to 30-day bulk delete |
@@ -213,11 +222,11 @@ Custom Dataverse table created by `create_csa_dataverse_schema.py`. Tracks sync 
 
 ```
 GET /api/data/v9.2/msdyn_botsessions
-  ?$filter=msdyn_sessioncreatedon ge {watermark}
-  &$select=msdyn_botsessionid,msdyn_sessionoutcome,msdyn_csatscore,
-           msdyn_sessioncreatedon,msdyn_sessionclosedon,_msdyn_botid_value,
-           msdyn_conversationid,msdyn_channelid,modifiedon
-  &$orderby=msdyn_sessioncreatedon asc
+  ?$filter=msdyn_startedon ge {watermark}
+  &$select=msdyn_botsessionid,msdyn_outcome,msdyn_outcomereason,msdyn_csatscore,
+           msdyn_startedon,msdyn_endedon,_msdyn_botid_value,
+           msdyn_isengaged,msdyn_topicname
+  &$orderby=msdyn_startedon asc
   &$top=5000
 ```
 
@@ -243,8 +252,8 @@ GET /api/data/v9.2/botcomponents
 GET /api/data/v9.2/msdyn_botcomponentsessions
   ?$filter=createdon gt {watermark}
   &$select=msdyn_botcomponentsessionid,_msdyn_botsessionid_value,
-           msdyn_topicname,msdyn_sessionoutcome,
-           msdyn_sessioncreatedon,msdyn_sessionclosedon
+           msdyn_topicname,msdyn_outcome,
+           msdyn_startedon,msdyn_endedon
   &$orderby=createdon asc
   &$top=5000
 ```

@@ -17,7 +17,7 @@ This matrix documents what CSA covers, what it partially covers, and what remain
 | Agent inventory | KQL: Agent Inventory query + Agent Overview workbook | Near parity | CSA adds agent type classification (conversational/autonomous) |
 | Active agent trend | KQL: Active Agent Trend query | Near parity | Same data source (msdyn_botsession), same calculation |
 | Session volume | KQL: Top Agents by Volume query | Near parity | CSA correlates with native BotMessageSend events |
-| Session outcomes (conversational) | KQL: Conversational Outcomes query | Near parity | Same msdyn_sessionoutcome data |
+| Session outcomes (conversational) | KQL: Conversational Outcomes query | Near parity | Same msdyn_outcome data |
 | Session outcomes (autonomous) | KQL: Autonomous Outcomes query | Near parity | CSA separates autonomous from conversational outcomes |
 | CSAT distribution | KQL: CSAT Distribution query | Near parity | Same msdyn_csatscore source |
 | Resolution rate | KQL: Resolution Matrix query | Near parity | CSA adds outcome weighting by agent type |
