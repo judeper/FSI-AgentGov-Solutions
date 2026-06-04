@@ -10,6 +10,10 @@ All notable changes to the DR Readiness Validation Framework.
 ### Fixed
 
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
+- **Lab validation (docs):** Corrected the Power Platform backup-retention note in `README.md` to the current Microsoft Managed Environments model — default 7 days for all production and nonproduction environments, extendable to 7/14/21/28 days only for production Managed Environments. The prior text incorrectly tied 28-day retention to "Dynamics 365 applications" presence. Verified against Microsoft Learn *Back up and restore environments*.
+- **Lab validation (docs):** Aligned sample audit-log filenames in `docs/evidence-export.md` and `templates/dr-evidence-metadata.sample.json` to the actual format emitted by `Invoke-DRTest.ps1` (`dr-audit-<yyyyMMdd-HHmmss>-<correlationid>.log`); the examples previously embedded the TestType, which the script does not.
+- **Lab validation:** Added `LAB-VALIDATION.md` evidence report (static validation: 3 Python compile, 4 PowerShell parse, 57/57 Pester, no schema drift, authoritative-source verification of all Power Platform / Dataverse API and backup claims).
+
 ## [2.0.2] - 2026-05-22
 
 ### Fixed

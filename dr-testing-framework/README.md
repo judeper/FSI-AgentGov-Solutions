@@ -286,7 +286,7 @@ Validation Success Rate = (Passed Validations / Total Validations) × 100
 
 ## Power Platform backup, restore, and regional notes (Microsoft Learn 2026-Q2)
 
-- Power Platform and Dataverse system backups are Microsoft-managed for environments with a database. Production environments with Dynamics 365 applications have up to 28 days of system backup retention; production environments without Dynamics 365 applications and nonproduction environments default to seven days unless eligible Managed Environment retention is extended.
+- Power Platform and Dataverse system backups are Microsoft-managed for environments that have a database. By default, both system and manual backups are retained for seven days across all production and nonproduction environments. For production **Managed Environments**, a tenant admin (Power Platform Admin, Entra Global Admin, or Dynamics 365 admin) can extend the retention period to 7, 14, 21, or up to 28 days through the Power Platform admin center or PowerShell; the configured value applies to both system and manual backups.
 - Manual backups are operator-initiated, may take 10-15 minutes before they are available for restore, do not count against storage capacity, and require at least 1 GB of available capacity to restore.
 - Manual backups are restored in the same region where the environment was backed up. Do not treat Azure region pairs as customer-controlled failover for Power Platform environments.
 - Use the current Power Apps admin module cmdlet `Backup-PowerAppEnvironment` for operator-initiated environment backups. `Copy-PowerAppEnvironment` copies source to target, but copied custom connectors receive new identifiers and flows may need connector rebinding.

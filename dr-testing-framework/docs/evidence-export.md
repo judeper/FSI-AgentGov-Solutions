@@ -58,8 +58,8 @@ evidence/
 ├── dr-evidence-20260315-143022.json
 ├── dr-evidence-20260315-143022.json.sha256
 └── audit-logs/
-    ├── dr-audit-AgentReadinessCheck-abc12345.log
-    └── dr-audit-DataverseAccessCheck-abc12345.log
+    ├── dr-audit-20260315-130145-abc12345.log
+    └── dr-audit-20260315-141507-abc12345.log
 ```
 
 ## Metadata JSON Format
@@ -70,8 +70,8 @@ evidence/
   "Environment": "https://contoso.crm.dynamics.com",
   "TestRunId": "abc12345",
   "AuditLogFiles": [
-    "dr-audit-AgentReadinessCheck-20260315-abc12345.log",
-    "dr-audit-DataverseAccessCheck-20260315-abc12345.log"
+    "dr-audit-20260315-130145-abc12345.log",
+    "dr-audit-20260315-141507-abc12345.log"
   ],
   "TestResults": [
     {
