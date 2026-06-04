@@ -207,7 +207,7 @@ Power Automate Flow
 | Component | Authentication Method | Deprecation Status |
 |-----------|----------------------|-------------------|
 | Exchange Online | Managed identity (Azure Automation) or certificate-based app-only; interactive only for admin workstations | Active |
-| Application Insights | Managed identity or Entra ID (OAuth 2.0); ~~API key~~ removed | x-api-key no longer functional after March 31, 2026 |
+| Application Insights | Managed identity or Entra ID (OAuth 2.0); ~~API key~~ removed | x-api-key query auth retiring September 30, 2026 (extended from March 31, 2026) |
 | Defender CloudAppEvents | Microsoft Graph (managed identity/certificate where available; delegated interactive for testing) | Active |
 | Azure Storage | Managed identity preferred; SAS token only for constrained legacy jobs | Active |
 | Power BI | Microsoft Entra ID | Active |

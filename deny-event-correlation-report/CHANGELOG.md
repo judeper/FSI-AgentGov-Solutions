@@ -4,6 +4,21 @@ All notable changes to the Deny Event Correlation Report are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **App Insights query API-key retirement date corrected to September 30, 2026.**
+  Microsoft extended the Application Insights query API-key (`x-api-key`)
+  retirement from the originally announced March 31, 2026 to **September 30,
+  2026** (Azure Update "Retirement: Transition to Entra ID … by September 30,
+  2026", modified 2026-04-21). Updated `docs/prerequisites.md`,
+  `docs/troubleshooting.md`, `docs/architecture.md`, and the header notes in
+  `scripts/Export-RaiTelemetry.ps1` so they no longer state the API key was
+  removed on the (now past) March 31, 2026 date. The extractor already uses
+  Entra ID authentication and is unaffected by the retirement either way.
+- Added `LAB-VALIDATION.md` documenting static lab-readiness validation against
+  authoritative Microsoft sources (Graph `runHuntingQuery`, `Search-UnifiedAuditLog`
+  status, Defender `CloudAppEvents` schema, App Insights query API-key retirement).
+
 ### Fixed
 
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.

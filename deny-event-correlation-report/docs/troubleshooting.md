@@ -30,11 +30,11 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 ### 2. Application Insights Query Fails
 
-> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments. As of March 31, 2026 the x-api-key path is no longer functional.
+> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments. Microsoft is retiring the x-api-key query path on **September 30, 2026** (extended from the originally announced March 31, 2026).
 >
-> **⚠️ Warning: x-api-key Removed (March 31, 2026)**
+> **⚠️ Warning: x-api-key query authentication retiring (September 30, 2026)**
 >
-> If you are troubleshooting API key authentication issues, note that this authentication method is **no longer functional** as of March 31, 2026. Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
+> If you are troubleshooting API key authentication issues, note that this authentication method is **scheduled for retirement on September 30, 2026** (Microsoft extended this from March 31, 2026). Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
 >
 > **Migration Path:**
 >
@@ -44,7 +44,7 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 >
 > See [Authentication Migration](prerequisites.md#authentication-migration) for complete migration steps.
 >
-> *Last verified: 2026-05-25*
+> *Last verified: 2026-06-04*
 
 **Symptoms:**
 - REST API returns 401/403 error
@@ -63,7 +63,7 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 **Diagnostic Steps (API Key - Deprecated):**
 
 ```powershell
-# Historical only: API key connectivity test (no longer functional after March 31, 2026)
+# Historical only: API key connectivity test (x-api-key query auth retiring September 30, 2026)
 $headers = @{ "x-api-key" = "your-key" }
 $uri = "https://api.applicationinsights.io/v1/apps/your-app-id/query?query=customEvents|take 1"
 Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
