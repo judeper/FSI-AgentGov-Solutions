@@ -59,7 +59,7 @@ Each governance zone defines which agent-to-agent communication patterns are per
 | **Evidence Export** | SHA-256 integrity-hashed JSON evidence for regulatory examinations |
 | **Approved Route Import** | CSV-based governance import for approved communication routes |
 | **Cross-Tenant Entra Correlation** | Correlates cross-tenant violations with Entra cross-tenant access policies and B2B direct connect settings |
-| **Child-Agent Payload Size Checks** | Validates child-agent input/output declarations against the documented 1 MB Copilot Studio limit |
+| **Child-Agent Payload Size Checks** | Estimates child-agent input/output declarations against a configurable advisory payload-size threshold (default 1 MB; current Copilot Studio docs publish a 5 MB connector payload limit, 450 KB for GCC) |
 
 ## Solution Components
 
