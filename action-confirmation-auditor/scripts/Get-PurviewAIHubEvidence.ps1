@@ -31,6 +31,14 @@
 .PARAMETER LookbackDays
     Number of days to look back for activity correlation (default: 7).
 
+.PARAMETER DataverseAccessToken
+    Optional Dataverse-audience access token (SecureString) used to query ACA
+    results. The Microsoft Graph session token cannot be reused for Dataverse
+    because the two services require tokens scoped to different audiences. When
+    omitted, the script attempts to acquire a Dataverse token via Az.Accounts
+    (`Get-AzAccessToken -ResourceUrl <DataverseUrl>`), which supports managed
+    identity in Azure Automation and interactive sign-in on a workstation.
+
 .PARAMETER OutputPath
     Directory to write evidence file. Defaults to current directory.
 
@@ -42,7 +50,17 @@
     Version: 1.2.1
     Solution: Action Confirmation Auditor (ACA)
     Controls: 2.12, 1.10
-    Requires: Microsoft.Graph.Authentication
+    Requires: Microsoft.Graph.Authentication (Connect-MgGraph). Az.Accounts is
+             required only when -DataverseAccessToken is not supplied.
+
+    Microsoft Graph delegated/application scope required for the audit log
+    query API (security/auditLog/queries): AuditLogsQuery.Read.All. Connect
+    with, e.g.:
+        Connect-MgGraph -Scopes 'AuditLogsQuery.Read.All'
+
+    Graph calls use Invoke-MgGraphRequest so the established Connect-MgGraph
+    session token (correct audience) is used automatically. Reference:
+    https://learn.microsoft.com/graph/api/security-auditlogquery-list-records
 
     Part of FSI Agent Governance Framework
 #>
@@ -63,12 +81,22 @@ function Get-PurviewAIHubEvidence {
         [ValidateRange(1, 90)]
         [int]$LookbackDays = 7,
 
+        [System.Security.SecureString]$DataverseAccessToken,
+
         [string]$OutputPath = '.'
     )
 
     begin {
         $ErrorActionPreference = 'Stop'
         Write-Verbose "Collecting Purview AI Hub evidence with $LookbackDays-day lookback..."
+
+        # Microsoft Graph PowerShell does not expose a raw token via Get-MgContext.
+        # Graph REST calls below use Invoke-MgGraphRequest, which reuses the
+        # established Connect-MgGraph session token (correct audience). Confirm a
+        # session exists before proceeding.
+        if (-not (Get-MgContext)) {
+            throw "Not connected to Microsoft Graph. Run: Connect-MgGraph -Scopes 'AuditLogsQuery.Read.All'"
+        }
     }
 
     process {
@@ -82,12 +110,6 @@ function Get-PurviewAIHubEvidence {
             Summary              = $null
         }
 
-        $graphHeaders = @{
-            'Authorization' = "Bearer $((Get-MgContext).AccessToken)"
-            'Accept'        = 'application/json'
-            'Content-Type'  = 'application/json'
-        }
-
         # ---------------------------------------------------------------
         # Step 1: Query Purview AI Hub activities via Graph
         # ---------------------------------------------------------------
@@ -98,16 +120,19 @@ function Get-PurviewAIHubEvidence {
         # Use Purview Data Map / AI Hub Graph endpoint
         # The exact endpoint depends on Purview API availability
         try {
-            # Query audit log for AI-related activities
+            # Query audit log for AI-related activities via the Graph audit log
+            # query API (security/auditLog/queries). Invoke-MgGraphRequest reuses
+            # the Connect-MgGraph session token with the Graph audience.
             $auditUri = "https://graph.microsoft.com/v1.0/security/auditLog/queries"
             $auditBody = @{
                 displayName     = "ACA-DSPM-Correlation-$(Get-Date -Format 'yyyyMMdd')"
                 filterStartDateTime = $startDate
                 filterEndDateTime   = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')
-                recordTypeFilters   = @('CopilotInteraction', 'AipDiscover', 'AipSensitivityLabelAction')
+                # auditLogRecordType enum members are camelCase.
+                recordTypeFilters   = @('copilotInteraction', 'aipDiscover', 'aipSensitivityLabelAction')
             } | ConvertTo-Json
 
-            $auditResp = Invoke-RestMethod -Uri $auditUri -Headers $graphHeaders -Method Post -Body $auditBody -ErrorAction SilentlyContinue
+            $auditResp = Invoke-MgGraphRequest -Method POST -Uri $auditUri -Body $auditBody -OutputType PSObject -ErrorAction Stop
 
             if ($auditResp -and $auditResp.id) {
                 Write-Verbose "Audit query created: $($auditResp.id). Waiting for results..."
@@ -115,7 +140,7 @@ function Get-PurviewAIHubEvidence {
 
                 # Poll for results
                 $resultsUri = "https://graph.microsoft.com/v1.0/security/auditLog/queries/$($auditResp.id)/records?`$top=500"
-                $resultsResp = Invoke-RestMethod -Uri $resultsUri -Headers $graphHeaders -Method Get -ErrorAction SilentlyContinue
+                $resultsResp = Invoke-MgGraphRequest -Method GET -Uri $resultsUri -OutputType PSObject -ErrorAction Stop
 
                 if ($resultsResp.value) {
                     foreach ($record in $resultsResp.value) {
@@ -169,30 +194,68 @@ function Get-PurviewAIHubEvidence {
         # ---------------------------------------------------------------
         Write-Verbose "Querying ACA action confirmation results from Dataverse..."
         $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
-        $dvHeaders = @{
-            'Authorization' = "Bearer $((Get-MgContext).AccessToken)"
-            'Accept'        = 'application/json'
-            'OData-Version' = '4.0'
+
+        # Dataverse requires a token scoped to the Dataverse audience; the Graph
+        # session token cannot be reused. Prefer a caller-supplied token, else
+        # acquire one via Az.Accounts (managed identity in Automation, or
+        # interactive on a workstation).
+        $dvToken = $null
+        if ($DataverseAccessToken) {
+            $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($DataverseAccessToken)
+            try {
+                $dvToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            } finally {
+                [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+            }
+        } elseif (Get-Command -Name 'Get-AzAccessToken' -ErrorAction SilentlyContinue) {
+            try {
+                $dvTokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/') -ErrorAction Stop
+                # Az.Accounts >= 5.x returns a SecureString by default.
+                if ($dvTokenResult.Token -is [System.Security.SecureString]) {
+                    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($dvTokenResult.Token)
+                    try {
+                        $dvToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+                    } finally {
+                        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+                    }
+                } else {
+                    $dvToken = [string]$dvTokenResult.Token
+                }
+            } catch {
+                Write-Warning "Failed to acquire Dataverse token via Az.Accounts: $_"
+            }
         }
 
-        $acaFilter = "createdon ge $startDate"
-        $acaSelect = "fsi_actionauditresultid,fsi_agentname,fsi_actionname,fsi_hasconfirmation,fsi_severity,createdon"
-        $acaUri = "$apiBase/fsi_actionauditresults?`$filter=$acaFilter&`$select=$acaSelect&`$orderby=createdon desc&`$top=500"
-
-        try {
-            $acaResp = Invoke-RestMethod -Uri $acaUri -Headers $dvHeaders -Method Get -ErrorAction Stop
-            foreach ($result in $acaResp.value) {
-                $evidence.ACAConfirmations.Add([PSCustomObject]@{
-                    ResultId         = $result.fsi_actionauditresultid
-                    AgentName        = $result.fsi_agentname
-                    ActionName       = $result.fsi_actionname
-                    HasConfirmation  = $result.fsi_hasconfirmation
-                    Severity         = $result.fsi_severity
-                    CreatedOn        = $result.createdon
-                })
+        if (-not $dvToken) {
+            Write-Warning "No Dataverse access token available. Supply -DataverseAccessToken or run Connect-AzAccount (Az.Accounts) so a Dataverse-audience token can be acquired. Skipping ACA Dataverse query."
+        } else {
+            $dvHeaders = @{
+                'Authorization' = "Bearer $dvToken"
+                'Accept'        = 'application/json'
+                'OData-Version' = '4.0'
             }
-        } catch {
-            Write-Warning "ACA Dataverse query failed: $_"
+
+            $acaFilter = "createdon ge $startDate"
+            $acaSelect = "fsi_actionauditresultid,fsi_agentname,fsi_actionname,fsi_confirmationstatus,fsi_severity,createdon"
+            $acaUri = "$apiBase/fsi_actionauditresults?`$filter=$acaFilter&`$select=$acaSelect&`$orderby=createdon desc&`$top=500"
+
+            try {
+                $acaResp = Invoke-RestMethod -Uri $acaUri -Headers $dvHeaders -Method Get -ErrorAction Stop
+                foreach ($result in $acaResp.value) {
+                    # fsi_confirmationstatus is the fsi_ACA_confirmationstatus option set
+                    # (Present = 100000000). A present confirmation maps to $true.
+                    $evidence.ACAConfirmations.Add([PSCustomObject]@{
+                        ResultId         = $result.fsi_actionauditresultid
+                        AgentName        = $result.fsi_agentname
+                        ActionName       = $result.fsi_actionname
+                        HasConfirmation  = ($result.fsi_confirmationstatus -eq 100000000)
+                        Severity         = $result.fsi_severity
+                        CreatedOn        = $result.createdon
+                    })
+                }
+            } catch {
+                Write-Warning "ACA Dataverse query failed: $_"
+            }
         }
 
         Write-Verbose "Retrieved $($evidence.ACAConfirmations.Count) ACA confirmation results."

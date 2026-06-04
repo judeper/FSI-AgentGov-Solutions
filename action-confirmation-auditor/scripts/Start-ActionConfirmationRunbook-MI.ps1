@@ -110,9 +110,9 @@ try {
 }
 
 # ===================================================================
-# Step 2: Acquire tokens for Graph and Dataverse
+# Step 2: Acquire token for the Power Platform admin API
 # ===================================================================
-Write-Verbose "Acquiring tokens for Graph and Dataverse..."
+Write-Verbose "Acquiring Power Platform admin token..."
 
 # Helper: convert SecureString token (Az.Accounts >= 2.17) to plain string
 # while preserving compatibility with earlier versions that returned a String.
@@ -130,16 +130,24 @@ function ConvertFrom-AzAccessTokenValue {
 }
 
 try {
-    $graphTokenResult = Get-AzAccessToken -ResourceUrl 'https://graph.microsoft.com'
-    $dvTokenResult    = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/')
-    $graphToken = ConvertFrom-AzAccessTokenValue -TokenValue $graphTokenResult.Token
+    # The Power Platform admin module (Add-PowerAppsAccount) expects a token
+    # scoped to the Power Apps service audience (https://service.powerapps.com/),
+    # NOT Microsoft Graph. Microsoft Learn documents this audience via
+    # Get-JwtToken "https://service.powerapps.com/".
+    $papTokenResult = Get-AzAccessToken -ResourceUrl 'https://service.powerapps.com/'
+    $papToken = ConvertFrom-AzAccessTokenValue -TokenValue $papTokenResult.Token
+
+    # Validate the managed identity can reach the central Dataverse org early.
+    # Per-environment Dataverse tokens are acquired later inside the scanner via
+    # Connect-EnvironmentDataverse.ps1 (also Az/MI based).
+    $dvTokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl.TrimEnd('/')
     ConvertFrom-AzAccessTokenValue -TokenValue $dvTokenResult.Token | Out-Null
 } catch {
     $errorOutput = @{
         Status   = 'Error'
         Stage    = 'TokenAcquisition'
         Error    = $_.Exception.Message
-        Guidance = 'Verify the managed identity has API permissions: Graph (Application.Read.All) and Dataverse (user_impersonation).'
+        Guidance = 'Verify the managed identity has a Power Platform admin role (for service.powerapps.com) and an application user with a Dataverse security role on the governance environment.'
     } | ConvertTo-Json -Depth 3
     Write-Output $errorOutput
     throw
@@ -150,9 +158,9 @@ try {
 # ===================================================================
 Write-Verbose "Connecting to Power Platform admin APIs..."
 try {
-    Add-PowerAppsAccount -AccessToken $graphToken -ErrorAction Stop
+    Add-PowerAppsAccount -AccessToken $papToken -ErrorAction Stop
 } catch {
-    Write-Warning "Power Platform admin connection: $_ -- continuing with Graph-only mode."
+    Write-Warning "Power Platform admin connection: $_ -- environment enumeration may fail."
 }
 
 # ===================================================================
