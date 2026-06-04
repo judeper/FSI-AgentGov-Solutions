@@ -6,6 +6,10 @@ All notable changes to the COI Testing Framework.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Docs**: Repaired a truncated/orphaned note blockquote at the top of `README.md` whose lead-in clause had been lost (it began mid-sentence with "> implemented; the agent-interaction layer..."). Reconstructed it into a complete scaffold-status note consistent with the *Overview* and *Implementation Status* sections. (lab-readiness validation)
+
 ## [1.1.2] - 2026-05-23
 
 ### Fixed

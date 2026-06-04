@@ -12,9 +12,11 @@ coe_function: govern
 > **Validated against framework version:** v1.6.0
 > **Last Verified:** 2026-05-25
 
-> implemented; the agent-interaction layer that drives a Copilot Studio agent
-> via Direct Line is not yet implemented. Scenarios currently report `SKIPPED`
-> until the integration is added. See *Implementation Status* below.
+> **Note:** This is a scaffold release. The scenario library, the result
+> schema, and the runner shell are implemented; the agent-interaction layer
+> that drives a Copilot Studio agent via Direct Line is not yet implemented.
+> Scenarios currently report `SKIPPED` until the integration is added. See
+> *Implementation Status* below.
 
 Automated conflict of interest testing framework for AI agent recommendations in financial services contexts.
 
