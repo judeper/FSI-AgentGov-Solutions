@@ -156,7 +156,7 @@ The accuracy of AAH calculations depends on the data tier available.
 |--------|-------------|-------------|---------------------|
 | Knowledge source citations | GenerativeAnswers (Result = "Success") | conversationtranscript Citation entities *(planned)* | Tier 1 may overcount (one event per generative call, not per citation) |
 | Action execution count | Not available in Tier 1 | conversationtranscript invoke activities *(planned)* | Tier 1 autonomous AAH uses session-level estimates only |
-| Session outcome | msdyn_botsession.msdyn_sessionoutcome | Same | No difference |
+| Session outcome | msdyn_botsession.msdyn_outcome | Same | No difference |
 | CSAT score | msdyn_botsession.msdyn_csatscore | Same | No difference |
 
 ### Impact on AAH Accuracy

@@ -53,10 +53,10 @@ def make_session(session_id: str, created_on: str, closed_on: str | None = None)
     """Build a minimal Dataverse session fixture."""
     session = {
         "msdyn_botsessionid": session_id,
-        "msdyn_sessioncreatedon": created_on,
+        "msdyn_startedon": created_on,
     }
     if closed_on is not None:
-        session["msdyn_sessionclosedon"] = closed_on
+        session["msdyn_endedon"] = closed_on
     return session
 
 

@@ -58,23 +58,35 @@ from applicationinsights import TelemetryClient
 # Configure logging
 logger = logging.getLogger("csa-sync")
 
-# Dataverse session outcome option set values
+# Dataverse session outcome option set values.
+# Attribute logical name: msdyn_outcome (global choice name: msdyn_sessionoutcome).
+# Integer values per the official msdyn_botsession entity reference:
+#   https://learn.microsoft.com/en-us/dynamics365/developer/reference/entities/msdyn_botsession
+# The friendly labels below intentionally preserve the downstream KQL data contract
+# (queries compare Outcome == "Resolved"/"Escalated"/"Abandoned"). 419550000 is the
+# documented "none" value (no outcome recorded — typically unengaged sessions).
+# Option-set integers are Microsoft-managed; verify against your environment's
+# metadata if a future Copilot Studio release renumbers them.
 SESSION_OUTCOMES = {
-    192350001: "Resolved",
-    192350002: "Escalated",
-    192350003: "Abandoned",
-    192350004: "Unengaged",
+    419550000: "Unengaged",
+    419550001: "Resolved",
+    419550002: "Escalated",
+    419550003: "Abandoned",
 }
 
-# Dataverse session outcome reason option set values
+# Dataverse session outcome reason option set values.
+# Attribute logical name: msdyn_outcomereason (global choice: msdyn_sessionoutcomereason).
+# Integer values and labels per the official msdyn_botsession entity reference (see above).
 SESSION_OUTCOME_REASONS = {
-    192350100: "TopicResolved",
-    192350101: "UserEndedConversation",
-    192350102: "HandoffInitiated",
-    192350103: "AgentTransfer",
-    192350104: "Timeout",
-    192350105: "UserAbandoned",
-    192350106: "NoEngagement",
+    419560000: "NoError",
+    419560001: "UserError",
+    419560002: "SystemError",
+    419560003: "UserExit",
+    419560004: "AgentTransferWithoutError",
+    419560005: "AgentTransferRequestedByUser",
+    419560006: "Resolved",
+    419560007: "AgentTransferConfiguredByAuthor",
+    419560008: "AgentTransferFromQuestionMaxAttempts",
 }
 
 # CSA Sync watermark table constants
@@ -111,12 +123,12 @@ def parse_iso_datetime(value: Any) -> Optional[datetime]:
 
 def get_session_created_timestamp(session: dict[str, Any]) -> Optional[datetime]:
     """Return the session creation timestamp used by the Dataverse lookback filter."""
-    return parse_iso_datetime(session.get("msdyn_sessioncreatedon"))
+    return parse_iso_datetime(session.get("msdyn_startedon"))
 
 
 def get_session_effective_timestamp(session: dict[str, Any]) -> Optional[datetime]:
     """Return the session timestamp used for watermark advancement."""
-    return parse_iso_datetime(session.get("msdyn_sessionclosedon")) or get_session_created_timestamp(session)
+    return parse_iso_datetime(session.get("msdyn_endedon")) or get_session_created_timestamp(session)
 
 
 def get_latest_session_timestamp(sessions: list[dict[str, Any]], fallback: datetime) -> datetime:
@@ -638,17 +650,16 @@ def fetch_sessions(
         select=[
             "msdyn_botsessionid",
             "_msdyn_botid_value",
-            "msdyn_sessionoutcome",
-            "msdyn_sessionoutcomereason",
-            "msdyn_sessioncreatedon",
-            "msdyn_sessionclosedon",
+            "msdyn_outcome",
+            "msdyn_outcomereason",
+            "msdyn_startedon",
+            "msdyn_endedon",
             "msdyn_isengaged",
             "msdyn_csatscore",
             "msdyn_topicname",
-            "msdyn_channelid",
         ],
-        filter_expr=f"msdyn_sessioncreatedon ge {start_iso}",
-        orderby="msdyn_sessioncreatedon asc",
+        filter_expr=f"msdyn_startedon ge {start_iso}",
+        orderby="msdyn_startedon asc",
     )
 
     logger.info("Fetched %d sessions from Dataverse", len(sessions))
@@ -712,14 +723,23 @@ def classify_usage_type(channel_id: str) -> str:
     """
     Classify usage type from the session channel identifier.
 
+    Tier 1 LIMITATION: the ``msdyn_botsession`` table does not expose a channel
+    column in its documented schema (see the official entity reference:
+    https://learn.microsoft.com/en-us/dynamics365/developer/reference/entities/msdyn_botsession),
+    so ``channel_id`` is currently always empty and this function returns
+    "Unknown". Channel-derived Internal/External classification is planned for
+    Tier 2 (conversation-transcript parsing). The keyword matching below is
+    retained for that future source and for callers that can supply a channel
+    identifier from another table.
+
     Args:
-        channel_id: The msdyn_channelid value from the session record
+        channel_id: A channel identifier, if available from a Tier 2 source.
 
     Returns:
-        "Internal" or "External"
+        "Internal", "External", or "Unknown" when no channel data is available.
     """
     if not channel_id:
-        return "Internal"
+        return "Unknown"
 
     channel_lower = channel_id.lower()
 
@@ -731,7 +751,7 @@ def classify_usage_type(channel_id: str) -> str:
     if any(kw in channel_lower for kw in internal_keywords):
         return "Internal"
 
-    return "Internal"
+    return "Unknown"
 
 
 def resolve_zone(environment_url: str, zone_mapping: dict[str, str]) -> str:
@@ -791,7 +811,7 @@ def transform_session(
     agent_mode = agent_classifications.get(bot_id, "Conversational")
 
     # Map session outcome
-    raw_outcome = session.get("msdyn_sessionoutcome")
+    raw_outcome = session.get("msdyn_outcome")
     outcome_str = SESSION_OUTCOMES.get(raw_outcome, "Unknown")
 
     # Map outcome differently for autonomous agents
@@ -802,12 +822,12 @@ def transform_session(
             outcome_str = "Failure"
 
     # Map outcome reason
-    raw_reason = session.get("msdyn_sessionoutcomereason")
+    raw_reason = session.get("msdyn_outcomereason")
     reason_str = SESSION_OUTCOME_REASONS.get(raw_reason, "Unknown")
 
     # Calculate session duration
-    created_on = session.get("msdyn_sessioncreatedon", "")
-    closed_on = session.get("msdyn_sessionclosedon", "")
+    created_on = session.get("msdyn_startedon", "")
+    closed_on = session.get("msdyn_endedon", "")
     duration_seconds = None
     if created_on and closed_on:
         try:
@@ -825,8 +845,11 @@ def transform_session(
     # Knowledge source
     has_ks = ks_map.get(session_id, False)
 
-    # Derive usage type from channel
-    channel_id = session.get("msdyn_channelid", "") or ""
+    # Derive usage type from channel.
+    # NOTE: msdyn_botsession has no channel column in its documented schema, so
+    # no channel identifier is available in Tier 1; usageType resolves to
+    # "Unknown" until Tier 2 transcript parsing supplies channel data.
+    channel_id = ""
     usage_type = classify_usage_type(channel_id)
 
     # Build customDimensions

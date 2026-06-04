@@ -92,9 +92,9 @@ Tier 1 provides session-level outcome data sufficient for most analytics:
 
 | Data Point | Source | Notes |
 |-----------|--------|-------|
-| Session outcome | msdyn_botsession.msdyn_sessionoutcome | Resolved, Escalated, Abandoned, Unengaged |
+| Session outcome | msdyn_botsession.msdyn_outcome | Resolved, Escalated, Abandoned, Unengaged (global choice `msdyn_sessionoutcome`) |
 | CSAT score | msdyn_botsession.msdyn_csatscore | 1-5 scale when survey enabled |
-| Session duration | msdyn_botsession timestamps | `msdyn_sessioncreatedon` and `msdyn_sessionclosedon` |
+| Session duration | msdyn_botsession timestamps | `msdyn_startedon` and `msdyn_endedon` |
 | Agent ID | msdyn_botsession.msdyn_botid | Joined with bot table for name |
 | Agent type | botcomponent.componenttype (integer) | Optionset value `17` = External Trigger (autonomous). The integer `componenttype` column is used; `componenttypename` is the human-readable label and is **not** the column queried. |
 | Knowledge source proxy | `msdyn_topicname` substring heuristic | Tier 1 best-effort heuristic — `hasKnowledgeSource = true` when the topic name contains `generativeanswers` or `knowledge` (case-insensitive). It does **not** correlate with `GenerativeAnswers` Application Insights events; agents whose KS topic uses a custom name will be under-counted. Tier 2 plans actual App Insights correlation. |
@@ -126,7 +126,7 @@ The sync pipeline uses a Dataverse tracking table (`fsi_csasyncwatermark`) to im
 
 1. **Read watermark:** Query fsi_csasyncwatermarks for the last successful sync timestamp per environment
 2. **Check concurrency lock:** Verify no other sync is InProgress (advisory lock with stale timeout)
-3. **Fetch new records:** Query msdyn_botsession where `msdyn_sessioncreatedon >= watermark - lookback_buffer` with `$orderby=msdyn_sessioncreatedon asc`
+3. **Fetch new records:** Query msdyn_botsession where `msdyn_startedon >= watermark - lookback_buffer` with `$orderby=msdyn_startedon asc`
 4. **Enrich records:** Join with bot (agent name) and botcomponent (agent type classification)
 5. **Emit events:** Send CopilotSessionOutcome custom events to Application Insights via Track API
 6. **Update watermark:** Write new watermark timestamp (last session's end time) after successful batch commit
@@ -148,19 +148,19 @@ Each synced session produces a custom event with these properties:
 | customDimensions.recipientId | string | Agent ID (matches AOF `recipientId` format) |
 | customDimensions.sessionId | string | Unique session ID from `msdyn_botsessionid` |
 | customDimensions.sessionOutcome | string | Conversational: Resolved, Escalated, Abandoned; Autonomous: Success, Failure |
-| customDimensions.sessionOutcomeReason | string | Sub-type from `msdyn_sessionoutcomereason` |
+| customDimensions.sessionOutcomeReason | string | Sub-type from `msdyn_outcomereason` |
 | customDimensions.isEngaged | boolean | Engaged session flag from `msdyn_isengaged` |
 | customDimensions.csatScore | number | 1-5 for conversational, empty for autonomous |
-| customDimensions.sessionDurationSeconds | number | Duration computed from `msdyn_sessioncreatedon` and `msdyn_sessionclosedon` |
+| customDimensions.sessionDurationSeconds | number | Duration computed from `msdyn_startedon` and `msdyn_endedon` |
 | customDimensions.hasKnowledgeSource | boolean | Tier 1 best-effort heuristic on `msdyn_topicname` (substring match for `generativeanswers`/`knowledge`); does **not** correlate with App Insights GenerativeAnswers events |
 | customDimensions.topicName | string | Primary topic from `msdyn_topicname` |
 | customDimensions.agentMode | string | `Conversational` or `Autonomous` |
-| customDimensions.channelId | string | Channel identifier |
+| customDimensions.usageType | string | `Unknown` in Tier 1 — `msdyn_botsession` has no channel column; channel-derived Internal/External classification is planned for Tier 2 |
 | customDimensions.Zone | string | Governance zone from environment metadata |
 | customDimensions.syncSource | string | `DataverseSync` (distinguishes from native events) |
 | customDimensions.syncTier | string | `Tier1` or `Tier2` |
-| customDimensions.sessionCreatedOn | string (ISO 8601) | True session start (`msdyn_sessioncreatedon`). Re-bin trends on this in KQL — see note on `timestamp` below. |
-| customDimensions.sessionClosedOn | string (ISO 8601) | True session end (`msdyn_sessionclosedon`). Re-bin trends on this in KQL — see note on `timestamp` below. |
+| customDimensions.sessionCreatedOn | string (ISO 8601) | True session start (`msdyn_startedon`). Re-bin trends on this in KQL — see note on `timestamp` below. |
+| customDimensions.sessionClosedOn | string (ISO 8601) | True session end (`msdyn_endedon`). Re-bin trends on this in KQL — see note on `timestamp` below. |
 | timestamp | datetime | **Important:** Application Insights stamps this column with the **send-time** of the sync run, not the actual session time. The `applicationinsights` Python SDK's `TelemetryClient.track_event` does not accept a custom timestamp. KQL queries that need true session time should bin on `customDimensions['sessionClosedOn']`. Migration to `azure-monitor-opentelemetry` (which supports custom timestamps) is planned. |
 
 ## Agent Type Classification
