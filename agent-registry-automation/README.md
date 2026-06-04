@@ -23,7 +23,7 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 
 | Feature | Description |
 |---------|-------------|
-| **Daily Discovery** | Scans all Power Platform environments via Bots API for unregistered agents |
+| **Daily Discovery** | Scans all Power Platform environments and reads each environment's Dataverse `bot` table for unregistered agents |
 | **Auto-Quarantine** | Zone 3 agents without committee approval are automatically quarantined |
 | **Registration Workflow** | Teams-based approval with configurable SLA tracking and escalation |
 | **Agent ID Sync** | Syncs registered agents to Microsoft Entra Agent ID when the preview API is enabled (feature-flagged) |
@@ -51,9 +51,9 @@ Many organizations deploy AI agents across multiple Power Platform environments 
          │                 │
          ▼                 ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│  Bots API        │  │  Microsoft       │  │  Entra Agent ID  │
-│  (2022-03-01-    │  │  Graph API       │  │  (feature-       │
-│   preview)       │  │                  │  │   flagged)       │
+│  BAP admin API + │  │  Microsoft       │  │  Entra Agent ID  │
+│  Dataverse `bot` │  │  Graph API       │  │  (feature-       │
+│  table per env   │  │                  │  │   flagged)       │
 └──────────────────┘  └──────────────────┘  └──────────────────┘
          │                 │
          ▼                 ▼
@@ -107,14 +107,14 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Admin** | Environment enumeration and Bots API access |
+| **Power Platform Admin** | Environment enumeration (BAP admin API) and `bot`-table read access |
 | **System Administrator** | Dataverse table creation and solution import |
 | **Entra Global Admin** or **Application Administrator** | Service principal registration and API permission grants |
 
 ### Environment
 
 - Target environment must be a **Managed Environment** (required for Dataverse Long-Term Retention)
-- Service principal must have Bots API and Graph API permissions (see [Prerequisites](docs/prerequisites.md))
+- Identity must have Power Platform Admin (for BAP environment enumeration), Dataverse `bot`-table read in each scanned environment, and Microsoft Graph permissions (see [Prerequisites](docs/prerequisites.md))
 
 ## Solution Components
 
@@ -189,7 +189,7 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 ## Key Configuration Notes
 
 - **Microsoft Entra Agent ID (Flow 3):** Disabled by default via the `fsi_ARA_IsEntraRegistrySyncEnabled` environment variable. Enable only after confirming the current Microsoft Graph beta endpoint, Agent ID permissions, and Microsoft Agent 365 or Microsoft 365 E7 licensing in your tenant.
-- **BotFrameworkEndpoint field name:** The `properties.botFrameworkEndpoint` field from the Bots API response needs live API confirmation. Verify the exact field path in your environment before enabling Flow 1.
+- **Agent endpoint URL:** The Dataverse `bot` table does not expose a Bot Framework endpoint column, so `fsi_agentendpointurl` is not populated during discovery. Populate it from channel configuration post-discovery if your governance process requires it.
 - **Office 365 connector for SLA:** The SLA calculation in Flow 2 uses the Office 365 Users connector to determine the approver's time zone for business-day calculations. If DLP policies block this connector, configure a fallback time zone in the `fsi_ARA_DefaultTimeZone` environment variable.
 - **7-year retention (LTR):** The `fsi_agentcomplianceevent` table is designed for Dataverse Long-Term Retention. Enable LTR policies after deployment to support SEC 17a-3/4 retention requirements.
 
@@ -220,28 +220,28 @@ Microsoft has introduced the [Microsoft 365 Copilot Agent Store](https://learn.m
 | Path | Source | Governance Implication |
 |------|--------|----------------------|
 | **Prebuilt** | Microsoft-provided agents | Require admin-level deployment approval; should be inventoried alongside custom agents |
-| **Copilot Studio** | Organization-built agents via Copilot Studio | Already covered by this solution's Bots API discovery |
-| **External Platforms** | Third-party agents via Teams Bot or custom integrations | May not be discoverable via the Bots API; require alternative inventory mechanisms |
+| **Copilot Studio** | Organization-built agents via Copilot Studio | Already covered by this solution's Dataverse `bot`-table discovery |
+| **External Platforms** | Third-party agents via Teams Bot or custom integrations | May not appear in the Dataverse `bot` table; require alternative inventory mechanisms |
 
-**Impact on this solution:** The current discovery mechanism uses the Power Platform Bots API (`2022-03-01-preview`) to scan for agents within Power Platform environments. This does not cover:
+**Impact on this solution:** The current discovery mechanism enumerates environments via the BAP admin API and reads each environment's Dataverse `bot` table to find agents. This does not cover:
 
-- **Prebuilt agents** deployed from the Agent Store, which may not appear in the Bots API response
+- **Prebuilt agents** deployed from the Agent Store, which may not appear as rows in the Dataverse `bot` table
 - **External platform agents** registered through Teams Bot manifests or custom engine agents
 - **Agent Store admin controls** for blocking or allowing agent deployment at the tenant level
 
 Future enhancements should consider:
 
 - Adding Graph API queries for the [Microsoft 365 Agents admin guide](https://learn.microsoft.com/en-us/microsoft-365/copilot/agent-essentials/m365-agents-admin-guide) endpoints to discover Agent Store deployments
-- Extending the `fsi_agentsource` choice set to include Agent Store (Prebuilt) and External Platform categories
+- Adding an `fsi_agentsource` choice column to distinguish Copilot Studio, Agent Store (Prebuilt), and External Platform categories
 - Monitoring the Agent Store admin center for new agent deployments as a supplementary discovery channel
 
 > **Note:** Agent Store discovery integration is not yet implemented. Organizations should manually inventory prebuilt and external agents until automated discovery support is added.
 
 ## Known Limitations
 
-- **Bots API preview:** The Power Platform Bots API (`2022-03-01-preview`) may change at GA. Monitor Microsoft documentation for breaking changes to the endpoint schema.
+- **Environment enumeration (BAP admin API):** Discovery lists environments via the Business Application Platform admin API (`api-version=2020-10-01`). Monitor the [Power Platform REST API documentation](https://learn.microsoft.com/rest/api/power-platform/) for version changes.
 - **Microsoft Entra Agent ID:** Flow 3 (Entra Sync) requires Microsoft Agent 365 or Microsoft 365 E7 licensing and is feature-flagged off by default. Confirm the current preview endpoint and permission names before enabling.
-- **BotFrameworkEndpoint field:** The exact field path (`properties.botFrameworkEndpoint`) in the Bots API response needs live API confirmation. The flow includes error handling for missing fields.
+- **Agent discovery (Dataverse `bot` table):** Discovery reads each environment's `bot` table, which requires `bot`-table read access in every scanned environment. The owner-expand path (`owninguser.domainname`) and `statecode` semantics should be confirmed against the live table in your tenant. The `bot` table has no Bot Framework endpoint column.
 - **Sandbox environments:** By default, sandbox environments are excluded from discovery scans. Set `fsi_ARA_IncludeSandboxEnvironments` to `true` to include them.
 
 ## Version History

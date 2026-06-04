@@ -9,7 +9,7 @@ Connection References:
   - fsi_cr_dataverse_agentregistry: Core data operations
   - fsi_cr_teams_agentregistry: Approval cards and alert notifications
   - fsi_cr_office365_agentregistry: Business day calculation for SLA
-  - fsi_cr_http_agentregistry: Power Platform Bots API and Graph API calls
+  - fsi_cr_http_agentregistry: BAP environment enumeration and Microsoft Graph calls
 """
 
 import argparse
@@ -59,8 +59,8 @@ CONNECTION_REF_DEFINITIONS = [
         "connector_id": "shared_webcontents",
         "description": (
             "HTTP with Microsoft Entra ID connection for Agent Registry Automation. "
-            "Used for Power Platform Bots API calls and Microsoft Graph "
-            "Agent ID API calls."
+            "Used for BAP environment enumeration, Microsoft Graph, and "
+            "Microsoft Entra Agent ID API calls."
         ),
     },
 ]

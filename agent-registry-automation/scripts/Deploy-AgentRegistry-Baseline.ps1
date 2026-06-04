@@ -6,20 +6,33 @@
     Exports baseline agent inventory from Power Platform to Dataverse.
 
 .DESCRIPTION
-    Scans all Power Platform environments using the Bots API
-    (2022-03-01-preview) and creates initial agent inventory records
-    in the fsi_agentinventory Dataverse table. Uses Managed Identity
+    Enumerates Power Platform environments via the Business Application
+    Platform (BAP) admin API, then discovers Copilot Studio agents by
+    querying each environment's Dataverse `bot` table (entity set `bots`).
+    Creates initial agent inventory records in the registry's
+    fsi_agentinventory Dataverse table. Uses Managed Identity
     authentication exclusively — no client secrets.
+
+    Authoritative sources for the discovery surface:
+    - Environment enumeration (BAP admin API):
+      https://learn.microsoft.com/rest/api/power-platform/ (List environments)
+      GET https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2020-10-01
+    - Copilot Studio agents are stored in the Dataverse `bot` table:
+      https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot
+      EntitySetName `bots`, PrimaryIdAttribute `botid`, PrimaryNameAttribute `name`.
 
     This script is typically run once during initial deployment to
     establish the baseline agent inventory. Subsequent updates are
     handled by the Discover-UnregisteredAgents-Daily flow.
 
 .PARAMETER DataverseUrl
-    Target Dataverse environment URL (e.g., https://example.crm.dynamics.com).
+    Target *registry* Dataverse environment URL where the fsi_* tables live
+    (e.g., https://example.crm.dynamics.com). Each scanned environment's own
+    Dataverse URL is resolved from the BAP environment metadata.
 
-.PARAMETER PowerPlatformApiUrl
-    Power Platform API base URL. Defaults to https://api.powerplatform.com.
+.PARAMETER BapApiUrl
+    Business Application Platform admin API base URL. Defaults to
+    https://api.bap.microsoft.com.
 
 .PARAMETER ExportPath
     Optional path to export baseline inventory as JSON file.
@@ -47,7 +60,11 @@
     Requires:
     - Azure Automation with System-Assigned Managed Identity
     - Managed Identity assigned Power Platform Administrator role
-    - Managed Identity assigned System Administrator in target Dataverse env
+      (for BAP admin environment enumeration)
+    - Managed Identity granted a Dataverse security role with read access to
+      the `bot` table in EACH environment to be scanned
+    - Managed Identity assigned System Administrator in the *registry*
+      Dataverse environment (to write fsi_* records)
     - Az.Accounts PowerShell module
 #>
 
@@ -58,7 +75,7 @@ param(
     [string]$DataverseUrl,
 
     [Parameter()]
-    [string]$PowerPlatformApiUrl = "https://api.powerplatform.com",
+    [string]$BapApiUrl = "https://api.bap.microsoft.com",
 
     [Parameter()]
     [string]$ExportPath,
@@ -233,7 +250,15 @@ function Get-PagedApiValues {
 function Get-PowerPlatformEnvironments {
     <#
     .SYNOPSIS
-        Lists all Power Platform environments via the Admin API.
+        Lists all Power Platform environments via the BAP admin API.
+
+    .DESCRIPTION
+        Uses the documented Business Application Platform admin route:
+        GET https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2020-10-01
+        Each returned environment exposes the Dataverse organization URL at
+        properties.linkedEnvironmentMetadata.instanceUrl, which is used to
+        query that environment's `bot` table for agent discovery.
+        Ref: https://learn.microsoft.com/rest/api/power-platform/ (List environments)
     #>
     param(
         [Parameter(Mandatory)]
@@ -243,8 +268,8 @@ function Get-PowerPlatformEnvironments {
         [string]$Token
     )
 
-    $uri = "$($ApiBaseUrl.TrimEnd('/'))/appmanagement/environments?api-version=2022-03-01-preview"
-    Write-AuditLog "Querying Power Platform environments..."
+    $uri = "$($ApiBaseUrl.TrimEnd('/'))/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2020-10-01"
+    Write-AuditLog "Querying Power Platform environments (BAP admin API)..."
 
     $environments = Get-PagedApiValues -Uri $uri -Token $Token
 
@@ -255,20 +280,36 @@ function Get-PowerPlatformEnvironments {
 function Get-EnvironmentBots {
     <#
     .SYNOPSIS
-        Lists all bots in a specific Power Platform environment.
+        Lists Copilot Studio agents in an environment via its Dataverse `bot` table.
+
+    .DESCRIPTION
+        Copilot Studio agents are stored as rows in the Dataverse `bot` table
+        (entity set `bots`, PrimaryIdAttribute `botid`, PrimaryNameAttribute
+        `name`). There is no Power Platform "Bots API" route for enumeration;
+        the authoritative inventory source is the per-environment Dataverse
+        Web API.
+        Ref: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot
+
+        $InstanceUrl is the environment's Dataverse organization URL, taken
+        from the BAP environment metadata. A separate Dataverse token (audience
+        = $InstanceUrl) is required because each environment is a distinct
+        Dataverse resource.
+
+        NOTE (runtime-verify): the owner expand path `owninguser` and the
+        statecode→published mapping should be confirmed against the live
+        `bot` table in your tenant; column availability can vary by version.
     #>
     param(
         [Parameter(Mandatory)]
-        [string]$ApiBaseUrl,
-
-        [Parameter(Mandatory)]
-        [string]$EnvironmentId,
+        [string]$InstanceUrl,
 
         [Parameter(Mandatory)]
         [string]$Token
     )
 
-    $uri = "$($ApiBaseUrl.TrimEnd('/'))/appmanagement/environments/$EnvironmentId/bots?api-version=2022-03-01-preview"
+    $select = "botid,name,schemaname,statecode,_ownerid_value"
+    $expand = "owninguser(`$select=domainname,internalemailaddress)"
+    $uri = "$($InstanceUrl.TrimEnd('/'))/api/data/v9.2/bots?`$select=$select&`$expand=$expand"
 
     try {
         return @(Get-PagedApiValues -Uri $uri -Token $Token)
@@ -279,9 +320,10 @@ function Get-EnvironmentBots {
             $statusCode = [int]$_.Exception.Response.StatusCode
         }
 
-        # 403/404 typically means no PVA access in this environment — skip gracefully
-        if ($statusCode -in @(403, 404)) {
-            Write-AuditLog "No bot access in environment $EnvironmentId (HTTP $statusCode) — skipping" -Level WARN
+        # 401/403/404 typically means the identity has no Dataverse access in
+        # this environment, or the org is not provisioned — skip gracefully.
+        if ($statusCode -in @(401, 403, 404)) {
+            Write-AuditLog "No bot-table access at $InstanceUrl (HTTP $statusCode) — skipping" -Level WARN
             return @()
         }
         throw
@@ -416,14 +458,16 @@ catch {
     exit 1
 }
 
-# Step 2: Acquire tokens for Power Platform API and Dataverse
+# Step 2: Acquire tokens for the BAP admin API and the registry Dataverse env
 Write-AuditLog "Acquiring access tokens..."
 try {
-    $ppToken = Get-ManagedIdentityToken -ResourceUrl "https://api.powerplatform.com"
-    Write-AuditLog "  Power Platform API: authenticated"
+    # BAP admin API audience is the Power Apps service resource.
+    # Ref: https://learn.microsoft.com/power-platform/admin/programmability-authentication
+    $bapToken = Get-ManagedIdentityToken -ResourceUrl "https://service.powerapps.com/"
+    Write-AuditLog "  BAP admin API:      authenticated"
 
     $dvToken = Get-ManagedIdentityToken -ResourceUrl $DataverseUrl
-    Write-AuditLog "  Dataverse:          authenticated"
+    Write-AuditLog "  Registry Dataverse: authenticated"
 }
 catch {
     Write-AuditLog "Token acquisition failed: $($_.Exception.Message)" -Level ERROR
@@ -431,8 +475,8 @@ catch {
     exit 1
 }
 
-# Step 3: List all Power Platform environments
-$environments = Get-PowerPlatformEnvironments -ApiBaseUrl $PowerPlatformApiUrl -Token $ppToken
+# Step 3: List all Power Platform environments (BAP admin API)
+$environments = Get-PowerPlatformEnvironments -ApiBaseUrl $BapApiUrl -Token $bapToken
 
 if ($environments.Count -eq 0) {
     Write-AuditLog "No environments found. Verify Managed Identity has Power Platform Administrator role." -Level WARN
@@ -449,33 +493,50 @@ $counters = @{
     Errors              = 0
 }
 
+# Per-environment Dataverse tokens are cached by instance URL because each
+# environment is a distinct Dataverse resource (audience = its org URL).
+$envTokenCache = @{}
+
 $zoneValue = $script:ZoneOptionSet[$Zone]
 $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 foreach ($env in $environments) {
-    $envId = $env.name  # GUID — $env.id is the ARM resource path
+    $envId = $env.name  # environment GUID
     $envName = $env.properties.displayName
+    # Dataverse organization URL for this environment (BAP metadata).
+    $instanceUrl = $env.properties.linkedEnvironmentMetadata.instanceUrl
     $counters.EnvironmentsScanned++
 
     Write-AuditLog "Scanning environment: $envName ($envId)"
 
+    if ([string]::IsNullOrWhiteSpace($instanceUrl)) {
+        Write-AuditLog "  No Dataverse instance linked to $envName — skipping" -Level WARN
+        continue
+    }
+
     try {
-        $bots = Get-EnvironmentBots -ApiBaseUrl $PowerPlatformApiUrl -EnvironmentId $envId -Token $ppToken
+        # Acquire (or reuse) a Dataverse token scoped to this environment.
+        if (-not $envTokenCache.ContainsKey($instanceUrl)) {
+            $envTokenCache[$instanceUrl] = Get-ManagedIdentityToken -ResourceUrl $instanceUrl
+        }
+        $envDvToken = $envTokenCache[$instanceUrl]
+
+        $bots = Get-EnvironmentBots -InstanceUrl $instanceUrl -Token $envDvToken
 
         if ($bots.Count -eq 0) {
-            Write-AuditLog "  No bots found in $envName"
+            Write-AuditLog "  No agents found in $envName"
             continue
         }
 
-        Write-AuditLog "  Found $($bots.Count) bot(s) in $envName"
+        Write-AuditLog "  Found $($bots.Count) agent(s) in $envName"
 
         foreach ($bot in $bots) {
             $counters.TotalAgents++
-            # Power Platform Bots API returns the GUID in `name`; `id` is the
-            # ARM resource path. Use `name` as the durable bot identifier so
-            # the alternate key (fsi_agentid + fsi_environmentid) stays stable.
-            $botId = $bot.name
-            $botName = $bot.properties.displayName
+            # Dataverse `bot` table: botid is the durable GUID identifier and
+            # name is the display name. Use botid for fsi_agentid so the
+            # alternate key (fsi_agentid + fsi_environmentid) stays stable.
+            $botId = $bot.botid
+            $botName = $bot.name
             if ([string]::IsNullOrWhiteSpace($botName)) { $botName = $botId }
 
             $agentRecord = @{
@@ -490,28 +551,29 @@ foreach ($env in $environments) {
                 fsi_isorphaned         = $false
             }
 
-            # Owner UPN — required column. If the API doesn't return one,
-            # populate a placeholder so the create succeeds; orphan detection
-            # will flag the record on the next compliance pass.
-            if ($bot.properties.owner -and $bot.properties.owner.userPrincipalName) {
-                $agentRecord["fsi_ownerupn"] = $bot.properties.owner.userPrincipalName
+            # Owner UPN — required column. Resolved from the expanded owning
+            # user (domainname is the user's UPN/logon). If absent, populate a
+            # placeholder so the create succeeds; orphan detection will flag the
+            # record on the next compliance pass.
+            $ownerUpn = $null
+            if ($bot.owninguser) {
+                $ownerUpn = $bot.owninguser.domainname
+                if ([string]::IsNullOrWhiteSpace($ownerUpn)) {
+                    $ownerUpn = $bot.owninguser.internalemailaddress
+                }
+            }
+            if (-not [string]::IsNullOrWhiteSpace($ownerUpn)) {
+                $agentRecord["fsi_ownerupn"] = $ownerUpn
             } else {
                 $agentRecord["fsi_ownerupn"] = "unknown@unassigned.local"
                 $agentRecord["fsi_isorphaned"] = $true
             }
 
-            # Published status — required column. Default to Draft if absent.
-            if ($bot.properties.publishedStatus) {
-                $mappedStatus = $script:PublishedStatusMap[$bot.properties.publishedStatus]
-                if ($null -ne $mappedStatus) {
-                    $agentRecord["fsi_publishedstatus"] = $mappedStatus
-                } else {
-                    Write-AuditLog "  Unknown publishedStatus '$($bot.properties.publishedStatus)' for $botName — defaulting to Draft" -Level WARN
-                    $agentRecord["fsi_publishedstatus"] = $script:PublishedStatusMap["Draft"]
-                }
-            } else {
-                $agentRecord["fsi_publishedstatus"] = $script:PublishedStatusMap["Draft"]
-            }
+            # Published status — required column. The `bot` table does not
+            # expose a Copilot Studio "published" lifecycle value; statecode
+            # only reflects record active/inactive. Default to Draft and let
+            # the registration flow govern published state from there.
+            $agentRecord["fsi_publishedstatus"] = $script:PublishedStatusMap["Draft"]
 
             if ($PSCmdlet.ShouldProcess("$botName ($botId) in $envName", "Upsert agent inventory record")) {
                 try {

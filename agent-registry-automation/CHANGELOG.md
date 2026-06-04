@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Major (discovery API correction):** Replaced the unverified Power Platform "Bots API" discovery surface with authoritative Microsoft APIs. Environment enumeration now uses the documented BAP admin API (`https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2020-10-01`, audience `https://service.powerapps.com/`), and agent enumeration reads each environment's Dataverse `bot` table (entity set `bots`, PK `botid`, name `name`). The prior `https://api.powerplatform.com/appmanagement/environments/{id}/bots?api-version=2022-03-01-preview` route is undocumented and conflicts with the AppManagement namespace (which is scoped to Microsoft-provided application packages, per the Power Platform REST API reference). Affects `scripts/Deploy-AgentRegistry-Baseline.ps1` and `docs/flow-configuration.md` (Flow 1). The `2.0.0` change that swapped `/powervirtualagents/.../bots` for `/appmanagement/.../bots` was itself unverified.
+- **Major:** Removed the `properties.botFrameworkEndpoint` → `fsi_agentendpointurl` mapping. The Dataverse `bot` table has no Bot Framework endpoint column ([bot table reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot)); `fsi_agentendpointurl` is left blank during discovery.
+- **Major (auth audiences):** Baseline script now requests a BAP token (audience `https://service.powerapps.com/`) for environment enumeration and a per-environment Dataverse token (audience = each environment's `instanceUrl` from `properties.linkedEnvironmentMetadata`) for `bot`-table reads, instead of a single `https://api.powerplatform.com` token.
+- **Major:** Corrected prerequisite permissions — removed the non-existent `Bot.Read.All` / `Environment.Read.All` Power Platform API application permissions. Environment enumeration is authorized by the Power Platform Admin role; agent discovery requires a Dataverse security role with `bot`-table read in each scanned environment. `docs/prerequisites.md`, `docs/troubleshooting.md`.
+- **Minor:** Updated network endpoint list (`api.bap.microsoft.com` replaces `api.powerplatform.com`), connection-reference descriptions, README architecture diagram, Known Limitations, and Platform Update Notes to match the corrected discovery mechanism.
+- **Minor:** Reworded the README Agent Store future-enhancement bullet ("add an `fsi_agentsource` choice column" instead of "extending" a non-existent choice set).
+
+### Notes
+
+- Verified against Microsoft Learn (June 2026): Power Platform REST API reference, BAP "List environments", Dataverse `bot` table reference, and Power Platform programmability authentication. See `LAB-VALIDATION.md` for the full evidence report and runtime-only caveats.
+- Version header and manifest bump deferred to maintainer: these corrections warrant a minor version bump (suggest `2.2.0`) plus the standard 4-file catalog sync and `manifest.yaml` update, which were intentionally left untouched in this validation pass.
+
+---
+
 ## [2.1.1] - 2026-05-23
 
 ### Fixed
