@@ -113,7 +113,7 @@ Error: Access denied to table fsi_HitlCheckpointResult
 
 **Symptom:** Scan reports unexpected results or fails to parse bot component definitions after a platform update.
 
-**Cause:** The **Request for Information** action entered public preview in July 2025. The `advancedapprovals` connector schema may change before general availability. Microsoft may update action parameter names, add new required fields, or modify the bot component representation.
+**Cause:** The **Request for Information** action entered public preview on July 31, 2025 and reached general availability on January 30, 2026 (Power Platform release plan); the connector reference page still labels it "(preview)" and **Run a Multistage Approval** remains in preview. The `advancedapprovals` connector schema may still change. Microsoft may update action parameter names, add new required fields, or modify the bot component representation.
 
 **Resolution:**
 1. Check the [Copilot Studio release notes](https://learn.microsoft.com/en-us/microsoft-copilot-studio/whats-new) for recent connector changes
@@ -250,13 +250,13 @@ or
 Error: Method not found: 'Void Microsoft.IdentityModel.Clients.ActiveDirectory...'
 ```
 
-**Cause:** Conflicting versions of `Microsoft.PowerApps.Administration.PowerShell` or `MSAL.PS` modules installed.
+**Cause:** Conflicting versions of `Microsoft.PowerApps.Administration.PowerShell` or `Az.Accounts` modules installed.
 
 **Resolution:**
 1. Check installed module versions:
    ```powershell
    Get-Module -ListAvailable -Name Microsoft.PowerApps.Administration.PowerShell
-   Get-Module -ListAvailable -Name MSAL.PS
+   Get-Module -ListAvailable -Name Az.Accounts
    ```
 2. Remove older versions:
    ```powershell
@@ -267,9 +267,9 @@ Error: Method not found: 'Void Microsoft.IdentityModel.Clients.ActiveDirectory..
 3. Install the latest version:
    ```powershell
    Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Force -AllowClobber
-   Install-Module -Name MSAL.PS -Force -AllowClobber
+   Install-Module -Name Az.Accounts -Force -AllowClobber
    ```
-   > **Note:** `MSAL.PS` is archived and no longer updated. See [Prerequisites](prerequisites.md) for migration guidance.
+   > **Note:** The runbook now authenticates with `Az.Accounts`; the archived `MSAL.PS` module is no longer a dependency. See [Prerequisites](prerequisites.md) for details.
 4. If running in Azure Automation, update modules through the Automation Account > Modules blade
 
 ---
