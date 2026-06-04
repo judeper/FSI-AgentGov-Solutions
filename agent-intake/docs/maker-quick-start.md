@@ -15,7 +15,7 @@ Express is the fast lane for the lowest-risk agents — those that:
 - Take **no autonomous financial actions** (no payments, no order entry, no irreversible external calls)
 - Are **not subject to enhanced regulatory routing** (e.g., not OCC/FINRA/SEC supervised activity flow)
 
-If any of those is not true, the form will tell you and save your draft for the Standard or Full path (available in v0.3 and v0.4).
+If any of those is not true, the form will tell you and route your request to the Standard or Full path, which ship in v1.0.0-preview.
 
 ---
 
@@ -80,5 +80,5 @@ Your sponsor's attestation, the trigger answers you gave, and the timestamp are 
 
 - Form not loading: [link to your portal admin contact]
 - Sponsor unsure how to approve: send them [`sponsor-cheat-sheet.md`](sponsor-cheat-sheet.md)
-- You need the full intake (Standard / Full path): [link to v0.3/v0.4 process when available]
+- You need the full intake (Standard / Full path): see [`maker-guide.md`](maker-guide.md) for the Standard and Full path walkthrough
 - General governance questions: see the [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/)
