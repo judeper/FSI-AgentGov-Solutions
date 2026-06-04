@@ -7,11 +7,20 @@
 
 .DESCRIPTION
     Enumerates Power Platform Managed Environments and evaluates each environment's
-    bot-sharing governance settings against the recommended baseline:
+    agent (bot) sharing governance settings against the recommended baseline. The
+    settings live under properties.governanceConfiguration.settings.extendedSettings
+    and use the documented Managed Environments "Limit sharing" agent-sharing
+    properties:
 
-      - Bot sharing should NOT be unrestricted (accesscontrolpolicy != None)
-      - Approval workflows should be configured for sharing requests
-      - Sharing limits should be enforced per Copilot Studio admin controls
+      - bot-limitSharingMode      should NOT be 'noLimit' (sharing should be
+                                  restricted, e.g. 'ExcludeSharingToSecurityGroups')
+      - bot-authoringSharingDisabled should be True (editor-level agent sharing
+                                  is turned off)
+      - bot-maxLimitUserSharing   should be a positive viewer limit (a value of
+                                  -1 means unlimited)
+
+    Source: Managed Environments "Limit sharing"
+    https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits
 
     Deviations are reported as structured JSON findings to support downstream
     compliance reporting and integration with the CTSG governance pipeline.
@@ -45,8 +54,10 @@
     File path for the scan results JSON. Defaults to .\output\bot-sharing-baseline-{timestamp}.json.
 
 .PARAMETER BaselinePolicy
-    Expected bot-sharing access control policy. Default: 'Restricted'.
-    Environments with a less restrictive policy generate a deviation finding.
+    Expected value for the agent (bot) limit-sharing mode
+    (extendedSettings.'bot-limitSharingMode'). Default: 'ExcludeSharingToSecurityGroups'.
+    Environments where the mode is unset or 'noLimit' generate a deviation finding.
+    Documented values: 'noLimit', 'ExcludeSharingToSecurityGroups'.
 
 .EXAMPLE
     .\Scan-ManagedEnvBotSharingBaseline.ps1
@@ -80,7 +91,7 @@ param(
     [string]$OutputPath,
 
     [Parameter()]
-    [string]$BaselinePolicy = 'Restricted'
+    [string]$BaselinePolicy = 'ExcludeSharingToSecurityGroups'
 )
 
 Set-StrictMode -Version Latest
@@ -179,9 +190,14 @@ function Test-BotSharingBaseline {
     $envId = $Environment.name
     $govConfig = $Environment.properties.governanceConfiguration
 
-    # Check 1: Bot sharing access control policy
-    $botSharing = $govConfig.settings.extendedSettings.botSharingAccessControl
-    if (-not $botSharing -or $botSharing -ne $ExpectedPolicy) {
+    # Check 1: Agent (bot) limit-sharing mode
+    # extendedSettings.'bot-limitSharingMode' — 'noLimit' (or unset) means agents
+    # can be shared without restriction. A restrictive value such as
+    # 'ExcludeSharingToSecurityGroups' is expected. Compared case-insensitively
+    # because Microsoft documentation shows mixed casing.
+    $botSharing = $govConfig.settings.extendedSettings.'bot-limitSharingMode'
+    $isRestricted = $botSharing -and ($botSharing -ne 'noLimit') -and ($botSharing -ieq $ExpectedPolicy)
+    if (-not $isRestricted) {
         $findings.Add([PSCustomObject]@{
             FindingType   = 'BOT_SHARING_UNRESTRICTED'
             Severity      = 'High'
@@ -189,41 +205,45 @@ function Test-BotSharingBaseline {
             Environment   = $envName
             Expected      = $ExpectedPolicy
             Actual        = if ($botSharing) { $botSharing } else { 'NotConfigured' }
-            Description   = "Bot sharing access control is not set to '$ExpectedPolicy'. " +
-                            'Unrestricted bot sharing may expose agents to unauthorized cross-tenant access.'
-            Remediation   = "Set bot sharing access control to '$ExpectedPolicy' in the Managed Environment settings."
+            Description   = "Agent limit-sharing mode (bot-limitSharingMode) is not set to '$ExpectedPolicy'. " +
+                            'Unrestricted agent sharing may expose agents to unauthorized cross-tenant access.'
+            Remediation   = "Set the agent sharing limit (bot-limitSharingMode) to '$ExpectedPolicy' in the Managed Environment 'Limit sharing' settings."
         })
     }
 
-    # Check 2: Sharing approval workflow
-    $sharingApproval = $govConfig.settings.extendedSettings.botSharingSharingApproval
-    if (-not $sharingApproval -or $sharingApproval -ne 'Required') {
+    # Check 2: Agent editor-sharing disabled
+    # extendedSettings.'bot-authoringSharingDisabled' — when True, owners/editors
+    # cannot share agents with individuals as Editors. A defensible posture
+    # disables broad editor-level sharing.
+    $editorSharingDisabled = $govConfig.settings.extendedSettings.'bot-authoringSharingDisabled'
+    if ($editorSharingDisabled -ne $true) {
         $findings.Add([PSCustomObject]@{
-            FindingType   = 'BOT_SHARING_APPROVAL_MISSING'
+            FindingType   = 'BOT_EDITOR_SHARING_ENABLED'
             Severity      = 'Medium'
             EnvironmentId = $envId
             Environment   = $envName
-            Expected      = 'Required'
-            Actual        = if ($sharingApproval) { $sharingApproval } else { 'NotConfigured' }
-            Description   = 'Bot sharing approval workflow is not configured. ' +
-                            'Agents can be shared without governance review.'
-            Remediation   = 'Enable the bot sharing approval workflow in Managed Environment settings.'
+            Expected      = 'True'
+            Actual        = if ($null -ne $editorSharingDisabled) { [string]$editorSharingDisabled } else { 'NotConfigured' }
+            Description   = 'Editor-level agent sharing is not disabled (bot-authoringSharingDisabled is not True). ' +
+                            'Owners and editors can grant Editor permissions when sharing agents.'
+            Remediation   = "Set 'bot-authoringSharingDisabled' to True in the Managed Environment 'Limit sharing' agent settings."
         })
     }
 
-    # Check 3: Sharing limits
-    $sharingLimit = $govConfig.settings.extendedSettings.botSharingMaxShareLimit
-    if (-not $sharingLimit -or [int]$sharingLimit -le 0) {
+    # Check 3: Agent viewer sharing limit
+    # extendedSettings.'bot-maxLimitUserSharing' — a value of -1 means unlimited.
+    $sharingLimit = $govConfig.settings.extendedSettings.'bot-maxLimitUserSharing'
+    if ($null -eq $sharingLimit -or [int]$sharingLimit -le 0) {
         $findings.Add([PSCustomObject]@{
             FindingType   = 'BOT_SHARING_LIMIT_MISSING'
             Severity      = 'Low'
             EnvironmentId = $envId
             Environment   = $envName
             Expected      = 'PositiveInteger'
-            Actual        = if ($sharingLimit) { $sharingLimit } else { 'NotConfigured' }
-            Description   = 'No bot sharing limit is configured. ' +
-                            'Agents may be shared with an unbounded number of principals.'
-            Remediation   = 'Configure a bot sharing limit in Managed Environment settings.'
+            Actual        = if ($null -ne $sharingLimit) { [string]$sharingLimit } else { 'NotConfigured' }
+            Description   = 'No agent viewer sharing limit is configured (bot-maxLimitUserSharing <= 0 or unset; -1 means unlimited). ' +
+                            'Agents may be shared with an unbounded number of viewers.'
+            Remediation   = 'Configure a positive agent viewer sharing limit (bot-maxLimitUserSharing) in Managed Environment settings.'
         })
     }
 
@@ -234,9 +254,9 @@ function Test-BotSharingBaseline {
         FindingCount    = $findings.Count
         Findings        = $findings
         BotSharingConfig = @{
-            AccessControl   = if ($botSharing) { $botSharing } else { $null }
-            SharingApproval = if ($sharingApproval) { $sharingApproval } else { $null }
-            MaxShareLimit   = if ($sharingLimit) { $sharingLimit } else { $null }
+            LimitSharingMode        = if ($botSharing) { $botSharing } else { $null }
+            AuthoringSharingDisabled = $editorSharingDisabled
+            MaxLimitUserSharing     = if ($null -ne $sharingLimit) { $sharingLimit } else { $null }
         }
     }
 }
