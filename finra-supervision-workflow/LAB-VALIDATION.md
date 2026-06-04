@@ -25,7 +25,7 @@ Automated **retrospective** supervision workflow for AI agent outputs to support
 | Unit tests | `python -m pytest scripts/test_export_supervision_evidence.py -q` | PASS (15 passed) |
 | Dataverse column naming | grep for snake_case `fsi_*_*` across solution | No violations (all logical names, e.g. `fsi_agentid`, `fsi_reviewoutcome`) |
 | Option-set value drift | Cross-checked `deploy.py`, `export_supervision_evidence.py` constants, README, `docs/dataverse-schema.md`, Power BI DAX, flow docs | Internally consistent small-integer scheme (1..n); README Step 1.5 instructs operators to set these explicitly rather than accept 100000000+ defaults |
-| FSI language rules | grep `ensures\|guarantees\|will prevent\|eliminates risk` in `*.md` | No violations |
+| FSI language rules | grep for the FSI-prohibited compliance-absolute phrases (per `fsi-language-rules.instructions.md`) in `*.md` | No violations |
 | Auth model | Reviewed `auth.py` | Managed-identity-first; client secret marked `# legacy: dev-only`; Dataverse token audience `<env>/.default` is correct |
 | Schema ↔ script ↔ doc consistency | Column references in scripts/DAX/flows vs `docs/dataverse-schema.md` | Consistent |
 
