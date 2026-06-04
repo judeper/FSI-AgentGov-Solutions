@@ -8,13 +8,15 @@ All notable changes to this solution will be documented in this file.
 
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
 
----
-
-## [Unreleased]
-
 ### Fixed
 
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
+
+### Documentation
+
+- **Lab-readiness validation (no code changes to scripts):** Static cross-solution validation confirmed every Tier 2 history-table entity set and column referenced by `Sync-SolutionAssessments.ps1` and `Export-UnifiedComplianceEvidence.ps1`, the ACV `fsi_environmentregistry` references in `Register-ProvisionedEnvironment.ps1`, and the Compliance Dashboard option-set values (`fsi_cd_status`/`fsi_cd_zone`/`fsi_cd_evidencetype`, intentionally 1-based) against each sibling solution's `create_*_dataverse_schema.py`. Evidence recorded in `LAB-VALIDATION.md`.
+- **`PREREQUISITES.md` authentication section corrected:** Documented the **Dataverse Application User + security role** requirement for managed-identity and service-principal authentication (a valid token alone returns `403` without it), and corrected the service-principal description from the delegated `user_impersonation` scope to the client-credentials `.default` scope. Cited the Power Platform admin docs for application users and custom security roles.
+- **Module prerequisites corrected:** Removed the unused `Microsoft.PowerApps.Administration.PowerShell` requirement from `PREREQUISITES.md` and `README.md` (the scripts call the Dataverse Web API directly via `Invoke-RestMethod`) and clarified that `MSAL.PS` is required only for interactive or legacy service-principal authentication.
 
 ## [2.0.3] — 2026-05-22 — Council review remediation
 

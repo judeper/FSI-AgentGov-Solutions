@@ -77,7 +77,7 @@ The FSI Agent Governance Framework includes standalone governance solutions that
 - Compliance Dashboard deployed with `fsi_controlmaster` table populated
 - Environment Lifecycle Management deployed (for provisioning hooks)
 - Agent Observability Foundation deployed (centralized telemetry consumed by integration sync runs; declared in `manifest.yaml` `dependencies`)
-- PowerShell 7.x with Microsoft.PowerApps.Administration.PowerShell module
+- PowerShell 7.x (the scripts call the Dataverse Web API directly via `Invoke-RestMethod`)
 - Managed identity for Azure-hosted automation; MSAL.PS only for interactive or legacy dev-only service principal authentication
 
 ### Steps
