@@ -138,25 +138,26 @@ Sends governance notification emails to environment/pipeline owners.
 
 ## Managed Environment Governance Configuration
 
-Use `pac admin set-governance-config` to enforce governance policies on production Managed Environments. This is recommended before enabling deployment pipelines to prevent unvetted solutions from being imported.
+Use `pac admin set-governance-config` to enforce governance policies on production Managed Environments. This is recommended before deploying solutions through pipelines, to help prevent unvetted solutions from being imported.
 
 **Required role:** Power Platform Admin (or Dynamics 365 admin with environment-level permissions).
+
+> **Scope note:** `pac admin set-governance-config` configures the Managed Environment protection level and solution checker mode only. It does not expose flags to disable unmanaged customizations or to enable deployment pipelines. Deployment pipelines are enabled by installing the Power Platform Pipelines app and configuring a host environment (see the [README Prerequisites](../README.md#prerequisites) and [portal walkthrough](portal-walkthrough.md)).
 
 ### Recommended configuration
 
 ```powershell
-# Apply FSI-recommended governance settings
+# Apply FSI-recommended governance settings (Managed Environment + solution checker warn)
 .\scripts\Set-GovernanceConfig.ps1 `
     -EnvironmentId "00000000-0000-0000-0000-000000000000" `
-    -SolutionCheckerMode "warn" `
-    -EnablePipelines
+    -ProtectionLevel "Standard" `
+    -SolutionCheckerMode "warn"
 
 # For stricter enforcement (blocks imports with critical solution checker findings)
 .\scripts\Set-GovernanceConfig.ps1 `
     -EnvironmentId "00000000-0000-0000-0000-000000000000" `
-    -SolutionCheckerMode "block" `
-    -DisableUnmanagedCustomizations `
-    -EnablePipelines
+    -ProtectionLevel "Standard" `
+    -SolutionCheckerMode "block"
 ```
 
 **Script location:** [`scripts/Set-GovernanceConfig.ps1`](../scripts/Set-GovernanceConfig.ps1)
@@ -165,20 +166,15 @@ Use `pac admin set-governance-config` to enforce governance policies on producti
 
 | Flag | Effect |
 |------|--------|
+| `--protection-level Standard` | Enables Managed Environments for the environment (required parameter) |
+| `--protection-level Basic` | Disables Managed Environments for the environment |
 | `--solution-checker-mode warn` | Logs solution checker findings without blocking import |
 | `--solution-checker-mode block` | Prevents import of solutions with critical findings |
-| `--disable-unmanaged-customizations` | Blocks unmanaged customizations in the environment |
-| `--enable-pipelines` | Enables deployment pipelines for ALM governance |
+| `--solution-checker-mode none` | Disables solution checker validation |
 
 ### Verification
 
-After applying configuration, verify with:
-
-```powershell
-pac admin governance-config get --environment "00000000-0000-0000-0000-000000000000"
-```
-
-If the CLI verification command is unavailable, verify in PPAC: **Environments** → select environment → **Settings** → **Governance**.
+The `pac` CLI does not currently expose a governance-config read command. Verify the applied settings in the Power Platform Admin Center (PPAC): **Environments** → select environment → **Settings** → **Governance**.
 
 > **Note:** Start with `warn` mode in non-production environments to assess solution checker impact before enforcing `block` in production.
 

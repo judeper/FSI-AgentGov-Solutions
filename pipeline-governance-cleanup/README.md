@@ -230,7 +230,7 @@ For tracking cleanup progress, create a custom table:
 | owneremail | Text | Owner email |
 | discovereddate | DateTime | When discovered |
 | notificationsentdate | DateTime | When owner was notified |
-| scheduledremovaldate | DateTime | Target enforcement date |
+| enforcementdate | DateTime | Target enforcement date |
 | status | Choice | Pending, Notified, ForceLinked, Exempted |
 | notes | Multiline Text | Admin notes |
 
