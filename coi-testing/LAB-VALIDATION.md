@@ -36,7 +36,7 @@ reports `SKIPPED`.
 | Report formats | text / json / html | All render; JSON is clean on stdout (banners on stderr) |
 | Dataverse column references | Cross-check runner ↔ `docs/dataverse-schema.md` ↔ `.ralph-config.json` | Consistent logical names |
 | Option-set values | Runner `status_map` ↔ schema doc ↔ README | Consistent `100000000`–`100000004` |
-| Language rules | grep `ensures compliance\|guarantees\|will prevent\|eliminates risk` (excl. CHANGELOG) | Clean |
+| Language rules | grep for the FSI-prohibited compliance-absolute phrases (per `fsi-language-rules.instructions.md`, excl. CHANGELOG) | Clean |
 
 ### Column / option-set consistency
 
