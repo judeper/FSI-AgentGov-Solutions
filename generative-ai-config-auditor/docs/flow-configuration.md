@@ -131,9 +131,9 @@ Add these **Initialize variable** actions immediately after the trigger:
                     "EnvironmentName": { "type": "string" },
                     "Zone": { "type": "string" },
                     "ViolationType": { "type": "string" },
-                    "Feature": { "type": "string" },
-                    "ExpectedPolicy": { "type": "string" },
-                    "ActualConfig": { "type": "string" },
+                    "AzureOpenAIEnabled": { "type": "boolean" },
+                    "OrchestrationMode": { "type": "string" },
+                    "GenerativeAnswersNodeCount": { "type": "integer" },
                     "Severity": { "type": "string" },
                     "RegulatoryContext": { "type": "string" }
                 }
@@ -142,7 +142,9 @@ Add these **Initialize variable** actions immediately after the trigger:
         "Drift": {
             "type": "object",
             "properties": {
-                "DriftDetected": { "type": "boolean" },
+                "HasDrift": { "type": "boolean" },
+                "IsFirstRun": { "type": "boolean" },
+                "DriftedAgents": { "type": "integer" },
                 "Details": { "type": "array" }
             }
         }
@@ -368,7 +370,7 @@ After either branch (use a common action after the condition):
 
 - The Parse_Results schema must match the runbook output structure exactly
 - If the runbook output changes (e.g., new fields added), update the schema in the flow
-- Key GAC schema differences from CMM: `ViolationType` and `Feature` fields per violation, `ExpectedPolicy`/`ActualConfig` instead of `ExpectedModerationLevel`/`ActualModerationLevel`
+- Key GAC schema differences from CMM: each violation includes `ViolationType` plus the generative AI configuration fields `AzureOpenAIEnabled`, `OrchestrationMode`, and `GenerativeAnswersNodeCount` (instead of CMM's `ExpectedModerationLevel`/`ActualModerationLevel`)
 
 ### Flow Errors (Scope_Catch)
 
