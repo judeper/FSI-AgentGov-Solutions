@@ -111,8 +111,8 @@ version; if absent, group-name enrichment will be empty (non-fatal).
   carrying the `# legacy: dev-only` marker; `requirements.txt` pins `azure-identity` and
   `msal`. PowerShell runbook/evidence paths use MSAL certificate auth (documented as the
   current supported path) and the docs steer unattended automation toward managed identity.
-- **Regulatory language** — no prohibited phrases ("ensures compliance", "guarantees",
-  "will prevent", "eliminates risk") in solution Markdown.
+- **Regulatory language** — no FSI-prohibited compliance-absolute phrases
+  (per `fsi-language-rules.instructions.md`) in solution Markdown.
 - **Content policy** — no Power Platform runtime artifacts; the flow is documented as a
   manual build in `docs/flow-configuration.md`.
 
