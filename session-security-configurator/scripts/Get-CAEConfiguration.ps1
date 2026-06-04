@@ -19,6 +19,14 @@
     4. Correlates with SSC session baselines to determine CAE coverage per zone
     5. Generates a CAE rollout posture report
 
+    Note: The continuousAccessEvaluation session control is only exposed on the
+    Microsoft Graph beta endpoint (the v1.0 conditionalAccessSessionControls
+    resource type does not include it). This script therefore reads policies via
+    Get-MgBetaIdentityConditionalAccessPolicy so the CAE mode is populated; using
+    the v1.0 cmdlet would report every policy as CAE "default enabled" regardless
+    of an explicit disabled setting.
+    See: https://learn.microsoft.com/graph/api/resources/continuousaccessevaluationsessioncontrol?view=graph-rest-beta
+
     Reference: https://learn.microsoft.com/entra/identity/conditional-access/concept-continuous-access-evaluation
 
 .PARAMETER OutputFormat
@@ -32,16 +40,17 @@
 
 .NOTES
     File: Get-CAEConfiguration.ps1
-    Version: 1.2.0
+    Version: 1.2.1
     Solution: Session Security Configurator (SSC)
     Controls: 1.23, 1.11
-    Requires: Microsoft.Graph.Identity.SignIns module
+    Requires: Microsoft.Graph.Beta.Identity.SignIns module (continuousAccessEvaluation
+              session control is beta-only)
 
     Part of FSI Agent Governance Framework
 #>
 
 #Requires -Version 7.0
-#Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Identity.SignIns
+#Requires -Modules Microsoft.Graph.Authentication, Microsoft.Graph.Beta.Identity.SignIns
 
 function Get-CAEConfiguration {
     [CmdletBinding()]
@@ -65,7 +74,12 @@ function Get-CAEConfiguration {
         # ---------------------------------------------------------------
         # Step 1: Retrieve all Conditional Access policies
         # ---------------------------------------------------------------
-        $policies = Get-MgIdentityConditionalAccessPolicy -All -ErrorAction Stop
+        # Use the beta endpoint: the continuousAccessEvaluation session control
+        # is not present on the v1.0 conditionalAccessSessionControls resource,
+        # so the v1.0 cmdlet (Get-MgIdentityConditionalAccessPolicy) never
+        # populates SessionControls.ContinuousAccessEvaluation and CAE-disabled
+        # policies would be silently misreported as default-enabled.
+        $policies = Get-MgBetaIdentityConditionalAccessPolicy -All -ErrorAction Stop
         Write-Verbose "Retrieved $($policies.Count) Conditional Access policies."
 
         # ---------------------------------------------------------------

@@ -7,6 +7,13 @@ All notable changes to the Session Security Configurator solution are documented
 ### Fixed
 
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
+- **CAE detection read from beta endpoint** (`scripts/Get-CAEConfiguration.ps1`): Switched policy retrieval from `Get-MgIdentityConditionalAccessPolicy` (v1.0) to `Get-MgBetaIdentityConditionalAccessPolicy` (beta). The `continuousAccessEvaluation` session control is not part of the v1.0 `conditionalAccessSessionControls` resource type, so the v1.0 cmdlet never populated `SessionControls.ContinuousAccessEvaluation`; every policy was reported as CAE "default enabled" and `CAEExplicitlyDisabled` was always `$false`, defeating the script's purpose of identifying policies with CAE explicitly disabled. Updated `#Requires` to `Microsoft.Graph.Beta.Identity.SignIns` (already a solution dependency for the Zone 3 risky-user policy). Verified against the [continuousAccessEvaluationSessionControl (beta)](https://learn.microsoft.com/graph/api/resources/continuousaccessevaluationsessioncontrol?view=graph-rest-beta) and [conditionalAccessSessionControls (v1.0)](https://learn.microsoft.com/graph/api/resources/conditionalaccesssessioncontrols?view=graph-rest-1.0) resource types.
+
+### Documentation
+
+- **persistentBrowser mode values corrected** (`scripts/private/Compare-SessionBaseline.ps1`): The `.PARAMETER Baseline` help listed `persistentBrowser` modes as `("never", "always", "persistent")`. Per the [persistentBrowserSessionControl](https://learn.microsoft.com/graph/api/resources/persistentbrowsersessioncontrol?view=graph-rest-1.0) resource type, only `always` and `never` are valid; removed the non-existent `"persistent"` value.
+- **`Get-AzAccessToken` SecureString caveat added** (`docs/prerequisites.md`): Documented that `Az.Accounts` 5.0.0+ returns the token as a `SecureString` by default, so a manual conversion is required before passing it to the SSC scripts' plain-text token parameters. Verified against [Protect secrets in Azure PowerShell](https://learn.microsoft.com/powershell/azure/security-features#transition-from-strings-to-securestrings).
+- **Accuracy/language fix** (`docs/prerequisites.md`): Changed "SSC enforces zone-specific session security controls" to "SSC validates …" — SSC validates configuration and detects drift; Conditional Access policies perform enforcement.
 
 ## [1.3.0] - 2026-05-22
 

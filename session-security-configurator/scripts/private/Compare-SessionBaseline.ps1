@@ -25,7 +25,7 @@
     Baseline configuration object loaded from zone baseline JSON file.
     Expected properties:
     - signInFrequencyMinutes: Numeric value in minutes
-    - persistentBrowser: Mode string ("never", "always", "persistent")
+    - persistentBrowser: Mode string ("never", "always")
     - authenticationStrength: Auth strength policy ID (or $null)
     - requireCompliantDevice: Boolean
 

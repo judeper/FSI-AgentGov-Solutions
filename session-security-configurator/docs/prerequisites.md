@@ -32,6 +32,8 @@ The following PowerShell modules are required for SSC scripts:
 - `MSAL.PS` (for evidence export with service principal)
 
 > ⚠️ **MSAL.PS deprecation notice:** The [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) repository was archived in September 2023 and receives no further updates or security patches. It remains functional but is not officially supported by Microsoft. For new deployments, consider acquiring Dataverse tokens via `Az.Accounts` (`Get-AzAccessToken -ResourceUrl`) or the Microsoft Graph PowerShell SDK instead. A future release of this solution will migrate off MSAL.PS; in the interim, the existing scripts continue to work with the archived module.
+>
+> **`Get-AzAccessToken` output change:** Starting with **Az.Accounts 5.0.0** (and the `Az` 14.0.0 rollup), `Get-AzAccessToken` returns the token as a `SecureString` by default instead of a plain `String`. The SSC scripts expect a plain-text bearer token via `-DataverseToken` / `-AccessToken`, so when sourcing a token from `Az.Accounts` 5.x you must convert the returned `SecureString` to plain text before passing it (for example with `ConvertFrom-SecureString -AsPlainText`). See [Protect secrets in Azure PowerShell](https://learn.microsoft.com/powershell/azure/security-features#transition-from-strings-to-securestrings).
 
 Install all required modules:
 
@@ -102,7 +104,7 @@ For scheduled validation via Azure Automation:
 
 ## Governance Zone Alignment
 
-SSC enforces zone-specific session security controls as defined in the FSI-AgentGov framework:
+SSC validates zone-specific session security controls as defined in the FSI-AgentGov framework:
 
 | Zone | Sign-In Frequency | Auth Strength | Compliant Device |
 |------|------------------|---------------|------------------|
