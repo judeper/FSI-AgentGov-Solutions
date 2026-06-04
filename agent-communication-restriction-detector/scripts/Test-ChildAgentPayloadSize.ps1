@@ -1,12 +1,20 @@
 ﻿<#
 .SYNOPSIS
-    Validates child-agent input/output payload sizes against the documented
-    Copilot Studio 1 MB limit.
+    Estimates child-agent input/output payload sizes against a configurable
+    advisory payload-size threshold.
 
 .DESCRIPTION
-    Scans Copilot Studio agent skill registrations and flow response configurations
-    to detect child-agent payloads that approach or exceed the documented 1 MB
-    (1,048,576 bytes) limit for child-agent input and output.
+    Scans Copilot Studio agent skill registrations and connected-agent topic
+    configurations to estimate child-agent payloads that approach or exceed a
+    configurable advisory threshold (default 1 MB / 1,048,576 bytes).
+
+    Important: Microsoft does not currently publish an explicit byte limit for
+    child-agent (connected-agent) input/output. The published Copilot Studio
+    limits document a 5 MB connector payload limit (450 KB for GCC) and a 28 KB
+    Omnichannel channel-data limit. The 1 MB default used here is a conservative
+    advisory heuristic, not a hard platform limit; tune it with -PayloadLimitKB
+    to match your organization's policy.
+    Reference: https://learn.microsoft.com/microsoft-copilot-studio/requirements-quotas#copilot-studio-web-app-limits
 
     Detection methods:
     1. Queries agent topic YAML for InvokeConnectedAgentTaskAction nodes and
@@ -14,15 +22,17 @@
     2. Checks flow response receive configurations for payload size thresholds
     3. Emits warning events when estimated payloads exceed configurable thresholds
 
-    Threshold levels:
-    - Warning:  >= 768 KB (75% of limit)
-    - Critical: >= 960 KB (93.75% of limit)
-    - Blocked:  >= 1,048,576 bytes (1 MB — documented platform limit)
-
-    Reference: https://learn.microsoft.com/microsoft-copilot-studio/advanced-flow-input-output
+    Threshold levels (relative to -PayloadLimitKB, default 1024 KB):
+    - Warning:  >= WarningThresholdKB  (default 768 KB)
+    - Critical: >= CriticalThresholdKB (default 960 KB)
+    - Blocked:  >= PayloadLimitKB      (default 1024 KB advisory threshold)
 
 .PARAMETER DataverseUrl
     Dataverse environment URL.
+
+.PARAMETER PayloadLimitKB
+    Advisory payload-size threshold in KB that marks a finding as Critical
+    (default: 1024). Not a documented platform limit — see DESCRIPTION.
 
 .PARAMETER WarningThresholdKB
     Payload size in KB to trigger warning (default: 768).
@@ -66,10 +76,13 @@ function Test-ChildAgentPayloadSize {
         )]
         [string]$DataverseUrl,
 
-        [ValidateRange(1, 1024)]
+        [ValidateRange(1, 5120)]
+        [int]$PayloadLimitKB = 1024,
+
+        [ValidateRange(1, 5120)]
         [int]$WarningThresholdKB = 768,
 
-        [ValidateRange(1, 1024)]
+        [ValidateRange(1, 5120)]
         [int]$CriticalThresholdKB = 960,
 
         [ValidateSet('Table', 'Json', 'Object')]
@@ -84,7 +97,7 @@ function Test-ChildAgentPayloadSize {
 
     begin {
         $ErrorActionPreference = 'Stop'
-        $LIMIT_BYTES = 1048576  # 1 MB documented limit
+        $LIMIT_BYTES = $PayloadLimitKB * 1024  # advisory threshold (not a documented platform limit)
         $WARNING_BYTES = $WarningThresholdKB * 1024
         $CRITICAL_BYTES = $CriticalThresholdKB * 1024
 
@@ -94,7 +107,7 @@ function Test-ChildAgentPayloadSize {
             . (Join-Path $privatePath 'Connect-EnvironmentDataverse.ps1')
         }
 
-        Write-Verbose "Payload size thresholds: Warning=$($WarningThresholdKB)KB, Critical=$($CriticalThresholdKB)KB, Limit=1024KB"
+        Write-Verbose "Payload size thresholds: Warning=$($WarningThresholdKB)KB, Critical=$($CriticalThresholdKB)KB, Advisory limit=$($PayloadLimitKB)KB"
     }
 
     process {
@@ -208,14 +221,14 @@ function Test-ChildAgentPayloadSize {
                         EstimatedInputKB   = [Math]::Round($inputSize / 1024, 1)
                         EstimatedOutputKB  = [Math]::Round($outputSize / 1024, 1)
                         EstimatedTotalKB   = [Math]::Round($estimatedPayloadBytes / 1024, 1)
-                        LimitKB            = 1024
+                        LimitKB            = $PayloadLimitKB
                         Severity           = $severity
                         Recommendation     = switch ($severity) {
-                            'Critical' { 'Payload exceeds 1 MB limit — reduce input/output variable count or use pagination' }
-                            'High'     { 'Payload approaching 1 MB limit — review for optimization opportunities' }
-                            'Warning'  { 'Payload at 75%+ of 1 MB limit — monitor growth' }
+                            'Critical' { 'Payload exceeds advisory limit — reduce input/output variable count or use pagination' }
+                            'High'     { 'Payload approaching advisory limit — review for optimization opportunities' }
+                            'Warning'  { 'Payload at 75%+ of advisory limit — monitor growth' }
                         }
-                        PlatformReference  = 'https://learn.microsoft.com/microsoft-copilot-studio/advanced-flow-input-output'
+                        PlatformReference  = 'https://learn.microsoft.com/microsoft-copilot-studio/requirements-quotas#copilot-studio-web-app-limits'
                     })
                 }
             }

@@ -8,8 +8,8 @@ Requirements for deploying the Agent Communication Restriction Detector (ACRD) s
 |-------------|---------|---------|
 | Windows PowerShell | 5.1 | Required for Microsoft.PowerApps.Administration.PowerShell environment enumeration |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration |
-| Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode) |
-| MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |
+| Az.Accounts | 2.17+ | Dataverse token acquisition (interactive and service-principal) for evidence export and helper scripts |
+| MSAL.PS | 4.37+ | Certificate-based Dataverse token acquisition in the Azure Automation runbook only (`Install-Module MSAL.PS`). MSAL.PS is archived by its maintainer and receives no security updates; treat as a runbook-only legacy dependency. |
 
 ## Python Requirements
 

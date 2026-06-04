@@ -4,9 +4,16 @@ All notable changes to the Agent Communication Restriction Detector are document
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Get-CrossTenantAccessCorrelation.ps1` read `isServiceProvider` off the wrong Graph object.** The script accessed `$partner.B2BCollaborationInbound.IsServiceProvider` and `$partner.B2BDirectConnectInbound.IsServiceProvider`, but per the Microsoft Graph [`crossTenantAccessPolicyConfigurationPartner`](https://learn.microsoft.com/graph/api/resources/crosstenantaccesspolicyconfigurationpartner) resource, `isServiceProvider` is a property of the partner object itself — `b2bCollaborationInbound`/`b2bDirectConnectInbound` are `crossTenantAccessPolicyB2BSetting` objects that expose `usersAndGroups`/`applications`, not `isServiceProvider`. The previous expressions always evaluated to `$null`. Now reads `IsServiceProvider` from the partner and records inbound B2B collaboration / direct-connect configuration as presence checks.
+
 ### Changed
 
+- **`Test-ChildAgentPayloadSize.ps1` advisory threshold made configurable and reference corrected.** The script claimed a "documented 1 MB Copilot Studio limit" and cited `microsoft-copilot-studio/advanced-flow-input-output`, which no longer documents a child-agent input/output byte limit (the page now redirects to general agent-flow guidance). Current published [Copilot Studio limits](https://learn.microsoft.com/microsoft-copilot-studio/requirements-quotas#copilot-studio-web-app-limits) document a 5 MB connector payload limit (450 KB GCC) and a 28 KB Omnichannel channel-data limit, but no explicit child-agent payload byte limit. Reframed the 1 MB value as a configurable advisory heuristic via a new `-PayloadLimitKB` parameter (default 1024), widened threshold validation ranges accordingly, updated finding text and the `PlatformReference` URL, and corrected the README feature description.
+- **`docs/prerequisites.md` corrected MSAL.PS / Az.Accounts roles.** MSAL.PS was mislabeled as "Evidence export authentication"; `Export-CommViolationEvidence.ps1` migrated to Az.Accounts in v1.2.1. MSAL.PS is now documented as a runbook-only certificate-auth dependency (and flagged as archived), and the Az.Accounts minimum was raised to 2.17+ to match the Export script's `#Requires`.
 - `Get-CrossTenantAccessCorrelation.ps1` and `Test-ChildAgentPayloadSize.ps1` now honor `-WhatIf` by returning before Graph or Dataverse scan work when `ShouldProcess` declines the operation.
+- Documented the previously undocumented `-IncludeCompliant` parameter in `Get-CrossTenantAccessCorrelation.ps1` comment-based help.
 
 ## [1.2.1] - 2026-05-23
 

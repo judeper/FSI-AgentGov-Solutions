@@ -26,6 +26,11 @@
 .PARAMETER OutputFormat
     Output format: Table (default), Json, or Object.
 
+.PARAMETER IncludeCompliant
+    Include correlation results that align with the cross-tenant access policy
+    (PolicyAction = AllowedByPartnerPolicy) in the output. By default only
+    policy-blocked violations are returned.
+
 .PARAMETER WhatIf
     Preview mode — shows correlation results without persisting to Dataverse.
 
@@ -88,10 +93,19 @@ function Get-CrossTenantAccessCorrelation {
         $allowedTenantIds = @{}
         foreach ($partner in $partners) {
             $tenantId = $partner.TenantId
+            # isServiceProvider is a property of the partner configuration object
+            # itself, NOT of the b2bCollaborationInbound / b2bDirectConnectInbound
+            # settings. Those are crossTenantAccessPolicyB2BSetting objects that expose
+            # usersAndGroups / applications, with no isServiceProvider member — so the
+            # previous $partner.B2BCollaborationInbound.IsServiceProvider always read
+            # $null. Capture inbound B2B configuration as a presence check and read
+            # isServiceProvider from the partner object.
+            # Ref: https://learn.microsoft.com/graph/api/resources/crosstenantaccesspolicyconfigurationpartner
             $allowedTenantIds[$tenantId] = @{
-                TenantId            = $tenantId
-                B2BCollaborationInbound  = $partner.B2BCollaborationInbound.IsServiceProvider
-                B2BDirectConnectInbound  = $partner.B2BDirectConnectInbound.IsServiceProvider
+                TenantId                 = $tenantId
+                IsServiceProvider        = $partner.IsServiceProvider
+                B2BCollaborationInbound  = $null -ne $partner.B2BCollaborationInbound
+                B2BDirectConnectInbound  = $null -ne $partner.B2BDirectConnectInbound
                 InboundTrustCompliant    = $null -ne $partner.InboundTrust
                 AutomaticUserConsent     = $partner.AutomaticUserConsentSettings.InboundAllowed
             }
