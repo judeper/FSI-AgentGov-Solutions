@@ -195,13 +195,15 @@ Install-Module -Name PnP.PowerShell -MinimumVersion 2.5.0 -Force -Scope CurrentU
 
 ## Microsoft Graph Permissions
 
-When using the Graph v1.0 scanner (`Invoke-GraphPermissionScan.ps1`), the following Microsoft Graph application or delegated permissions are required:
+The Graph v1.0 scanner (`Invoke-GraphPermissionScan.ps1`) reads the [list permissions on a driveItem](https://learn.microsoft.com/graph/api/driveitem-list-permissions?view=graph-rest-1.0) endpoint. Choose the least-privileged permission that satisfies your flow:
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
-| `Sites.Read.All` | Application or Delegated | Read SharePoint site and drive metadata |
-| `Files.Read.All` | Application or Delegated | Read file content and item permissions |
-| `Group.Read.All` | Application or Delegated | Resolve Entra ID group membership for permission grants |
+| `Files.Read.All` | Application (least privileged) | Read driveItem sharing permissions (`/drives/{driveId}/items/{itemId}/permissions`) |
+| `Files.Read` | Delegated (least privileged) | Read driveItem sharing permissions for the signed-in user |
+| `Sites.Read.All` | Application or Delegated (higher privileged) | Alternative when the app already holds site-level read; not required if `Files.Read[.All]` is granted |
+
+Permission set per the authoritative [list permissions](https://learn.microsoft.com/graph/api/driveitem-list-permissions?view=graph-rest-1.0#permissions) reference. `Group.Read.All` is **not** required for this scanner: group-based grants are returned inline in the `grantedToV2` / `grantedToIdentitiesV2` facets of each permission, so the script displays group display names without making a separate group-membership call.
 
 For delegated flows, the signed-in user must also have access to the target SharePoint site. For application-only flows, admin consent is required.
 
@@ -215,8 +217,10 @@ The `Invoke-GraphPermissionScan.ps1` script provides an alternative scan path us
 - Handles `Retry-After` headers on 429/503 responses; falls back to exponential backoff when the header is absent
 
 ```powershell
-# Get an access token (requires Sites.Read.All, Files.Read.All, Group.Read.All)
-$token = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+# Get an access token (least privileged: Files.Read.All for app-only, Files.Read for delegated)
+# Az.Accounts 5.x returns .Token as a SecureString by default; convert to plain text for the -AccessToken string parameter.
+$secureToken = (Get-AzAccessToken -ResourceTypeName MSGraph -AsSecureString).Token
+$token = [System.Net.NetworkCredential]::new('', $secureToken).Password
 
 # Scan permissions for specific drive items
 .\scripts\Invoke-GraphPermissionScan.ps1 `
