@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Agent Observability Foundation
 
-> **Version:** v1.2.2
+> **Version:** v1.2.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -262,7 +262,11 @@ This solution supports the following FSI-AgentGov framework controls:
 
 ## Version
 
-**v1.2.2** - Council-review remediation (2026-05-22)
+**v1.2.3** - Lab-readiness validation (2026-06-04)
+
+**What's New in v1.2.3:**
+- Corrected WORM container coverage: `docs/worm-configuration.md` and `scripts/verify_worm.py` now identify `insights-logs-appevents` as the primary audit-of-record container (Copilot Studio interaction events) and direct applying/verifying WORM across all four diagnostic-export containers, not just `insights-logs-apptraces`
+- Added `LAB-VALIDATION.md` static validation evidence report
 
 **What's New in v1.2.2:**
 - Removed stale "ADLS Gen2" reference and Control 1.6 (DSPM for AI) mappings from `power-bi/kql-views/vw_dim_regulation_control.kql`

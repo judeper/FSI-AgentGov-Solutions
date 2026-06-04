@@ -1,7 +1,7 @@
 id: agent-observability-foundation
 name: Agent Observability Foundation
 description: FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting.
-version: 1.2.2
+version: 1.2.3
 status: live
 domain: monitoring-analytics
 tier: '1'

@@ -171,7 +171,7 @@
     "agent-observability-foundation": {
       "id": "agent-observability-foundation",
       "name": "Agent Observability Foundation",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "domain": "monitoring-analytics",
       "tier": "1",
       "status": "live",
