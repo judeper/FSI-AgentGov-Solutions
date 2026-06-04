@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Upstream Microsoft dependency:** The Request for Information action reached general availability on Jan 30, 2026 (Power Platform release plan), though the Human in the Loop connector reference still labels the action preview; Run a Multistage Approval remains preview in Microsoft Learn. Review the Power Platform preview terms before using any preview action with regulated data.
+> **Upstream Microsoft dependency:** Mixed — The Request for Information action reached general availability on Jan 30, 2026 (Power Platform release plan), though the Human in the Loop connector reference still labels it preview; Run a Multistage Approval remains preview in Microsoft Learn. Review the Power Platform preview terms before using any preview action with regulated data.
 
 Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `shared_advancedapprovals` connector.
 

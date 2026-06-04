@@ -15,8 +15,8 @@ prerequisites:
   security-admin: "Entra Global Admin or Application Administrator permissions for app registration, consent, and service principal setup."
 verification: "Run a scan and confirm new rows in fsi_HitlScanRun and fsi_HitlCheckpointResult, then verify the target Copilot Studio bot is listed in the maker portal."
 upstreamDependency:
-  status: preview
-  note: The Request for Information and Run a Multistage Approval actions remain preview in Microsoft Learn and should be reviewed against preview terms before regulated-data use.
+  status: mixed
+  note: The Request for Information action reached general availability on Jan 30, 2026 (Power Platform release plan), though the Human in the Loop connector reference still labels it preview; Run a Multistage Approval remains preview in Microsoft Learn. Review the Power Platform preview terms before using any preview action with regulated data.
 
 # zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
 #   per-agent HITL checkpoint governance applies wherever the agent has flows
