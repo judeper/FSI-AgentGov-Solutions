@@ -4,6 +4,14 @@ All notable changes to the FINRA Supervision Workflow solution are documented he
 
 ## [Unreleased]
 
+### Changed
+
+- **docs**: Corrected Power BI refresh-cadence guidance in `docs/power-bi-setup.md`. A 30-minute refresh cadence (48 refreshes/day) requires Power BI Premium / Premium Per User; semantic models on shared capacity (Power BI Pro) are limited to 8 refreshes/day. Replaced the contradictory "Frequency: Daily / every 30 minutes" table with capacity-based guidance and an authoritative Microsoft Learn citation. (lab-readiness validation)
+
+### Added
+
+- **docs**: Added `LAB-VALIDATION.md` evidence report documenting static validation (parse-validity, authoritative-source verification, doc completeness) for lab-readiness. (lab-readiness validation)
+
 ## [1.1.1] - 2026-05-23
 
 ### Changed

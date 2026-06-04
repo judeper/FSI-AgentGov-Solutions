@@ -220,15 +220,21 @@ RETURN DIVIDE(ThisWeek - LastWeek, LastWeek, 0)
 3. Configure:
    - Gateway: Not required (Dataverse is cloud)
    - Credentials: OAuth2 organizational account
-   - Scheduled refresh: Every 30 minutes
+   - Scheduled refresh: see capacity-based limits below
+
+> **Refresh cadence depends on license/capacity.** Semantic models on **shared
+> capacity (Power BI Pro)** are limited to **up to 8 scheduled refreshes per day**.
+> A 30-minute cadence (48 refreshes/day) requires **Power BI Premium or Premium
+> Per User (PPU)**, which supports up to 48 refreshes per day. Choose a cadence
+> your capacity supports. See [Data refresh in Power BI](https://learn.microsoft.com/power-bi/connect-data/refresh-data#data-refresh).
 
 ### Refresh Schedule Settings
 
 | Setting | Value |
 |---------|-------|
 | Time zone | (UTC-05:00) Eastern Time |
-| Frequency | Daily |
-| Times | Every 30 minutes during business hours |
+| Frequency (Pro / shared capacity) | Up to 8 times per day (e.g., hourly during business hours) |
+| Frequency (Premium / PPU) | Up to 48 times per day (e.g., every 30 minutes) |
 
 ---
 
