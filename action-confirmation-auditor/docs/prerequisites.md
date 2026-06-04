@@ -134,6 +134,31 @@ If ELM is not deployed, zone classification defaults to Zone 3 (most restrictive
 
 ---
 
+## Optional: Purview AI Hub / DSPM Integration
+
+`scripts/Get-PurviewAIHubEvidence.ps1` cross-references ACA confirmation results
+with Microsoft Purview AI Hub (DSPM for AI) activity. It is optional and has
+additional dependencies beyond the core scan:
+
+| Requirement | Purpose |
+|-------------|---------|
+| `Microsoft.Graph.Authentication` module | Connect to Microsoft Graph (`Connect-MgGraph`) |
+| Graph scope `AuditLogsQuery.Read.All` | Required by the Graph audit log query API (`security/auditLog/queries`) |
+| Dataverse access token (Power Platform Premium not required) | Query `fsi_actionauditresults`; supplied via `-DataverseAccessToken` (SecureString) or acquired automatically via `Az.Accounts` `Get-AzAccessToken` |
+| DSPM for AI enabled and Copilot audit logging active | So AI Hub activities exist to correlate |
+
+The Microsoft Graph session token cannot be reused for Dataverse because the two
+services require tokens scoped to different audiences. Example:
+
+```powershell
+Connect-MgGraph -Scopes 'AuditLogsQuery.Read.All'
+Connect-AzAccount   # or rely on managed identity in Azure Automation
+. ./scripts/Get-PurviewAIHubEvidence.ps1
+Get-PurviewAIHubEvidence -DataverseUrl 'https://yourorg.crm.dynamics.com' -LookbackDays 7
+```
+
+---
+
 ## Validation Checklist
 
 - [ ] E5 or E5 Compliance license available
