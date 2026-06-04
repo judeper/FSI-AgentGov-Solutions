@@ -4,6 +4,11 @@ All notable changes to the Agent 365 Lifecycle Governance solution.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Doc drift**: `docs/flow-configuration.md` Managed Solution Wrapper component table said "All 14 variables" while `scripts/create_alg_environment_variables.py` deploys 16 and the Environment Variables Reference table lists 16. Corrected to 16. (lab-validation)
+- **API accuracy**: `docs/troubleshooting.md` and `DELIVERY-CHECKLIST.md` Phase 3 described access-review creation as requiring `principalScopes`/`resourceScopes`, contradicting Flow 2, which uses the `accessReviewQueryScope` (`scope.query` = `/servicePrincipals/{id}`, `queryType` = `MicrosoftGraph`). Per Microsoft Graph, `principalScopes`/`resourceScopes` apply only to the `principalResourceMembershipsScope` shape, which this solution does not use. Aligned both files to the scope shape Flow 2 actually sends. (lab-validation)
+
 ## [1.1.5] - 2026-05-23
 
 ### Fixed
