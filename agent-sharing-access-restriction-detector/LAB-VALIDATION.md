@@ -28,7 +28,7 @@ regulation in isolation.
 | Dataverse column references | Cross-checked every `$select`/`$filter`/PATCH body against `create_asard_dataverse_schema.py` and `docs/dataverse-schema.md` | Pass — all logical names valid |
 | Option-set values | Verified compliance/severity codes use `100000000+` not `0/1/2` | Pass |
 | Environment-variable names | Cross-checked `create_asard_environment_variables.py` against `docs/flow-configuration.md` | Pass — 4 variables consistent |
-| Language rules | grep for `ensures\|guarantees\|will prevent\|eliminates risk` across `*.md` | Pass — no violations |
+| Language rules | grep for the FSI-prohibited compliance-absolute phrases (per `fsi-language-rules.instructions.md`) across `*.md` | Pass — no violations |
 | API/permission claims | Verified against Microsoft Learn (see Sources) | Pass |
 
 ## Authoritative Sources Cited
