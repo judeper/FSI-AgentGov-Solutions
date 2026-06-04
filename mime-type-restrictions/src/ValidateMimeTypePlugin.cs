@@ -366,6 +366,35 @@ namespace FsiAgentGovernance.Plugins
                 }
             }
 
+            // ─── Step 4a: Offset-based signature validation ─────────────────
+            // Some container formats share a leading magic signature but are
+            // distinguished by a secondary signature at a fixed offset. WebP,
+            // for example, begins with the RIFF prefix (52 49 46 46) that also
+            // matches WAV and AVI; a legitimate WebP carries the "WEBP"
+            // signature (57 45 42 50) at byte offset 8. Enforcing the offset
+            // signature rejects a RIFF-based file (e.g., WAV/AVI) renamed and
+            // mislabeled as image/webp. Configured via the optional
+            // "offsetValidation" object on an allowlist entry in MimeConfig.json.
+            if (allowedEntry.OffsetValidation != null &&
+                !string.IsNullOrWhiteSpace(allowedEntry.OffsetValidation.Signature))
+            {
+                var offsetSignature = ParseHexString(allowedEntry.OffsetValidation.Signature);
+                var offset = allowedEntry.OffsetValidation.Offset;
+                if (offsetSignature != null && !MatchesAtOffset(fileBytes, offset, offsetSignature))
+                {
+                    HandleViolation(tracingService,
+                        $"File '{fileName}' declares MIME type '{declaredMimeType}' but does not " +
+                        $"contain the expected signature at byte offset {offset}. Container formats " +
+                        "such as WAV and AVI share the RIFF prefix; the offset check rejects files " +
+                        "of those types that are mislabeled as this MIME type.",
+                        correlationId);
+                    return;
+                }
+
+                tracingService.Trace("[FSI-MIME] Offset-{0} signature validated for '{1}'.",
+                    offset, declaredMimeType);
+            }
+
             // ─── Step 5: OpenXML deep inspection ───────────────────────────
             if (IsOpenXmlType(declaredMimeType))
             {
@@ -457,6 +486,29 @@ namespace FsiAgentGovernance.Plugins
             for (var i = 0; i < prefix.Length; i++)
             {
                 if (data[i] != prefix[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks whether <paramref name="data"/> contains the specified
+        /// <paramref name="signature"/> bytes starting at <paramref name="offset"/>.
+        /// Returns <c>false</c> (fail-secure) if the data is too short to contain
+        /// the signature at the requested offset.
+        /// </summary>
+        private static bool MatchesAtOffset(byte[] data, int offset, byte[] signature)
+        {
+            if (data == null || signature == null || offset < 0)
+                return false;
+
+            if (data.Length < offset + signature.Length)
+                return false;
+
+            for (var i = 0; i < signature.Length; i++)
+            {
+                if (data[offset + i] != signature[i])
                     return false;
             }
 
@@ -660,6 +712,14 @@ namespace FsiAgentGovernance.Plugins
             public string Description { get; set; }
 
             /// <summary>
+            /// Optional secondary signature validated at a fixed byte offset.
+            /// Used for container formats (e.g., WebP) whose leading magic
+            /// signature is shared with other formats (e.g., RIFF/WAV/AVI).
+            /// </summary>
+            [JsonPropertyName("offsetValidation")]
+            public OffsetSignature OffsetValidation { get; set; }
+
+            /// <summary>
             /// Resolves the <see cref="MagicBytes"/> property into a list of byte arrays,
             /// handling both single-string and array-of-strings JSON representations.
             /// </summary>
@@ -707,6 +767,22 @@ namespace FsiAgentGovernance.Plugins
 
             [JsonPropertyName("magicBytes")]
             public string MagicBytes { get; set; }
+
+            [JsonPropertyName("description")]
+            public string Description { get; set; }
+        }
+
+        /// <summary>
+        /// Represents a secondary signature validated at a fixed byte offset
+        /// (e.g., the "WEBP" signature at offset 8 inside a RIFF container).
+        /// </summary>
+        private class OffsetSignature
+        {
+            [JsonPropertyName("offset")]
+            public int Offset { get; set; }
+
+            [JsonPropertyName("signature")]
+            public string Signature { get; set; }
 
             [JsonPropertyName("description")]
             public string Description { get; set; }

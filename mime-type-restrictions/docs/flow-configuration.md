@@ -149,6 +149,7 @@ The MIME Type Restrictions solution operates across two preventive layers plus a
      - PNG: Must start with `89 50 4E 47` (PNG signature)
      - JPEG: Must start with `FF D8 FF` (JPEG SOI marker)
    - If mismatch detected (e.g., declared PDF but header is EXE) → Blocked
+   - **Offset signature check:** when an allowlist entry defines `offsetValidation`, the plugin also verifies a secondary signature at a fixed byte offset. WebP (`image/webp`) begins with the RIFF prefix (`52 49 46 46`) shared by WAV and AVI; the plugin requires the `WEBP` signature (`57 45 42 50`) at offset 8, so a RIFF-based file (e.g., a WAV/AVI renamed to `.webp`) is blocked.
 
 5. **OpenXML Deep Inspection:**
    - For Office documents (DOCX, XLSX, PPTX):
@@ -200,8 +201,8 @@ Plugin writes detailed trace logs for troubleshooting:
 
 Current Microsoft Learn guidance distinguishes **agent user file input** from **uploaded knowledge-source files**:
 
-- **User file input** can analyze CSV, PDF, TXT, JPG, PNG, WebP, or nonanimated GIF files. Current limits include images up to 15 MB (4 MB for DirectLine-based channels), PDFs under 40 pages, and TXT/CSV files under 180 KB. Users can't upload files when the agent is published to the SharePoint channel, and files in customer-managed-key environments can be accepted but aren't processed by the agent.
-- **Uploaded files as knowledge sources** support document formats such as Word, Excel, PowerPoint, PDF, text, HTML, CSV, XML, OpenDocument, EPUB, RTF, Apple iWork, JSON, YAML, and LaTeX. Standalone image, video, executable, and audio files aren't supported as uploaded knowledge documents; files over 512 MB and encrypted or password-protected files aren't supported.
+- **User file input** lets agent users upload files for analysis. Supported types are DOCX, CSV, PDF, TXT, JPG, PNG, WebP, and nonanimated GIF. The individual file size limit is 15 MB. Text content is capped at 30,000 characters per file (and across files in a multi-file upload) when the code interpreter is off; with the code interpreter on there is no character limit. XLSX and PPTX user-input support is currently experimental (contact Microsoft to enable). Users can't upload files when the agent is published to the SharePoint channel, and files in customer-managed-key environments are accepted but aren't processed by the agent. (See [Allow file input from users](https://learn.microsoft.com/microsoft-copilot-studio/image-input-analysis).)
+- **Uploaded files as knowledge sources** support document formats such as Word, Excel, PowerPoint, PDF, text, HTML, CSV, XML, OpenDocument, EPUB, RTF, Apple iWork, JSON, YAML, and LaTeX. Standalone image, video, executable, and audio files aren't supported as uploaded knowledge documents; images are supported only when embedded (annotated) in PDFs. Files over 512 MB and encrypted or password-protected files aren't supported, and an agent can include up to 500 files as knowledge. (See [Upload files as a knowledge source](https://learn.microsoft.com/microsoft-copilot-studio/knowledge-add-file-upload).)
 - The default `mime-config.json` remains intentionally narrower for Enterprise Managed environments. Add WebP, legacy Office, or other supported platform formats only after documenting business need, magic-byte behavior, downstream scanning, and zone-specific risk acceptance.
 
 #### 2. Power Platform Data Policy Reference — dlp-policy-template.json
