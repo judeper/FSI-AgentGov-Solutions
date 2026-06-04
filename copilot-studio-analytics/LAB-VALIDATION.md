@@ -31,7 +31,7 @@ management reporting (not standalone regulator-grade evidence — see `queries/g
 | Agent classification (`componenttype = 17`) | Verified against `botcomponent` entity reference | ✅ Code correct; wording already honest |
 | Auth / token audience | Reviewed managed-identity-first auth + Dataverse scope | ✅ Correct (scope = environment URL `/.default`) |
 | SDK status | `applicationinsights` (maintenance) vs `azure-monitor-opentelemetry`; `LogsQueryClient.query_workspace`/`query_resource` | ✅ Consistent with docs |
-| Language rules | Grepped `ensures|guarantees|will prevent|eliminates risk` (excluding CHANGELOG history) | ✅ Zero hits |
+| Language rules | Grepped for the FSI-prohibited compliance-absolute phrases (per `fsi-language-rules.instructions.md`, excluding CHANGELOG history) | ✅ Zero hits |
 | PowerShell parse | N/A — solution contains no `.ps1` files | — |
 
 ## 3. Authoritative Sources Cited
