@@ -128,10 +128,22 @@ def create_audit_log_query(
     start_time: datetime,
     end_time: datetime,
     record_types: Optional[list[str]] = None,
+    operation_filters: Optional[list[str]] = None,
 ) -> str:
     """Create a Purview auditLogQuery and return the query ID.
 
-    Reference: https://learn.microsoft.com/graph/api/security-auditlogquery-post
+    ``record_types`` values must be valid ``auditLogRecordType`` enum members
+    (for example ``MicrosoftTeams`` or ``PowerPlatformServiceActivity``);
+    ``operation_filters`` values are activity names such as
+    ``CopilotInteraction``. Copilot interactions are logged with the operation
+    ``CopilotInteraction`` (numeric RecordType 261) and are not exposed as a
+    dedicated ``auditLogRecordType`` enum member, so they are selected via the
+    operation filter rather than the record-type filter.
+
+    References:
+      - https://learn.microsoft.com/graph/api/resources/security-auditlogquery
+      - https://learn.microsoft.com/graph/api/resources/security-auditlogrecordtype
+      - https://learn.microsoft.com/purview/audit-copilot
     """
     body: dict[str, Any] = {
         "displayName": f"CMM-PurviewCorrelation-{datetime.now(tz=timezone.utc).strftime('%Y%m%d%H%M%S')}",
@@ -140,6 +152,8 @@ def create_audit_log_query(
     }
     if record_types:
         body["recordTypeFilters"] = record_types
+    if operation_filters:
+        body["operationFilters"] = operation_filters
 
     result = _graph_request(token, "POST", AUDIT_LOG_QUERY_URL, body=body)
     query_id = result.get("id")
@@ -259,8 +273,14 @@ def pull_moderation_events(
 # Correlation engine
 # ---------------------------------------------------------------------------
 
-# Copilot-related Purview record types
-COPILOT_RECORD_TYPES = ["CopilotInteraction", "MicrosoftTeams", "PowerPlatform"]
+# Copilot interactions are recorded in the unified audit log with the operation
+# "CopilotInteraction" (numeric RecordType 261). The Microsoft Graph
+# auditLogRecordType enum does not expose a dedicated Copilot record type, so the
+# operation filter is used to target Copilot interaction events directly.
+# auditLogQuery filters are combined with AND semantics, so a record-type filter
+# is intentionally omitted to avoid narrowing past Copilot interaction events.
+# Ref: https://learn.microsoft.com/graph/api/resources/security-auditlogrecordtype
+COPILOT_OPERATION_FILTERS = ["CopilotInteraction"]
 TIMESTAMP_TOLERANCE_SECONDS = 300  # 5-minute window for event correlation
 
 
@@ -457,7 +477,7 @@ def main() -> int:
 
     logger.info("Creating Purview audit log query: %s to %s", start_time, end_time)
     query_id = create_audit_log_query(
-        token, start_time, end_time, record_types=COPILOT_RECORD_TYPES
+        token, start_time, end_time, operation_filters=COPILOT_OPERATION_FILTERS
     )
 
     # 4. Poll and retrieve audit records

@@ -201,11 +201,11 @@ python scripts/correlate_purview_events.py \
 
 **Correlation logic:**
 1. Pulls moderation violation records from the `fsi_moderationviolations` Dataverse table
-2. Creates a Purview audit log query via Graph `auditLogQuery` API targeting CopilotInteraction, MicrosoftTeams, and PowerPlatform record types
+2. Creates a Purview audit log query via the Microsoft Graph `auditLogQuery` API filtered to the `CopilotInteraction` operation (unified audit log RecordType 261). The Graph `auditLogRecordType` enum does not expose a dedicated Copilot record type, so Copilot interactions are selected by operation filter rather than record-type filter.
 3. Matches events by user principal name + timestamp proximity (5-minute window)
 4. Extracts DSPM context: sensitivity labels, sensitive info types, DLP policy matches, and Copilot interaction metadata
 
-**Required Graph permissions:** `AuditLogsQuery.Read.All` (application), `User.Read.All` (application)
+**Required Graph permissions:** `AuditLogsQuery.Read.All` (application; least-privileged service-scoped variants such as `AuditLogsQuery-CRM.Read.All` are also supported), `User.Read.All` (application)
 
 **Output:** JSON file with enriched events and correlation summary.
 
