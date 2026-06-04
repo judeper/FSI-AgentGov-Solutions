@@ -10,6 +10,10 @@ All notable changes to the RAG Source Validator.
 
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
 
+### Fixed
+
+- **Docs (lab-readiness):** Corrected the README **Prerequisites** section. The Licensing table previously listed "Power Platform Premium -- Validation flows," but this solution is script-based and ships no Power Automate flows; replaced with the actual Dataverse-capacity and Azure-compute (Automation / Functions / VM) requirements. Rewrote the **Permissions** table around the managed-identity-first model with concrete, citation-backed grants: Microsoft Graph application permission `Sites.Read.All`/`Files.Read.All` for `driveItem` content retrieval, a Dataverse application user with a security role on the three RSV tables, and `Storage Blob Data Reader` for the optional/planned blob path. Aligned the Deployment step and the Troubleshooting authentication row with the same permission names. `README.md`. (lab-readiness validation)
+
 ## [1.3.1] - 2026-05-23
 
 ### Council Review -- Production-Readiness Fixes

@@ -80,22 +80,30 @@ The RAG Source Validator helps verify AI agents use trusted, verified knowledge 
 
 ## Prerequisites
 
-### Licensing
+### Licensing and hosting
+
+This solution is script-based and ships no Power Automate flows or canvas apps. The validator (`Invoke-SourceValidation.ps1`) and governance scripts run as PowerShell 7 on an Azure-hosted compute host (Azure Automation, Azure Functions, or a VM-hosted scheduled job) using its managed identity.
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Validation flows |
-| **Dataverse capacity** | Source registry |
-| **SharePoint Online** | SharePoint source access |
-| **Azure Storage** | Blob source access (optional) |
+| **Dataverse capacity** | Source registry tables (`fsi_knowledgesource`, `fsi_validationresult`, `fsi_sourcechange`) and Copilot Studio uploaded-document storage |
+| **Azure compute (Automation / Functions / VM)** | Hosts the scheduled validation script with a managed identity |
+| **SharePoint Online** | SharePoint / OneDrive source content access via Microsoft Graph |
+| **Azure Storage** | Azure Blob source access (optional; blob validation is planned, not yet implemented) |
 
 ### Permissions
 
-| Role | Required For |
-|------|--------------|
-| **SharePoint Reader** | Document content access |
-| **Dataverse Reader** | Table data access |
-| **Storage Blob Reader** | Azure Blob access |
+The recommended production path is a system- or user-assigned managed identity. Grant it the following (least-privilege, read-only where possible):
+
+| Identity grant | Scope | Required for |
+|----------------|-------|--------------|
+| **Microsoft Graph application permission `Sites.Read.All`** (or `Files.Read.All`) | Tenant, admin-consented | Reading SharePoint / OneDrive `driveItem` content for hash validation |
+| **Dataverse application user with a security role** granting create/read/write on `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange` | Target environment | Reading the source registry and writing validation results, source changes, and status updates |
+| **Storage Blob Data Reader** | Target storage account | Azure Blob source access (optional; planned source type) |
+
+> **Permission references:** Downloading `driveItem` content requires a Graph permission such as `Sites.Read.All` or `Files.Read.All` ([Get driveItem content](https://learn.microsoft.com/graph/api/driveitem-get-content)). The managed identity must be registered as a Dataverse [application user associated with a security role](https://learn.microsoft.com/power-apps/developer/data-platform/use-multi-tenant-server-server-authentication#create-an-application-user-associated-with-the-registered-application-in-dataverse) before it can read or write the registry tables.
+>
+> The legacy client-secret development fallback uses the same Entra app registration and Dataverse application-user role; it is for local development only (see [Deployment](#deployment)).
 
 ## Quick Start
 
@@ -144,7 +152,7 @@ The script automatically captures baselines on first run for sources without an 
 ## Deployment
 
 1. Create the Dataverse schema manually in your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema-manual) for current status)
-2. Grant the Azure-hosted job's managed identity Dataverse access to `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange`, plus Microsoft Graph permissions for SharePoint or OneDrive content retrieval
+2. Grant the Azure-hosted job's managed identity Dataverse access to `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange` (via a Dataverse application user and security role), plus the Microsoft Graph application permission `Sites.Read.All` (or `Files.Read.All`) for SharePoint or OneDrive content retrieval
 3. Register knowledge sources via the model-driven app or Dataverse API
 4. Run `Invoke-SourceValidation.ps1 -UseManagedIdentity` to capture baselines and validate
 5. Configure scheduled execution via Azure Automation, Azure Functions, or a VM-hosted scheduled job with managed identity enabled
@@ -304,7 +312,7 @@ For documents with references, validates all links are accessible.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Authentication failure | Expired token or insufficient SharePoint/Dataverse permissions | Re-authenticate; verify SharePoint Reader and Dataverse Reader roles |
+| Authentication failure | Expired token or insufficient SharePoint/Dataverse permissions | Re-authenticate; verify the managed identity has Graph `Sites.Read.All`/`Files.Read.All` and a Dataverse application-user security role (see [Permissions](#permissions)) |
 | Hash mismatch on first run | No baseline captured for the source | Run `Invoke-SourceValidation.ps1` — baselines are captured automatically on first run |
 | Source not found | Incorrect URI or source moved/renamed | Verify source URI; re-register via the model-driven app or Dataverse API |
 | Stale content alerts | Source not updated within freshness threshold | Review source update schedule; adjust threshold if appropriate |
