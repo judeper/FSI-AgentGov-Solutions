@@ -47,7 +47,7 @@ restricting to approved security groups, and retains rollback evidence.
      **correct**.
    - `authenticationtrigger`: `0 = As Needed`, `1 = Always`. **Matches.**
    - `authorizedsecuritygroupids`: String, "comma-delimited list of **up to 20**
-     Azure AD Group IDs … ignored if Access Control Policy is not Group
+     Microsoft Entra ID group IDs … ignored if Access Control Policy is not Group
      membership", `MaxLength 739`. Remediation caps to the first 20 groups —
      **correct**.
 2. **Protect secrets in Azure PowerShell** —
