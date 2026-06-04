@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **botcomponent componenttype filter:** Corrected the Copilot Studio `botcomponents` `componenttype` filter in `Get-AgentHitlSettings.ps1` and `governance/Test-HitlCheckpointConfiguration.ps1`. The scripts filtered `componenttype eq 12 or componenttype eq 2` with a comment claiming "12 = Topic, 2 = Dialog/Skill". Per the authoritative [Microsoft Dataverse botcomponent reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent), those values are **Bot variable (V2) = 12** and **Bot variable = 2** — neither holds the topic/dialog action content the scan parses, so HITL checkpoints could be silently missed. The filter now targets `componenttype eq 0` (Topic), `9` (Topic V2), `4` (Dialog), and `1` (Skill).
+
+### Changed
+
+- **Runbook auth:** Migrated `Start-HitlValidationRunbook.ps1` from the archived [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) module (last updated September 2023) to `Az.Accounts` certificate-based service-principal sign-in (`Connect-AzAccount -ServicePrincipal -CertificateThumbprint` + `Get-AzAccessToken -ResourceUrl`), matching the rest of the solution and removing the last `MSAL.PS` dependency. The handler converts the SecureString token returned by Az.Accounts 5.x back to a header string. Updated `docs/prerequisites.md` and `docs/troubleshooting.md` module references accordingly.
+- **Request for Information GA:** Updated `README.md`, `docs/prerequisites.md`, and `docs/troubleshooting.md` to reflect that the Request for Information action reached general availability on Jan 30, 2026 (Power Platform release plan), while noting the Human in the Loop connector reference page still labels the action preview and Run a Multistage Approval remains preview.
+
+### Notes
+
+- Added `LAB-VALIDATION.md` documenting authoritative-source verification (Microsoft Learn), gaps and fixes, and runtime-only caveats — including the documented-versus-deployed `botcomponents` lookup attribute discrepancy (`_botid_value` retained per council-review fix M-5; Microsoft documents only `parentbotid`/`_parentbotid_value`).
+
 ## [1.1.2] - 2026-05-23
 
 ### Fixed

@@ -252,9 +252,12 @@ function Get-AgentHitlSettings {
         #region Query botcomponent for flow/topic definitions
 
         try {
-            # componenttype 12 = Topic, componenttype 2 = Dialog/Skill
+            # botcomponent_componenttype choices (Microsoft Dataverse reference):
+            #   0 = Topic, 1 = Skill, 4 = Dialog, 9 = Topic (V2). Topic/Dialog
+            #   components hold the action and connector references parsed below;
+            #   modern Copilot Studio agents store topics as Topic (V2) = 9.
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
+                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 0 or componenttype eq 9 or componenttype eq 4 or componenttype eq 1)&" +
                 "`$select=name,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop

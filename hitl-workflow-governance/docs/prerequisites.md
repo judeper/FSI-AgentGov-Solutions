@@ -2,7 +2,7 @@
 
 Requirements for deploying the HITL Workflow Governance solution.
 
-> **Preview Notice:** The Human in the Loop connector actions — **Request for Information** (RFI) and **Run a Multistage Approval** — are currently in public preview. RFI entered public preview in July 2025. The connector reference labels both actions as "(preview)." Preview features may change before general availability. This solution provides governance tooling, but administrators should monitor the [Copilot Studio release notes](https://learn.microsoft.com/en-us/microsoft-copilot-studio/whats-new) and connector reference for changes that may affect behavior.
+> **Preview Notice:** The Human in the Loop connector (`shared_advancedapprovals`) provides two actions used by this solution. **Request for Information** (RFI) entered public preview on July 31, 2025 and reached general availability on January 30, 2026 per the Power Platform release plan, although the connector reference page still labels the action "(preview)". **Run a Multistage Approval** remains in public preview. Preview features may change before general availability. This solution provides governance tooling, but administrators should monitor the [Copilot Studio release notes](https://learn.microsoft.com/en-us/microsoft-copilot-studio/whats-new) and connector reference for changes that may affect behavior.
 
 ---
 
@@ -68,16 +68,14 @@ The Python deployment client uses `DefaultAzureCredential` when `--client-secret
 | Module | Minimum Version | Purpose |
 |--------|----------------|---------|
 | `Microsoft.PowerApps.Administration.PowerShell` | 2.0+ | Power Platform environment and agent enumeration |
-| `Az.Accounts` | 5.0+ | Managed identity, certificate, and interactive Azure token acquisition |
-| `MSAL.PS` | 4.37+ | Certificate-based token acquisition in `Start-HitlValidationRunbook.ps1` |
+| `Az.Accounts` | 5.0+ | Managed identity, certificate, and interactive Azure token acquisition (including the Azure Automation runbook) |
 
-> ⚠️ **MSAL.PS deprecation notice:** The [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) repository was archived in September 2023 and receives no further updates. The rest of this solution migrated to `Az.Accounts` in v1.1.2 (m-6); `Start-HitlValidationRunbook.ps1` retains the dependency for certificate-based Azure Automation token acquisition. For new runbook deployments, consider using `Az.Accounts` `Connect-AzAccount -CertificateThumbprint` instead.
+> **MSAL.PS removed:** Earlier releases used the [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) module for certificate-based token acquisition in `Start-HitlValidationRunbook.ps1`. That repository was archived in September 2023 and receives no further updates. As of this validation pass the runbook authenticates with `Az.Accounts` (`Connect-AzAccount -ServicePrincipal -CertificateThumbprint` + `Get-AzAccessToken -ResourceUrl`), so `MSAL.PS` is no longer required anywhere in the solution.
 
 Install with:
 ```powershell
 Install-Module -Name Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser -Force
 Install-Module -Name Az.Accounts -Scope CurrentUser -Force
-Install-Module -Name MSAL.PS -Scope CurrentUser -Force
 ```
 
 ---
@@ -182,7 +180,6 @@ For scheduled unattended scans:
 
 4. **Install Required Modules**
    - `Az.Accounts`
-   - `MSAL.PS`
    - `Microsoft.PowerApps.Administration.PowerShell`
 
 ---
@@ -216,7 +213,7 @@ The `shared_advancedapprovals` connector (Human in the Loop) provides two action
 
 | Action | Operation ID | Status | Key considerations |
 |--------|--------------|--------|--------------------|
-| **Request for Information** | `RequestForInformation` | Public preview | Requires `title`, Outlook `message`, and `assignedTo`; uses only the first response; does not support external-tenant assignees; supports Text, Yes/No, Email, Number, and Date input types |
+| **Request for Information** | `RequestForInformation` | GA (Jan 30, 2026); connector reference still labels it "(preview)" | Requires `title`, Outlook `message`, and `assignedTo`; uses only the first response; does not support external-tenant assignees; supports Text, Yes/No, Email, Number, and Date input types |
 | **Run a Multistage Approval** | `StartAndWaitForAnApprovalProcess` | Preview | Available only in agent flows; no attachments; no ALM/sharing/import support; same approver cannot be assigned to different stages; AI stages require Copilot Studio Copilot Credits |
 
 Administrators should avoid spaces in RFI input names because Microsoft Learn notes that spaces can cause output values to be wrapped in double braces. Re-validate scan logic if Microsoft changes connector schemas before general availability.
@@ -231,7 +228,7 @@ Administrators should avoid spaces in RFI input names because Microsoft Learn no
 - [ ] Managed identity, workload identity federation, certificate credential, or interactive admin setup path selected
 - [ ] App registration created only where required for certificate-based or legacy service-principal auth
 - [ ] Admin consent granted for required API permissions
-- [ ] PowerShell modules installed (`Microsoft.PowerApps.Administration.PowerShell`, `Az.Accounts`, `MSAL.PS`)
+- [ ] PowerShell modules installed (`Microsoft.PowerApps.Administration.PowerShell`, `Az.Accounts`)
 - [ ] Python 3.9+ with packages from `scripts/requirements.txt`
 - [ ] Scanning identity has Dataverse read access to `bot` and `botcomponent` tables
 - [ ] Network connectivity to required endpoints verified

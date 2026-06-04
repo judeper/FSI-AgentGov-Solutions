@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Upstream Microsoft dependency:** Preview — The Request for Information and Run a Multistage Approval actions remain preview in Microsoft Learn and should be reviewed against preview terms before regulated-data use.
+> **Upstream Microsoft dependency:** The Request for Information action reached general availability on Jan 30, 2026 (Power Platform release plan), though the Human in the Loop connector reference still labels the action preview; Run a Multistage Approval remains preview in Microsoft Learn. Review the Power Platform preview terms before using any preview action with regulated data.
 
 Validates that Copilot Studio agent flows include required human-in-the-loop (HITL) checkpoints per zone governance policy, using Microsoft's **Request for Information** and **Run a Multistage Approval** actions from the `shared_advancedapprovals` connector.
 
@@ -19,7 +19,7 @@ Validates that Copilot Studio agent flows include required human-in-the-loop (HI
 
 The HITL Workflow Governance solution (HWG) scans Power Platform environments for Copilot Studio agents and validates that their flows include required human review checkpoints. In regulated financial services environments, agent actions that modify data, initiate external communication, or process customer financial information may require human approval before execution. HWG identifies agents missing required HITL steps, classifies violations by severity based on zone and action type, tracks evidence of human review, and exports compliance evidence for regulatory examination.
 
-Microsoft introduced the **Request for Information** (RFI) action for Copilot Studio agent flows in public preview in July 2025. The `shared_advancedapprovals` Human in the Loop connector also provides **Run a Multistage Approval** (`StartAndWaitForAnApprovalProcess`) for structured approval workflows. Both actions remain labeled as preview in Microsoft Learn. Organizations should review the [Power Platform preview terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/) before using these actions with regulated data.
+Microsoft introduced the **Request for Information** (RFI) action for Copilot Studio agent flows in public preview on July 31, 2025; per the Power Platform release plan it reached general availability on January 30, 2026, although the Human in the Loop connector reference page still labels the action preview. The `shared_advancedapprovals` Human in the Loop connector also provides **Run a Multistage Approval** (`StartAndWaitForAnApprovalProcess`) for structured approval workflows, which remains labeled preview in Microsoft Learn. Organizations should review the [Power Platform preview terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/) before using any preview action with regulated data.
 
 ## Related Controls
 
