@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.1] - 2026-05-23
+
 ### Fixed
 
 - **Major**: Replaced `contoso.crm.dynamics.com` with `example.crm.dynamics.com` (RFC 2606) in `fsi_ARA_DataverseEnvironmentUrl` description. `scripts/create_environment_variables.py:108`. (council review M2)
