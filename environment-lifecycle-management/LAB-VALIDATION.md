@@ -20,7 +20,7 @@ FINRA Rule 4511(a), SEC Rules 17a-3 / 17a-4(f), and SOX 404 recordkeeping.
 |------|--------|--------|
 | Python parse-validity (12 scripts) | `python -m py_compile` on every `.py` in `scripts/` | PASS — zero errors |
 | PowerShell scripts | Inventory | None in this solution (shared `Get-ZoneClassification.ps1` lives at repo-root `scripts/shared/`, out of scope here) |
-| Language rules (no "ensures/guarantees/will prevent/eliminates risk") | grep across `*.md`, `*.py`, `*.json` excluding CHANGELOG | PASS — zero violations |
+| Language rules (FSI compliance-absolute phrasing) | grep across `*.md`, `*.py`, `*.json` excluding CHANGELOG | PASS — zero violations |
 | Dataverse column / entity-set naming | Cross-checked scripts ↔ `create_dataverse_schema.py` SchemaNames | PASS — logical names consistent (`fsi_environmentrequest`(s), `fsi_provisioninglog`(s), `fsi_zone`, `fsi_state`, etc.) |
 | Option-set values (canonical 100000001+) | Reviewed `create_dataverse_schema.py` OPTIONSETS + `.ralph-config.json` domain facts | PASS — all 8 global option sets use `100000001+`; docs aligned (legacy `1..N` already remediated in v1.2.0/1.2.1) |
 | Auth pattern (managed-identity-first) | Reviewed `elm_client.py`, `register_service_principal.py`, all CLI scripts | PASS — `DefaultAzureCredential` first; client-secret paths carry `# legacy: dev-only` markers and dev-only help text |
