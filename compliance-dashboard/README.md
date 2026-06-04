@@ -205,7 +205,7 @@ The `Get-ExchangeComplianceData.ps1` script collects Exchange Online compliance 
 
 ### Microsoft Learn 2026-Q2 integration notes
 
-- Use Microsoft Graph Reports APIs with `Reports.Read.All` for Microsoft 365 usage signals. Microsoft 365 Copilot usage reports are available under the v1.0 `/copilot/reports/...` path where available; legacy `/beta/reports/...` endpoints should not be used for production dashboards.
+- Use Microsoft Graph Reports APIs with `Reports.Read.All` for Microsoft 365 usage signals. General-availability usage reports such as `getOffice365ActiveUserDetail` are served from the v1.0 `/reports/...` path. Microsoft 365 Copilot usage reports (for example `getMicrosoft365CopilotUserCountSummary`) are currently available **only under `/beta`** (both `/beta/copilot/reports/...` and `/beta/reports/...`); per Microsoft Learn, `/beta` APIs are subject to change and are not supported for production use, so treat Copilot usage signals as preview until a v1.0 endpoint is published.
 - Compliance Manager assessment and improvement-action exports remain portal-driven Excel exports in current Microsoft Learn guidance. Treat those files as evidence inputs until Microsoft publishes a supported Graph API or SDK for assessment score export.
 - Use Power BI semantic model refresh APIs for automation (`Dataset.ReadWrite.All`) and poll refresh status for API-triggered refreshes. For embedded or paginated compliance reporting, use embed token v2 and paginated `exportToFile` only on supported capacity SKUs.
 - Use Dataverse FetchXML aggregate queries or Web API `$apply=groupby(...,aggregate(...))` for cross-table score rollups, and partition large aggregations because Dataverse aggregate queries evaluate up to 50,000 records per query.
