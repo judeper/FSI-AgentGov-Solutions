@@ -285,3 +285,37 @@ function Get-BapApiBaseUrl {
         return "https://api.bap.microsoft.com"
     }
 }
+
+function Get-BapResource {
+    <#
+    .SYNOPSIS
+        Returns the OAuth resource (audience) used to acquire a token for the Power Platform
+        Business Application Platform (BAP) admin REST API.
+
+    .DESCRIPTION
+        The BAP admin REST API is hosted at api.bap.microsoft.com (and sovereign equivalents),
+        but the request HOST is not the token AUDIENCE. Microsoft's documented audience for the
+        BAP / Power Platform admin REST surface is the first-party "Power Apps Service" resource
+        https://service.powerapps.com/ (Application ID 475226c6-020e-4fb2-8a90-7a972cbfc1d4) --
+        the same resource the Microsoft.PowerApps.Administration.PowerShell module and
+        New-PowerAppManagementApp registration target.
+        Ref: https://learn.microsoft.com/power-platform/admin/programmability-authentication
+
+        Requesting "https://api.bap.microsoft.com/.default" can fail token acquisition
+        (AADSTS500011: resource principal not found) because that host is not a registered
+        Microsoft Entra resource identifier URI.
+
+        Sovereign-cloud resource identifier URIs for Power Apps Service are not publicly
+        documented. For those clouds this helper falls back to the BAP base URL as the audience;
+        operators should verify in-tenant and use -BapResource / FSI_BAP_RESOURCE to override.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$EnvironmentUrl,
+        [Parameter(Mandatory = $true)][string]$BapApiBaseUrl
+    )
+    if ($EnvironmentUrl -match '\.(microsoftdynamics\.us|appsplatform\.us|dynamics\.cn)') {
+        # Sovereign clouds: resource identifier URI not authoritatively documented -- verify in-tenant.
+        return $BapApiBaseUrl
+    }
+    return "https://service.powerapps.com/"
+}
