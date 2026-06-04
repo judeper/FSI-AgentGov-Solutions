@@ -1,4 +1,5 @@
 ﻿#Requires -Version 7.0
+#Requires -Modules Az.Accounts
 
 <#
 .SYNOPSIS
@@ -28,10 +29,17 @@
     sharing configurations. Required.
 
     JSON format: Array of objects with agentId, environmentId, and
-    previousSharingConfig properties.
+    previousSharingConfig properties. previousSharingConfig may be either:
+      - Canonical (recommended): an object holding the prior bot-table sharing
+        columns captured by Test-AgentSharingCompliance.ps1 / the detection flow
+        in fsi_evidencejson — { accesscontrolpolicy, authorizedsecuritygroupids,
+        authenticationmode, authenticationtrigger }. The restore reverses
+        remediation by PATCHing these columns back onto the bot record.
+      - Legacy: an array of per-principal share objects
+        ({ principalId, principalType, roleName }) re-applied via GrantAccess.
 
     CSV format: Columns AgentId, EnvironmentId, PreviousSharingPrincipals
-    (JSON-encoded array of principal objects).
+    (JSON-encoded — either the canonical object or the legacy principal array).
 
 .PARAMETER DataverseUrl
     Target Dataverse environment URL (e.g., https://org.crm.dynamics.com).
@@ -142,16 +150,28 @@ function Get-DataverseAccessToken {
 
     $resource = "$($DataverseUrl.TrimEnd('/'))/"
 
+    # Az.Accounts 5.0.0+ / Az 14.0.0+ return the token as a SecureString by
+    # default. Request it explicitly and convert to plain text for the Bearer
+    # header. Handles both SecureString (current) and String (legacy Az) results.
+    # Ref: https://learn.microsoft.com/powershell/azure/protect-secrets
+    $toPlainText = {
+        param($Token)
+        if ($Token -is [System.Security.SecureString]) {
+            return ($Token | ConvertFrom-SecureString -AsPlainText)
+        }
+        return [string]$Token
+    }
+
     switch ($AuthMode) {
         'ManagedIdentity' {
             Write-Verbose 'Acquiring token via system-assigned managed identity'
-            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource
-            return $tokenResponse.Token
+            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource -AsSecureString
+            return (& $toPlainText $tokenResponse.Token)
         }
         'Interactive' {
             Write-Verbose 'Acquiring token via interactive authentication'
-            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource -TenantId $TenantId
-            return $tokenResponse.Token
+            $tokenResponse = Get-AzAccessToken -ResourceUrl $resource -TenantId $TenantId -AsSecureString
+            return (& $toPlainText $tokenResponse.Token)
         }
         'ClientSecret' {
             # legacy: dev-only — replace with managed identity in production
@@ -251,10 +271,24 @@ function Restore-AgentSharing {
 
     $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
 
+    # Determine the evidence shape. The canonical UASD evidence (fsi_evidencejson)
+    # produced by Test-AgentSharingCompliance.ps1 and the detection flow records the
+    # prior bot-table sharing columns (accesscontrolpolicy, authorizedsecuritygroupids,
+    # authenticationmode, authenticationtrigger). A restore therefore reverses the
+    # remediation by patching those columns back onto the bot record.
+    # A legacy evidence shape — an array of per-principal share objects — is still
+    # supported via record-level GrantAccess as a backward-compatible fallback.
+    $hasAccessPolicy = $false
+    if ($sharingConfig -isnot [System.Array] -and
+        $null -ne $sharingConfig.PSObject.Properties['accesscontrolpolicy']) {
+        $hasAccessPolicy = $true
+    }
+
     if ($DryRun) {
+        $mode = if ($hasAccessPolicy) { 'bot accesscontrolpolicy restore' } else { 'principal GrantAccess restore' }
         Add-AuditEntry -Action 'RESTORE_DRYRUN' -AgentId $agentId -EnvironmentId $envId `
-            -Status 'DryRun' -Details "Would restore sharing to: $($sharingConfig | ConvertTo-Json -Compress)"
-        Write-Host "  [DRY-RUN] Agent ${agentId}: Would restore sharing config" -ForegroundColor Yellow
+            -Status 'DryRun' -Details "Would restore via ${mode}: $($sharingConfig | ConvertTo-Json -Compress)"
+        Write-Host "  [DRY-RUN] Agent ${agentId}: Would restore sharing config ($mode)" -ForegroundColor Yellow
         return
     }
 
@@ -265,18 +299,50 @@ function Restore-AgentSharing {
     }
 
     try {
-        # Look up the bot record by agent ID
-        $lookupUri = "$apiBase/bots?`$filter=botid eq '$agentId'&`$select=botid"
-        $lookupResponse = Invoke-RestMethod -Uri $lookupUri -Headers $headers -Method Get
-
-        if (-not $lookupResponse.value -or $lookupResponse.value.Count -eq 0) {
+        # Confirm the bot record exists before attempting a restore.
+        $lookupUri = "$apiBase/bots($agentId)?`$select=botid"
+        try {
+            Invoke-RestMethod -Uri $lookupUri -Headers $headers -Method Get | Out-Null
+        } catch {
             Add-AuditEntry -Action 'RESTORE_FAIL' -AgentId $agentId -EnvironmentId $envId `
                 -Status 'Failed' -Details "Agent not found in Dataverse"
             Write-Warning "  Agent ${agentId}: Not found in Dataverse — skipping"
             return
         }
 
-        # Build the sharing restoration payload
+        if ($hasAccessPolicy) {
+            # ── Canonical restore: re-apply the prior bot sharing columns ──────
+            $restoreBody = [ordered]@{
+                accesscontrolpolicy = [int]$sharingConfig.accesscontrolpolicy
+            }
+            $priorGroups = $null
+            if ($null -ne $sharingConfig.PSObject.Properties['authorizedsecuritygroupids']) {
+                $priorGroups = $sharingConfig.authorizedsecuritygroupids
+            }
+            $restoreBody['authorizedsecuritygroupids'] = if ($null -ne $priorGroups) { [string]$priorGroups } else { '' }
+            if ($null -ne $sharingConfig.PSObject.Properties['authenticationmode'] -and
+                $null -ne $sharingConfig.authenticationmode) {
+                $restoreBody['authenticationmode'] = [int]$sharingConfig.authenticationmode
+            }
+            if ($null -ne $sharingConfig.PSObject.Properties['authenticationtrigger'] -and
+                $null -ne $sharingConfig.authenticationtrigger) {
+                $restoreBody['authenticationtrigger'] = [int]$sharingConfig.authenticationtrigger
+            }
+
+            $patchHeaders = $headers.Clone()
+            $patchHeaders['If-Match'] = '*'  # update-only; avoid accidental upsert
+            $patchUri = "$apiBase/bots($agentId)"
+            $patchBody = $restoreBody | ConvertTo-Json -Compress
+            Invoke-RestMethod -Uri $patchUri -Headers $patchHeaders -Method Patch -Body $patchBody | Out-Null
+
+            Add-AuditEntry -Action 'RESTORE_COMPLETE' -AgentId $agentId -EnvironmentId $envId `
+                -Status 'Success' `
+                -Details "Restored bot sharing columns: $patchBody"
+            Write-Host "  Agent ${agentId}: Restored accesscontrolpolicy=$($restoreBody.accesscontrolpolicy)" -ForegroundColor Green
+            return
+        }
+
+        # ── Legacy restore: per-principal record sharing via GrantAccess ───────
         $principalIds = @()
         foreach ($principal in $sharingConfig) {
             if ($principal.principalId) {
