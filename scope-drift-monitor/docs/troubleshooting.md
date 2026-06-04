@@ -347,12 +347,21 @@ null
 
 ### Export Flow Run Data
 
-```powershell
-# Use Power Platform CLI
-pac flow list
-pac flow run list --flow-id "xxxxx"
-pac flow run show --flow-id "xxxxx" --run-id "yyyyy"
-```
+Power Automate retains cloud flow run history for 28 days in the portal. There is no
+`pac` CLI command group for cloud flow runs, so use one of the following to retain
+run telemetry beyond 28 days:
+
+1. **Power Automate portal** — open the flow > **28-day run history**, open a run, and
+   use **Download** / **Export** on individual action inputs and outputs for ad-hoc review.
+2. **Power Automate Management connector** — build a companion flow that calls the
+   **List Flow Runs** action and writes the results to a long-term store (Dataverse table,
+   Azure Storage, or Log Analytics) on a schedule.
+3. **Dataverse** — where cloud flow run records are surfaced in your environment, query
+   the flow run / process session tables via the Dataverse Web API and export to your
+   audit store.
+
+> **Note:** Align the retention store with your organization's audit requirements
+> (for example, FINRA Rule 4511 / SEC Rule 17a-4 record-keeping obligations).
 
 ### Contact Support
 

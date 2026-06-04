@@ -6,6 +6,25 @@ All notable changes to the Scope Drift Monitor.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`docs/troubleshooting.md`** — "Export Flow Run Data" referenced non-existent
+  `pac flow list` / `pac flow run list` / `pac flow run show` commands. There is no `pac flow`
+  CLI command group; replaced with accurate guidance (portal 28-day run history export, Power
+  Automate Management connector **List Flow Runs** to a long-term store, Dataverse flow-run
+  tables) plus a FINRA 4511 / SEC 17a-4 retention caveat. (lab-readiness validation)
+- **`scripts/Test-AlertDelivery.ps1`** — corrected the Teams incoming-webhook retirement date
+  from the inaccurate "March 31, 2026" to Microsoft's authoritative progressive-rollout window
+  (completing May 22, 2026), and noted that new webhook creation has been blocked since August
+  2024. Updated both the `.NOTES` block and the runtime `Write-Warning`. (lab-readiness validation)
+
+### Added
+
+- **`LAB-VALIDATION.md`** — static lab-readiness validation report with authoritative
+  Microsoft source citations (Copilot audit RecordType 261 / `CopilotEventData` schema, Office
+  365 Management Activity API content/subscription constraints, `pac` CLI command groups, Teams
+  connector retirement), verified-correct items, fixes, and runtime-only caveats.
+
 ### Changed
 
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
