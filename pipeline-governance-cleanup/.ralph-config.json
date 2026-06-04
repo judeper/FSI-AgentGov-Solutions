@@ -2,8 +2,9 @@
   "domainFacts": [
     "The Dataverse deploymentpipeline table has no direct host-environment reference; host association is implicit from the environment where the table resides.",
     "Get-PipelineInventory.ps1 -ProbePipelines output is directional only because pac pipeline list text parsing can produce false negatives; manual validation in Deployment Pipeline Configuration remains required.",
-    "The README optional PipelineCleanupLog table still lists scheduledremovaldate, while notification templates and automation guidance use enforcementdate; future edits should reconcile the column name before adding flow logic.",
-    "Script banner versions lagged the manifest in council review: Get-PipelineInventory.ps1 showed 1.2.0 and Send-OwnerNotifications.ps1 showed 1.1.0 while the solution version was 1.2.1.",
+    "Resolved 2026-06: the README optional PipelineCleanupLog table now uses enforcementdate (was scheduledremovaldate), matching notification templates and automation guidance.",
+    "Resolved 2026-06: script banners aligned to manifest version 1.2.1 (Get-PipelineInventory.ps1 and Send-OwnerNotifications.ps1 previously lagged at 1.2.0 and 1.1.0).",
+    "pac admin set-governance-config requires --protection-level and supports --solution-checker-mode (none/warn/block); it does NOT have --enable-pipelines or --disable-unmanaged-customizations, and there is no pac governance-config get command. Verified against Microsoft Learn pac admin reference 2026-06.",
     "This solution is intentionally PowerShell/manual guidance only and does not ship Dataverse schema generators or Power Platform exported flow JSON."
   ]
 }

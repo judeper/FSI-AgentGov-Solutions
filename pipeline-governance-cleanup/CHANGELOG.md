@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- **Lab-readiness validation (2026-06):** Corrected `Set-GovernanceConfig.ps1` to use only valid `pac admin set-governance-config` parameters. The script previously omitted the **required** `--protection-level` parameter and passed two parameters that do not exist in the current `pac` CLI (`--disable-unmanaged-customizations`, `--enable-pipelines`), so every invocation would have failed. Added a `-ProtectionLevel` parameter (Standard/Basic, default Standard), added `none` to the solution-checker mode set, and removed the invalid switches. Verified against [pac admin reference](https://learn.microsoft.com/power-platform/developer/cli/reference/admin#pac-admin-set-governance-config).
+- **Set-GovernanceConfig.ps1 verification step:** Removed the call to `pac admin governance-config get`, which is not a valid `pac` command. The script now directs the operator to verify settings in the Power Platform Admin Center.
+- **docs/automation-guide.md:** Updated the Managed Environment governance section, configuration-flags table, examples, and verification step to match the corrected `Set-GovernanceConfig.ps1` and the supported `pac` parameters; added a scope note clarifying that deployment-pipeline enablement is not performed by this command.
+- **README.md:** Reconciled the optional `PipelineCleanupLog` tracking-table column `scheduledremovaldate` to `enforcementdate`, aligning with the notification templates and automation guidance.
+- **Script banners:** Aligned in-script version banners to the manifest version (`Get-PipelineInventory.ps1` 1.2.0 → 1.2.1; `Send-OwnerNotifications.ps1` 1.1.0 → 1.2.1).
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 - `Send-OwnerNotifications.ps1` nested `Main` function now declares `SupportsShouldProcess`, preserving `-WhatIf` handling for live email sends.
 

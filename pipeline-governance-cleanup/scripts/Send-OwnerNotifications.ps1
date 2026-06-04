@@ -309,7 +309,7 @@ function Main {
 
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host "  Pipeline Governance Notification Script" -ForegroundColor Cyan
-    Write-Host "  Version: 1.1.0 - April 2026" -ForegroundColor Cyan
+    Write-Host "  Version: 1.2.1 - June 2026" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 

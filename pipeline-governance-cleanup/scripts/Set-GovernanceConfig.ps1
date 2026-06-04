@@ -7,30 +7,36 @@
 
 .DESCRIPTION
     Configures Managed Environment governance settings for production environments.
-    This script wraps pac admin set-governance-config with FSI-recommended defaults:
-    - Solution checker enforcement mode (warn or block)
-    - Disable unmanaged solution customizations
-    - Enable deployment pipelines
+    This script wraps `pac admin set-governance-config` with FSI-recommended defaults:
+    - Managed Environment protection level (Standard enables Managed Environments)
+    - Solution checker enforcement mode (none, warn, or block)
 
     IMPORTANT: This script requires the Power Platform Admin role and PAC CLI
     authenticated to the target tenant.
 
-    After applying configuration, the script verifies the settings using
-    pac admin governance-config get (when available) and outputs the result.
+    Scope note: `pac admin set-governance-config` does not expose flags to disable
+    unmanaged customizations or to enable deployment pipelines. Deployment pipelines
+    are enabled by installing the Power Platform Pipelines app and configuring a host
+    environment (see ../README.md Prerequisites and docs/portal-walkthrough.md). This
+    script intentionally configures only the supported managed-environment and
+    solution-checker settings.
+
+    The `pac` CLI does not currently expose a governance-config read command, so the
+    script directs the operator to verify the applied settings in the Power Platform
+    Admin Center.
 
 .PARAMETER EnvironmentId
     Target Power Platform environment ID (GUID).
 
+.PARAMETER ProtectionLevel
+    Managed Environment protection level. 'Standard' enables Managed Environments;
+    'Basic' disables them. This maps to the required `--protection-level` parameter
+    of `pac admin set-governance-config`. Default: Standard
+
 .PARAMETER SolutionCheckerMode
-    Solution checker enforcement mode. 'warn' logs findings without blocking;
-    'block' prevents import of solutions with critical findings.
-    Default: warn
-
-.PARAMETER DisableUnmanagedCustomizations
-    If specified, disables unmanaged solution customizations in the environment.
-
-.PARAMETER EnablePipelines
-    If specified, enables deployment pipelines for the environment.
+    Solution checker enforcement mode. 'none' disables the checker; 'warn' logs
+    findings without blocking; 'block' prevents import of solutions with critical
+    findings. Default: warn
 
 .PARAMETER DryRun
     If specified, prints the commands that would be executed without running them.
@@ -40,7 +46,7 @@
 
 .EXAMPLE
     .\Set-GovernanceConfig.ps1 -EnvironmentId "00000000-0000-0000-0000-000000000000" `
-        -SolutionCheckerMode "block" -DisableUnmanagedCustomizations -EnablePipelines
+        -ProtectionLevel "Standard" -SolutionCheckerMode "block"
 
 .NOTES
     Prerequisites:
@@ -48,6 +54,7 @@
     - Power Platform Admin role
 
     Reference:
+    - https://learn.microsoft.com/power-platform/developer/cli/reference/admin#pac-admin-set-governance-config
     - https://learn.microsoft.com/power-apps/maker/data-platform/use-powerapps-checker
     - https://learn.microsoft.com/power-platform/admin/managed-environment-overview
 #>
@@ -59,14 +66,12 @@ param(
     [string]$EnvironmentId,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("warn", "block")]
+    [ValidateSet("Standard", "Basic")]
+    [string]$ProtectionLevel = "Standard",
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("none", "warn", "block")]
     [string]$SolutionCheckerMode = "warn",
-
-    [Parameter(Mandatory = $false)]
-    [switch]$DisableUnmanagedCustomizations,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$EnablePipelines,
 
     [Parameter(Mandatory = $false)]
     [switch]$DryRun
@@ -95,16 +100,9 @@ catch {
 $setArgs = @(
     "admin", "set-governance-config",
     "--environment", $EnvironmentId,
+    "--protection-level", $ProtectionLevel,
     "--solution-checker-mode", $SolutionCheckerMode
 )
-
-if ($DisableUnmanagedCustomizations) {
-    $setArgs += "--disable-unmanaged-customizations"
-}
-
-if ($EnablePipelines) {
-    $setArgs += "--enable-pipelines"
-}
 
 $cmdDisplay = "pac $($setArgs -join ' ')"
 
@@ -114,8 +112,8 @@ if ($DryRun) {
     Write-Info "[DRY RUN] Would execute:"
     Write-Host "  $cmdDisplay"
     Write-Host ""
-    Write-Info "[DRY RUN] Would then verify with:"
-    Write-Host "  pac admin governance-config get --environment $EnvironmentId"
+    Write-Info "[DRY RUN] Then verify in the Power Platform Admin Center:"
+    Write-Host "  Environments > $EnvironmentId > Settings > Governance"
     return
 }
 
@@ -135,24 +133,14 @@ Write-Host ($output -join "`n")
 Write-Host ""
 
 # ── Verify ───────────────────────────────────────────────────────────────────
+# The pac CLI does not currently expose a governance-config read command, so
+# verification is a manual step in the Power Platform Admin Center.
 
-Write-Info "Verifying applied configuration..."
-
-$verifyArgs = @("admin", "governance-config", "get", "--environment", $EnvironmentId)
-$verifyOutput = & pac @verifyArgs 2>&1
-$verifyExit = $LASTEXITCODE
-
-if ($verifyExit -ne 0) {
-    Write-Host "[WARN] Verification command not available or failed (exit $verifyExit)." -ForegroundColor Yellow
-    Write-Host "  Manually verify in Power Platform Admin Center:" -ForegroundColor Yellow
-    Write-Host "  Environments > $EnvironmentId > Settings > Governance" -ForegroundColor Yellow
-}
-else {
-    Write-Host ($verifyOutput -join "`n")
-}
+Write-Host ""
+Write-Info "Verify the applied configuration in the Power Platform Admin Center:"
+Write-Host "  Environments > $EnvironmentId > Settings > Governance" -ForegroundColor Yellow
 
 Write-Host ""
 Write-Info "Governance configuration applied to environment $EnvironmentId"
+Write-Info "  Protection level: $ProtectionLevel"
 Write-Info "  Solution checker mode: $SolutionCheckerMode"
-if ($DisableUnmanagedCustomizations) { Write-Info "  Unmanaged customizations: disabled" }
-if ($EnablePipelines) { Write-Info "  Deployment pipelines: enabled" }
