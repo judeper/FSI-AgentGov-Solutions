@@ -2,6 +2,18 @@
 
 All notable changes to the Generative AI Config Auditor are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **`Connect-EnvironmentDataverse.ps1` SecureString token handling** — `Get-AzAccessToken` returns the access token as a `SecureString` by default on Az.Accounts 5.x (older versions return a plain `String`). The interactive auth path returned `$tokenResult.Token` verbatim, so on current Az.Accounts the bearer token became the literal string `System.Security.SecureString`, producing `401 Unauthorized` on every per-environment and ELM Dataverse call made by `Get-AgentGenAISettings.ps1`. The token is now normalized to plain text via `[System.Net.NetworkCredential]`, matching the existing handling in `GACClient.psm1`, `Get-PurviewDLPEvidence.ps1`, and `Import-ApprovedAoaiConnections.ps1`. Reference: [Get-AzAccessToken](https://learn.microsoft.com/powershell/module/az.accounts/get-azaccesstoken) ("the default output type has been changed from a plain text `String` to `SecureString`").
+
+### Documentation
+
+- **`docs/prerequisites.md` API permissions corrected** — Removed the inaccurate "Microsoft Graph `Environment.Read.All` (Application)" row; environment enumeration is performed by `Microsoft.PowerApps.Administration.PowerShell` (`Get-AdminPowerAppEnvironment`) against the Power Platform Admin (BAP) API and is governed by the admin roles already listed, not a Microsoft Graph scope. Documented the Graph permission that `Get-PurviewDLPEvidence.ps1` actually requires: `InformationProtectionPolicy.Read` (Delegated) / `InformationProtectionPolicy.Read.All` (Application). Reference: [List informationProtection labels](https://learn.microsoft.com/graph/api/informationprotectionpolicy-list-labels).
+- **`docs/prerequisites.md` module list** — Added `Microsoft.Graph.Authentication` (required by `Get-PurviewDLPEvidence.ps1` for `Invoke-MgGraphRequest`) and `ExchangeOnlineManagement` (optional, for `Get-DlpCompliancePolicy` / `Get-Label`), plus their install commands. Noted that Az.Accounts 5.x SecureString tokens are handled automatically.
+- **`docs/flow-configuration.md` Parse JSON schema aligned to runbook output** — The `GAC-DailyAudit` Parse JSON schema documented violation fields (`Feature`, `ExpectedPolicy`, `ActualConfig`) and a `Drift.DriftDetected` property that `Start-GenAIConfigValidationRunbook.ps1` does not emit. Corrected the violation item properties to the actual fields (`AzureOpenAIEnabled`, `OrchestrationMode`, `GenerativeAnswersNodeCount`) and the `Drift` object to `HasDrift` / `IsFirstRun` / `DriftedAgents` / `Details`.
+
 ## [1.2.1] - 2026-05-19
 
 ### Changed

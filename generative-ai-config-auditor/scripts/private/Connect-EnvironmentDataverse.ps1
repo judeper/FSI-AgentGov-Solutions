@@ -179,6 +179,18 @@ try {
         $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
     }
 
+    # Az.Accounts 5.x changed the default Get-AzAccessToken output type from a
+    # plain-text String to a SecureString (older versions still return a String).
+    # Normalize to a plain bearer string so downstream Authorization headers
+    # ("Bearer <token>") are well-formed rather than the literal text
+    # "System.Security.SecureString". Matches the handling in GACClient.psm1,
+    # Get-PurviewDLPEvidence.ps1, and Import-ApprovedAoaiConnections.ps1.
+    if ($tokenResult.Token -is [System.Security.SecureString]) {
+        $accessToken = [System.Net.NetworkCredential]::new('', $tokenResult.Token).Password
+    } else {
+        $accessToken = $tokenResult.Token
+    }
+
     $expiresOn = if ($tokenResult.ExpiresOn) {
         $tokenResult.ExpiresOn.LocalDateTime
     } else {
@@ -186,12 +198,12 @@ try {
     }
 
     $script:TokenCache[$normalizedUrl] = @{
-        Token     = $tokenResult.Token
+        Token     = $accessToken
         ExpiresOn = $expiresOn
     }
 
     Write-Verbose "Interactive token acquired for $normalizedUrl (expires: $expiresOn)"
-    return $tokenResult.Token
+    return $accessToken
 } catch {
     if ($_.Exception.Message -match 'No Azure context found') {
         throw $_

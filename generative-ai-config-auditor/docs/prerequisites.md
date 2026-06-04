@@ -7,9 +7,11 @@ Requirements for deploying the Generative AI Config Auditor (GAC) solution.
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
 | PowerShell | 7.4+ | Core runtime matching the solution scripts' `#Requires -Version 7.4` declarations |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration |
-| Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode) |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration (`Get-AdminPowerAppEnvironment`) |
+| Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode). Az.Accounts 5.x returns `Get-AzAccessToken` tokens as `SecureString` by default; the solution scripts detect and convert these automatically. |
 | MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |
+| Microsoft.Graph.Authentication | 2.0+ | Required by `Get-PurviewDLPEvidence.ps1` for `Invoke-MgGraphRequest` (sensitivity/information protection label evidence) |
+| ExchangeOnlineManagement | 3.0+ | Optional — enables `Get-DlpCompliancePolicy` / `Get-Label` in `Get-PurviewDLPEvidence.ps1` |
 
 ## Python Requirements
 
@@ -36,6 +38,12 @@ Install-Module -Name Az.Accounts -Force -Scope CurrentUser
 
 # Install MSAL.PS for evidence export
 Install-Module -Name MSAL.PS -Force -Scope CurrentUser
+
+# Install Microsoft.Graph.Authentication for Purview DLP evidence collection
+Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser
+
+# Optional: Exchange Online Management for DLP policy / sensitivity label cmdlets
+Install-Module -Name ExchangeOnlineManagement -Force -Scope CurrentUser
 ```
 
 ## Microsoft Entra ID App Registration
@@ -55,10 +63,12 @@ A Microsoft Entra ID app registration is required for both interactive and non-i
 
 | API | Permission | Type | Purpose |
 |-----|-----------|------|---------|
-| Dynamics CRM | `user_impersonation` | Delegated | Dataverse read/write for schema and data |
-| Microsoft Graph | `Environment.Read.All` | Application | Power Platform environment enumeration |
+| Dynamics CRM (`https://<org>.crm.dynamics.com/.default`) | `user_impersonation` | Delegated | Dataverse read/write for schema and data |
+| Microsoft Graph | `InformationProtectionPolicy.Read` | Delegated | Read sensitivity / information protection labels for `Get-PurviewDLPEvidence.ps1`. Use `InformationProtectionPolicy.Read.All` (Application) for non-interactive execution. |
 
 > **Note:** After adding permissions, an admin must grant consent for the tenant.
+>
+> **Environment enumeration** is performed by the `Microsoft.PowerApps.Administration.PowerShell` module (`Get-AdminPowerAppEnvironment`), which authenticates against the Power Platform Admin (BAP) API and is governed by the Power Platform admin **roles** listed under [Permissions](#permissions) below — not a Microsoft Graph application permission. No `Environment.Read.All` Microsoft Graph scope is used by this solution.
 
 ### Certificate Authentication (Recommended for Automation)
 
