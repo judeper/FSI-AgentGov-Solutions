@@ -101,7 +101,7 @@ verified as already-correct during this pass (no change applied):
   (`fsi_overallseverity`, `fsi_totalpolicies`, etc.), and option-set values are documented
   in the Dataverse-issued `100000000+` range rather than `0/1/2` placeholders.
 - **Language and branding:** no prohibited regulatory-assurance phrases outside CHANGELOG
-  history; no legacy "Azure AD" branding except the required `AzureADMyOrg` API literal.
+  history; no legacy directory-service branding except the required `AzureADMyOrg` API literal.
 
 ## Runtime-Only Caveats
 
