@@ -74,8 +74,8 @@ GDPR Art. 5(1)(c), GLBA Section 501(b), and CCPA purpose limitation.
   `fsi_allowed*` arrays) matches `docs/dataverse-schema.md`. No snake_case violations.
 - **Option-set values** use 10001+ ranges everywhere (violation type, severity, status,
   zone), matching the schema doc — no 0/1/2 drift.
-- **Language rules** — no prohibited phrases ("ensures/guarantees/will prevent/eliminates
-  risk") in any markdown.
+- **Language rules** — no FSI-prohibited compliance-absolute phrases
+  (per `fsi-language-rules.instructions.md`) in any markdown.
 
 ## Gaps Found and Fixed
 
