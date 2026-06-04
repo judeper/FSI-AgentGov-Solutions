@@ -39,7 +39,7 @@ for platform updates that could affect AI-agent deployments (Copilot Studio, Age
 | Category / severity enum mappings | Microsoft Learn enums | Verified |
 | Auth model | Source review of `Get-McmAccessToken` | Managed-identity-first; ClientSecret marked `# legacy: dev-only` |
 | Dataverse column / option-set names | `.ralph-config.json` + `create_mcm_dataverse_schema.py` cross-check | Consistent |
-| FSI language rules | grep for `ensures/guarantees/will prevent/eliminates risk` (excl. CHANGELOG) | 0 violations |
+| FSI language rules | grep for the FSI-prohibited compliance-absolute phrases (per `fsi-language-rules.instructions.md`, excl. CHANGELOG) | 0 violations |
 | Deprecated-API references | grep for `shared_http`, `/beta/`, retired O365 connectors | None misused; all are correct retirement callouts |
 
 ---
