@@ -59,7 +59,9 @@
   Migration completed: February 4, 2026
 
   The deprecated x-api-key authentication method has been removed.
-  This script will continue working after March 31, 2026.
+  This script uses Entra ID authentication and is unaffected by the
+  Application Insights query API-key retirement (September 30, 2026,
+  extended by Microsoft from the originally announced March 31, 2026).
 
   Prerequisites:
   - Install Az.Accounts module: Install-Module Az.Accounts -Force
