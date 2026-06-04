@@ -45,7 +45,7 @@ This solution does not ship a packaged `.zip` file. Create all Dataverse tables,
 
 - [ ] Follow [Flow Configuration](flow-configuration.md) to manually build CD-ScoreCalculator and CD-ExceptionMonitor flows in Power Automate designer
 - [ ] Configure connection references (Dataverse, Office 365 Outlook, Microsoft Teams) during flow creation
-- [ ] Set the `CD_NotificationEmail` environment variable to the compliance administrator email address
+- [ ] Set the `fsi_CD_NotificationEmail` environment variable to the compliance administrator email address
 
 ---
 

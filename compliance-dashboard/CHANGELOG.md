@@ -9,6 +9,8 @@ All notable changes to the Compliance Dashboard solution.
 
 ### Fixed
 
+- **Doc accuracy (lab validation):** Corrected the Microsoft 365 Copilot usage report endpoint guidance in `README.md` ("Microsoft Learn 2026-Q2 integration notes") and `docs/flow-configuration.md` (CD-EvidenceCollector "Microsoft 365 usage reports" section). Both previously claimed `getMicrosoft365CopilotUserCountSummary` was available on a v1.0 `/copilot/reports/...` path. Per Microsoft Learn, that report API exists **only under `/beta`** (`/beta/copilot/reports/...` and `/beta/reports/...`) as of 2026-Q2 and is not supported for production; `getOffice365ActiveUserDetail` remains GA on v1.0. Guidance now reflects the actual API surface. (lab validation)
+- **Doc consistency:** `docs/deployment-checklist.md` referenced the notification environment variable as `CD_NotificationEmail`; aligned it to the schema name `fsi_CD_NotificationEmail` used in `docs/flow-configuration.md`. (lab validation)
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 ## [1.0.5] - 2026-05-23
 

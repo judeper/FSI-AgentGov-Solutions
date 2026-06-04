@@ -202,12 +202,15 @@ Recommended interim pattern:
 
 **Microsoft 365 usage reports (Graph)**
 ```http
-GET https://graph.microsoft.com/v1.0/copilot/reports/getMicrosoft365CopilotUserCountSummary(period='D30')?$format=application/json
+# Microsoft 365 Copilot usage reports are currently BETA-only (subject to change, not supported for production):
+GET https://graph.microsoft.com/beta/copilot/reports/getMicrosoft365CopilotUserCountSummary(period='D30')?$format=application/json
+
+# General-availability M365 usage detail is served from v1.0:
 GET https://graph.microsoft.com/v1.0/reports/getOffice365ActiveUserDetail(period='D30')
 Authorization: Bearer {token}
 ```
 
-Use `Reports.Read.All` and the least-privileged Microsoft Entra role required for delegated reads. For production dashboards, prefer the v1.0 `/copilot/reports/...` APIs when available instead of legacy beta `/reports/...` Copilot endpoints.
+Use `Reports.Read.All` and the least-privileged Microsoft Entra role required for delegated reads. The Copilot usage report APIs (`getMicrosoft365CopilotUserCountSummary` and related) exist only on `/beta` as of 2026-Q2 — per Microsoft Learn, `/beta` endpoints are subject to change and are not supported in production, so treat Copilot usage signals as preview until Microsoft publishes a v1.0 equivalent.
 
 **Power Platform Environments**
 ```http
