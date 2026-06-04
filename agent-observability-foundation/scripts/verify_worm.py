@@ -16,13 +16,23 @@ Usage:
     # Basic verification with config file
     python verify_worm.py --config config/config.yml
 
-    # Override storage account and container
+    # Verify the primary audit-of-record container (Copilot Studio interaction
+    # events export to the AppEvents category -> insights-logs-appevents).
     python verify_worm.py --config config/config.yml \\
         --storage-account staofsec17a4export \\
-        --container-name insights-logs-apptraces
+        --container-name insights-logs-appevents
 
     # Verbose output for debugging
     python verify_worm.py --config config/config.yml --verbose
+
+Container scope:
+    Each verification run checks a single container. Azure diagnostic-settings
+    export creates one container per enabled log category
+    (insights-logs-appevents, insights-logs-apptraces, insights-logs-apprequests,
+    insights-logs-appexceptions). WORM immutability is scoped per container, so
+    run this script once per audit-of-record container. The Copilot Studio
+    interaction events that back this solution's books-and-records evidence land
+    in insights-logs-appevents. See docs/worm-configuration.md.
 
 Verification Checks:
     1. Storage account exists and is StorageV2 (not HNS-enabled)

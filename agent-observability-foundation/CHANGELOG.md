@@ -2,6 +2,16 @@
 
 All notable changes to the Agent Observability Foundation are documented here.
 
+## [1.2.3] - 2026-06-04
+
+### Fixed
+
+- **Critical (WORM audit coverage):** `docs/worm-configuration.md` and `scripts/verify_worm.py` previously treated `insights-logs-apptraces` as the sole/primary WORM container. Azure diagnostic-settings export creates one container per enabled log category (`insights-logs-{category}`), and the primary Copilot Studio audit-of-record telemetry (`BotMessageSend`, `BotMessageReceived`, `GenerativeAnswers`) exports under the **AppEvents** category to `insights-logs-appevents` — which `templates/diagnostic-settings.json` enables alongside `AppTraces`, `AppRequests`, and `AppExceptions`. Following the prior guidance verbatim would protect `insights-logs-apptraces` while leaving the primary audit container `insights-logs-appevents` unprotected. The WORM guide now enumerates all four export containers, identifies `insights-logs-appevents` as the primary audit-of-record container, and directs applying the immutability policy and running `verify_worm.py` once per container. Container naming verified against Microsoft Learn (Azure Monitor resource logs — Azure Storage destination). (lab-readiness validation)
+
+### Added
+
+- `LAB-VALIDATION.md` — static lab-readiness validation evidence report (authoritative-source verification of Copilot Studio telemetry schema, KQL table/column correctness, deployment ARM API versions, and RBAC role definition IDs).
+
 ## [1.2.2] - 2026-05-22
 
 ### Fixed

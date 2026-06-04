@@ -23,7 +23,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | agent-communication-restriction-detector | v1.2.1 | 2.17 | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
 | agent-knowledge-source-scanner | v1.1.2 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
 | agent-registry-automation | v2.1.1 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
-| agent-observability-foundation | v1.2.2 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
+| agent-observability-foundation | v1.2.3 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
 | agent-sharing-access-restriction-detector | v2.0.2 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
 | audit-compliance-manager | v1.0.5 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
 | coi-testing | v1.1.2 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |

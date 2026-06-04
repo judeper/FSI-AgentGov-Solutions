@@ -5,6 +5,7 @@
     "The solution maps to controls 1.7, 2.8, 2.9, 3.2. Control 1.6 (DSPM for AI) is NOT in the official catalog for this solution.",
     "Workbook templates declare applicationInsightsId parameter but sourceId defaults to 'Azure Monitor' — workbook binding requires post-deployment configuration to target the correct App Insights resource.",
     "Power BI TMDL tables use import mode with placeholder sources — not DirectQuery as some docs state. The semantic model ships 18 DAX measures (not 19).",
-    "Sampling below 100% is documented as a compliance risk with explicit caveats for audit defensibility. This is an intentional design decision for cost optimization in non-critical environments."
+    "Sampling below 100% is documented as a compliance risk with explicit caveats for audit defensibility. This is an intentional design decision for cost optimization in non-critical environments.",
+    "WORM container coverage: diagnostic-settings export creates one container per enabled log category (insights-logs-{category}). The primary audit-of-record telemetry (Copilot Studio BotMessageSend/BotMessageReceived/GenerativeAnswers) is the AppEvents category -> insights-logs-appevents. Apply WORM and run verify_worm.py per container; insights-logs-appevents is primary. verify_worm.py's config default container remains insights-logs-apptraces for backward compatibility, but appevents is the one that backs books-and-records evidence."
   ]
 }

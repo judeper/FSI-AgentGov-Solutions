@@ -33,9 +33,30 @@ WORM (Write Once Read Many) policies enable immutable storage for Azure Blob Sto
 Before configuring WORM policy:
 
 1. **Storage account exists:** Provisioned by `provision.py` (StorageV2, hierarchical namespace disabled)
-2. **Container exists:** `insights-logs-apptraces` container is auto-created by Azure Diagnostic Settings on first telemetry export (NOT created by `provision.py`)
-3. **Diagnostic Settings configured:** Data is flowing to the container
+2. **Export containers exist:** Azure Diagnostic Settings auto-creates one blob container per enabled log category on first telemetry export (NOT created by `provision.py`). The `templates/diagnostic-settings.json` template in this solution enables four categories, producing four containers (see [Which containers must be protected](#which-containers-must-be-protected) below)
+3. **Diagnostic Settings configured:** Data is flowing to the containers
 4. **Verify test environment:** Confirm you are NOT in production (first time)
+
+---
+
+## Which containers must be protected
+
+Azure Monitor diagnostic-settings export to a storage account writes blobs under the container naming convention `insights-logs-{log category name}` (lowercased), one container per enabled log category. Immutability (WORM) policies in Azure Blob Storage are scoped **per container**, so a policy applied to one container does not protect the others.
+
+The `templates/diagnostic-settings.json` template enables four Application Insights log categories. After telemetry begins flowing, expect these containers:
+
+| Log category | Container | Holds |
+|--------------|-----------|-------|
+| `AppEvents` | `insights-logs-appevents` | **Primary audit-of-record.** Copilot Studio custom events (`BotMessageSend`, `BotMessageReceived`, `GenerativeAnswers`, topic/action events) that the KQL query library and compliance evidence depend on. |
+| `AppTraces` | `insights-logs-apptraces` | Trace/diagnostic messages |
+| `AppRequests` | `insights-logs-apprequests` | Request telemetry |
+| `AppExceptions` | `insights-logs-appexceptions` | Exception telemetry |
+
+> **Required for SEC 17a-4(f) coverage:** Apply the WORM time-based retention policy (with `allowProtectedAppendWrites` enabled) to **each** container that holds audit-of-record data. At minimum, `insights-logs-appevents` must be protected, because it — not `insights-logs-apptraces` — holds the Copilot Studio interaction events used as books-and-records evidence. Protecting only `insights-logs-apptraces` leaves the primary audit container unprotected. Repeat Steps 2–8 below for each container, and run the verification script once per container.
+>
+> The portal steps and CLI examples below use `insights-logs-apptraces` as a worked example. Substitute the container name for each container you protect, starting with `insights-logs-appevents`.
+
+Container naming convention reference: [Azure Monitor — send diagnostic data to Azure Storage](https://learn.microsoft.com/azure/azure-monitor/essentials/resource-logs#azure-storage).
 
 ---
 
@@ -164,11 +185,19 @@ Verify immutability is enforced:
 
 ## Verification
 
-Run the verification script to confirm WORM compliance status:
+Run the verification script to confirm WORM compliance status. The script verifies one container per run, so run it once for each protected container, starting with the primary audit-of-record container `insights-logs-appevents`:
 
 ```bash
-python scripts/verify_worm.py --storage-account <storage-account> --container insights-logs-apptraces
+# Primary audit-of-record container (Copilot Studio interaction events)
+python scripts/verify_worm.py --storage-account <storage-account> --container-name insights-logs-appevents
+
+# Repeat for each remaining protected container
+python scripts/verify_worm.py --storage-account <storage-account> --container-name insights-logs-apptraces
+python scripts/verify_worm.py --storage-account <storage-account> --container-name insights-logs-apprequests
+python scripts/verify_worm.py --storage-account <storage-account> --container-name insights-logs-appexceptions
 ```
+
+A run exits non-zero if the named container's policy is missing, unlocked, has insufficient retention, or has protected append writes disabled. Treat the WORM posture as adequate only when every audit-of-record container passes.
 
 The script performs read-only verification without modifying any policies.
 
