@@ -4,9 +4,17 @@ All notable changes to this solution are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Schema:** Added `fsi_ApprovedScopes` and `fsi_ActualScopes` memo columns to the `fsi_AgentConnectorScope` table in `create_cod_dataverse_schema.py`. This resolves the deferred limitation carried since v2.1.1: `Compare-OAuthScopeBaseline.ps1` queries `fsi_approvedscopes` / `fsi_actualscopes` on the baseline table, but those columns previously existed only on `fsi_credentialviolation` and `fsi_credentialexception`. The name-level OAuth scope baseline comparison now targets columns that exist on the queried entity instead of returning HTTP 400. Regenerated `docs/dataverse-schema.md` via `--output-docs`. Existing tenants must re-run `python scripts/create_cod_dataverse_schema.py` to add the two columns (additive, non-destructive migration).
+
 ### Fixed
 
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
+
+### Validation
+
+- Lab-readiness static validation pass (no live tenant). All 9 PowerShell scripts parse cleanly; all 3 Python scripts compile; column references cross-checked against `create_cod_dataverse_schema.py`; auth token audiences and current Microsoft APIs verified against Microsoft Learn. See `LAB-VALIDATION.md`.
 
 ## [2.1.1] - 2026-05-22
 
