@@ -133,7 +133,7 @@ Write-Verbose "Filter mode: $($filterConfig.FilterMode)"
 function Get-ExtendedSetting {
     <#
     .SYNOPSIS
-        Extracts a setting from governanceConfiguration.settings.extendedSettings.
+        Extracts a setting from properties.governanceConfiguration.settings.extendedSettings.
     #>
     param(
         [Parameter(Mandatory)]
@@ -144,7 +144,7 @@ function Get-ExtendedSetting {
     )
     
     try {
-        $extendedSettings = $Environment.Internal.governanceConfiguration.settings.extendedSettings
+        $extendedSettings = $Environment.Internal.properties.governanceConfiguration.settings.extendedSettings
         if ($extendedSettings -and $extendedSettings.PSObject.Properties.Name -contains $SettingKey) {
             return $extendedSettings.$SettingKey
         }
@@ -352,7 +352,7 @@ foreach ($env in $environments) {
     # Build raw settings for debugging
     $rawSettings = @{}
     try {
-        $extendedSettings = $env.Internal.governanceConfiguration.settings.extendedSettings
+        $extendedSettings = $env.Internal.properties.governanceConfiguration.settings.extendedSettings
         if ($extendedSettings) {
             foreach ($prop in $extendedSettings.PSObject.Properties) {
                 if ($prop.Name -like 'bot-*') {

@@ -74,7 +74,7 @@
   "setting_descriptions": {
     "bot-limitSharingMode": {
       "noLimit": "Agents can be shared with anyone in the organization",
-      "ExcludeSharingToSecurityGroups": "Agent sharing restricted to security groups only"
+      "ExcludeSharingToSecurityGroups": "Agent sharing with security groups is excluded; sharing is limited to individual users"
     },
     "bot-authoringSharingDisabled": {
       "true": "Agent authoring sharing is disabled (ALM-only deployment)",
@@ -82,7 +82,7 @@
     },
     "bot-publishedBotLimitSharingMode": {
       "noLimit": "Published agents can be accessed by anyone",
-      "ExcludeSharingToSecurityGroups": "Published agent access restricted to security groups"
+      "ExcludeSharingToSecurityGroups": "Published agent sharing with security groups is excluded; access is limited to individual users"
     }
   }
 }
