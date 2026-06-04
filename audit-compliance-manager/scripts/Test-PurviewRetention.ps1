@@ -73,7 +73,7 @@
 .NOTES
     Version: 1.0.4
     Requires:
-    - ExchangeOnlineManagement module v3.7.0 or later
+    - ExchangeOnlineManagement module v3.0.0 or later
     - Security & Compliance PowerShell connection for retention policies
     - Purview Compliance Admin or Entra Global Admin role
     - For service principal: Application with Compliance.ManageAsApp permission

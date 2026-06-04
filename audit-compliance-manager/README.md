@@ -309,6 +309,30 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 
 > **Note:** DSR compliance automation is not yet included in ACM scripts. Organizations should track DSR capabilities through their privacy operations program and evaluate integration in a future release.
 
+### Audit log access: Exchange Online cmdlet vs Microsoft Graph Audit Query API
+
+This solution reads the unified audit log through Exchange Online PowerShell
+([`Search-UnifiedAuditLog`](https://learn.microsoft.com/powershell/module/exchangepowershell/search-unifiedauditlog))
+and checks enablement with
+[`Get-AdminAuditLogConfig`](https://learn.microsoft.com/purview/audit-log-enable-disable).
+Two related platform changes are worth tracking:
+
+- **Mailbox-specific audit cmdlets are retiring.** Microsoft has announced the
+  retirement of `Search-MailboxAuditLog` and `New-MailboxAuditLogSearch`. This
+  solution does **not** use those cmdlets — `Search-UnifiedAuditLog` is the
+  supported replacement and remains current. See the
+  [Search-UnifiedAuditLog reference](https://learn.microsoft.com/powershell/module/exchangepowershell/search-unifiedauditlog).
+- **The Microsoft Graph Audit Query API is the modern programmatic path.** The
+  [`auditLogQuery` API](https://learn.microsoft.com/graph/api/resources/security-auditlogquery)
+  (under `/security/auditLog/queries`) is generally available and offers
+  asynchronous search and granular `AuditLogsQuery.Read.All` permissions (plus
+  workload-scoped variants such as `AuditLogsQuery-Entra.Read.All`). ACM still
+  uses the cmdlet for tenant validation because it is simpler to run from Azure
+  Automation runbooks and aligns with the canary-event verification pattern.
+  Migrating the audit-search steps to the Graph Audit Query API is recommended
+  to evaluate for a future minor release; it is not required for current
+  lab-readiness because the cmdlet path remains supported.
+
 ## Components
 
 ### Scripts
