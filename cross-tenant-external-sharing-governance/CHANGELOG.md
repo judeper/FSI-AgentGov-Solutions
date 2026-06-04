@@ -6,6 +6,27 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed (lab-readiness validation)
+
+- **`Scan-ManagedEnvBotSharingBaseline.ps1` used non-existent governance
+  properties.** The script evaluated `extendedSettings.botSharingAccessControl`,
+  `extendedSettings.botSharingSharingApproval`, and
+  `extendedSettings.botSharingMaxShareLimit` — none of which exist in the Power
+  Platform Managed Environments `governanceConfiguration` schema. Against a live
+  tenant every environment would have been flagged non-compliant on all three
+  checks because the property lookups always returned `$null`. Replaced with the
+  documented agent-sharing properties from the Managed Environments "Limit
+  sharing" control:
+  `bot-limitSharingMode` (not `noLimit`; expected
+  `ExcludeSharingToSecurityGroups`), `bot-authoringSharingDisabled` (expected
+  `True`), and `bot-maxLimitUserSharing` (positive viewer limit; `-1` means
+  unlimited). Also removed the invented "sharing approval workflow" check
+  (Managed Environments has no such property) and repurposed it to the documented
+  editor-sharing toggle. Source:
+  https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits
+  The `BaselinePolicy` parameter default changed from `Restricted` to the
+  documented enum value `ExcludeSharingToSecurityGroups`.
+
 ## [1.1.0] - 2026-05-23 [BREAKING DEPLOY]
 
 ### Changed (BREAKING)
