@@ -74,8 +74,8 @@ Guidelines Establishing Information Security Standards (12 CFR 30 App. B).
   `fsi_runtimestamp`, `fsi_validationtime`, `fsi_contentmoderationlevel`, etc.)
   match `create_dataverse_schema.py`. Option-set values use the 100000000+ range
   (zone, severity) rather than 0/1/2.
-- **Language rules pass.** No occurrences of "ensures / guarantees / will prevent
-  / eliminates risk" in solution docs or scripts.
+- **Language rules pass.** No occurrences of the FSI-prohibited compliance-absolute
+  phrases (per `fsi-language-rules.instructions.md`) in solution docs or scripts.
 - **Parse-validity.** All `.ps1`/`.psm1` files parse with zero errors
   (`Parser::ParseFile`); all `.py` files compile (`python -m py_compile`).
 
