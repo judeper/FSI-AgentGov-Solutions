@@ -482,7 +482,7 @@ python create_audit_compliance_schema.py \
 | Module | Version | Purpose |
 |--------|---------|---------|
 | `Microsoft.PowerApps.Administration.PowerShell` | 2.0+ | Power Platform environment management |
-| `ExchangeOnlineManagement` | 3.7.0+ | Exchange Online MI auth, audit log search |
+| `ExchangeOnlineManagement` | 3.0+ | Exchange Online MI auth, audit log search |
 | `AuditComplianceHelpers` | 1.0.0 | ALCA shared helper module (custom) |
 
 #### Configuration Steps
@@ -550,7 +550,7 @@ For each Power Platform environment with Dataverse:
 1. Navigate to **Azure Automation Account** → **Modules** → **Browse gallery**
 2. Search and import:
    - `Microsoft.PowerApps.Administration.PowerShell` (version 2.0+)
-   - `ExchangeOnlineManagement` (version 3.7.0+)
+   - `ExchangeOnlineManagement` (version 3.0+)
 3. Wait for import completion (Status: Available)
 
 **Step 4: Upload Custom Helper Module**

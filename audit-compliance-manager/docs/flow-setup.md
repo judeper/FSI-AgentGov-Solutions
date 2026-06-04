@@ -26,7 +26,7 @@ Before creating the flows, ensure you have:
 - [ ] **Azure subscription** with Automation Account containing:
   - Start-TenantValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
   - Start-EnvironmentValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
-  - Required PowerShell modules installed (MSAL.PS 4.37.0, ExchangeOnlineManagement 3.7.0+, Microsoft.PowerApps.Administration.PowerShell 2.0.180+)
+  - Required PowerShell modules installed (MSAL.PS 4.37.0, ExchangeOnlineManagement 3.0+, Microsoft.PowerApps.Administration.PowerShell 2.0.180+)
   - Certificate uploaded for service principal authentication
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Microsoft Teams** with Workflows app installed and channel created for alerts
@@ -83,7 +83,7 @@ Navigate to **Automation Account** > **Modules** > **Browse gallery** and import
 | Module | Version | Purpose |
 |--------|---------|---------|
 | MSAL.PS | 4.37.0 | Dataverse Web API token acquisition |
-| ExchangeOnlineManagement | 3.7.0 | Tenant-level audit configuration checks |
+| ExchangeOnlineManagement | 3.0+ | Tenant-level audit configuration checks |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Environment discovery and validation |
 
 **Important:** Wait for each module to finish importing before starting the next one (status = "Available").
@@ -564,7 +564,7 @@ This table defines the alert behavior based on validation status:
 1. Navigate to **Automation Account** > **Modules**
 2. Check module versions match requirements:
    - MSAL.PS: 4.37.0
-   - ExchangeOnlineManagement: 3.7.0
+   - ExchangeOnlineManagement: 3.0+
    - Microsoft.PowerApps.Administration.PowerShell: 2.0.0
 3. Update modules if needed (may require reimporting)
 

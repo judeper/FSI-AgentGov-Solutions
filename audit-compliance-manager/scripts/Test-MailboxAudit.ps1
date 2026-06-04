@@ -57,7 +57,7 @@
 .NOTES
     Version: 1.0.2
     Requires:
-    - ExchangeOnlineManagement module v3.7.0 or later
+    - ExchangeOnlineManagement module v3.0.0 or later
     - Exchange Online Administrator or Global Administrator role
     - For service principal: Application with Exchange.ManageAsApp permission
 

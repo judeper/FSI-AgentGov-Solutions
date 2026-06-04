@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
+- **Lab-readiness validation pass:** Aligned `ExchangeOnlineManagement` minimum-version references to the enforced `#Requires` gate (`3.0.0`/`3.0+`). NOTES prose, the install-hint error message in `private/Connect-AuditServices.ps1`, `SOLUTION-DOCUMENTATION.md`, and `docs/flow-setup.md` previously said `3.7.0`, contradicting every `#Requires` statement (`3.0.0`) and the README runtime table (`3.0+`).
+- **Audit-access modernization note:** Added a README "Platform Update Notes" subsection documenting that `Search-UnifiedAuditLog` remains the supported cmdlet (the retiring `Search-MailboxAuditLog` / `New-MailboxAuditLogSearch` cmdlets are not used here) and that the Microsoft Graph `auditLogQuery` API (`AuditLogsQuery.Read.All`) is the recommended modern programmatic path to evaluate for a future release. Authoritative Microsoft Learn sources cited. See `LAB-VALIDATION.md`.
 
 ### Fixed
 

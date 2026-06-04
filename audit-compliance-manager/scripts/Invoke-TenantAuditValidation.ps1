@@ -100,7 +100,7 @@
 .NOTES
     Version: 1.0.4
     Requires:
-    - ExchangeOnlineManagement module v3.7.0 or later
+    - ExchangeOnlineManagement module v3.0.0 or later
     - PowerShell 7.0 or later
     - Exchange Online Admin or Entra Global Admin role
     - Purview Compliance Admin role (for Purview retention validation)
