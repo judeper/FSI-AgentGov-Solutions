@@ -40,7 +40,9 @@
     Maximum retry attempts for throttled requests. Defaults to 5.
 
 .EXAMPLE
-    $token = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com").Token
+    # Az.Accounts 5.x returns .Token as a SecureString; convert to plain text for -AccessToken.
+    $secureToken = (Get-AzAccessToken -ResourceTypeName MSGraph -AsSecureString).Token
+    $token = [System.Net.NetworkCredential]::new('', $secureToken).Password
     .\Invoke-GraphPermissionScan.ps1 -DriveId "b!abc123" -ItemIds @("01ABC","02DEF") -AccessToken $token
 
 .NOTES
@@ -49,10 +51,15 @@
     Framework:  FSI Agent Governance
     Controls:   4.3, 1.4, 1.5
 
-    Required Microsoft Graph permissions (application or delegated):
-    - Sites.Read.All  — Read site and drive metadata
-    - Files.Read.All  — Read file content and permissions
-    - Group.Read.All  — Resolve group-based permission grants
+    Required Microsoft Graph permissions (application or delegated) for the
+    list-permissions endpoint (https://learn.microsoft.com/graph/api/driveitem-list-permissions):
+    - Files.Read.All  — Read driveItem sharing permissions (application, least privileged)
+    - Files.Read      — Read driveItem sharing permissions (delegated, least privileged)
+    - Sites.Read.All  — Higher-privileged alternative; not required if Files.Read[.All] is granted
+
+    Group.Read.All is NOT required: group-based grants are returned inline in the
+    grantedToV2 / grantedToIdentitiesV2 facets, so no separate group-membership
+    call is made.
 
     For delegated flows, the signed-in user must also have access to the
     target SharePoint site.

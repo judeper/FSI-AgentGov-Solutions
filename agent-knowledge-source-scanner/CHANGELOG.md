@@ -8,6 +8,12 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 ### Fixed
 
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
+- **Least-privilege Graph permissions corrected.** The Graph v1.0 scanner (`Invoke-GraphPermissionScan.ps1`) documentation listed `Group.Read.All` as required, but the [list-permissions endpoint](https://learn.microsoft.com/graph/api/driveitem-list-permissions?view=graph-rest-1.0#permissions) requires only `Files.Read.All` (application) / `Files.Read` (delegated), with `Sites.Read.All` as a higher-privileged alternative. Group-based grants are returned inline in the `grantedToV2`/`grantedToIdentitiesV2` facets, so no group-membership call (and no `Group.Read.All`) is made. Corrected README "Microsoft Graph Permissions" table and the script `.NOTES`. (lab-readiness validation)
+- **`Get-AzAccessToken` example updated for Az.Accounts 5.x.** `.Token` is now a `SecureString` by default, so the previous `(Get-AzAccessToken -ResourceUrl ...).Token` example no longer binds to the `[string]$AccessToken` parameter. Examples now use `-ResourceTypeName MSGraph -AsSecureString` and convert to plain text. (lab-readiness validation)
+
+### Added
+
+- **`LAB-VALIDATION.md`** — static (no-tenant) lab-readiness validation report: authoritative Microsoft source verification of Graph endpoints/permissions/batching, PnP.PowerShell 3.x authentication, gaps found and fixed, and runtime-only caveats. (lab-readiness validation)
 ## [1.1.2] - 2026-05-23
 
 ### Fixed
