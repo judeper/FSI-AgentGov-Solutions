@@ -86,11 +86,11 @@ flowchart TD
 
 ## Zone applicability
 
-| Zone | Express path coverage in v0.2 |
-|------|-------------------------------|
-| Personal (Zone 3) | ✅ Full Express coverage with sponsor sign-off |
-| Team (Zone 2) | ⚠️ Captured; routed to Standard/follow-up review |
-| Enterprise (Zone 1) | ⚠️ Captured; routed to Full/follow-up review |
+| Zone | Intake path coverage in v1.0.0-preview |
+|------|-----------------------------------------|
+| Personal (Zone 3) | ✅ Express path — sponsor 1-click approval with FINRA 3110 attestation |
+| Team (Zone 2) | ✅ Standard path — 22-question catalog routed to a conditional reviewer |
+| Enterprise (Zone 1) | ✅ Full path — 35-question catalog, parallel reviewer quorum, and MRM handoff where applicable |
 
 ## Regulatory alignment
 
@@ -168,10 +168,11 @@ See [`docs/pilot-deployment-runbook.md`](docs/pilot-deployment-runbook.md) for t
 
 ## Roadmap
 
-- **v0.3** — Standard path (Tier-2/Zone-2 questions, InfoSec sample dashboard, M365 declarative agent surface)
-- **v0.4** — Full path (Tier-1/Zone-1 questions, parallel reviewer dashboard, MRM/Compliance/Privacy/Legal routing)
-- **v0.5** — Sovereign cloud adaptation guide (GCC / GCC-High / DoD)
-- **v1.0** — Live after pilot-firm validation feedback incorporated
+Express, Standard, and Full paths all ship in v1.0.0-preview. Forward-looking items:
+
+- **v1.1** — Convert `fsi_appealofid` to a self-lookup; live-tenant verification of the Microsoft Entra Agent ID `fsiReviewerAttestations` open-type field; Power Pages multistep form-binding automation once PAC CLI supports it.
+- **Post-v1.0** — M365 Copilot declarative agent surface (conversational intake); sovereign cloud adaptation guide (GCC / GCC-High / DoD); localization beyond en-US.
+- **v1.0 (live)** — Promote from preview after pilot-firm validation feedback is incorporated.
 
 ## Changelog
 
