@@ -106,6 +106,8 @@
 | fsi_ConnectorId | fsi_connectorid | String | No | Identifier of the connector |  |
 | fsi_ConnectorName | fsi_connectorname | String | No | Display name of the connector |  |
 | fsi_OAuthScopes | fsi_oauthscopes | Memo | No | JSON array of OAuth scopes for this connector |  |
+| fsi_ApprovedScopes | fsi_approvedscopes | Memo | No | Approved OAuth scope baseline (comma/space/semicolon-separated scope names) for name-level comparison by Compare-OAuthScopeBaseline.ps1 |  |
+| fsi_ActualScopes | fsi_actualscopes | Memo | No | Actual OAuth scope names observed on the connector (comma/space/semicolon-separated) for name-level comparison by Compare-OAuthScopeBaseline.ps1 |  |
 | fsi_ServicePrincipalId | fsi_serviceprincipalid | String | No | Entra ID service principal object ID |  |
 | fsi_PermissionLevel | fsi_permissionlevel | String | No | Permission level granted to the connector |  |
 | fsi_CapturedAt | fsi_capturedat | DateTime | No | When this scope baseline was captured |  |

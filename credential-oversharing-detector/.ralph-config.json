@@ -8,6 +8,7 @@
     "PowerShell scanners do not call Microsoft Graph today — Graph permissions are documented as optional/future. PP module is authenticated via Add-PowerAppsAccount in service-principal mode for unattended runs.",
     "The 'accesscontrolpolicy' column does NOT exist on the Dataverse bot entity — do not include it in $select.",
     "OData GUID filters use unquoted GUIDs (e.g., botid eq 12345678-... NOT botid eq '12345678-...').",
-    "Detection rules currently apply count-based thresholds + name-based heuristics. True semantic comparison of actual scope names against per-agent declared/approved baselines is planned (Tier 2) — see CHANGELOG Known Limitations."
+    "Detection rules currently apply count-based thresholds + name-based heuristics. True semantic comparison of actual scope names against per-agent declared/approved baselines is planned (Tier 2) — see CHANGELOG Known Limitations.",
+    "fsi_AgentConnectorScope (baseline) table now carries fsi_approvedscopes and fsi_actualscopes memo columns (added [Unreleased]). Compare-OAuthScopeBaseline.ps1 queries these on fsi_agentconnectorscopes; they previously existed only on fsi_credentialviolation/fsi_credentialexception, causing HTTP 400. Re-run create_cod_dataverse_schema.py on existing tenants to add them."
   ]
 }
