@@ -8,6 +8,12 @@ All notable changes to the Unrestricted Agent Sharing Detector are documented he
 ### Fixed
 
 - `Restore-AgentSharingFromEvidence.ps1` nested `Restore-AgentSharing` helper now declares `SupportsShouldProcess`, preserving `-WhatIf` handling for live sharing restore calls.
+- `Restore-AgentSharingFromEvidence.ps1` token acquisition now requests `Get-AzAccessToken -AsSecureString` and converts to plain text before building the `Bearer` header. The ManagedIdentity and Interactive paths previously returned `$tokenResponse.Token` directly, which is a `SecureString` on Az.Accounts 5.0.0+/Az 14.0.0+, producing a `Bearer System.Security.SecureString` header and 401s. Aligns with the SecureString handling already used in the detector, export, and import scripts. ([Protect secrets in Azure PowerShell](https://learn.microsoft.com/powershell/azure/protect-secrets))
+- `Restore-AgentSharingFromEvidence.ps1` now restores the canonical UASD evidence shape — the prior bot-table sharing columns (`accesscontrolpolicy`, `authorizedsecuritygroupids`, `authenticationmode`, `authenticationtrigger`) captured in `fsi_evidencejson` by `Test-AgentSharingCompliance.ps1` and the detection flow — by PATCHing the `bot` record (with `If-Match: *`), reversing the documented remediation. The legacy per-principal `GrantAccess` evidence format is retained as a backward-compatible fallback. Previously the runbook only understood the principal-array format and could not consume real UASD evidence.
+
+### Changed
+
+- Added `#Requires -Modules Az.Accounts` to `Restore-AgentSharingFromEvidence.ps1` so the `Get-AzAccessToken` dependency is declared, matching the other governance scripts.
 
 ## [2.0.1] — 2026-05-04
 
