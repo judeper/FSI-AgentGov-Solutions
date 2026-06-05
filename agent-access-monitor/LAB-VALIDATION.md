@@ -33,7 +33,7 @@ three Dataverse tables, and exports tamper-evident JSON evidence with SHA-256 ha
 | Dataverse column logical names | `create_dataverse_schema.py` (source of truth) vs scripts/docs | Consistent |
 | Option-set values (zone/severity) | schema script vs `dataverse-schema.md` | Consistent |
 | Authentication model | repo standard (managed-identity-first) | Compliant; legacy paths marked |
-| `Get-AdminPowerAppEnvironmentGroup` cmdlet | Microsoft Learn module reference | **Not found — flagged** |
+| `Get-AdminPowerAppEnvironmentGroup` cmdlet | Microsoft Learn module reference | **Not found — removed** |
 | Regulatory language rules | grep prohibited phrases | Clean |
 
 ## Authoritative sources cited
@@ -84,18 +84,20 @@ with security groups is *excluded*; sharing is limited to individuals). Correcte
 `bot-limitSharingMode` and `bot-publishedBotLimitSharingMode` descriptions, which feed
 violation/evidence output and operator-facing alerts.
 
-### Flagged — environment-group cmdlet not found (no code change)
+### Fixed — environment-group cmdlet does not exist (second-pass, Major)
 
-`Get-EnvironmentAccessSettings.ps1` enriches environment-group names via
-`Get-AdminPowerAppEnvironmentGroup`. This cmdlet is **not present** in the published
-`Microsoft.PowerApps.Administration.PowerShell` module reference on Microsoft Learn. The
-call is best-effort and wrapped in `try/catch` with `-ErrorAction SilentlyContinue`, so a
-missing cmdlet degrades gracefully: the environment-group GUID is still captured from
-`$env.Internal.properties.environmentGroup.id`, only the friendly group name is omitted.
-No change was made because (a) it does not block validation, and (b) module versions
-evolve and a future/region-specific build may expose it. **Lab action:** confirm cmdlet
-availability with `Get-Command Get-AdminPowerAppEnvironmentGroup` in your installed module
-version; if absent, group-name enrichment will be empty (non-fatal).
+`Get-EnvironmentAccessSettings.ps1` enriched environment-group names via
+`Get-AdminPowerAppEnvironmentGroup`. A second-pass command-existence check against the
+published
+[`Microsoft.PowerApps.Administration.PowerShell` module reference](https://learn.microsoft.com/powershell/module/microsoft.powerapps.administration.powershell/)
+confirmed that **no environment-group cmdlet exists** in the module (the `Get-*` list goes
+`Get-AdminPowerAppEnvironment` → `Get-AdminPowerAppEnvironmentLocations` →
+`Get-AdminPowerAppEnvironmentRoleAssignment`). The call could never succeed; the surrounding
+`try/catch` only kept it from crashing while emitting a warning on every run. The dead lookup
+was removed. The environment-group GUID is still captured from
+`$env.Internal.properties.environmentGroup.id`; the friendly group name stays `null`
+(resolve from the Power Platform admin center if required). The result-object shape is
+unchanged.
 
 ## Items verified as already correct (no change)
 
