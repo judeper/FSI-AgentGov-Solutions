@@ -64,11 +64,13 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
 ## Managed Identity Configuration
 
 - [ ] `MI-CrossTenantReadOnly` provisioned
-  - Assigned permissions: Policy.Read.All, User.Read.All, CrossTenantInformation.ReadBasic.All, Organization.Read.All, PowerPlatform.Admin.Read.All
+  - Assigned Graph permissions: Policy.Read.All, User.Read.All, CrossTenantInformation.ReadBasic.All, Organization.Read.All
+  - Power Platform admin (BAP) access: registered as management application via `New-PowerAppManagementApp`
   - Date configured: _______________
 
 - [ ] `MI-CrossTenantReadWrite` provisioned
-  - Assigned permissions: Policy.ReadWrite.CrossTenantAccess, User.Read.All, CrossTenantInformation.ReadBasic.All, PowerPlatform.Admin.ReadWrite.All
+  - Assigned Graph permissions: Policy.ReadWrite.CrossTenantAccess, User.Read.All, CrossTenantInformation.ReadBasic.All
+  - Power Platform admin (BAP) access: registered as management application via `New-PowerAppManagementApp`
   - Policy.ReadWrite.CrossTenantAccess approved by Entra Global Admin: Yes / Pending
   - Date configured: _______________
 

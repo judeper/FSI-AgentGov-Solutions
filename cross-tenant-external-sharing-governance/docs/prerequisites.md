@@ -23,7 +23,7 @@ Used by: Flow 1, Flow 2, Flow 3, Flow 6, PowerShell scripts
 | `User.Read.All` | Application | Microsoft Graph | Read guest user profiles |
 | `CrossTenantInformation.ReadBasic.All` | Application | Microsoft Graph | Resolve tenant IDs to display names |
 | `Organization.Read.All` | Application | Microsoft Graph | Read home tenant organization details |
-| `PowerPlatform.Admin.Read.All` | Application | Power Platform API | Read tenant isolation, agent shares, environments |
+| Power Platform admin management application (`New-PowerAppManagementApp`) | Service principal registration | Power Platform admin API (BAP) | Read tenant isolation, agent shares, environments |
 
 ### MI-CrossTenantReadWrite
 
@@ -34,7 +34,9 @@ Used by: Flow 4, Flow 5 only
 | `Policy.ReadWrite.CrossTenantAccess` | Application | Microsoft Graph | Update Entra CTA partner policies |
 | `User.Read.All` | Application | Microsoft Graph | Resolve user profiles during onboarding |
 | `CrossTenantInformation.ReadBasic.All` | Application | Microsoft Graph | Resolve tenant IDs during onboarding |
-| `PowerPlatform.Admin.ReadWrite.All` | Application | Power Platform API | Remove agent role assignments |
+| Power Platform admin management application (`New-PowerAppManagementApp`) | Service principal registration | Power Platform admin API (BAP) | Remove agent role assignments |
+
+> **Note:** The Power Platform admin (BAP) API used by this solution does not expose granular read-only vs. read-write application permission scopes. A service principal (including a managed identity) is granted access by registering it as a Power Platform admin management application with `New-PowerAppManagementApp`, which grants tenant-admin-equivalent access. The separation between `MI-CrossTenantReadOnly` and `MI-CrossTenantReadWrite` is therefore enforced operationally (by which identity each flow uses), not by distinct API permission scopes. Microsoft Graph permissions in the tables above remain granular. See [Power Platform API authentication](https://learn.microsoft.com/power-platform/admin/programmability-authentication-v2); the newer `api.powerplatform.com` surface uses delegated permissions plus RBAC roles (Reader/Contributor) for service principals rather than application permissions.
 
 > **IAM Note:** `Policy.ReadWrite.CrossTenantAccess` is a highly privileged Graph permission that may require Entra Global Admin approval in FSI tenants. If approval is delayed, Flows 4 and 5 can operate in manual-instruction-only mode.
 
@@ -86,11 +88,21 @@ az rest --method POST \
 
 Refer to [Microsoft Graph permission reference](https://learn.microsoft.com/en-us/graph/permissions-reference) for app role IDs.
 
-### Step 3: Assign Power Platform Admin API Permissions
+### Step 3: Grant Power Platform Admin API Access
 
-1. Register each Managed Identity as a service principal in the Power Platform admin center
-2. Assign `PowerPlatform.Admin.Read.All` to **MI-CrossTenantReadOnly**
-3. Assign `PowerPlatform.Admin.ReadWrite.All` to **MI-CrossTenantReadWrite**
+The Power Platform admin (BAP) API does not use Microsoft Graph-style application permission scopes. Grant each Managed Identity tenant-admin-equivalent access by registering its service principal as a Power Platform admin management application:
+
+```powershell
+# Run as a Power Platform tenant administrator
+Add-PowerAppsAccount -Endpoint prod -TenantID <tenant-id>
+
+# Register each Managed Identity's service principal (use the MI Application ID).
+# This grants the service principal the same permissions as a tenant admin.
+New-PowerAppManagementApp -ApplicationId <MI-CrossTenantReadOnly-AppId>
+New-PowerAppManagementApp -ApplicationId <MI-CrossTenantReadWrite-AppId>
+```
+
+> **Note:** `New-PowerAppManagementApp` grants tenant-admin-equivalent access; the BAP API offers no granular read-only vs. read-write scopes. Maintain least-privilege separation operationally by ensuring only Flows 4 and 5 act through `MI-CrossTenantReadWrite`. On the newer Power Platform API (`api.powerplatform.com`), service principals are scoped via RBAC roles (Reader/Contributor) instead. See [Power Platform API authentication](https://learn.microsoft.com/power-platform/admin/programmability-authentication-v2).
 
 ### Step 4: Validate Permissions
 

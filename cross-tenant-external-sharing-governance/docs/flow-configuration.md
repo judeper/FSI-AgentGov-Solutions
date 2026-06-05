@@ -350,7 +350,7 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
    | Method | `GET` |
    | Base Resource URL | `https://api.powerplatform.com` |
    | Microsoft Entra ID Resource URI | `https://api.powerplatform.com` |
-   | URI | `/appmanagement/environments?api-version=2022-03-01-preview` |
+   | URI | `/environmentmanagement/environments?api-version=2024-10-01` |
 
 9. **For Each Environment**
    - Action: Apply to each on environments from Step 8
