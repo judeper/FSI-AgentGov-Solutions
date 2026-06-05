@@ -25,7 +25,7 @@ All flows use connection references deployed by `create_mrm_connection_reference
 
 | Logical Name | Display Name | Connector | Purpose |
 |---|---|---|---|
-| `fsi_cr_dataverse_mrm` | Dataverse - MRM | Common Data Service | Model inventory CRUD, risk ratings, validation cycles, findings, monitoring, compliance events |
+| `fsi_cr_dataverse_mrm` | Dataverse - MRM | Microsoft Dataverse | Model inventory CRUD, risk ratings, validation cycles, findings, monitoring, compliance events |
 | `fsi_cr_teams_mrm` | Teams - MRM | Microsoft Teams | Risk scoring cards, validation alerts, SLA breach alerts, revalidation requests |
 | `fsi_cr_approvals_mrm` | Approvals - MRM | Approvals | Validator assignment approval, revalidation confirmation, examiner alert choices |
 | `fsi_cr_http_mrm` | HTTP with Microsoft Entra ID - MRM | HTTP with Microsoft Entra ID | Dataverse bot table enrichment, Graph API user resolution, Agent 365 / Microsoft Entra Agent ID registry enrichment |
