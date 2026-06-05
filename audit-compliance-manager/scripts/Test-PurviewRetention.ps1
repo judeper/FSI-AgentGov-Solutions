@@ -1,4 +1,4 @@
-﻿#Requires -Version 7.2
+#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
 
 <#
@@ -180,17 +180,17 @@ function Test-PurviewRetention {
     # Critical record types for AI agent governance
     $RequiredRecordTypes = @("CopilotInteraction", "PowerPlatformAdmin")
 
-    # Retention duration enum to days mapping
+    # Retention duration enum to days mapping.
+    # Keys are the only values the UnifiedAuditLogRetentionDuration enum accepts
+    # (ThreeMonths, SixMonths, NineMonths, TwelveMonths, TenYears) and that
+    # Get-UnifiedAuditLogRetentionPolicy returns. There is no intermediate value
+    # between TwelveMonths (365 days) and TenYears (3650 days).
     $RetentionDurationMap = @{
-        "ThreeMonths" = 90
-        "SixMonths"   = 180
-        "NineMonths"  = 270
-        "OneYear"     = 365
-        "TwoYears"    = 730
-        "ThreeYears"  = 1095
-        "FiveYears"   = 1825
-        "SevenYears"  = 2555
-        "TenYears"    = 3650
+        "ThreeMonths"  = 90
+        "SixMonths"    = 180
+        "NineMonths"   = 270
+        "TwelveMonths" = 365
+        "TenYears"     = 3650
     }
 
     $checks = @()
@@ -254,7 +254,7 @@ function Test-PurviewRetention {
                     CurrentRetentionDays = $DefaultAuditStandardRetentionDays
                     RequiredRetentionDays = $minimumRequiredDays
                     Severity             = "Critical"
-                    Recommendation       = "Create custom retention policy: New-UnifiedAuditLogRetentionPolicy -Name 'Zone $Zone Retention' -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays)"
+                    Recommendation       = "Create custom retention policy: New-UnifiedAuditLogRetentionPolicy -Name 'Zone $Zone Retention' -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays) -Priority 100"
                 }
             }
             else {
@@ -283,7 +283,7 @@ function Test-PurviewRetention {
                         CurrentRetentionDays = $DefaultAuditStandardRetentionDays
                         RequiredRetentionDays = $minimumRequiredDays
                         Severity             = "Critical"
-                        Recommendation       = "Create record type-specific policy: New-UnifiedAuditLogRetentionPolicy -Name '$recordType Retention' -RecordTypes $recordType -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays)"
+                        Recommendation       = "Create record type-specific policy: New-UnifiedAuditLogRetentionPolicy -Name '$recordType Retention' -RecordTypes $recordType -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays) -Priority 100"
                     }
                 }
                 else {
@@ -421,7 +421,7 @@ function Test-PurviewRetention {
                             CurrentRetentionDays = $DefaultAuditStandardRetentionDays
                             RequiredRetentionDays = $minimumRequiredDays
                             Severity             = "High"
-                            Recommendation       = "Create record type-specific policy: New-UnifiedAuditLogRetentionPolicy -Name '$recordType Retention' -RecordTypes $recordType -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays)"
+                            Recommendation       = "Create record type-specific policy: New-UnifiedAuditLogRetentionPolicy -Name '$recordType Retention' -RecordTypes $recordType -RetentionDuration $(Get-RequiredRetentionDuration -Days $minimumRequiredDays) -Priority 100"
                         }
                     }
                     else {
@@ -549,14 +549,15 @@ function Test-PurviewRetention {
 function Get-RequiredRetentionDuration {
     param([int]$Days)
 
+    # Returns the smallest UnifiedAuditLogRetentionDuration enum value that meets
+    # or exceeds the required number of days. Valid enum values per
+    # New-UnifiedAuditLogRetentionPolicy are ThreeMonths, SixMonths, NineMonths,
+    # TwelveMonths, and TenYears. Any requirement above 365 days maps to TenYears
+    # because the enum has no intermediate value.
     if ($Days -le 90) { return "ThreeMonths" }
     elseif ($Days -le 180) { return "SixMonths" }
     elseif ($Days -le 270) { return "NineMonths" }
-    elseif ($Days -le 365) { return "OneYear" }
-    elseif ($Days -le 730) { return "TwoYears" }
-    elseif ($Days -le 1095) { return "ThreeYears" }
-    elseif ($Days -le 1825) { return "FiveYears" }
-    elseif ($Days -le 2555) { return "SevenYears" }
+    elseif ($Days -le 365) { return "TwelveMonths" }
     else { return "TenYears" }
 }
 
