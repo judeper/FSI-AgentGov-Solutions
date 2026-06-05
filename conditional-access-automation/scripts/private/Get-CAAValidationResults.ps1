@@ -33,7 +33,8 @@
     Optional validation run identifier to filter validation history records.
 
 .EXAMPLE
-    $token = (Get-AzAccessToken -ResourceUrl $dvUrl).Token
+    $secured = Get-AzAccessToken -ResourceUrl $dvUrl -AsSecureString
+    $token = [System.Net.NetworkCredential]::new('', $secured.Token).Password
     Get-CAAValidationResults -DataverseUrl 'https://org.crm.dynamics.com' `
         -AccessToken $token -Table 'fsi_capolicyvalidationhistories' `
         -FromDate (Get-Date).AddDays(-30)
