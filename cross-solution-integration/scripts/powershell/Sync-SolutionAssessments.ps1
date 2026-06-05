@@ -532,7 +532,7 @@ function Register-SolutionEvidence {
         $evidenceRecord = @{
             'fsi_name'          = "$Solution Evidence Package — $($exportDate.Substring(0,10))"
             'fsi_evidencetype'  = Get-EvidenceTypeId
-            'fsi_description'   = "Automated evidence package from $((Get-SolutionTableConfig)[$Solution].SolutionName). Files: $fileNames. SHA-256 recomputed and verified against manifest at registration time."
+            'fsi_evidencedescription' = "Automated evidence package from $((Get-SolutionTableConfig)[$Solution].SolutionName). Files: $fileNames. SHA-256 recomputed and verified against manifest at registration time."
             'fsi_collecteddate' = $exportDate
             'fsi_hash'          = $packageHash
         }
@@ -597,7 +597,7 @@ function Register-SolutionEvidence {
     $evidenceRecord = @{
         'fsi_name'          = "$Solution Evidence Export — $([DateTime]::UtcNow.ToString('yyyy-MM-dd'))"
         'fsi_evidencetype'  = Get-EvidenceTypeId
-        'fsi_description'   = "Automated evidence from $((Get-SolutionTableConfig)[$Solution].SolutionName). SHA-256 recomputed at registration. File: $($evidenceFile.Name)"
+        'fsi_evidencedescription' = "Automated evidence from $((Get-SolutionTableConfig)[$Solution].SolutionName). SHA-256 recomputed at registration. File: $($evidenceFile.Name)"
         'fsi_collecteddate' = (Get-IsoUtcTimestamp)
         'fsi_hash'          = $hash
     }
