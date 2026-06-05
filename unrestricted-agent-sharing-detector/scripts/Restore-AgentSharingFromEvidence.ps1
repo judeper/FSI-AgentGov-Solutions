@@ -363,7 +363,11 @@ function Restore-AgentSharing {
         foreach ($principal in $sharingConfig) {
             $principalId = $principal.principalId
             $principalType = if ($principal.principalType) { $principal.principalType } else { 'team' }
-            $roleName = if ($principal.roleName) { $principal.roleName } else { 'CanView' }
+            # AccessMask must be a Dataverse AccessRights value (ReadAccess, WriteAccess,
+            # AppendAccess, AppendToAccess, CreateAccess, DeleteAccess, ShareAccess,
+            # AssignAccess). 'CanView' is not a valid AccessRights member and is rejected
+            # by GrantAccess. See https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/reference/accessrights
+            $roleName = if ($principal.roleName) { $principal.roleName } else { 'ReadAccess' }
 
             try {
                 $grantBody = @{
