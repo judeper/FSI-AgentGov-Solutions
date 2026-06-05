@@ -57,7 +57,9 @@ A Microsoft Entra ID app registration is required for both interactive and non-i
 | API | Permission | Type | Purpose |
 |-----|-----------|------|---------|
 | Dynamics CRM | `user_impersonation` | Delegated | Dataverse read/write for schema and data |
-| Microsoft Graph | `Environment.Read.All` | Application | Power Platform environment enumeration |
+| Microsoft Graph | `Policy.Read.All` | Delegated or Application | Read the cross-tenant access policy (`crossTenantAccessPolicy`) consumed by `Get-CrossTenantAccessCorrelation.ps1` |
+
+> **Note:** Power Platform environment enumeration is performed by the `Microsoft.PowerApps.Administration.PowerShell` module (`Get-AdminPowerAppEnvironment`, which calls the BAP admin API) using the executing identity's Power Platform Admin role — it does **not** require a Microsoft Graph application permission. There is no Microsoft Graph `Environment.Read.All` permission. `Policy.Read.All` is required only when running the optional cross-tenant correlation script.
 
 > **Note:** After adding permissions, an admin must grant consent for the tenant.
 
