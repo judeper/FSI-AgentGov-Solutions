@@ -105,8 +105,13 @@ function Get-DlpAuditEvents {
     Write-Host "Searching for DlpRuleMatch events from $Start to $End..." -ForegroundColor Cyan
 
     do {
+        # `DlpRuleMatch` is an audit Operation, not a RecordType. Search-UnifiedAuditLog
+        # `-RecordType` binds to the AuditRecordType enum (valid DLP record types are
+        # ComplianceDLPSharePoint / ComplianceDLPExchange / DLPEndpoint), so passing
+        # "DlpRuleMatch" there fails parameter binding. Filter on `-Operations` instead,
+        # which returns DlpRuleMatch events across all DLP workloads.
         $params = @{
-            RecordType     = "DlpRuleMatch"
+            Operations     = "DlpRuleMatch"
             StartDate      = $Start
             EndDate        = $End
             SessionId      = $sessionId

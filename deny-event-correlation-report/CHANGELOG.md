@@ -21,6 +21,18 @@ All notable changes to the Deny Event Correlation Report are documented here.
 
 ### Fixed
 
+- **DLP audit extraction used an invalid `Search-UnifiedAuditLog -RecordType`.**
+  `DlpRuleMatch` is an audit *Operation*, not a member of the `AuditRecordType`
+  enum, so `Search-UnifiedAuditLog -RecordType "DlpRuleMatch"` failed parameter
+  binding and the DLP extractor could not run. `scripts/Export-DlpCopilotEvents.ps1`
+  now filters with `-Operations "DlpRuleMatch"` (returns DLP rule-match events
+  across all DLP workloads). In `kql-queries/dlp-copilot-matches.kql` the seven
+  `where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55` filters were
+  corrected to `where Operation == "DlpRuleMatch"`; the "Numeric equivalent: 55"
+  comment was wrong (record type 55 is `SharePointContentTypeOperation`; valid DLP
+  record types are `ComplianceDLPSharePoint`/`ComplianceDLPExchange`). Corrected the
+  matching claim in `LAB-VALIDATION.md`. Source:
+  <https://learn.microsoft.com/office/office-365-management-api/office-365-management-activity-api-schema#auditlogrecordtype>
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 
 ## [2.0.4] — 2026-05-23

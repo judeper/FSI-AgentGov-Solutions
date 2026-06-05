@@ -30,6 +30,7 @@ reporting). Regulatory alignment: helps support FINRA 4511, SEC 17a-3/17a-4, GLB
 | `Get-AzAccessToken -ResourceUrl … -AsSecureString` | Az.Accounts 5.x behavior | Correct SecureString contract, defensive plaintext fallback present |
 | Language rules (no compliance-overclaim phrasing) | grep across solution | **Zero** violations |
 | KQL parse-coherence (5 query files) | Manual review | Coherent; ingestion-pattern caveats already documented |
+| DLP audit filter (`Export-DlpCopilotEvents.ps1`, `dlp-copilot-matches.kql`) | Microsoft Learn (Management Activity API schema) | **Second-pass fix:** `DlpRuleMatch` is an Operation, not a RecordType — moved to `-Operations` / KQL `Operation`; removed wrong "Numeric equivalent: 55" comment (55 = SharePointContentTypeOperation) |
 
 ## Authoritative Sources Cited
 
@@ -81,11 +82,11 @@ March 31, 2026 date only as historical context. **No runtime code path changed**
 - **Graph Defender extractor** (`Export-DefenderCopilotEvents.ps1`): uses the GA
   `https://graph.microsoft.com/v1.0/security/runHuntingQuery` endpoint with
   `ThreatHunting.Read.All`, matching the authoritative v1.0 contract.
-- **Unified audit extractors** (`Export-CopilotDenyEvents.ps1`,
-  `Export-DlpCopilotEvents.ps1`): `Search-UnifiedAuditLog` with `RecordType`
-  `CopilotInteraction` / `DlpRuleMatch` is the correct, current path. The Graph
-  `/security/auditLog/queries` beta is accurately described as a not-yet-production
-  migration path.
+- **CopilotInteraction extractor** (`Export-CopilotDenyEvents.ps1`):
+  `Search-UnifiedAuditLog -RecordType CopilotInteraction` is correct —
+  `CopilotInteraction` (AuditLogRecordType 261) is a valid `AuditRecordType`
+  enum member. The Graph `/security/auditLog/queries` beta is accurately
+  described as a not-yet-production migration path.
 - **DLP Workload literals** `Copilot` / `MicrosoftCopilotStudio` are used consistently
   across script and KQL (the incorrect `MicrosoftCopilot` literal was already removed in
   v2.0.2).

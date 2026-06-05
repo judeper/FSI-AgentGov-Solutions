@@ -32,7 +32,7 @@
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(24h)
-| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| where Operation == "DlpRuleMatch"  // DlpRuleMatch is an audit Operation; in OfficeActivity the DLP RecordType name is ComplianceDLPSharePoint/ComplianceDLPExchange
 | extend AuditData = parse_json(OfficeObjectId)
 | where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
@@ -65,7 +65,7 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| where Operation == "DlpRuleMatch"  // DlpRuleMatch is an audit Operation; in OfficeActivity the DLP RecordType name is ComplianceDLPSharePoint/ComplianceDLPExchange
 | extend AuditData = parse_json(OfficeObjectId)
 | where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
@@ -85,7 +85,7 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| where Operation == "DlpRuleMatch"  // DlpRuleMatch is an audit Operation; in OfficeActivity the DLP RecordType name is ComplianceDLPSharePoint/ComplianceDLPExchange
 | extend AuditData = parse_json(OfficeObjectId)
 | where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
@@ -108,7 +108,7 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(1h)
-| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| where Operation == "DlpRuleMatch"  // DlpRuleMatch is an audit Operation; in OfficeActivity the DLP RecordType name is ComplianceDLPSharePoint/ComplianceDLPExchange
 | extend AuditData = parse_json(OfficeObjectId)
 | where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
@@ -134,7 +134,7 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(30d)
-| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| where Operation == "DlpRuleMatch"  // DlpRuleMatch is an audit Operation; in OfficeActivity the DLP RecordType name is ComplianceDLPSharePoint/ComplianceDLPExchange
 | extend AuditData = parse_json(OfficeObjectId)
 | where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
@@ -156,7 +156,7 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(30d)
-| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| where Operation == "DlpRuleMatch"  // DlpRuleMatch is an audit Operation; in OfficeActivity the DLP RecordType name is ComplianceDLPSharePoint/ComplianceDLPExchange
 | extend AuditData = parse_json(OfficeObjectId)
 | where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
@@ -178,7 +178,7 @@ OfficeActivity
 // -----------------------------------------------------------------------------
 OfficeActivity
 | where TimeGenerated > ago(7d)
-| where RecordType == "DlpRuleMatch"  // Numeric equivalent: 55
+| where Operation == "DlpRuleMatch"  // DlpRuleMatch is an audit Operation; in OfficeActivity the DLP RecordType name is ComplianceDLPSharePoint/ComplianceDLPExchange
 | extend AuditData = parse_json(OfficeObjectId)
 | where tostring(AuditData.Workload) in ("Copilot","MicrosoftCopilotStudio")
     or tostring(AuditData.PolicyDetails) contains "Copilot"
