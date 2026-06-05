@@ -164,9 +164,12 @@ function Test-ChildAgentPayloadSize {
                 'OData-Version' = '4.0'
             }
 
-            # Query botcomponent records containing InvokeConnectedAgentTaskAction
+            # Query botcomponent records containing InvokeConnectedAgentTaskAction.
+            # botcomponent has no _botid_value column; the owning bot is the
+            # parentbotid lookup, exposed in OData as _parentbotid_value.
+            # Ref: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent
             $filter = "contains(content,'InvokeConnectedAgentTaskAction')"
-            $select = "botcomponentid,name,content,_botid_value"
+            $select = "botcomponentid,name,content,_parentbotid_value"
             $uri = "$apiBase/botcomponents?`$filter=$filter&`$select=$select&`$top=500"
 
             try {
@@ -217,7 +220,7 @@ function Test-ChildAgentPayloadSize {
                         EnvironmentName    = $envDisplayName
                         BotComponentId     = $component.botcomponentid
                         ComponentName      = $component.name
-                        BotId              = $component._botid_value
+                        BotId              = $component._parentbotid_value
                         EstimatedInputKB   = [Math]::Round($inputSize / 1024, 1)
                         EstimatedOutputKB  = [Math]::Round($outputSize / 1024, 1)
                         EstimatedTotalKB   = [Math]::Round($estimatedPayloadBytes / 1024, 1)
