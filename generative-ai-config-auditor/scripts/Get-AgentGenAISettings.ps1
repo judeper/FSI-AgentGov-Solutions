@@ -243,7 +243,7 @@ function Get-AgentGenAISettings {
             Extracts generative AI configuration from bot settings and components.
         .DESCRIPTION
             Queries bot_botsetting for AOAI toggle and orchestration mode, then
-            queries botcomponent filtered by _botid_value to find generative answers
+            queries botcomponent filtered by _parentbotid_value to find generative answers
             nodes in topic content JSON. Conservative parsing returns 'Unable to Determine'
             for unknown structures.
         #>
@@ -517,10 +517,11 @@ function Get-AgentGenAISettings {
         #region Query botcomponent for topic definitions
 
         try {
-            # Filter botcomponents by _botid_value and componenttype for topics
-            # componenttype 12 = Topic, componenttype 2 = Dialog/Skill
+            # Filter botcomponents by _parentbotid_value (the bot lookup on
+            # botcomponent) and componenttype for topics.
+            # componenttype 0 = Topic, componenttype 9 = Topic (V2)
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
+                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 0 or componenttype eq 9)&" +
                 "`$select=name,content,componenttype"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
