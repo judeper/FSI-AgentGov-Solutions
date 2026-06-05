@@ -151,9 +151,11 @@ function Get-FUSEnvironmentVariable {
 
     try {
         $schemaName = "fsi_FUS_$Name"
+        # Canonical one-to-many navigation property is environmentvariabledefinition_environmentvariablevalue;
+        # 'environmentvariablevalues' is not a valid navigation property and fails $expand.
         $uri = "$script:DataverseUrl/api/data/v9.2/environmentvariabledefinitions?" +
                "`$filter=schemaname eq '$schemaName'&" +
-               "`$expand=environmentvariablevalues"
+               "`$expand=environmentvariabledefinition_environmentvariablevalue(`$select=value)"
 
         $headers = @{
             'Authorization'    = "Bearer $script:AccessToken"
@@ -166,8 +168,9 @@ function Get-FUSEnvironmentVariable {
 
         if ($response.value.Count -gt 0) {
             $varDef = $response.value[0]
-            if ($varDef.environmentvariablevalues.Count -gt 0) {
-                return $varDef.environmentvariablevalues[0].value
+            $envValues = $varDef.environmentvariabledefinition_environmentvariablevalue
+            if ($envValues -and $envValues.Count -gt 0) {
+                return $envValues[0].value
             }
             return $varDef.defaultvalue
         }

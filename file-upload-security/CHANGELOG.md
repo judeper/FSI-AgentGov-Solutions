@@ -4,6 +4,10 @@ All notable changes to the File Upload Security Configurator will be documented 
 
 ## [Unreleased]
 
+### Fixed
+
+- **HIGH (command-existence): `Get-FUSEnvironmentVariable` used a non-existent `$expand` navigation property.** The Dataverse environment-variable lookup expanded `environmentvariablevalues`, which is not a valid navigation property on `environmentvariabledefinition` and fails the OData request ("Could not find a property named 'environmentvariablevalues'"). Replaced with the canonical one-to-many navigation property `environmentvariabledefinition_environmentvariablevalue($select=value)` and updated the downstream property read. `scripts/private/FUSClient.psm1`. Verified against the [Environment Variable Definition table reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/environmentvariabledefinition) (relationship `environmentvariabledefinition_environmentvariablevalue`). (validation2 second-pass)
+
 ### Changed
 
 - **Docs (lab-readiness validation):** README "Copilot Studio file input limits" note re-verified against the current [Allow file input from users](https://learn.microsoft.com/microsoft-copilot-studio/image-input-analysis) Microsoft Learn page. Added DOCX to the supported user-upload types and the XLSX/PPTX experimental caveat; replaced the stale per-format limits (4 MB DirectLine cap, 40-page PDF, 180 KB TXT/CSV) with the currently documented limits (15 MB individual file size; 30,000-character text limit without code interpreter, no limit with code interpreter); clarified that knowledge-source uploads are a separate 512 MB feature.
