@@ -268,7 +268,14 @@ function Get-DataverseAccessToken {
 
     if (Get-Command -Name 'Get-AzAccessToken' -ErrorAction SilentlyContinue) {
         try {
-            $script:DataverseToken = (Get-AzAccessToken -ResourceUrl $EnvironmentUrl).Token
+            # Get-AzAccessToken returns .Token as a SecureString by default starting
+            # Az.Accounts 5.0.0 (Az 14.0.0); older versions return a String. Guard on
+            # the runtime type and convert so the value is usable as a Bearer token.
+            $rawToken = (Get-AzAccessToken -ResourceUrl $EnvironmentUrl).Token
+            if ($rawToken -is [System.Security.SecureString]) {
+                $rawToken = ConvertFrom-SecureString -SecureString $rawToken -AsPlainText
+            }
+            $script:DataverseToken = $rawToken
             return $script:DataverseToken
         }
         catch {
