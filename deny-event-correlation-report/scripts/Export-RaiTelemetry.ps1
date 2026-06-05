@@ -105,8 +105,12 @@ function Invoke-AppInsightsQuery {
 
     # Get access token for Application Insights API.
     # Migrated from deprecated x-api-key to Entra ID token-based authentication (February 2026).
-    # Az.Accounts >=2.17 returns SecureString by default; >=5.0 emits a deprecation
-    # warning unless `-AsSecureString` is explicitly requested with `-ResourceUrl`.
+    # Az.Accounts 2.17.0 added the opt-in `-AsSecureString` switch; the SecureString
+    # return type became the DEFAULT in Az.Accounts 5.0.0 (Az 14.0.0). On pre-5.0
+    # builds the default is plain text and a deprecation warning is emitted unless
+    # `-AsSecureString` is requested. Requesting it explicitly works on 2.17.0+ and
+    # keeps the SecureString contract on every supported version.
+    # Ref: https://learn.microsoft.com/powershell/azure/protect-secrets
     try {
         $token = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io" -AsSecureString -ErrorAction Stop
         if (-not $token) {
