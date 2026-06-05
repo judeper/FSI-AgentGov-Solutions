@@ -41,6 +41,7 @@ unrestricted-agent-sharing-detector/
     ├── create_uasd_connection_references.py
     ├── requirements.txt
     ├── uasd_client.py               # Deprecated stub (v1.0.1) — raises ImportError, use shared DataverseClient
+    ├── Restore-AgentSharingFromEvidence.ps1  # Rollback runbook — restores prior bot sharing config from fsi_evidencejson
     └── governance/
         ├── Invoke-SharingAudit.ps1
         ├── Test-AgentSharingCompliance.ps1
