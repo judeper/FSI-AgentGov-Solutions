@@ -96,7 +96,7 @@ Component metadata table. Used for agent type classification -- specifically to 
 | name | String | Component display name | |
 | componenttype | OptionSet (integer) | Component type identifier | **Key field for classification.** Filter on this integer value, e.g. `componenttype eq 17`. |
 | componenttypename | String | Human-readable component-type label | Informational only — do **not** filter on this. |
-| botid | Lookup (bot) | Parent agent reference | Join key to bot table |
+| parentbotid | Lookup (bot) | Parent agent reference (`_parentbotid_value` in the Web API) | Join key to bot table. There is no `botid` column on botcomponent. |
 | schemaname | String | Component schema name | |
 | createdon | DateTime | Component creation timestamp | |
 
@@ -107,7 +107,7 @@ Component metadata table. Used for agent type classification -- specifically to 
 | 17 (External Trigger) | Autonomous | Agent triggered by events, not user conversations |
 | Other values | Conversational | Standard conversational agent |
 
-> **Classification query:** `GET /api/data/v9.2/botcomponents?$filter=_botid_value eq '{botId}' and componenttype eq 17&$select=_botid_value,componenttype`
+> **Classification query:** `GET /api/data/v9.2/botcomponents?$filter=_parentbotid_value eq '{botId}' and componenttype eq 17&$select=_parentbotid_value,componenttype`
 
 ---
 
@@ -242,8 +242,8 @@ GET /api/data/v9.2/bots
 
 ```
 GET /api/data/v9.2/botcomponents
-  ?$filter=_botid_value eq '{botId}' and componenttype eq 17
-  &$select=botcomponentid,componenttype
+  ?$filter=_parentbotid_value eq '{botId}' and componenttype eq 17
+  &$select=botcomponentid,componenttype,_parentbotid_value
 ```
 
 ### Tier 2 Topic Sessions *(Planned)*

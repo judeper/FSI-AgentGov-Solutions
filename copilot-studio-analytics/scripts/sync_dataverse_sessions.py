@@ -419,16 +419,20 @@ def get_agent_classifications(client: DataverseClient) -> dict[str, str]:
         classifications[bot_id] = "Conversational"  # Default
 
     # Query botcomponents with External Trigger type (componenttype 17)
-    # to identify autonomous agents
+    # to identify autonomous agents. The botcomponent table's lookup to the
+    # parent Copilot is `parentbotid` (Targets: bot), exposed in the Web API
+    # as the formatted value `_parentbotid_value`. There is no `botid` column
+    # on botcomponent, so selecting/filtering `_botid_value` returns HTTP 400.
+    # Ref: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent
     autonomous_components = client.query(
         "botcomponents",
-        select=["_botid_value", "componenttype"],
+        select=["_parentbotid_value", "componenttype"],
         filter_expr="componenttype eq 17",
     )
 
     autonomous_bot_ids = set()
     for comp in autonomous_components:
-        bot_id = comp.get("_botid_value", "")
+        bot_id = comp.get("_parentbotid_value", "")
         if bot_id:
             autonomous_bot_ids.add(bot_id)
 
