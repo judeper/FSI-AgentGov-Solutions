@@ -231,21 +231,14 @@ try {
     throw "Failed to retrieve environments: $($_.Exception.Message)"
 }
 
-# Build environment group lookup
-Write-Verbose "Retrieving environment groups..."
+# Environment group friendly-name lookup is not available through the
+# Microsoft.PowerApps.Administration.PowerShell module: there is no
+# Get-AdminPowerAppEnvironmentGroup (or any environment-group) cmdlet in the
+# published module reference. The environment-group GUID is still captured below
+# from $env.Internal.properties.environmentGroup.id; only the friendly group name
+# is omitted. Resolve names from the Power Platform admin center if required.
+# Ref: https://learn.microsoft.com/powershell/module/microsoft.powerapps.administration.powershell/
 $groupLookup = @{}
-
-try {
-    $groups = Get-AdminPowerAppEnvironmentGroup -ErrorAction SilentlyContinue
-    if ($groups) {
-        foreach ($group in $groups) {
-            $groupLookup[$group.Id] = $group
-            Write-Verbose "Loaded group: $($group.DisplayName)"
-        }
-    }
-} catch {
-    Write-Warning "Failed to retrieve environment groups: $($_.Exception.Message)"
-}
 
 # Process environments
 $results = @()
