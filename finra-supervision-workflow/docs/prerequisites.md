@@ -154,12 +154,15 @@ Required for polling state and optional legacy secret storage:
 3. Enable soft delete and purge protection
 
 ```bash
-# Create Key Vault (if needed)
+# Create Key Vault (if needed).
+# Soft delete is always enabled and cannot be turned off, so there is no
+# --enable-soft-delete flag on `az keyvault create`. Use --retention-days to set
+# the soft-delete retention window (7-90 days; default 90).
 az keyvault create \
     --name fsw-credentials-kv \
     --resource-group rg-fsi-governance \
     --location eastus \
-    --enable-soft-delete true \
+    --retention-days 90 \
     --enable-purge-protection true
 ```
 
