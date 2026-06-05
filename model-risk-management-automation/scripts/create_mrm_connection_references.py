@@ -13,7 +13,7 @@ Connection References:
     alerts, SLA breach alerts, and revalidation approval requests
   - fsi_cr_approvals_mrm: Validator assignment approval, revalidation
     confirmation, and Tier 1 examiner alert choices
-  - fsi_cr_http_mrm: Power Platform Bots API, Microsoft Graph API calls
+  - fsi_cr_http_mrm: Dataverse bot table enrichment, Microsoft Graph API calls
     for user profile resolution and Agent 365 / Microsoft Entra Agent ID registry
   - fsi_cr_sharepoint_mrm: Agent Card document upload, folder creation,
     and metadata updates in the Agent Card Library
@@ -72,8 +72,8 @@ CONNECTION_REF_DEFINITIONS = [
         "display_name": "HTTP with Microsoft Entra ID - Model Risk Management",
         "connector_id": "shared_webcontents",
         "description": (
-            "HTTP with Microsoft Entra ID connection for MRM. Used for Power "
-            "Platform Bots API, Microsoft Graph API calls for user "
+            "HTTP with Microsoft Entra ID connection for MRM. Used for "
+            "Dataverse bot table enrichment, Microsoft Graph API calls for user "
             "profile resolution and Agent 365 / Microsoft Entra Agent ID registry."
         ),
     },

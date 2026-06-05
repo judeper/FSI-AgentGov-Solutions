@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.0.4] — 2026-05-23
+## [Unreleased]
+
+### Fixed
+
+- **Command existence (second-pass audit)**: The agent-metadata enrichment call cited a non-existent Power Platform API endpoint. `docs/flow-configuration.md` step 4.2 used `https://api.powerplatform.com/appmanagement/environments/{env}/bots/{bot}?api-version=2022-03-01-preview` and `SOLUTION-DOCUMENTATION.md` §3 used a `powervirtualagents/...bots` path; neither namespace exposes a bot read (the Power Platform API only documents bot-scoped sub-resources under the `copilotstudio` namespace — `botQuarantine`, `makerevaluation`). Both now read the documented Dataverse `bot` table (`GET .../api/data/v9.2/bots({botId})?$select=name,schemaname,statecode,publishedon,_ownerid_value`), whose `botid` equals the Power Platform Bot ID stored in `fsi_agentid`. Ref: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot
+- **Doc consistency**: Updated `DELIVERY-CHECKLIST.md` API field-confirmation rows, `docs/prerequisites.md` network/role tables, `README.md` role table, and the `fsi_cr_http_mrm` usage descriptions in `docs/flow-configuration.md` and `scripts/create_mrm_connection_references.py` to reference the Dataverse `bot` table instead of the non-existent "Power Platform Bots API".
+
+### Notes
+
+- Verified EXISTS against Microsoft Learn: the Graph beta Agent 365 package inventory `GET /beta/copilot/admin/catalog/packages?$filter=supportedHosts/any(h:h eq 'Copilot')` with delegated `CopilotPackages.Read.All`; the beta `GET /beta/agentRegistry/agentInstances/{id}` legacy identity cross-reference (with the documented May 2026 Agent 365 convergence); the Graph v1.0 user-profile read; and `Get-AzAccessToken -ResourceUrl -AsSecureString` (Az.Accounts). Dataverse custom entity sets and logical columns matched `create_mrm_dataverse_schema.py`.
+
+---
 
 ### Fixed
 

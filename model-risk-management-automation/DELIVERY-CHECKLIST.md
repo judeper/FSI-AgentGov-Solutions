@@ -40,9 +40,9 @@ OptionSet integer values are defined in `scripts/create_mrm_dataverse_schema.py`
 
 | API | Field | Expected | Confirmed |
 |-----|-------|----------|-----------|
-| Power Platform Bots API (2022-03-01-preview) | ownerObjectId | Present in response | [ ] |
-| Power Platform Bots API | displayName | Present in response | [ ] |
-| Power Platform Bots API | lastModifiedTime | Present in response | [ ] |
+| Dataverse bot table | _ownerid_value | Present in response | [ ] |
+| Dataverse bot table | name | Present in response | [ ] |
+| Dataverse bot table | modifiedon | Present in response | [ ] |
 
 ### Infrastructure Setup
 

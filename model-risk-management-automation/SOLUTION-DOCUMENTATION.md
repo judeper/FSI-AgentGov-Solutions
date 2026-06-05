@@ -85,7 +85,7 @@ This solution requires `agent-registry-automation` to be deployed in the same Da
 
 ### Required APIs
 
-1. **Power Platform Bots API** — `GET https://api.powerplatform.com/powervirtualagents/environments/{envId}/bots/{botId}?api-version=2022-03-01-preview`
+1. **Dataverse bot table** — `GET https://{org}.crm.dynamics.com/api/data/v9.2/bots({botId})?$select=name,schemaname,statecode,publishedon,_ownerid_value` — documented source for agent metadata (`botId` equals the Power Platform Bot ID stored in `fsi_agentid`)
 2. **Microsoft Graph — Agent 365 package inventory (preview)** — `GET https://graph.microsoft.com/beta/copilot/admin/catalog/packages?$filter=supportedHosts/any(h:h eq 'Copilot')` for delegated administrator inventory exports when `IsAgent365LifecycleEnabled` is enabled
 3. **Microsoft Graph — Agent Registry agent instances (legacy/beta)** — `GET https://graph.microsoft.com/beta/agentRegistry/agentInstances/{agentInstanceId}` for identity-only cross-reference while Microsoft converges registry APIs into Agent 365
 4. **Microsoft Graph — User Profile** — `GET https://graph.microsoft.com/v1.0/users/{userUPN}?$select=id,displayName,mail,jobTitle,department`

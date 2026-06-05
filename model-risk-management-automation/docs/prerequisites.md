@@ -18,7 +18,7 @@ Complete all prerequisites before deploying the Model Risk Management Automation
 
 | Role | Required For |
 |------|--------------|
-| Power Platform Admin | Environment enumeration, Bots API access, and Managed Environment configuration |
+| Power Platform Admin | Environment enumeration, Dataverse `bot` table access, and Managed Environment configuration |
 | System Administrator (Dataverse) | Dataverse table creation, solution import, and alternate key configuration |
 | Microsoft Entra Global Administrator or Application Administrator | Managed identity creation and API permission grants |
 | SharePoint Admin | MRM Governance site creation and permission configuration |
@@ -100,9 +100,8 @@ Feature flags are implemented as Dataverse environment variables. Both default t
 | Endpoint | Protocol | Purpose |
 |----------|----------|---------|
 | `graph.microsoft.com` | HTTPS (443) | Graph API calls for user resolution and Agent Registry |
-| `api.powerplatform.com` | HTTPS (443) | Power Platform API for agent metadata |
+| `{org}.crm.dynamics.com` | HTTPS (443) | Dataverse Web API (model inventory and `bot` table agent metadata) |
 | `{tenant}.sharepoint.com` | HTTPS (443) | Agent Card document operations |
-| `{org}.crm.dynamics.com` | HTTPS (443) | Dataverse Web API |
 
 > **Note:** If your environment uses a firewall or proxy, verify that these endpoints are accessible from the Power Automate service. Refer to [Microsoft Power Automate IP addresses](https://learn.microsoft.com/en-us/power-automate/ip-address-configuration) for the current IP ranges.
 
