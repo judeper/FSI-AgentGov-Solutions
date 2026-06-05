@@ -181,7 +181,7 @@ function Compare-SessionBaseline {
             }
             else {
                 try {
-                    $strengthPolicy = Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $policyAuthStrengthId -ErrorAction Stop
+                    $strengthPolicy = Get-MgPolicyAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $policyAuthStrengthId -ErrorAction Stop
                     $policyAuthStrength = $strengthPolicy.DisplayName
                 }
                 catch {
