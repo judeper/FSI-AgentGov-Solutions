@@ -101,9 +101,16 @@ GDPR Art. 5(1)(c), GLBA Section 501(b), and CCPA purpose limitation.
   `Invoke-DriftScan.ps1` does not. If no active `Audit.General` subscription exists, the
   first scan can return `AF20024`. Start the subscription once before initial scanning (the
   troubleshooting guide documents this).
-- **Sovereign IC cloud (eaglex):** the client-secret fallback maps the IC endpoint to the
-  `login.microsoftonline.us` authority. The IC (eaglex) login authority may differ; out of
-  scope for a commercial-cloud lab — verify before any IC deployment.
+- **National cloud Management API endpoints (corrected 2026-06-05):** the
+  `ManagementApiEndpoint` allow-list now matches the four published Office 365 Management
+  Activity API roots — `manage.office.com` (Enterprise), `manage-gcc.office.com` (GCC),
+  `manage.office365.us` (GCC High), `manage.protection.apps.mil` (DoD) — per
+  https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference.
+  The previous DoD value (`manage.protection.outlook.com`) and an undocumented IC/eaglex
+  value (`manage.office.eaglex.ic.gov`) were removed. GCC High / DoD map to the
+  `login.microsoftonline.us` authority; Enterprise and GCC moderate use
+  `login.microsoftonline.com`. Confirm authority and endpoint reachability before any
+  sovereign-cloud deployment.
 
 ## Lab-Readiness Assessment
 

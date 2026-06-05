@@ -8,6 +8,16 @@ All notable changes to the Scope Drift Monitor.
 
 ### Fixed
 
+- **National cloud Management API endpoints** — corrected the `fsi_SDM_ManagementApiEndpoint`
+  allow-list (both PowerShell scripts' `ValidateSet`, `README.md`, and `docs/flow-configuration.md`)
+  to match the four published Office 365 Management Activity API roots: `manage.office.com`
+  (Enterprise), `manage-gcc.office.com` (GCC), `manage.office365.us` (GCC High), and
+  `manage.protection.apps.mil` (DoD). The previous DoD value (`manage.protection.outlook.com`)
+  was inaccurate and an undocumented IC/eaglex value (`manage.office.eaglex.ic.gov`) was removed.
+  Updated the client-secret-fallback login-authority `switch` accordingly (GCC High / DoD →
+  `login.microsoftonline.us`; Enterprise / GCC moderate → `login.microsoftonline.com`). Source:
+  [Office 365 Management Activity API reference](https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference).
+  (technical accuracy review vs Microsoft Learn)
 - **`docs/troubleshooting.md`** — "Export Flow Run Data" referenced non-existent
   `pac flow list` / `pac flow run list` / `pac flow run show` commands. There is no `pac flow`
   CLI command group; replaced with accurate guidance (portal 28-day run history export, Power
