@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Invalid `RetentionDuration` enum values (second-pass command-existence):** `Test-PurviewRetention.ps1` mapped retention requirements to non-existent `UnifiedAuditLogRetentionDuration` values (`OneYear`, `TwoYears`, `ThreeYears`, `FiveYears`, `SevenYears`). The enum only accepts `ThreeMonths`, `SixMonths`, `NineMonths`, `TwelveMonths`, `TenYears`. `Get-RequiredRetentionDuration` now returns `TwelveMonths` (was `OneYear`) and maps any requirement above 365 days to `TenYears` (the only valid value that meets a 730-day Zone 3 minimum). The `RetentionDurationMap` lookup was corrected to key on the real enum values so a `TwelveMonths` policy is no longer mis-read as `$null`/below-minimum. Remediation guidance also now includes the **mandatory** `-Priority` parameter that `New-UnifiedAuditLogRetentionPolicy` requires. Source: Microsoft Learn `New-UnifiedAuditLogRetentionPolicy`.
 - `Compare-ValidationBaseline.ps1` now uses `$null -eq` baseline detection so array-shaped Dataverse responses are handled consistently.
 
 ## [1.0.5] - 2026-05-23
