@@ -161,7 +161,7 @@ When creating/updating `fsi_controlassessment` records:
   "fsi_assessmentdate": "2026-02-10T06:00:00Z",
   "fsi_status": 1,
   "fsi_score": 100,
-  "fsi_notes": "Automated assessment via ACV v1.0.0. Run ID: {guid}. Orchestrator severity: Passed.",
+  "fsi_notes": "Automated: Audit Configuration Validator v1.0.4. Run ID: {guid}. Status: Compliant. Source: fsi_auditvalidationhistories, Timestamp: 2026-02-10T06:00:00.000Z.",
   "fsi_nextreviewdate": "2026-02-11T06:00:00Z",
   "fsi_evidencecount": 1
 }

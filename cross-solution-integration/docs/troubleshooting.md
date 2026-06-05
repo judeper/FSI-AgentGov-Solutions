@@ -49,13 +49,12 @@
 
 ### Authentication errors with managed identity or legacy service principal
 
-**Symptom:** `Connect-DataverseApi` fails with 401 or insufficient privileges.
+**Symptom:** `Connect-DataverseApi` fails with 401 or 403 / insufficient privileges.
 
 **Resolution:**
-1. Verify the app registration has `user_impersonation` Dataverse API permission
-2. Confirm the service principal is added as an application user in Dataverse
-3. Check security role assignments on the application user
-4. For cross-environment scenarios, the managed identity or legacy service principal must be registered as an application user in each environment
+1. Confirm the identity (managed identity or app-registration service principal) is added to the Dataverse environment as an **Application User** — a valid OAuth token alone returns `403` without it. The integration authenticates as a confidential client using the client-credentials `<environment-url>/.default` scope, not the delegated `user_impersonation` scope (which applies only to interactive/public-client sign-in).
+2. Verify the Application User has an assigned **security role** granting the table privileges this integration needs (see PREREQUISITES.md).
+3. For cross-environment scenarios, register the identity as an Application User with a security role in **each** environment.
 
 ### Zone value appears as 100000001 instead of 1
 
