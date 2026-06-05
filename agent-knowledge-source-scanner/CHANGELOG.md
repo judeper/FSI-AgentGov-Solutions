@@ -4,9 +4,11 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-06-05
 
 ### Fixed
 
+- **SharePoint "Everyone" claim mislabeled.** `Get-KnowledgeSourceItemPermissions.ps1` matched the login name `c:0(.s|true` but classified it as `EveryoneExceptExternal` / "Everyone except external users". `c:0(.s|true` is the **Everyone** claim (all users), which can include external/guest users when the tenant enables it (`Set-SPOTenant -ShowEveryoneClaim $true`) — a distinct, broader principal than "Everyone except external users". The claim is now classified as `EveryoneClaim` with an accurate label, and detection for the genuine "Everyone except external users" claim (`c:0-.f|rolemanager|spo-grid-all-users`) was added so that principal is no longer silently treated as a direct permission. Both claim types remain in the out-of-scope set for scoring. Verified against [Grant the Everyone claim to external users](https://learn.microsoft.com/troubleshoot/microsoft-365/admin/access-management/grant-everyone-claim-to-external-users) and [Default SharePoint groups](https://learn.microsoft.com/sharepoint/default-sharepoint-groups#special-sharepoint-groups). `scripts/Get-KnowledgeSourceItemPermissions.ps1:599-615`. (technical accuracy review vs Microsoft Learn)
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 - **Least-privilege Graph permissions corrected.** The Graph v1.0 scanner (`Invoke-GraphPermissionScan.ps1`) documentation listed `Group.Read.All` as required, but the [list-permissions endpoint](https://learn.microsoft.com/graph/api/driveitem-list-permissions?view=graph-rest-1.0#permissions) requires only `Files.Read.All` (application) / `Files.Read` (delegated), with `Sites.Read.All` as a higher-privileged alternative. Group-based grants are returned inline in the `grantedToV2`/`grantedToIdentitiesV2` facets, so no group-membership call (and no `Group.Read.All`) is made. Corrected README "Microsoft Graph Permissions" table and the script `.NOTES`. (lab-readiness validation)
 - **`Get-AzAccessToken` example updated for Az.Accounts 5.x.** `.Token` is now a `SecureString` by default, so the previous `(Get-AzAccessToken -ResourceUrl ...).Token` example no longer binds to the `[string]$AccessToken` parameter. Examples now use `-ResourceTypeName MSGraph -AsSecureString` and convert to plain text. (lab-readiness validation)
@@ -14,6 +16,7 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 ### Added
 
 - **`LAB-VALIDATION.md`** — static (no-tenant) lab-readiness validation report: authoritative Microsoft source verification of Graph endpoints/permissions/batching, PnP.PowerShell 3.x authentication, gaps found and fixed, and runtime-only caveats. (lab-readiness validation)
+
 ## [1.1.2] - 2026-05-23
 
 ### Fixed

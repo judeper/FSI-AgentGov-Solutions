@@ -111,3 +111,20 @@ require a live tenant to exercise; they are documented above and do not block la
 
 An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Every PnP.PowerShell cmdlet and parameter (Connect-PnPOnline, Get-PnPEntraIDGroupMember -Transitive, Register-PnPEntraIDAppForInteractiveLogin), the Microsoft Graph v1.0 driveItem permissions route, and the Az.Accounts token shape were confirmed against authoritative sources; no corrections required.
 
+## Third-Pass Technical Accuracy Review (2026-06-05)
+
+A third-pass technical-accuracy review (v1.1.3) corrected a finding the earlier passes
+missed: the SharePoint login-name `c:0(.s|true` was classified and commented as
+"Everyone except external users". That string is the **Everyone** claim (all users),
+which can include external/guest users when the tenant enables it
+(`Set-SPOTenant -ShowEveryoneClaim $true`) — a distinct, broader principal than
+"Everyone except external users" (`c:0-.f|rolemanager|spo-grid-all-users`). The scanner
+now classifies `c:0(.s|true` as `EveryoneClaim` and additionally detects the genuine
+"Everyone except external users" claim. This supersedes the line above that recorded the
+claims-encoding comment as "verified still accurate."
+
+| Claim (in code/docs) | Verified against | Result |
+|----------------------|------------------|--------|
+| `c:0(.s|true` is the **Everyone** claim (all users; may include external) — not "Everyone except external users" | [Grant the Everyone claim to external users](https://learn.microsoft.com/troubleshoot/microsoft-365/admin/access-management/grant-everyone-claim-to-external-users); [Default SharePoint groups](https://learn.microsoft.com/sharepoint/default-sharepoint-groups#special-sharepoint-groups) | ✅ Corrected (was mislabeled) |
+| `GET /sites/{site-id}/permissions` requires `Sites.FullControl.All` | [List permissions on a site](https://learn.microsoft.com/graph/api/site-list-permissions?view=graph-rest-1.0) | ✅ Confirmed (README claim accurate) |
+

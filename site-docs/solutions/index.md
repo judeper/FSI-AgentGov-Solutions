@@ -25,7 +25,7 @@ Solutions for securing agent content, file handling, and knowledge sources.
 
 | Solution | Description | Version | Status | Zones | Controls |
 |----------|-------------|---------|--------|-------|----------|
-| [Agent Knowledge Source Scanner](agent-knowledge-source-scanner/index.md) | Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources. | v1.1.2 | live | personal, team, enterprise | 4.3, 1.4, 1.5 |
+| [Agent Knowledge Source Scanner](agent-knowledge-source-scanner/index.md) | Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources. | v1.1.3 | live | personal, team, enterprise | 4.3, 1.4, 1.5 |
 | [Content Moderation Monitor](content-moderation-monitor/index.md) | Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements. | v1.1.2 | live | personal, team, enterprise | 1.27, 1.8 |
 | [File Upload Security](file-upload-security/index.md) | Automated validation of Copilot Studio agent file upload settings against governance zone policies. Supports Control 1.14 by detecting agents with file uploads enabled where uploads should be restricted or disabled. | v1.1.2 | live | personal, team, enterprise | 1.14, 1.8, 1.4 |
 | [MIME Type Restrictions for File Uploads](mime-type-restrictions/index.md) | Dataverse plugin, connector-classification reference, and Sentinel queries for MIME type restriction governance in Copilot Studio agent file upload scenarios. | v1.2.1 | live | personal, team, enterprise | 1.5, 1.13, 1.25, 3.3, 3.7 |
