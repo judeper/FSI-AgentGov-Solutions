@@ -91,7 +91,7 @@ uses the publisher-prefixed schema name `fsi_CD_NotificationEmail`. Aligned the 
 
 - Server-side support for the `mailboxSettings/userPurpose` and `assignedLicenses/$count`
   advanced-query filters depends on tenant/directory state; exercise the fallback paths.
-- `category eq 'DataLossPrevention'` filtering on `alerts_v2` depends on the connected
+- `serviceSource eq 'dataLossPrevention'` filtering on `alerts_v2` depends on the connected
   Defender/Purview detection sources; the script already degrades gracefully on failure.
 - Power BI requires the option sets to be created with explicit integer values (1-6) — an
   authoring step that cannot be verified without a live environment.
