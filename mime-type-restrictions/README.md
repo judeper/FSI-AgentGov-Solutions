@@ -82,7 +82,7 @@ The default `mime-config.json` for Zone 3 includes:
 TIFF was removed from the Enterprise Managed default allowlist based on:
 
 1. **Copilot Studio support matrix:** TIFF is not listed as a supported user file input type in Copilot Studio
-2. **Security posture:** TIFF supports multi-page documents, embedded scripts via EXIF/IPTC metadata, and complex IFD structures that have been historically exploited (CVE-2020-1599, CVE-2017-0263)
+2. **Security posture:** TIFF supports multi-page documents, rich embedded metadata (EXIF/IPTC), and complex Image File Directory (IFD) structures; image-parsing code paths for such formats have been historically exploited for remote code execution (for example, CVE-2013-3906 — the Microsoft Graphics component TIFF-processing remote code execution vulnerability addressed by [MS13-096](https://learn.microsoft.com/security-updates/securitybulletins/2013/ms13-096))
 3. **Business need:** TIFF is uncommon for AI agent input scenarios; organizations that require TIFF should add it to their zone-specific allowlist with explicit risk acceptance
 
 ### Animated GIF Policy
