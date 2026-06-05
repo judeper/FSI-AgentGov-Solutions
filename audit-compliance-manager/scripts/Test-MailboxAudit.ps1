@@ -16,11 +16,17 @@
 
     The script performs two validation checks:
     1. Organization-level check via Get-OrganizationConfig.AuditDisabled
-    2. Sample mailbox check (5 mailboxes) to detect per-mailbox overrides
+    2. Mailbox audit bypass check via Get-MailboxAuditBypassAssociation to detect
+       accounts explicitly excluded from mailbox audit logging
 
-    Per-mailbox overrides (AuditEnabled=$false) can occur when administrators
-    explicitly disable audit on specific mailboxes. This is a compliance risk
-    and triggers a Warning status.
+    When mailbox auditing on by default is turned on, it overrides the per-mailbox
+    AuditEnabled property: Get-Mailbox always returns AuditEnabled=$true and setting
+    AuditEnabled=$false on a mailbox is ignored. The supported way to exclude an
+    account from auditing is a mailbox audit bypass association
+    (Set-MailboxAuditBypassAssociation -AuditBypassEnabled $true). Accounts with an
+    active bypass association are not audited, which is a compliance risk and
+    triggers a Warning status.
+    Reference: https://learn.microsoft.com/en-us/purview/audit-mailboxes
 
 .PARAMETER Interactive
     Use interactive browser-based authentication instead of service principal.
@@ -184,51 +190,56 @@ function Test-MailboxAudit {
 
         Write-Host ""
 
-        # Step 3: Sample mailbox check for per-mailbox overrides
-        Write-Host "[3/3] Checking sample mailboxes for per-mailbox overrides..." -ForegroundColor Yellow
+        # Step 3: Check for mailbox audit bypass associations.
+        # When mailbox auditing on by default is enabled, the per-mailbox AuditEnabled
+        # property is overridden (Get-Mailbox always returns True) and AuditEnabled=$false
+        # is ignored. The supported way to exclude an account from auditing is a mailbox
+        # audit bypass association, so that is what we detect here.
+        # Reference: https://learn.microsoft.com/en-us/purview/audit-mailboxes
+        Write-Host "[3/3] Checking for mailbox audit bypass associations..." -ForegroundColor Yellow
 
         $mailboxCheckStatus = "Unknown"
-        $mailboxesChecked = 0
-        $overridesFound = 0
-        $overrideDetails = @()
+        $associationsChecked = 0
+        $bypassEnabledCount = 0
+        $bypassedAccounts = @()
 
         try {
-            # Get a sample of 5 mailboxes with audit properties
-            $sampleMailboxes = Get-EXOMailbox -ResultSize 5 -PropertySets Audit -ErrorAction Stop
+            # AuditBypassEnabled=$true means the account is excluded from mailbox audit logging.
+            $bypassAssociations = Get-MailboxAuditBypassAssociation -ResultSize unlimited -ErrorAction Stop
 
-            $mailboxesChecked = $sampleMailboxes.Count
+            $associationsChecked = @($bypassAssociations).Count
 
-            foreach ($mailbox in $sampleMailboxes) {
-                if ($mailbox.AuditEnabled -eq $false) {
-                    $overridesFound++
-                    $overrideDetails += $mailbox.UserPrincipalName
-                    Write-Host "  ⚠ Override detected: $($mailbox.UserPrincipalName) has AuditEnabled=$false" -ForegroundColor Yellow
+            foreach ($association in $bypassAssociations) {
+                if ($association.AuditBypassEnabled -eq $true) {
+                    $bypassEnabledCount++
+                    $bypassedAccounts += $association.Name
+                    Write-Host "  ⚠ Bypass detected: $($association.Name) has AuditBypassEnabled=`$true" -ForegroundColor Yellow
                 }
             }
 
-            if ($overridesFound -eq 0) {
+            if ($bypassEnabledCount -eq 0) {
                 $mailboxCheckStatus = "Passed"
-                Write-Host "✓ No per-mailbox audit overrides detected (sampled $mailboxesChecked mailboxes)" -ForegroundColor Green
+                Write-Host "✓ No mailbox audit bypass associations detected (checked $associationsChecked account(s))" -ForegroundColor Green
             }
             else {
                 $mailboxCheckStatus = "Warning"
-                Write-Host "⚠ Found $overridesFound mailbox(es) with audit disabled (sampled $mailboxesChecked mailboxes)" -ForegroundColor Yellow
-                Write-Host "  This indicates administrators have manually disabled audit on specific mailboxes." -ForegroundColor Yellow
+                Write-Host "⚠ Found $bypassEnabledCount account(s) bypassing mailbox audit (checked $associationsChecked account(s))" -ForegroundColor Yellow
+                Write-Host "  These accounts are excluded from mailbox audit logging via Set-MailboxAuditBypassAssociation." -ForegroundColor Yellow
             }
         }
         catch {
-            # If Get-EXOMailbox fails (e.g., permissions issue), log warning but don't fail overall check
-            Write-Host "⚠ Warning: Unable to check sample mailboxes. Error: $($_.Exception.Message)" -ForegroundColor Yellow
+            # If the bypass query fails (e.g., permissions issue), log warning but don't fail overall check
+            Write-Host "⚠ Warning: Unable to check mailbox audit bypass associations. Error: $($_.Exception.Message)" -ForegroundColor Yellow
             Write-Host "  This is supplementary validation. Organization-level check is primary." -ForegroundColor Yellow
             $mailboxCheckStatus = "Skipped"
         }
 
         $checks += @{
-            Name              = "SampleMailboxOverrides"
-            Status            = $mailboxCheckStatus
-            MailboxesChecked  = $mailboxesChecked
-            OverridesFound    = $overridesFound
-            OverrideDetails   = $overrideDetails
+            Name                 = "MailboxAuditBypassAssociations"
+            Status               = $mailboxCheckStatus
+            AssociationsChecked  = $associationsChecked
+            BypassEnabledCount   = $bypassEnabledCount
+            BypassedAccounts     = $bypassedAccounts
         }
 
         Write-Host ""
@@ -240,11 +251,11 @@ function Test-MailboxAudit {
         }
         elseif ($mailboxCheckStatus -eq "Warning") {
             $overallStatus = "Warning"
-            $reason = "Mailbox audit is enabled organization-wide, but $overridesFound mailbox(es) have audit explicitly disabled. Review and re-enable: Set-Mailbox -Identity <mailbox> -AuditEnabled `$true"
+            $reason = "Mailbox audit is enabled organization-wide, but $bypassEnabledCount account(s) bypass mailbox audit logging. Review and remove the bypass where it is not required: Set-MailboxAuditBypassAssociation -Identity <account> -AuditBypassEnabled `$false"
         }
         else {
             $overallStatus = "Passed"
-            $reason = "Mailbox audit is enabled organization-wide. No per-mailbox overrides detected in sample."
+            $reason = "Mailbox audit is enabled organization-wide. No mailbox audit bypass associations detected."
         }
 
         Write-Host "========================================" -ForegroundColor Cyan
