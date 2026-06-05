@@ -22,7 +22,7 @@ and SOX 302/404 — it does not by itself satisfy any regulation.
 - Microsoft Graph Conditional Access **session control** schema: `signInFrequency`, `persistentBrowser`,
   `continuousAccessEvaluation`, and `grantControls.authenticationStrength` / `builtInControls`.
 - Graph PowerShell cmdlet currency (`Get-/New-/Update-MgIdentityConditionalAccessPolicy`,
-  `Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy`,
+  `Get-MgPolicyAuthenticationStrengthPolicy`,
   `*-MgIdentityConditionalAccessAuthenticationContextClassReference`, beta `*-MgBetaIdentityConditionalAccessPolicy`).
 - Required Graph permission scopes and the v1.0-vs-beta endpoint boundary for each property read.
 - `Az.Accounts` `Get-AzAccessToken` output-type change and `MSAL.PS` deprecation status.
@@ -77,6 +77,23 @@ PowerShell" guidance, which states the token must be converted manually; there i
 `docs/prerequisites.md` stated "SSC enforces zone-specific session security controls." SSC validates
 configuration and detects drift; the deployed Conditional Access policies perform enforcement. Changed to
 "SSC validates …".
+
+### 5. (Bug) Non-existent v1.0 cmdlet `Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy` — fixed (second pass)
+
+Four call sites invoked `Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy`
+(`Test-SessionCompliance.ps1` lines 327 and 500, `Invoke-BaselineCapture.ps1` line 248, and
+`private/Compare-SessionBaseline.ps1` line 184). That cmdlet exists **only in the beta module**
+(`Microsoft.Graph.Beta.Identity.SignIns`). In the v1.0 `Microsoft.Graph.Identity.SignIns` module
+declared by each script's `#Requires`, it does not exist — the v1.0 `conditionalAccessRoot` resource
+exposes only `authenticationContextClassReferences`, `namedLocations`, `policies`, and `templates`
+(no `authenticationStrength` navigation), so no v1.0 cmdlet is generated for that path. A live run would
+fail with "The term '…' is not recognized." The correct v1.0 cmdlet, mapping to
+`/policies/authenticationStrengthPolicies`, is `Get-MgPolicyAuthenticationStrengthPolicy`, which accepts
+the same `-AuthenticationStrengthPolicyId` parameter.
+
+**Fix:** replaced all four calls with `Get-MgPolicyAuthenticationStrengthPolicy`. Sources:
+`https://learn.microsoft.com/graph/api/resources/conditionalaccessroot?view=graph-rest-1.0`,
+`https://learn.microsoft.com/powershell/module/microsoft.graph.identity.signins/get-mgpolicyauthenticationstrengthpolicy?view=graph-powershell-1.0`.
 
 ## Verified as correct (no change needed)
 

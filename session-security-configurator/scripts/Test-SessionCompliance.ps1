@@ -324,7 +324,7 @@ function Get-PolicyAuthenticationStrengthDisplayName {
     }
 
     try {
-        $strengthPolicy = Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $authStrengthId -ErrorAction Stop
+        $strengthPolicy = Get-MgPolicyAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $authStrengthId -ErrorAction Stop
         $script:authStrengthDisplayNameCache[$authStrengthId] = $strengthPolicy.DisplayName
         return $strengthPolicy.DisplayName
     }
@@ -497,7 +497,7 @@ try {
     Write-Host "Querying authentication strength policies..." -ForegroundColor Cyan
 
     # Query authentication strength policies
-    $authStrengthPolicies = Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy -ErrorAction Stop
+    $authStrengthPolicies = Get-MgPolicyAuthenticationStrengthPolicy -ErrorAction Stop
 
     Write-Host "Found $($authStrengthPolicies.Count) authentication strength policy(ies)." -ForegroundColor Cyan
 

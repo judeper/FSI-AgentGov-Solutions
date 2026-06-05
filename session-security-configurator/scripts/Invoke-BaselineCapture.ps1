@@ -245,7 +245,7 @@ try {
     $authStrength = if ($firstPolicy.AuthenticationStrengthId) {
         # Query auth strength name
         try {
-            $authStrengthPolicy = Get-MgIdentityConditionalAccessAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $firstPolicy.AuthenticationStrengthId -ErrorAction Stop
+            $authStrengthPolicy = Get-MgPolicyAuthenticationStrengthPolicy -AuthenticationStrengthPolicyId $firstPolicy.AuthenticationStrengthId -ErrorAction Stop
             $authStrengthPolicy.DisplayName
         }
         catch {
