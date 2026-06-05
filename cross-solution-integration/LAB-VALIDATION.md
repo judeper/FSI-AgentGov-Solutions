@@ -136,3 +136,19 @@ material risk to a first lab deployment — the missing Dataverse Application Us
 security-role prerequisite for non-interactive auth — is now documented in
 `PREREQUISITES.md`. Remaining items are runtime confirmations that require a live
 tenant.
+
+## Second-pass command-existence addendum (2026-06-04)
+
+An independent fresh-eyes re-derivation of every entity set, logical column, and
+option-set value found one issue the first pass missed: the evidence-registration
+path in `Sync-SolutionAssessments.ps1` wrote `fsi_description` on
+`fsi_complianceevidence`, but that table's memo column is `fsi_evidencedescription`
+(`compliance-dashboard/scripts/create_cd_dataverse_schema.py:204`). A live Web API
+`POST`/`PATCH` would have returned `400` (property does not exist). The first pass
+verified the Tier 2 history tables and Compliance Dashboard option sets but did not
+cover the evidence-write column mapping. Corrected in both evidence writes and in
+`docs/status-mapping.md`. All other cross-solution references re-confirmed accurate.
+
+> Note: `fsi_collectedby` is `Required` on `fsi_complianceevidence` and is not set by
+> the script; whether a live create succeeds depends on tenant default-population of
+> that lookup. This is a runtime confirmation, not a command-existence defect.

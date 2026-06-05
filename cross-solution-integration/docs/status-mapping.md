@@ -187,7 +187,7 @@ When Tier 2 solutions export evidence packages, register them in `fsi_compliance
   "fsi_name": "ACV Evidence Export — 2026-02-10",
   "fsi_controlassessmentid@odata.bind": "/fsi_controlassessments({assessment_guid})",
   "fsi_evidencetype": 5,
-  "fsi_description": "Automated evidence from Audit Configuration Validator. SHA-256 verified.",
+  "fsi_evidencedescription": "Automated evidence from Audit Configuration Validator. SHA-256 verified.",
   "fsi_collecteddate": "2026-02-10T06:00:00Z",
   "fsi_hash": "a1b2c3d4..."
 }

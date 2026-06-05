@@ -10,6 +10,7 @@ All notable changes to this solution will be documented in this file.
 
 ### Fixed
 
+- **Second-pass command-existence (P0 column fix):** Evidence registration in `Sync-SolutionAssessments.ps1` wrote the non-existent column `fsi_description` on `fsi_complianceevidence`; the schema defines the memo column as `fsi_evidencedescription` (`compliance-dashboard/scripts/create_cd_dataverse_schema.py:204`). A live Web API `POST`/`PATCH` would have returned `400` (property does not exist). Corrected both evidence writes (`scripts/powershell/Sync-SolutionAssessments.ps1`) and the documented payload in `docs/status-mapping.md`.
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 
 ### Documentation
