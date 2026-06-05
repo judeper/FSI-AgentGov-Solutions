@@ -75,7 +75,7 @@ Register a Microsoft Entra ID application with the following permissions:
 
 Flow 3 is feature-flagged because programmatic agent-identity sync still relies on Microsoft Graph beta endpoints. Microsoft Entra Agent ID is generally available for all Microsoft Entra customers; before enabling, confirm the current Microsoft Graph beta endpoint and permission names in your tenant. Current Microsoft Learn Agent ID terminology uses agent identity blueprints, blueprint principals, agent identities, and agent users; avoid hard-coding legacy `AgentRegistration.*` permission names.
 
-> **Note:** Do not enable Flow 3 in production until your Microsoft 365 tenant exposes the required Agent ID API permissions and the governance team validates licensing for Microsoft Agent 365 or Microsoft 365 E5.
+> **Note:** Do not enable Flow 3 in production until your Microsoft 365 tenant exposes the required Agent ID API permissions and the governance team validates licensing for Microsoft Agent 365 or Microsoft 365 E7.
 
 ---
 
