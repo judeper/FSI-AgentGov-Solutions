@@ -83,6 +83,7 @@ generative-ai-config-auditor/
 │   ├── Invoke-GenAIBaselineCapture.ps1
 │   ├── Compare-GenAIConfigCompliance.ps1
 │   ├── Get-AgentGenAISettings.ps1
+│   ├── Get-PurviewDLPEvidence.ps1
 │   ├── Export-GenAIConfigEvidence.ps1
 │   ├── Test-EvidenceIntegrity.ps1
 │   ├── Start-GenAIConfigValidationRunbook.ps1
@@ -90,6 +91,7 @@ generative-ai-config-auditor/
 │   │   ├── GACClient.psm1
 │   │   ├── Connect-EnvironmentDataverse.ps1
 │   │   ├── Get-ExpectedGenAIPolicy.ps1
+│   │   ├── Get-GACValidationResults.ps1
 │   │   ├── Get-ZoneClassification.ps1
 │   │   └── Test-ParameterValidation.ps1
 │   └── governance/
