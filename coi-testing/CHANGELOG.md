@@ -9,6 +9,7 @@ All notable changes to the COI Testing Framework.
 ### Fixed
 
 - **Docs**: Repaired a truncated/orphaned note blockquote at the top of `README.md` whose lead-in clause had been lost (it began mid-sentence with "> implemented; the agent-interaction layer..."). Reconstructed it into a complete scaffold-status note consistent with the *Overview* and *Implementation Status* sections. (lab-readiness validation)
+- **Minor**: `Get-CoiInventory.ps1` no longer passes `--json` to `pac connection list`. Unlike `pac admin list` and `pac solution list`, the `pac connection list` command does not support a `--json` flag (only `--environment`), so the unknown option would cause PAC to error and the connection enumeration to return empty. `Invoke-PacCommand` already falls back to capturing the tabular text output when JSON is unavailable. `scripts/Get-CoiInventory.ps1:227`. (second-pass command-existence audit)
 
 ## [1.1.2] - 2026-05-23
 

@@ -224,7 +224,10 @@ function Main {
     # ── Connections (optional) ───────────────────────────────────────────
     if ($IncludeConnections) {
         Write-Info 'Enumerating connections...'
-        $connections = Invoke-PacCommand -Command @('connection','list','--json') -Description 'Connection list' -DryRun:$DryRun
+        # Note: 'pac connection list' does not support the --json flag (only --environment),
+        # unlike 'pac admin list' and 'pac solution list'. Invoke-PacCommand falls back to
+        # capturing the tabular text output when JSON is unavailable.
+        $connections = Invoke-PacCommand -Command @('connection','list') -Description 'Connection list' -DryRun:$DryRun
         $inventory.connections = @($connections)
         Write-Info "Found $($connections.Count) connection(s)"
     }

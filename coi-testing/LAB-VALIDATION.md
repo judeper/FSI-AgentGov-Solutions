@@ -56,7 +56,7 @@ prerequisites, and troubleshooting.
 | Dataverse Web API record create returns **204 No Content** (runner accepts `[201, 204]`) | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/use-insomnia-web-api · https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-entity-web-api |
 | Custom Dataverse Choice (option set) values live in the **100000000+** range | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-update-options-web-api |
 | App-only / confidential-client Dataverse token scope is `<environment-url>/.default` (runner uses `f"{environment}/.default"`) | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/authenticate-oauth |
-| `pac admin list`, `pac solution list`, `pac connection list`, `--json` are valid PAC CLI commands | https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/admin · https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/solution · https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/connection |
+| `pac admin list` and `pac solution list` support `--json`; `pac connection list` exists but supports only `--environment` (no `--json` flag) | https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/admin · https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/solution · https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/connection |
 | `azure-identity` credential classes used by the runner (`ManagedIdentityCredential`, `WorkloadIdentityCredential`, `CertificateCredential`, `AzureCliCredential`, `DeviceCodeCredential`, `ClientSecretCredential`, `ChainedTokenCredential`) | https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme |
 | Direct Line 3.0 concepts (referenced as future/not-implemented in a `TODO`) | https://learn.microsoft.com/azure/bot-service/rest-api/bot-framework-rest-direct-line-3-0-concepts |
 
@@ -65,6 +65,7 @@ prerequisites, and troubleshooting.
 | Severity | Gap | Fix |
 |----------|-----|-----|
 | Minor (docs) | `README.md` carried a **truncated/orphaned note blockquote** at the top — it began mid-sentence ("> implemented; the agent-interaction layer…") with its lead-in clause lost. | Reconstructed it into a complete scaffold-status note consistent with *Overview* / *Implementation Status*. Added an `[Unreleased]` CHANGELOG entry. |
+| Command-existence (second pass) | `Get-CoiInventory.ps1` invoked `pac connection list --json`, but `pac connection list` does not document a `--json` flag (only `--environment`) — the unknown option would cause PAC to error and the connection enumeration to return empty. `pac admin list` and `pac solution list` *do* support `--json`. | Removed `--json` from the `pac connection list` invocation; `Invoke-PacCommand` already falls back to capturing tabular text when JSON is unavailable. |
 
 No other defects were found. Scripts parse and run, exit codes match documentation,
 column names and option-set values are internally consistent, authentication is
