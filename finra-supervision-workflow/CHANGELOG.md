@@ -6,6 +6,8 @@ All notable changes to the FINRA Supervision Workflow solution are documented he
 
 ### Changed
 
+- **docs**: Corrected `az keyvault create` example in `docs/prerequisites.md` — removed the non-existent `--enable-soft-delete true` flag (soft delete is always enabled and cannot be disabled, so the flag was removed from `az keyvault create`) and added `--retention-days 90` for the soft-delete retention window. (second-pass command-existence validation)
+- **docs**: Replaced the deprecated `Get-SupervisoryReviewPolicy` cmdlet with the documented `Get-SupervisoryReviewPolicyV2` in `docs/communication-compliance-setup.md` (Steps 5 and 6). The non-V2 cmdlet page is no longer published on Microsoft Learn (404); README and flow-configuration.md already used the V2 cmdlet. (second-pass command-existence validation)
 - **docs**: Corrected Power BI refresh-cadence guidance in `docs/power-bi-setup.md`. A 30-minute refresh cadence (48 refreshes/day) requires Power BI Premium / Premium Per User; semantic models on shared capacity (Power BI Pro) are limited to 8 refreshes/day. Replaced the contradictory "Frequency: Daily / every 30 minutes" table with capacity-based guidance and an authoritative Microsoft Learn citation. (lab-readiness validation)
 
 ### Added

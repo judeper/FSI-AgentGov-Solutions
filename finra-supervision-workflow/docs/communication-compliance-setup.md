@@ -171,7 +171,7 @@ The flow needs policy IDs to filter alerts:
 ```powershell
 Connect-IPPSSession
 
-Get-SupervisoryReviewPolicy |
+Get-SupervisoryReviewPolicyV2 |
     Select-Object Name, Guid, Enabled |
     Format-Table
 ```
@@ -209,7 +209,7 @@ Note the policy GUID values for flow configuration.
 Connect-IPPSSession
 
 # Verify policies are visible
-Get-SupervisoryReviewPolicy | Select-Object Name, Guid, Enabled | Format-Table
+Get-SupervisoryReviewPolicyV2 | Select-Object Name, Guid, Enabled | Format-Table
 
 # Verify managed identity or connector authentication with a test run in Power Automate.
 # For local troubleshooting, use an interactive admin session rather than exporting secrets.
