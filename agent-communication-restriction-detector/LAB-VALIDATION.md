@@ -82,8 +82,11 @@ agent communication topology and policy alignment.
 
 - Dataverse OData queries use correct logical column names and entity set names.
 - Power Automate option-set mappings use integer values `100000001`/`100000002` (Approved/Denied).
-- Bot/skill discovery queries `bots` and `botcomponents` with `componenttype eq 2 or 10` and extracts
-  `connectedAgentSchemaName` — consistent with the Dataverse botcomponent table (source 6).
+- Bot/skill discovery queries `bots` and `botcomponents`. Skill components are selected with
+  `componenttype eq 1 or componenttype eq 13` (Skill / Skill (V2)) and joined to the owning bot
+  via the `_parentbotid_value` lookup, consistent with the Dataverse botcomponent table (source 6).
+  The second-pass review corrected an earlier `componenttype eq 2 or 10` (Bot variable / Bot
+  translations (V2)) filter and a non-existent `_botid_value` column.
 - Cross-tenant token-audience fix (C-1), `Get-Date -AsUTC` removal (C-2), and
   `Connect-EnvironmentDataverse` call-operator fix (C-3) from v1.2.1 remain correct.
 - Sovereign-cloud Dataverse URL `ValidatePattern` regexes accept commercial + US Gov + Germany clouds.

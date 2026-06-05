@@ -245,10 +245,16 @@ function Get-AgentSkillRegistrations {
         }
 
         try {
-            # Query botcomponents for skill/connector type components
-            # componenttype 2 = Dialog/Skill, componenttype 10 = Skill
+            # Query botcomponents for skill-type components. Per the botcomponent
+            # table reference (botcomponent_componenttype option set), componenttype
+            # 1 = Skill and 13 = Skill (V2). (Values 2 and 10 are "Bot variable" and
+            # "Bot translations (V2)" respectively, not skills.) The bot a component
+            # belongs to is the parentbotid lookup, exposed in OData as
+            # _parentbotid_value; botcomponent has no _botid_value column. Lookup
+            # GUIDs are filtered without quotes.
+            # Ref: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 2 or componenttype eq 10)&" +
+                "`$filter=_parentbotid_value eq $($Bot.botid) and (componenttype eq 1 or componenttype eq 13)&" +
                 "`$select=name,content,componenttype,schemaname"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
