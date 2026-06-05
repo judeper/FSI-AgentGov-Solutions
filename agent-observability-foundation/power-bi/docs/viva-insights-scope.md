@@ -33,10 +33,12 @@
 | Average session duration | Time per conversation | Available |
 
 ### Prerequisites
-- 1+ Copilot license (50-license minimum removed)
+- At least 50 Copilot licenses in the tenant (report eligibility requirement) plus at least one Microsoft Copilot Studio license (standalone, pay-as-you-go, or bundled with Copilot)
 - Insights Analyst role in Viva Insights
-- Copilot Studio agents published to Production environment
+- At least one Copilot Studio agent published to a Production (default) environment with usage
 - Power BI Desktop June 2022 or newer (for report access)
+
+> **Source:** [Copilot Studio agents report — Prerequisites (Microsoft Viva Insights)](https://learn.microsoft.com/viva/insights/advanced/analyst/templates/copilot-studio-agents#prerequisites)
 
 ### Data Characteristics
 - Initial query: Last 28 days of data

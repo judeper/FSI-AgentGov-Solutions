@@ -2,6 +2,12 @@
 
 All notable changes to the Agent Observability Foundation are documented here.
 
+## [1.2.4] - 2026-06-05
+
+### Fixed
+
+- **Viva Insights prerequisites accuracy:** `power-bi/docs/viva-insights-scope.md` stated the Copilot Studio agents report required only "1+ Copilot license (50-license minimum removed)." Microsoft Learn confirms the report is still gated on a tenant having **at least 50 Copilot licenses** plus at least one Microsoft Copilot Studio license and an agent published to a Production (default) environment with usage. Corrected the prerequisite list and added the authoritative Learn citation. Verified against [Copilot Studio agents report — Prerequisites (Microsoft Viva Insights)](https://learn.microsoft.com/viva/insights/advanced/analyst/templates/copilot-studio-agents#prerequisites). (technical accuracy review vs Microsoft Learn)
+
 ## [1.2.3] - 2026-06-04
 
 ### Fixed
