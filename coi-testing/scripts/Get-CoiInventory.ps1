@@ -2,11 +2,11 @@
 
 <#
 .SYNOPSIS
-    Enumerates Center of Influence (CoI) testing artifacts using Power Platform CLI.
+    Enumerates Conflict of Interest (COI) testing artifacts using Power Platform CLI.
 
 .DESCRIPTION
     Uses PAC CLI to inventory solutions, environments, and connections used during
-    CoI test cycles. Outputs structured JSON to coi-testing/output/ for downstream
+    COI test cycles. Outputs structured JSON to coi-testing/output/ for downstream
     analysis and audit evidence.
 
     This script is a cross-check inventory tool — it does NOT execute tests.
@@ -35,7 +35,7 @@
     .\Get-CoiInventory.ps1
 
 .EXAMPLE
-    .\Get-CoiInventory.ps1 -EnvironmentFilter "CoI" -IncludeConnections
+    .\Get-CoiInventory.ps1 -EnvironmentFilter "COI" -IncludeConnections
 
 .EXAMPLE
     .\Get-CoiInventory.ps1 -OutputPath "C:\reports\coi" -DryRun
@@ -245,7 +245,7 @@ function Main {
 
     # Summary
     Write-Host ''
-    Write-Host '── CoI Inventory Summary ──' -ForegroundColor Green
+    Write-Host '── COI Inventory Summary ──' -ForegroundColor Green
     Write-Host "  Environments : $($inventory.environments.Count)"
     Write-Host "  Solutions    : $($inventory.solutions.Count)"
     if ($IncludeConnections) {
