@@ -223,7 +223,7 @@ function Get-AgentHitlSettings {
         .SYNOPSIS
             Extracts HITL checkpoint nodes from bot component flow definitions.
         .DESCRIPTION
-            Queries botcomponent filtered by _botid_value for topic/flow definitions,
+            Queries botcomponent filtered by _parentbotid_value for topic/flow definitions,
             parses content JSON for references to the advancedapprovals connector —
             specifically "Request for information" and "Run a multistage approval"
             action nodes. Extracts reviewer assignments, input counts, and titles.
@@ -257,7 +257,7 @@ function Get-AgentHitlSettings {
             #   components hold the action and connector references parsed below;
             #   modern Copilot Studio agents store topics as Topic (V2) = 9.
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 0 or componenttype eq 9 or componenttype eq 4 or componenttype eq 1)&" +
+                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 0 or componenttype eq 9 or componenttype eq 4 or componenttype eq 1)&" +
                 "`$select=name,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop

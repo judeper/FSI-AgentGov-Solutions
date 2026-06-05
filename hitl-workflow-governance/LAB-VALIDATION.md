@@ -109,22 +109,20 @@ multistage action.
 
 ## Runtime-only caveats (require a live tenant to confirm)
 
-1. **`botcomponents` lookup attribute (`_botid_value` vs `_parentbotid_value`).**
-   The three scanning paths filter `botcomponents` by `_botid_value eq '<botid>'`.
-   The authoritative Dataverse reference documents only a **`parentbotid`** lookup
-   (OData `_parentbotid_value`) on `botcomponent` — there is no documented `botid`
-   lookup. However, council-review fix **M-5** deliberately standardized all three
-   scripts on `_botid_value` because that attribute matched the maintainers' production
-   tenant and `_parentbotid_value` "can return zero rows in some tenants"
-   (`.ralph-config.json`). This is a genuine documented-versus-deployed discrepancy that
-   has varied across Copilot Studio platform versions. **This pass intentionally left
-   `_botid_value` in place** to avoid reverting a tenant-tested fix without a live tenant
-   to validate against. **Action for lab:** confirm in the target tenant which lookup
-   attribute `botcomponents` exposes; if a query returns an OData "property not found"
-   error or zero rows for an agent known to have topics, switch the filter to
-   `_parentbotid_value` consistently across `Get-AgentHitlSettings.ps1`,
-   `governance/Test-HitlCheckpointConfiguration.ps1`, and
-   `private/HWGClient.psm1` (`Get-BotHitlSettings`).
+1. **`botcomponents` lookup attribute — corrected to `_parentbotid_value`.**
+   The second-pass command-existence audit reversed the pass-1 **M-5** decision. The
+   authoritative Microsoft Dataverse `botcomponent` reference documents exactly one
+   lookup to the parent bot: **`parentbotid`** (referenced attribute `bot.botid`),
+   exposed over the Web API as **`_parentbotid_value`**. There is **no `botid` lookup
+   and no `_botid_value` attribute** on `botcomponent`, so a filter or select on
+   `_botid_value` raises an OData *"Could not find a property named '_botid_value'"*
+   error — a hard command/column-existence failure, not a tenant-version variance. All
+   three scanning paths now filter on `_parentbotid_value` consistently:
+   `Get-AgentHitlSettings.ps1`, `governance/Test-HitlCheckpointConfiguration.ps1`, and
+   `private/HWGClient.psm1` (`Get-BotHitlSettings`). The earlier
+   `.ralph-config.json` claim that `_parentbotid_value` "can return zero rows in some
+   tenants" was not reproducible against the documented schema and has been corrected.
+   Source: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent
 
 2. **componenttype coverage.** The corrected filter (0/9/4/1) targets topic, dialog, and
    skill components. Confirm in the target tenant that the agents under test store their
@@ -143,10 +141,10 @@ multistage action.
 
 ## Final lab-readiness assessment
 
-**Lab-ready with the caveats above.** All scripts parse, Python compiles, and unit tests
-pass. The two corrected behaviors (componenttype filter, runbook auth) materially improve
-the likelihood that a lab scan detects HITL checkpoints and authenticates without the
-archived MSAL.PS module. The single most important pre-run check is **caveat 1** (the
-`botcomponents` lookup attribute), which is tenant-version-dependent and cannot be
-resolved statically. Documentation is complete and internally consistent; regulatory
-language complies with FSI rules.
+**Lab-ready.** All scripts parse, Python compiles, and unit tests
+pass. The corrected behaviors (componenttype filter, runbook auth, and the
+`_parentbotid_value` lookup) materially improve the likelihood that a lab scan detects
+HITL checkpoints and authenticates without the archived MSAL.PS module. The
+`botcomponents` lookup attribute is now aligned with the documented Dataverse schema
+(`_parentbotid_value`), removing the previous tenant-version caveat. Documentation is
+complete and internally consistent; regulatory language follows the FSI rules.
