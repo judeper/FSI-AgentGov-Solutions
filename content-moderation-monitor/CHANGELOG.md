@@ -6,6 +6,7 @@ All notable changes to the Content Moderation Monitor.
 
 ### Fixed
 
+- **Minor**: `docs/flow-setup.md` listed the license as "Power Automate Premium per user." The current Microsoft SKU name is **Power Automate Premium** (sold per user); "per user" is the licensing model, not part of the SKU name. Relabeled to "Power Automate Premium, which is sold per user." Verified against [Types of Power Automate licenses](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/types). (Microsoft Learn accuracy review)
 - **Major**: `correlate_purview_events.py` passed invalid `recordTypeFilters` values (`CopilotInteraction`, `PowerPlatform`) to the Microsoft Graph `auditLogQuery` API. Neither is a valid `microsoft.graph.security.auditLogRecordType` enum member, so the query would be rejected. Copilot interactions are now selected via `operationFilters: ["CopilotInteraction"]` (unified audit log RecordType 261), the documented way to target Copilot interaction events. Added `operation_filters` support to `create_audit_log_query` and updated the README correlation description. (lab-readiness validation)
 
 ## [1.1.2] - 2026-05-22
