@@ -26,7 +26,7 @@ Many organizations deploy AI agents across multiple Power Platform environments 
 | **Daily Discovery** | Scans all Power Platform environments and reads each environment's Dataverse `bot` table for unregistered agents |
 | **Auto-Quarantine** | Zone 3 agents without committee approval are automatically quarantined |
 | **Registration Workflow** | Teams-based approval with configurable SLA tracking and escalation |
-| **Agent ID Sync** | Syncs registered agents to Microsoft Entra Agent ID when the preview API is enabled (feature-flagged) |
+| **Agent ID Sync** | Syncs registered agents to Microsoft Entra Agent ID when enabled (feature-flagged; uses Microsoft Graph beta endpoints) |
 | **Orphan Detection** | Weekly check for agents whose owners have departed or become inactive |
 | **Examiner Dashboard** | Compliance reporting with zone-filtered inventory and audit trail |
 
@@ -188,7 +188,7 @@ Follow the step-by-step instructions in [Flow Configuration](docs/flow-configura
 
 ## Key Configuration Notes
 
-- **Microsoft Entra Agent ID (Flow 3):** Disabled by default via the `fsi_ARA_IsEntraRegistrySyncEnabled` environment variable. Enable only after confirming the current Microsoft Graph beta endpoint, Agent ID permissions, and Microsoft Agent 365 or Microsoft 365 E7 licensing in your tenant.
+- **Microsoft Entra Agent ID (Flow 3):** Disabled by default via the `fsi_ARA_IsEntraRegistrySyncEnabled` environment variable. Enable only after confirming the current Microsoft Graph beta endpoint, Agent ID permissions, and Microsoft Agent 365 or Microsoft 365 E5 licensing in your tenant.
 - **Agent endpoint URL:** The Dataverse `bot` table does not expose a Bot Framework endpoint column, so `fsi_agentendpointurl` is not populated during discovery. Populate it from channel configuration post-discovery if your governance process requires it.
 - **Office 365 connector for SLA:** The SLA calculation in Flow 2 uses the Office 365 Users connector to determine the approver's time zone for business-day calculations. If DLP policies block this connector, configure a fallback time zone in the `fsi_ARA_DefaultTimeZone` environment variable.
 - **7-year retention (LTR):** The `fsi_agentcomplianceevent` table is designed for Dataverse Long-Term Retention. Enable LTR policies after deployment to support SEC 17a-3/4 retention requirements.
@@ -240,7 +240,7 @@ Future enhancements should consider:
 ## Known Limitations
 
 - **Environment enumeration (BAP admin API):** Discovery lists environments via the Business Application Platform admin API (`api-version=2020-10-01`). Monitor the [Power Platform REST API documentation](https://learn.microsoft.com/rest/api/power-platform/) for version changes.
-- **Microsoft Entra Agent ID:** Flow 3 (Entra Sync) requires Microsoft Agent 365 or Microsoft 365 E7 licensing and is feature-flagged off by default. Confirm the current preview endpoint and permission names before enabling.
+- **Microsoft Entra Agent ID:** Flow 3 (Entra Sync) requires Microsoft Agent 365 or Microsoft 365 E5 licensing and is feature-flagged off by default. Confirm the current Microsoft Graph beta endpoint and permission names before enabling.
 - **Agent discovery (Dataverse `bot` table):** Discovery reads each environment's `bot` table, which requires `bot`-table read access in every scanned environment. The owner-expand path (`owninguser.domainname`) and `statecode` semantics should be confirmed against the live table in your tenant. The `bot` table has no Bot Framework endpoint column.
 - **Sandbox environments:** By default, sandbox environments are excluded from discovery scans. Set `fsi_ARA_IncludeSandboxEnvironments` to `true` to include them.
 
