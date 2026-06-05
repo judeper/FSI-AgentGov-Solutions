@@ -125,3 +125,8 @@ compiles. The remaining unknowns are runtime-only (exact response field paths,
 per-environment role assignments) and are explicitly flagged above for
 confirmation during the first lab run. A maintainer version bump (suggested
 `2.2.0`) plus the standard catalog/manifest sync is recommended as a follow-up.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The BAP admin environments route with api-version 2020-10-01 and token audience, the Dataverse bot table (no botFrameworkEndpoint column), pac copilot list, Get-AzAccessToken, and Microsoft Graph v1.0 signInActivity were confirmed; the pass-1 BAP correction holds. Two runtime-only items (Entra Agent ID beta preview, live response shapes) are caveated.
+

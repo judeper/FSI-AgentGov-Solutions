@@ -161,3 +161,8 @@ Before production use, a maintainer must validate items in §7 against a live
 tenant (especially per-environment Dataverse application-user permissions and
 the BAP token audience). The centralized cloud flow remains documentation-only
 and should be reconciled to the authoritative source in a future release.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The Organization inactivitytimeoutenabled / inactivitytimeoutinmins columns (the correct source), Conditional Access signInFrequency session controls, Az.Accounts authentication, and all fsi_ custom columns and option-sets were confirmed against Microsoft Learn; no corrections required. The BAP governanceConfiguration fallback is caveated.
+

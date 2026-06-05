@@ -103,3 +103,8 @@ prohibited compliance-language phrases, and authentication follows the managed-i
 standard. Every documented external dependency and API behavior is confirmed against
 authoritative Microsoft Learn sources. Remaining items are runtime/tenant-dependent
 validations and the already-documented future-release dashboard, none of which block lab use.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. All fsi_hallucinationreports Dataverse columns and option-set integers, azure.identity credential classes, shared-client signatures, and the environment-variable navigation-property bind were confirmed against Microsoft Learn and the schema; neither recurring repo bug class is present. The deprecated-but-installable MSAL.PS fallback is left as-is. No corrections required.
+

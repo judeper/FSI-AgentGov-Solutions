@@ -112,3 +112,8 @@ supported CLI surface. All three scripts parse cleanly, all documented `pac`
 commands/parameters and the Dataverse schema are confirmed against authoritative
 Microsoft Learn references, and FSI language rules pass. Remaining items are
 inherently runtime/tenant-dependent and are clearly documented as manual steps.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Every pac verb and flag was confirmed against Microsoft Learn — admin list (--json / --type), admin set-governance-config (--protection-level / --solution-checker-mode enums), pipeline list / deploy (pipeline list has no --json flag and there is no pac pipeline link, both correctly documented), solution check / clone / pack, and auth. The seven DeploymentPipeline trigger messages and output parameters and the Microsoft.Graph mail cmdlets were also confirmed. No corrections required; two Power Automate flow-expression parameters are caveated.
+

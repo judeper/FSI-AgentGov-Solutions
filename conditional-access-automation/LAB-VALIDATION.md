@@ -133,3 +133,8 @@ reflect the current v1.0 CA schema, and dependency declarations are complete and
 The remaining items are environment-specific runtime configuration (app IDs, licensing, managed
 identity, strength IDs) that are inherent to any CA deployment and are appropriately documented
 in the solution's prerequisites and deployment guides.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Microsoft Graph Conditional Access cmdlets (New/Get/Update-MgIdentityConditionalAccessPolicy), the conditionalAccessPolicy JSON schema, the beta /identity/conditionalAccess/evaluate endpoint, Microsoft Graph Applications cmdlets, and Dataverse entity sets and columns were all confirmed against Microsoft Learn; no corrections required.
+

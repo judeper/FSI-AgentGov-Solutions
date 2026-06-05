@@ -130,3 +130,8 @@ customer-facing docs no longer contain stale capability claims. Remaining items 
 live-tenant verifications (Entra Agent ID preview behavior, `tags`-on-create acceptance,
 blueprint-token binding) that cannot be closed by static analysis and are already tracked as v1.1
 closure items. No blocking defects were found.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Entra Agent ID Microsoft Graph v1.0 routes (agentIdentity / blueprint / inheritablePermissions), pac CLI verbs and flags, Security & Compliance PowerShell (e.g. New-ComplianceTag), BAP routes, and all fsi_ Dataverse logical names were confirmed against Microsoft Learn; 100/100 pytest passing. One fallback-only Az.Accounts 5.x SecureString-token item is caveated (not a defect).
+

@@ -114,3 +114,8 @@ against authoritative Microsoft documentation. Two documentation/accuracy defect
 `pac flow` CLI commands, stale Teams-webhook retirement date) were corrected. Remaining items
 are genuine runtime-only checks (live audit payloads, `@odata.bind` navigation names,
 subscription bootstrap) that require a tenant and are documented above for the lab operator.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The Office 365 Management Activity API (subscriptions/start, content, NextPageUri header), the audit RecordType 261 = CopilotInteraction pairing, Microsoft Graph Send-MgUserMail / Connect-MgGraph, the IMDS / App Service / legacy managed-identity token api-versions, and the fsi_agentscopes / scopeviolations entity sets and option-sets were all confirmed against Microsoft Learn. No botcomponent or environment-variable surfaces. The @odata.bind navigation-property names are caveated (pass-1 territory; schema script not in scope).
+

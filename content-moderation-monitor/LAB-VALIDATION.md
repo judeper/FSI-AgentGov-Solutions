@@ -97,3 +97,8 @@ references are internally consistent, language and naming conventions pass, and 
 Graph enum defect has been corrected and grounded in authoritative Microsoft documentation. The
 remaining items are inherent runtime/data-quality characteristics that require a live tenant to exercise
 and are already disclosed to operators in the README and troubleshooting guide.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The Dataverse bot table and configuration column, the Purview auditLogQuery Microsoft Graph v1.0 surface, all fsi_ logical columns and option-set integers, and the MSAL / Az cmdlets were confirmed against Microsoft Learn; the bot.configuration internal moderation key is handled defensively and caveated. No corrections required.
+
