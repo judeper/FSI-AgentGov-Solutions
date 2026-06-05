@@ -2,6 +2,12 @@
 
 All notable changes to the Action Confirmation Auditor are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **`scripts/Get-PurviewAIHubEvidence.ps1`**: Removed the invalid `copilotInteraction` value from the Graph audit log query `recordTypeFilters`. `copilotInteraction` is not a member of the v1.0 `auditLogRecordType` enum (it is the beta `copilotInteractionAuditRecord` record subtype, not a filter value); sending an unknown evolvable-enum member returns HTTP 400 and fails the entire query. The filter now uses only the valid camelCase members `aipDiscover` and `aipSensitivityLabelAction`, and Copilot interaction activity is collected via the existing Activity Explorer fallback. (second-pass command-existence audit; verified against `https://learn.microsoft.com/graph/api/resources/security-auditlogrecordtype?view=graph-rest-1.0`)
+
 ## [1.2.1] - 2026-05-23
 
 ### Fixed

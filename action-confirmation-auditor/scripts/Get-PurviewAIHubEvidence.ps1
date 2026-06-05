@@ -128,8 +128,13 @@ function Get-PurviewAIHubEvidence {
                 displayName     = "ACA-DSPM-Correlation-$(Get-Date -Format 'yyyyMMdd')"
                 filterStartDateTime = $startDate
                 filterEndDateTime   = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')
-                # auditLogRecordType enum members are camelCase.
-                recordTypeFilters   = @('copilotInteraction', 'aipDiscover', 'aipSensitivityLabelAction')
+                # auditLogRecordType enum members are camelCase. Note: there is
+                # no 'copilotInteraction' member in the v1.0 auditLogRecordType
+                # enum (copilotInteractionAuditRecord is a beta record subtype,
+                # not a recordTypeFilters value); sending it returns HTTP 400 and
+                # fails the whole query. Copilot interaction activity is collected
+                # via the Activity Explorer fallback below.
+                recordTypeFilters   = @('aipDiscover', 'aipSensitivityLabelAction')
             } | ConvertTo-Json
 
             $auditResp = Invoke-MgGraphRequest -Method POST -Uri $auditUri -Body $auditBody -OutputType PSObject -ErrorAction Stop

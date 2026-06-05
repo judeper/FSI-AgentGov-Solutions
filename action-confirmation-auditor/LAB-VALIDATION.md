@@ -36,7 +36,7 @@ action type, and supports exception management with Maker/Checker gating.
 
 | Topic | Source |
 |-------|--------|
-| Graph audit log query API on **v1.0**, `recordTypeFilters`, `auditLogRecordType` enum (`copilotInteraction`) | `https://learn.microsoft.com/graph/api/resources/security-auditlogquery` and `https://learn.microsoft.com/graph/api/security-auditlogquery-list-records` |
+| Graph audit log query API on **v1.0**, `recordTypeFilters`, `auditLogRecordType` enum (`aipDiscover`, `aipSensitivityLabelAction`) | `https://learn.microsoft.com/graph/api/resources/security-auditlogquery` and `https://learn.microsoft.com/graph/api/security-auditlogquery-list-records` |
 | `Get-MgContext` exposes ClientId/TenantId/Scopes/AuthType — **not** an access token | `https://learn.microsoft.com/powershell/microsoftgraph/authentication-commands` |
 | `Invoke-MgGraphRequest` for authenticated Graph REST calls in PowerShell | `https://learn.microsoft.com/powershell/module/microsoft.graph.authentication/invoke-mggraphrequest` |
 | `Get-AzAccessToken` default output changed to SecureString; `-ResourceUrl` usage | `https://learn.microsoft.com/powershell/module/az.accounts/get-azaccesstoken` |
@@ -67,9 +67,14 @@ action type, and supports exception management with Maker/Checker gating.
    The schema has no such column. **Fix:** query `fsi_confirmationstatus`
    (option set, `Present = 100000000`) and derive `HasConfirmation` as a boolean.
 
-4. **`Get-PurviewAIHubEvidence.ps1` — enum casing.** `recordTypeFilters` values
-   normalized to documented camelCase (`copilotInteraction`, `aipDiscover`,
-   `aipSensitivityLabelAction`).
+4. **`Get-PurviewAIHubEvidence.ps1` — recordTypeFilters values.** The
+   `recordTypeFilters` use documented camelCase members of the v1.0
+   `auditLogRecordType` enum (`aipDiscover`, `aipSensitivityLabelAction`).
+   `copilotInteraction` is **not** a member of that enum (it is a beta
+   record subtype, `copilotInteractionAuditRecord`, not a filter value), so
+   it was removed — an unknown evolvable-enum member returns HTTP 400 and
+   fails the whole query. Copilot interaction activity is collected via the
+   Activity Explorer fallback.
 
 5. **`Start-ActionConfirmationRunbook-MI.ps1` — wrong token audience for Power
    Platform admin.** Acquired a Graph token and passed it to
@@ -119,8 +124,9 @@ action type, and supports exception management with Maker/Checker gating.
 - **Graph audit log query latency.** The script polls once after a 5-second
   delay; real audit queries may take longer to return records. Confirm and tune
   poll/retry against a live tenant.
-- **DSPM for AI availability / Copilot audit record types.** Presence of
-  `copilotInteraction` records depends on tenant licensing and audit
+- **DSPM for AI availability / Copilot audit record types.** Copilot
+  interaction activity is collected via the Activity Explorer fallback;
+  presence of those records depends on tenant licensing and audit
   configuration.
 
 ## Final Lab-Readiness Assessment
