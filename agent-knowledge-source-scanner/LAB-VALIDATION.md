@@ -106,3 +106,8 @@ outputs, troubleshooting), and the solution honors the no-runtime-artifact and l
 conventions. Two documentation/permission gaps were corrected (least-privilege Graph scope and
 the Az.Accounts `SecureString` token example). Remaining caveats are inherently runtime-only and
 require a live tenant to exercise; they are documented above and do not block lab validation.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Every PnP.PowerShell cmdlet and parameter (Connect-PnPOnline, Get-PnPEntraIDGroupMember -Transitive, Register-PnPEntraIDAppForInteractiveLogin), the Microsoft Graph v1.0 driveItem permissions route, and the Az.Accounts token shape were confirmed against authoritative sources; no corrections required.
+

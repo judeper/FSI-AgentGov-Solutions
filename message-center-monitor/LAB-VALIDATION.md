@@ -145,3 +145,8 @@ These require a live non-prod tenant and are tracked in `AGENTS.md` §3 "Phases 
 
 No corrective code changes were required; this report is the committed evidence artifact for
 the lab-readiness pass.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The Microsoft Graph v1.0 admin/serviceAnnouncement/messages route plus serviceUpdateMessage properties, the ServiceMessage.Read.All permission and paging, Get-MgServiceAnnouncementMessage, and the fsi_messagecenterlogs schema and option-sets were all confirmed against Microsoft Learn (BAP and Power Platform API were exercised live in the pass-1 dry-run). No corrections required.
+

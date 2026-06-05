@@ -77,3 +77,8 @@ All 14 query files and the Power BI KQL views use a single consistent normalizat
 ## Lab-readiness assessment
 
 **Lab-ready.** All scripts, templates, and KQL parse cleanly and align with authoritative Microsoft Learn schemas and current ARM API versions. Deployment guidance is complete (provision → verify → deploy workbooks/alerts → WORM). The one material correctness gap found — WORM coverage of the primary audit-of-record container — has been fixed in documentation and verifier guidance. Remaining open items are runtime-only confirmations that require a live tenant and are listed above as caveats.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. All KQL tables and columns (AppEvents, customEvents via isfuzzy / column_ifexists), ARM resource types and api-versions, az CLI commands, and Azure management SDK methods were confirmed against Microsoft Learn; no corrections required.
+

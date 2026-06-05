@@ -136,3 +136,8 @@ real tenant to confirm: (a) the BAP audience succeeds and environment role data 
 ---
 
 *Segregation of Duties Detector — Lab Validation Report*
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Microsoft Graph v1.0 roleManagement/directory roleAssignmentScheduleInstances (with $expand=principal) and roleDefinitions are GA; the Dataverse systemusers / systemuserroles_association N:N relationship and the fsi_conflictrules / sodviolations schema and option-sets, the BAP environments api-version 2023-06-01 with PowerApps Administration cmdlets, and the managed-identity / workload-identity token endpoints were all confirmed against Microsoft Learn. No corrections required; the BAP per-environment roleAssignments REST contract is caveated (runtime-confirmable, consistent with sibling calls).
+

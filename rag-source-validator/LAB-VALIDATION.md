@@ -51,3 +51,8 @@ No script logic, schema, option-set, or column changes were required — the cod
 ## Lab-readiness assessment
 
 **Lab-ready.** The solution parses cleanly (Python + PowerShell), uses managed-identity-first authentication with correct IMDS/Graph/Dataverse endpoints and token audiences, references Dataverse columns and option-set values consistently with its schema source of truth, and honors the FSI language rules. The two documentation gaps that could block a first-time lab deployment — an inaccurate licensing prerequisite and missing concrete identity permissions — are now corrected and citation-backed. Remaining caveats are runtime-only or already-documented design limitations, none of which prevent a lab installation.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The custom fsi_knowledgesources / validationresults / sourcechanges entity sets and columns match create_rsv schema; option-sets are explicitly valued; Microsoft Graph v1.0 driveItem /content reads, the IMDS / App Service / legacy managed-identity token api-versions, and sovereign-cloud endpoint pairings were all confirmed. No botcomponent usage. The MSAL.PS interactive path (still on PSGallery) is caveated.
+

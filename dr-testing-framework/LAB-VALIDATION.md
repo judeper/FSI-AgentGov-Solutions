@@ -77,3 +77,8 @@ language violations). Three documentation-accuracy gaps were corrected — the m
 being the outdated backup-retention model now realigned to the current Microsoft Managed
 Environments model. Live-tenant execution paths remain unverified by design (no tenant in this
 validation) and are clearly enumerated above as runtime-only caveats.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Backup/Copy-PowerAppEnvironment cmdlets (documentation-only), Dataverse entity sets including botcomponent _parentbotid_value (correct in this context), the OAuth token endpoint, and the KQL AzureActivity / requests tables were confirmed against Microsoft Learn; no corrections required. One SecureString-token item is handled defensively and caveated.
+

@@ -91,3 +91,8 @@ Copilot Studio / DLP claims now match current Microsoft Learn. The one material 
 unenforced WebP offset-8 check) is fixed and verified by build + existing tests. Remaining items are
 inherently runtime-only (plugin registration, sandbox signing, Sentinel ingestion) and are documented
 for the deploying administrator.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The C# Dataverse plugin on the out-of-the-box annotation table (mimetype / documentbody / filename), the PowerApps DLP cmdlets Get/Set-PowerAppDlpPolicyConnectorConfigurations, the pac / dotnet / cosign / gh-attestation build chain, the Sentinel ARM api-version 2023-02-01, and the KQL were all confirmed. No botcomponent or environment-variable surfaces are present. No corrections required; the PowerPlatformDlpActivity_CL ingestion dependency is caveated.
+

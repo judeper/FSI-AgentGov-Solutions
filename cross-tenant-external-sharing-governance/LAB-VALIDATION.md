@@ -128,3 +128,8 @@ against authoritative Microsoft sources. One genuine functional defect (the Mana
 Environment bot-sharing property names) was found and corrected. Remaining
 unverifiable items are inherent live-tenant response-shape confirmations, which the
 scripts already surface as delivery-checklist actions rather than silent assumptions.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Microsoft Graph cross-tenant access endpoints (crossTenantAccessPolicy / default / partners on v1.0) and all consumed properties, Get-AzAccessToken, Get-PowerAppTenantIsolationPolicy, the BAP governanceConfiguration call, and all Dataverse entity sets / columns / option-sets were confirmed. Two BAP admin endpoints remain operator-confirmation items but are try/catch-guarded. No corrections required.
+

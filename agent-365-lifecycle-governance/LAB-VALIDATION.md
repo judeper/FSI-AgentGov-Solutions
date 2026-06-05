@@ -92,3 +92,8 @@ and the Phase 3 non-production API validation already mandated in `DELIVERY-CHEC
 Static validation found no blocking defects; the three doc-drift corrections remove
 contradictions that would have misled an operator building Flow 2 or sizing environment
 variables. No version bump applied (doc-only corrections; avoids manifest/catalog churn).
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Cmdlets, Microsoft Graph v1.0/beta endpoints, Dataverse columns/option-sets/alternate-key, and Python imports were re-derived against Microsoft Learn and confirmed to exist; no corrections required.
+

@@ -116,3 +116,8 @@ Learn documentation. The documentation gaps that would have misdirected a lab
 operator (wrong repo for the scripts) are fixed. Remaining unknowns are strictly
 runtime behaviors that require a live tenant; they are enumerated above so a lab
 operator can plan targeted execution tests. No blocking issues.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Dataverse bot sharing columns (accesscontrolpolicy system picklist 0-3, authorizedsecuritygroupids), PowerApps Administration cmdlets, OAuth token / device-code endpoints, and the custom Dataverse entity sets and option-sets were confirmed against Microsoft Learn; no corrections required.
+

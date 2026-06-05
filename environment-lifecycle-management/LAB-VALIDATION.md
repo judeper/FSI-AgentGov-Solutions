@@ -95,3 +95,8 @@ canonical, and language rules are satisfied. The only outstanding items are
 runtime-only behaviors that inherently require a licensed tenant, plus the
 documented (and clearly labeled) preview `api-version` on the Environment
 Groups API.
+
+## Second-Pass Command-Existence Re-Verification (2026-06-05)
+
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. Set-AdminPowerAppEnvironmentGovernanceConfiguration, the Power Platform API environmentGroups provisioning routes, pac admin create-service-principal, Microsoft Graph applications/addPassword, and the Dataverse Organization audit columns were all confirmed against Microsoft Learn; no corrections required. The preview api-version 2022-03-01-preview is disclosed as a runtime caveat.
+
