@@ -211,7 +211,7 @@ See [Teams Integration](docs/teams-integration.md) for Teams setup.
 2. Use the provided adaptive card template
 3. Configure the flow to post high-severity alerts
 
-> **Note on Office 365 Connectors Deprecation:** Microsoft retired Office 365 incoming webhook connectors on **2026-03-31**. This solution uses the native **Power Automate "Post card in a chat or channel" Teams connector** with an Adaptive Card payload, which is unaffected by this retirement. If you have other integrations using custom incoming webhooks, plan migration to Power Automate Workflows connector or Adaptive Card actions.
+> **Note on Office 365 Connectors Deprecation:** Microsoft retired Office 365 connectors (including incoming webhook connectors) within Microsoft Teams, with the final deprecation rollout beginning **May 18, 2026** and completing **May 22, 2026** (after several earlier extensions). This solution's Phase 1 path posts Adaptive Cards to a **Teams Workflows incoming webhook** (Power Automate Workflows app), and the Phase 3 flow uses the native **"Post card in a chat or channel" Teams connector** — neither relies on retired Office 365 connectors. If you have other integrations using custom Office 365 incoming webhooks, migrate them to the Workflows app. See Microsoft's [Retirement of Office 365 connectors within Microsoft Teams](https://devblogs.microsoft.com/microsoft365dev/retirement-of-office-365-connectors-within-microsoft-teams/).
 
 ### Step 4: Verify It Works
 
