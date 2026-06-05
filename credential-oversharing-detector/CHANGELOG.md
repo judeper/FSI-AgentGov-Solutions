@@ -10,6 +10,7 @@ All notable changes to this solution are documented here.
 
 ### Fixed
 
+- **Second-pass command-existence audit:** Migrated `Export-CredentialEvidence.ps1` off the deprecated/archived `MSAL.PS` module (`Get-MsalToken`) to `Az.Accounts` (`Connect-AzAccount` + `Get-AzAccessToken -ResourceUrl <DataverseUrl> -AsSecureString`), matching the Dataverse token-acquisition pattern already used by the other COD governance scripts. `MSAL.PS` is no longer maintained by Microsoft; removing it eliminates a future-break dependency and aligns the evidence-export auth path with the managed-identity-first standard. `-Interactive` and service-principal certificate (`-ClientId`/`-CertificateThumbprint`) flows are preserved. Updated `docs/prerequisites.md` to drop the `MSAL.PS` row.
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 
 ### Validation

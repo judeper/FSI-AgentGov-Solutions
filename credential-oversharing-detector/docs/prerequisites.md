@@ -7,8 +7,7 @@
 | PowerShell | 7.1+ | Core scanning and governance scripts |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.217+ | Power Platform environment and agent queries (`Add-PowerAppsAccount`, `Get-AdminPowerAppEnvironment`) |
 | Python | 3.9+ | Dataverse schema setup and evidence export |
-| Az.Accounts | 2.17.0+ (5.3.4 validated) | Dataverse token acquisition for compliance persistence |
-| MSAL.PS | 4.37.0.0+ | Dataverse evidence export authentication |
+| Az.Accounts | 2.17.0+ (5.3.4 validated) | Dataverse token acquisition for compliance persistence and evidence export |
 | Microsoft.Graph (optional) | 2.36.1+ | Entra ID service principal queries when Graph enrichment is enabled |
 
 ## Licensing

@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.0
-#Requires -Modules @{ ModuleName='MSAL.PS'; ModuleVersion='4.37.0.0' }
+#Requires -Modules @{ ModuleName='Az.Accounts'; ModuleVersion='2.17.0' }
 
 <#
 .SYNOPSIS
@@ -156,57 +156,40 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "  Authenticating to Dataverse..." -ForegroundColor Cyan
 
-$dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
+# Dataverse requires a token whose audience is the environment URL. Acquire it via
+# Az.Accounts (managed-identity-first per AGENTS.md authentication standard), matching
+# the token-acquisition pattern used by the other COD governance scripts.
+$dataverseResource = $DataverseUrl.TrimEnd('/')
 
-if ($Interactive) {
-    try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
+try {
+    $azContext = Get-AzContext -ErrorAction SilentlyContinue
+
+    if ($Interactive) {
+        if (-not $azContext) {
+            $connectParams = @{ Tenant = $TenantId }
+            if ($ClientId) { $connectParams.AccountId = $ClientId }
+            Connect-AzAccount @connectParams | Out-Null
         }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $msalParams = @{
-            TenantId    = $TenantId
-            Scopes      = @($dataverseScope)
-            Interactive = $true
+    }
+    else {
+        # Service principal with certificate
+        if (-not $ClientId) {
+            throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
         }
-        if ($ClientId) { $msalParams.ClientId = $ClientId }
+        if (-not $CertificateThumbprint) {
+            throw "CertificateThumbprint is required for service principal authentication."
+        }
 
-        $authResult = Get-MsalToken @msalParams
-        $accessToken = $authResult.AccessToken
+        Connect-AzAccount -ServicePrincipal -Tenant $TenantId `
+            -ApplicationId $ClientId -CertificateThumbprint $CertificateThumbprint | Out-Null
     }
-    catch {
-        Write-Error "Interactive authentication failed: $($_.Exception.Message)"
-        throw
-    }
+
+    $tokenResult = Get-AzAccessToken -ResourceUrl $dataverseResource -AsSecureString -ErrorAction Stop
+    $accessToken = $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
 }
-else {
-    # Service principal with certificate
-    if (-not $ClientId) {
-        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
-    }
-    if (-not $CertificateThumbprint) {
-        throw "CertificateThumbprint is required for service principal authentication."
-    }
-
-    try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $authResult = Get-MsalToken `
-            -TenantId $TenantId `
-            -ClientId $ClientId `
-            -ClientCertificate (Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint") `
-            -Scopes @($dataverseScope)
-
-        $accessToken = $authResult.AccessToken
-    }
-    catch {
-        Write-Error "Service principal authentication failed: $($_.Exception.Message)"
-        throw
-    }
+catch {
+    Write-Error "Dataverse authentication failed: $($_.Exception.Message)"
+    throw
 }
 
 Write-Host "  Authentication successful." -ForegroundColor Green
