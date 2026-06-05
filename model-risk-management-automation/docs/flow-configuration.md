@@ -28,7 +28,7 @@ All flows use connection references deployed by `create_mrm_connection_reference
 | `fsi_cr_dataverse_mrm` | Dataverse - MRM | Common Data Service | Model inventory CRUD, risk ratings, validation cycles, findings, monitoring, compliance events |
 | `fsi_cr_teams_mrm` | Teams - MRM | Microsoft Teams | Risk scoring cards, validation alerts, SLA breach alerts, revalidation requests |
 | `fsi_cr_approvals_mrm` | Approvals - MRM | Approvals | Validator assignment approval, revalidation confirmation, examiner alert choices |
-| `fsi_cr_http_mrm` | HTTP with Microsoft Entra ID - MRM | HTTP with Microsoft Entra ID | Power Platform Bots API, Graph API user resolution, Agent 365 / Microsoft Entra Agent ID registry enrichment |
+| `fsi_cr_http_mrm` | HTTP with Microsoft Entra ID - MRM | HTTP with Microsoft Entra ID | Dataverse bot table enrichment, Graph API user resolution, Agent 365 / Microsoft Entra Agent ID registry enrichment |
 | `fsi_cr_sharepoint_mrm` | SharePoint - MRM | SharePoint Online | Agent Card upload, folder creation, metadata updates |
 | `fsi_cr_wordonline_mrm` | Word Online - MRM | Word Online (Business) | Agent Card document generation from template |
 
@@ -90,7 +90,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
 | Connection Reference | Purpose |
 |---------------------|---------|
 | `fsi_cr_dataverse_mrm` | Read agent inventory, upsert model inventory, create compliance events |
-| `fsi_cr_http_mrm` | Power Platform Bots API enrichment, Graph API owner resolution, optional Agent 365 / Microsoft Entra Agent ID registry cross-reference |
+| `fsi_cr_http_mrm` | Dataverse bot table enrichment, Graph API owner resolution, optional Agent 365 / Microsoft Entra Agent ID registry cross-reference |
 | `fsi_cr_teams_mrm` | API failure alerts to FlowAdministrators |
 
 ### Step-by-Step Build Instructions
@@ -141,12 +141,17 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
        - Initialize variable: IsNewRecord (Boolean)
          Value: @{equals(length(outputs('List_MRM_Records')?['body/value']), 0)}
 
-   4.2 HTTP - Enrich with PPAC Bots API
+   4.2 HTTP - Enrich from the Dataverse bot table
        Connection: fsi_cr_http_mrm
        Method: GET
-       URI: https://api.powerplatform.com/appmanagement/environments/@{agent.environmentid}/bots/@{agent.agentid}?api-version=2022-03-01-preview
+       URI: https://<your-environment>.crm.dynamics.com/api/data/v9.2/bots(@{agent.agentid})?$select=name,schemaname,statecode,publishedon,_ownerid_value
        Headers: Authorization: Bearer (from connection)
        Configure Run After: Continue on failure (enrichment is best-effort)
+       Note: The Dataverse `bot` table (entity set `bots`, primary key `botid`,
+             which equals the Power Platform Bot ID stored in fsi_agentid) is the
+             documented source for agent metadata. You can also use the Dataverse
+             connector "Get a row by ID" action on the bot table instead of HTTP.
+             Ref: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot
 
    4.3 HTTP - Resolve owner from Microsoft Graph
        Connection: fsi_cr_http_mrm
@@ -240,7 +245,7 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
 ### Error Handling
 
 - **Agent inventory inaccessible (step 2):** Creates Critical compliance event, alerts FlowAdministrators, terminates — no partial sync
-- **PPAC Bots API failure (step 4.2):** Continue processing with available data; enrichment fields left null
+- **Dataverse `bot` table enrichment failure (step 4.2):** Continue processing with available data; enrichment fields left null
 - **Graph API failure (step 4.3):** Continue; owner fields populated from agent inventory source data
 - **Individual agent failure (within step 4):** Log error to compliance events, continue processing remaining agents
 - **All errors:** Configure `Scope` run-after to catch failures and log to `fsi_mrmcomplianceevents`

@@ -124,7 +124,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Admin** | Environment enumeration and Bots API access |
+| **Power Platform Admin** | Environment enumeration and Dataverse `bot` table access |
 | **System Administrator** | Dataverse table creation and security role configuration |
 | **Microsoft Entra Global Administrator** or **Application Administrator** | Managed identity API permission grants |
 
