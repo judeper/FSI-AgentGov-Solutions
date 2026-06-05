@@ -353,11 +353,15 @@ function Get-DLPAlerts {
     $sinceDate = (Get-Date).AddDays(-$Days).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
     try {
+        # DLP alerts are identified by the `serviceSource` property (enum value
+        # `dataLossPrevention`), not by `category` — `category` is deprecated and holds
+        # MITRE ATT&CK kill-chain categories. `alerts_v2` supports `$filter` only on
+        # assignedTo, classification, determination, createdDateTime, lastUpdateDateTime,
+        # severity, serviceSource, and status; it does not support `$orderby`/`$select`.
         $alerts = Invoke-GraphRequestWithPagination -Uri (
             "$GraphBase/v1.0/security/alerts_v2?" +
-            "`$filter=category eq 'DataLossPrevention' and createdDateTime ge $sinceDate" +
-            "&`$select=id,title,severity,status,createdDateTime,description" +
-            "&`$top=999&`$orderby=createdDateTime desc"
+            "`$filter=serviceSource eq 'dataLossPrevention' and createdDateTime ge $sinceDate" +
+            "&`$top=999"
         )
 
         foreach ($alert in $alerts) {
