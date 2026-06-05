@@ -360,7 +360,7 @@ function Test-HitlCheckpointConfiguration {
             #   components hold the action and connector references parsed below;
             #   modern Copilot Studio agents store topics as Topic (V2) = 9.
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 0 or componenttype eq 9 or componenttype eq 4 or componenttype eq 1)&" +
+                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 0 or componenttype eq 9 or componenttype eq 4 or componenttype eq 1)&" +
                 "`$select=name,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
