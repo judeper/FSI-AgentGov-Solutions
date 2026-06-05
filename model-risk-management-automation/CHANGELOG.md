@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.0.4] — 2026-05-23
+
 ### Fixed
 
 - **Critical**: Flow 2 step 3.7 Change Frequency Score used a nonexistent lookup `_fsi_validationcycle_lookup_value` on `fsi_mrmcomplianceevent`; corrected to `_fsi_modelinventory_lookup_value eq @{model.id}` per the schema (only `fsi_ModelInventory_Lookup` exists on that table). `docs/flow-configuration.md` ~line 355. (council review C-1)
