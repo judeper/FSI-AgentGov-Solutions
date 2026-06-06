@@ -112,8 +112,9 @@ TYPE_MAP = {
     "JSON":       100000003,
     "DataSource": 100000004,
     "Secret":     100000005,
-    # "Decimal" is not a native env-var type — flows must JSON-parse the value
-    "Decimal":    100000003,
+    # "Number" (100000001) is shown in the maker UI as the "Decimal number"
+    # data type, so "Decimal" maps to the same numeric type code.
+    "Decimal":    100000001,
 }
 
 

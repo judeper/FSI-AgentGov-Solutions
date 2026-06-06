@@ -103,15 +103,18 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                 print(f"    Type: {var['type']}, Default: {var['defaultvalue']}")
                 results["created"] += 1
             else:
-                # Map type to Dataverse environment variable type code:
-                # 100000000 = String, 100000001 = Number, 100000002 = Boolean, 100000003 = JSON, 100000004 = DataSource, 100000005 = Secret
-                # NOTE: there is no native "Decimal" type for environment variables; "Decimal" entries below are stored as JSON.
+                # Map type to Dataverse environment variable type code
+                # (environmentvariabledefinition_type global choice):
+                # 100000000 = String, 100000001 = Number, 100000002 = Boolean,
+                # 100000003 = JSON, 100000004 = Data Source, 100000005 = Secret.
+                # "Number" (100000001) is surfaced in the maker UI as the
+                # "Decimal number" data type, so "Decimal" maps to 100000001.
                 type_code_map = {
                     "String": 100000000,
                     "Number": 100000001,
                     "Boolean": 100000002,
                     "JSON": 100000003,
-                    "Decimal": 100000003,  # treated as JSON; Power Automate flows must JSON-parse the value
+                    "Decimal": 100000001,  # "Decimal number" == Number type
                 }
                 type_code = type_code_map.get(var["type"], 100000000)
 
@@ -169,8 +172,8 @@ def main() -> None:
         epilog="""
 Environment variables created:
   - fsi_DRT_DataverseUrl (String, "")
-  - fsi_DRT_ProbeBudgetMinutes (Decimal-as-JSON, 60)
-  - fsi_DRT_MaxMinutesSinceLastResult (Decimal-as-JSON, 1440)
+  - fsi_DRT_ProbeBudgetMinutes (Number, 60)
+  - fsi_DRT_MaxMinutesSinceLastResult (Number, 1440)
   - fsi_DRT_TeamsGroupId (String, "")
   - fsi_DRT_TeamsChannelId (String, "")
   - fsi_DRT_NotificationEmail (String, "")
