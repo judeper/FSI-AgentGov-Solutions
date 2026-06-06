@@ -8,6 +8,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed (technical accuracy review vs Microsoft Learn)
 
+- **Non-existent `bots/{botId}/roleAssignments` agent-share endpoint corrected.** The README
+  architecture diagram (Layer 3), `DELIVERY-CHECKLIST.md`, and Flow 2 (`Detect-ExternalAgentShares-Daily`)
+  in `docs/flow-configuration.md` described reading agent shares via a
+  `GET .../bots/{botId}/roleAssignments` REST path, which Microsoft does not document. Copilot
+  Studio agents are Dataverse `bot` records, so the documented way to enumerate who an agent is
+  shared with is the Dataverse `RetrieveSharedPrincipalsAndAccess` Web API function on the `bot`
+  record, whose `PrincipalAccess` array yields each shared `Principal` (mapped to `principalId`)
+  and `AccessMask`. Updated the diagram, checklist, and Flow 2 steps 9a/9b-i/9b-ii accordingly.
+  Refs:
+  [RetrieveSharedPrincipalsAndAccess](https://learn.microsoft.com/power-apps/developer/data-platform/webapi/reference/retrievesharedprincipalsandaccess)
+  and [Verifying access in code](https://learn.microsoft.com/power-apps/developer/data-platform/security-access-coding).
 - **Fabricated Power Platform API permission scopes removed.** README, `docs/prerequisites.md`,
   `docs/troubleshooting.md`, and `DELIVERY-CHECKLIST.md` listed
   `PowerPlatform.Admin.Read.All` and `PowerPlatform.Admin.ReadWrite.All` as Microsoft

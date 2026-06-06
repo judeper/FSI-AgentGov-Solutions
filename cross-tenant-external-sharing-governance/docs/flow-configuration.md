@@ -357,19 +357,26 @@ Wrap Steps 4–11 in a **Scope: Main Logic** action. Add a parallel **Scope: Cat
    - **Concurrency:** Set degree of parallelism to `5`
 
    9a. **Get Agents in Environment**
-   - Retrieve agent list from the environment's Copilot Studio inventory
+   - Action: "List rows" (Dataverse) against the environment's `bot` table
+     (`GET .../api/data/v9.2/bots?$select=botid,name,_owninguser_value`) — Copilot Studio
+     agents are stored as Dataverse `bot` records.
 
    9b. **For Each Agent**
    - Action: Apply to each on agents
 
-   9b-i. **Get Agent Role Assignments**
-   - Action: HTTP with Microsoft Entra ID
-   - Retrieve role assignments for the current agent
-   - **Schema validation:** Confirm response contains expected `principalId` field before processing
+   9b-i. **Get Agent Shares (record sharing)**
+   - Action: HTTP with Microsoft Entra ID (Dataverse Web API)
+   - Call the documented `RetrieveSharedPrincipalsAndAccess` function on the agent's `bot`
+     record to list every user/team/organization the agent is shared with:
+     `GET .../api/data/v9.2/RetrieveSharedPrincipalsAndAccess(Target=@t)?@t={'@odata.id':'bots(<botid>)'}`
+   - **Schema validation:** Confirm the response `PrincipalAccess` array is present; each entry
+     exposes `Principal` (the shared user/team, whose `id` maps to `principalId` below) and
+     `AccessMask`. Ref:
+     https://learn.microsoft.com/power-apps/developer/data-platform/webapi/reference/retrievesharedprincipalsandaccess
 
-   9b-ii. **For Each Role Assignment**
+   9b-ii. **For Each Shared Principal**
 
-   - **Condition:** `principalId` exists in `guestUserIndex`
+   - **Condition:** `principalId` (the `Principal.id` from each `PrincipalAccess` entry) exists in `guestUserIndex`
    - **If true (guest found):**
 
      1. **Check Approved Status**
