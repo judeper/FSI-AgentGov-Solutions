@@ -71,7 +71,7 @@
 
 - Verify `fsi_COD_TeamsGroupId` and `fsi_COD_TeamsChannelId` are set correctly
 - Check that the Teams connection reference is bound to a user with access to the target channel
-- Note: Teams incoming webhooks are retired as of March 31, 2026; use the Power Automate Teams connector
+- Note: Microsoft 365 (O365) connectors / Teams incoming webhooks stop functioning after May 22, 2026 (deprecation rollout May 18-22, 2026); use the Power Automate Teams connector
 - Test the Teams connection by sending a manual message from a test flow
 
 ### Approval emails not sent
