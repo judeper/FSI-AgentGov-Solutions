@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "agent-observability-foundation",
   "solutionName": "Agent Observability Foundation",
-  "solutionVersion": "1.2.3",
+  "solutionVersion": "1.2.4",
   "status": "live",
   "controls": [
     {

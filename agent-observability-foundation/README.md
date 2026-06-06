@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Agent Observability Foundation
 
-> **Version:** v1.2.3
+> **Version:** v1.2.4
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -261,6 +261,11 @@ This solution supports the following FSI-AgentGov framework controls:
 - [Control 2.8: Access Control and Segregation of Duties](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties.md) - Operational vs compliance access paths
 
 ## Version
+
+**v1.2.4** - Technical accuracy review vs Microsoft Learn (2026-06-05)
+
+**What's New in v1.2.4:**
+- Corrected Viva Insights prerequisites in `power-bi/docs/viva-insights-scope.md`: the Copilot Studio agents report still requires at least 50 Copilot licenses (the prior "50-license minimum removed" note was inaccurate), per Microsoft Learn
 
 **v1.2.3** - Lab-readiness validation (2026-06-04)
 
