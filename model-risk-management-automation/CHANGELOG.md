@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Non-existent `PowerPlatform.Admin.Read.All` permission**: `docs/prerequisites.md` listed a
+  fabricated `PowerPlatform.Admin.Read.All` application permission on the Power Platform API.
+  Power Platform API scopes are namespaced — the
+  [permission reference](https://learn.microsoft.com/power-platform/admin/programmability-permission-reference#defined-permissions)
+  defines scopes such as `EnvironmentManagement.Settings.Read`, not a single `*.Admin.Read.All`.
+  Corrected the row to `EnvironmentManagement.Settings.Read` for environment-config reads and
+  noted that agent/bot metadata is read via the Dataverse Web API with an application user +
+  security role. Updated the `LAB-VALIDATION.md` open-item note accordingly.
+  (technical accuracy review vs Microsoft Learn)
 - **Command existence (second-pass audit)**: The agent-metadata enrichment call cited a non-existent Power Platform API endpoint. `docs/flow-configuration.md` step 4.2 used `https://api.powerplatform.com/appmanagement/environments/{env}/bots/{bot}?api-version=2022-03-01-preview` and `SOLUTION-DOCUMENTATION.md` §3 used a `powervirtualagents/...bots` path; neither namespace exposes a bot read (the Power Platform API only documents bot-scoped sub-resources under the `copilotstudio` namespace — `botQuarantine`, `makerevaluation`). Both now read the documented Dataverse `bot` table (`GET .../api/data/v9.2/bots({botId})?$select=name,schemaname,statecode,publishedon,_ownerid_value`), whose `botid` equals the Power Platform Bot ID stored in `fsi_agentid`. Ref: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot
 - **Doc consistency**: Updated `DELIVERY-CHECKLIST.md` API field-confirmation rows, `docs/prerequisites.md` network/role tables, `README.md` role table, and the `fsi_cr_http_mrm` usage descriptions in `docs/flow-configuration.md` and `scripts/create_mrm_connection_references.py` to reference the Dataverse `bot` table instead of the non-existent "Power Platform Bots API".
 - **Connector naming (technical-accuracy review)**: `docs/flow-configuration.md` connection-reference table listed the `fsi_cr_dataverse_mrm` connector as "Common Data Service" — the legacy CDS 2.0 connector that has been deprecated since October 2022. Corrected to "Microsoft Dataverse", which matches the `shared_commondataserviceforapps` connector actually deployed by `scripts/create_mrm_connection_references.py`. Refs: https://learn.microsoft.com/power-platform/important-changes-coming and https://learn.microsoft.com/connectors/commondataserviceforapps/
