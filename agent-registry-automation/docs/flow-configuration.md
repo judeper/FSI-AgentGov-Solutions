@@ -448,7 +448,7 @@ Add **HTTP with Microsoft Entra ID** action only after confirming the current Mi
 - **Headers:**
   - `Content-Type`: `application/json`
 
-> **Note:** Microsoft Entra Agent ID for Copilot Studio is in preview. Current Microsoft Learn terminology describes agent identity blueprints, blueprint principals, agent identities, and agent users. Do not hard-code the legacy `agentRegistrations` endpoint or permission names until they are confirmed in your tenant.
+> **Note:** Microsoft Entra Agent ID is generally available for Microsoft Entra customers, but the Microsoft Graph beta endpoints and permissions for programmatic agent-identity management still require confirmation in your tenant. Current Microsoft Learn terminology describes agent identity blueprints, blueprint principals, agent identities, and agent users. Do not hard-code the legacy `agentRegistrations` endpoint or permission names until they are confirmed in your tenant.
 
 #### Step 6: Handle Response
 

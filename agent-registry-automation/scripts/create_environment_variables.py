@@ -45,7 +45,7 @@ ENV_VAR_DEFINITIONS = [
         "description": (
             "Feature flag for Microsoft Entra Agent ID sync (Flow 3). "
             "Set to 'true' only after Microsoft Agent 365 or Microsoft 365 E7 "
-            "licensing and preview API availability are confirmed in tenant."
+            "licensing and Microsoft Graph beta endpoint availability are confirmed in tenant."
         ),
     },
     {

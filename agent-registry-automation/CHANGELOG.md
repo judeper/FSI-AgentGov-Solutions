@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Major:** Corrected prerequisite permissions — removed the non-existent `Bot.Read.All` / `Environment.Read.All` Power Platform API application permissions. Environment enumeration is authorized by the Power Platform Admin role; agent discovery requires a Dataverse security role with `bot`-table read in each scanned environment. `docs/prerequisites.md`, `docs/troubleshooting.md`.
 - **Minor:** Updated network endpoint list (`api.bap.microsoft.com` replaces `api.powerplatform.com`), connection-reference descriptions, README architecture diagram, Known Limitations, and Platform Update Notes to match the corrected discovery mechanism.
 - **Minor:** Reworded the README Agent Store future-enhancement bullet ("add an `fsi_agentsource` choice column" instead of "extending" a non-existent choice set).
+- **Minor (Agent ID status):** Updated the now-outdated "preview" framing for Microsoft Entra Agent ID. Per the same Learn page, Agent ID is generally available for all Microsoft Entra customers; Flow 3 remains feature-flagged because programmatic agent-identity sync still relies on Microsoft Graph **beta** endpoints. Updated `README.md`, `docs/flow-configuration.md`, `docs/prerequisites.md`, and `.ralph-config.json`.
 
 ### Notes
 
