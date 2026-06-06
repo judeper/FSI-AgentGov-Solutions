@@ -8,6 +8,18 @@ All notable changes to the Scope Drift Monitor.
 
 ### Fixed
 
+- **Connector identity in `AISystemPlugin` parsing** — `Invoke-DriftScan.ps1` and
+  `New-AgentBaseline.ps1` read the connector identity from `AISystemPlugin[].Name`, which
+  is the plugin *type* (e.g. `"BuiltIn"`), not the connector. The documented Copilot audit
+  sample is `{"Id":"BingWebSearch","Name":"BuiltIn"}`, where `.Id` is the connector identity.
+  Both scripts now prefer `$plugin.Id` (falling back to `$plugin.Name` when absent) so the
+  baseline and drift scan key on the actual connector rather than recording every built-in
+  plugin as `"BuiltIn"`. **Operational note:** regenerate existing agent baselines with
+  `New-AgentBaseline.ps1` after upgrading — baselines captured before this fix store the
+  plugin type and will not match `.Id`-keyed scan results. Source:
+  [CopilotInteraction audit schema](https://learn.microsoft.com/office/office-365-management-api/copilot-schema)
+  and [Audit Copilot Studio activities](https://learn.microsoft.com/microsoft-copilot-studio/admin-logging-copilot-studio#see-audited-events-agent-usage).
+  (technical accuracy review vs Microsoft Learn)
 - **National cloud Management API endpoints** — corrected the `fsi_SDM_ManagementApiEndpoint`
   allow-list (both PowerShell scripts' `ValidateSet`, `README.md`, and `docs/flow-configuration.md`)
   to match the four published Office 365 Management Activity API roots: `manage.office.com`
