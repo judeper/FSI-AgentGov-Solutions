@@ -14,7 +14,14 @@ All notable changes to the Unrestricted Agent Sharing Detector are documented he
 
 ### Changed
 
+- README "Components" tree now lists `scripts/Restore-AgentSharingFromEvidence.ps1`, the rollback runbook referenced throughout the CHANGELOG and `LAB-VALIDATION.md` but previously omitted from the file listing.
 - Added `#Requires -Modules Az.Accounts` to `Restore-AgentSharingFromEvidence.ps1` so the `Get-AzAccessToken` dependency is declared, matching the other governance scripts.
+
+### Verified (Microsoft Learn 2026-Q2 accuracy review)
+
+- Dataverse `bot` table sharing model confirmed against the [Copilot (bot) table reference](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/bot): `accesscontrolpolicy` (`0`=Any, `1`=Copilot readers, `2`=Group membership, `3`=Any (multi-tenant)), `authenticationmode` (`1`=None), and `authorizedsecuritygroupids` ("comma-delimited list of up to 20 ... Group IDs", `MaxLength 739`) — all solution claims accurate.
+- Native agent sharing rules confirmed GA (May 23, 2025) with the four documented controls against [Limit sharing — Agent sharing rules](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules).
+- Copilot Studio chat-sharing scopes (individuals, security groups, everyone in the organization) and the Microsoft Entra ID + "Require users to sign-in" prerequisite confirmed against [Share agents with other users](https://learn.microsoft.com/en-us/microsoft-copilot-studio/admin-share-bots).
 
 ## [2.0.1] — 2026-05-04
 
