@@ -20,6 +20,10 @@ All notable changes to MIME Type Restrictions for File Uploads are documented he
 - Refreshed PowerShell guidance to use current `Microsoft.PowerApps.Administration.PowerShell` DLP cmdlets and managed identity-first Microsoft Graph authentication patterns.
 - Bumped solution metadata, package examples, templates, and plugin comments to **1.2.1**.
 
+### Fixed
+
+- **Corrected TIFF removal rationale CVE citations.** The README cited CVE-2020-1599 and CVE-2017-0263 as historically exploited TIFF/image-parsing vulnerabilities, but neither is TIFF-related (CVE-2020-1599 is a Juniper Junos OS denial-of-service issue; CVE-2017-0263 is a Windows Win32k elevation-of-privilege issue). Replaced with CVE-2013-3906 — the Microsoft Graphics component TIFF-processing remote code execution vulnerability addressed by [MS13-096](https://learn.microsoft.com/security-updates/securitybulletins/2013/ms13-096).
+
 ## [1.2.0] — Unreleased — CI build, CodeQL, signed binary release (#38)
 
 ### Added
