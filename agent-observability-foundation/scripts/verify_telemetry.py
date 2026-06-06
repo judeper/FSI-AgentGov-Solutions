@@ -184,14 +184,14 @@ def verify_retention_compliance(retention_days: int) -> bool:
     Returns:
         True if compliant (>= 730 days)
     """
-    min_retention = 730  # SEC 17a-4(b)(4) requires 2-year retention
+    min_retention = 730  # SEC 17a-4(b)(4) "easily accessible place" window (first 2 years); full 3-year retention is held in WORM blob export
 
     if retention_days >= min_retention:
         print(f"  Retention compliance: >= {min_retention} days (SEC 17a-4)")
         return True
     else:
         print(f"  Retention compliance: {retention_days} days < {min_retention} required")
-        print("    SEC 17a-4(b)(4) requires 2-year (730 day) retention.")
+        print("    SEC 17a-4(b)(4) requires the first 2 years (730 days) in an easily accessible place; full 3-year retention is held in WORM export.")
         print("    Update Application Insights retention settings.")
         return False
 

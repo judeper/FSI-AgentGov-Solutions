@@ -26,7 +26,7 @@
     },
     "retention_days": {
       "type": "integer",
-      "description": "Data retention period in days. Default 730 (2 years) for SEC 17a-4(b)(4) compliance",
+      "description": "Data retention period in days. Default 730 (2 years) covers the SEC 17a-4(b)(4) easily-accessible window; WORM blob export holds the full 3-year+ retention",
       "default": 730,
       "minimum": 30,
       "maximum": 730,

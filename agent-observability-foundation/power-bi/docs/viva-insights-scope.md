@@ -13,12 +13,16 @@
 > **Application Insights is the authoritative data source for all agent types.**
 > See [Power BI Integration Guide](power-bi-integration.md) for comprehensive dashboards.
 
-## Preview Status
+## Availability
 
-> **Preview Disclaimer:** As of February 2026, the Viva Insights Agent Dashboard
-> is in preview. Features, metrics, and data availability may change before
-> General Availability (expected March 2026). This documentation reflects the
-> preview state and will be updated at GA.
+> **Status:** The Microsoft Copilot Dashboard in Viva Insights and the Copilot
+> Studio agents report are generally available. Microsoft Learn documents both as
+> standard features with eligibility prerequisites (for example, a minimum of 50
+> Copilot or Viva Insights licenses) and no preview labeling. Microsoft does not
+> publish an explicit GA date in these articles; verify current eligibility and
+> metric availability against the linked Microsoft Learn documentation for your
+> tenant. See [Microsoft Copilot Dashboard](https://learn.microsoft.com/en-us/viva/insights/org-team-insights/copilot-dashboard)
+> and [Copilot Studio agents report](https://learn.microsoft.com/en-us/viva/insights/advanced/analyst/templates/copilot-studio-agents).
 
 ## What Viva Insights Covers
 

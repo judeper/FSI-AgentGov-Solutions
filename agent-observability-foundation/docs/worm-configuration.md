@@ -88,7 +88,7 @@ Container naming convention reference: [Azure Monitor — send diagnostic data t
    **Retention Period Reference:**
    | Regulatory Requirement | Minimum Days | Recommended |
    |------------------------|--------------|-------------|
-   | SEC 17a-4(b)(4) - Communications | 730 (2 years) | 730 |
+   | SEC 17a-4(b)(4) - Communications | 1095 (3 years) | 1095 |
    | SEC 17a-4(a) - Financial records | 2190 (6 years) | 2555 (7 years) |
    | FINRA 4511 - Books and records | 2190 (6 years) | 2555 (7 years) |
 

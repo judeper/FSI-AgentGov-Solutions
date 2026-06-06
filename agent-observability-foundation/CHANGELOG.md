@@ -2,6 +2,14 @@
 
 All notable changes to the Agent Observability Foundation are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **Accuracy (Microsoft Learn re-verification):** Two corrections from the escalated-item re-verification pass.
+  - **Viva Insights GA status (B1):** `power-bi/docs/viva-insights-scope.md` carried a "Preview Disclaimer … in preview … General Availability (expected March 2026)" note. The Microsoft Copilot Dashboard in Viva Insights and the Copilot Studio agents report are documented on current Microsoft Learn how-tos (updated 2026-05/06) as standard generally-available features with no preview labeling. Replaced the preview disclaimer with an "Availability" note and Learn citations. Sources: [Microsoft Copilot Dashboard](https://learn.microsoft.com/en-us/viva/insights/org-team-insights/copilot-dashboard), [Copilot Studio agents report](https://learn.microsoft.com/en-us/viva/insights/advanced/analyst/templates/copilot-studio-agents).
+  - **SEC 17a-4(b)(4) retention wording (B2):** Several places described the rule as a "2-year retention" requirement. SEC Rule 17a-4(b) requires preservation for **not less than three years, the first two years in an easily accessible place** for (b)(4) communications. The 2-year figure is only the accessible-window sub-period (correctly implemented by the 730-day Log Analytics interactive store); the WORM blob export must hold communications for the full 3-year minimum. Corrected `config/config.example.yml`, `config/config.schema.json`, `governance-mapping.md`, `scripts/verify_telemetry.py` comments/messages, and the WORM retention reference table in `docs/worm-configuration.md` (SEC 17a-4(b)(4) communications minimum 730 → 1095 days). Source: [17 CFR §240.17a-4](https://www.ecfr.gov/current/title-17/chapter-II/part-240/section-240.17a-4). No script behavior change (the 730-day accessible-window threshold is unchanged).
+
 ## [1.2.4] - 2026-06-05
 
 ### Fixed

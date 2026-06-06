@@ -28,7 +28,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [1.7 - Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Complete audit trail of agent interactions | SEC 17a-4(b)(4) - 2-year communications retention, FINRA 4511 - Books and records |
+| [1.7 - Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Complete audit trail of agent interactions | SEC 17a-4(b)(4) - 3-year communications retention (first 2 years easily accessible), FINRA 4511 - Books and records |
 | [3.2 - Usage Analytics and Activity Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) | Session metrics, message volumes, interaction patterns | Operational visibility requirement |
 
 **Supporting evidence for:**
