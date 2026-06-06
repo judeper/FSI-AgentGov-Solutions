@@ -56,9 +56,10 @@ GDPR Art. 5(1)(c), GLBA Section 501(b), and CCPA purpose limitation.
 
 - **RecordType 261 = `CopilotInteraction`** filter in both collector scripts — matches the
   authoritative audit schema (source 1).
-- **`CopilotEventData` parsing** (`AISystemPlugin[].Name`, `AccessedResources`, `Contexts[].Id`,
+- **`CopilotEventData` parsing** (`AISystemPlugin[].Id` for connector identity, `AccessedResources`, `Contexts[].Id`,
   agent identity via `AgentId`/`BotId`/`AppIdentity`) — field names match the documented
-  Copilot audit schema (source 1).
+  Copilot audit schema (source 1). The documented sample is `{"Id":"BingWebSearch","Name":"BuiltIn"}`,
+  where `.Id` is the connector identity and `.Name` is the plugin type.
 - **Office 365 Management API usage** — `subscriptions/content?contentType=Audit.General`,
   `NextPageUri` header pagination, `contentUri` blob fetch, the **24-hour windowing** in
   `New-AgentBaseline.ps1`, and `-Days` `ValidateRange(1,7)` all align with the documented

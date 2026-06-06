@@ -469,8 +469,11 @@ function Get-AccessedResources {
         # Extract connectors from AISystemPlugin array
         if ($eventData.AISystemPlugin) {
             foreach ($plugin in @($eventData.AISystemPlugin)) {
-                if ($plugin.Name) {
-                    $connectorName = $plugin.Name
+                # .Id is the connector/plugin identity (e.g. "BingWebSearch"); .Name is the
+                # plugin type (e.g. "BuiltIn"). Prefer .Id; fall back to .Name if absent.
+                # Ref: https://learn.microsoft.com/office/office-365-management-api/copilot-schema
+                $connectorName = if ($plugin.Id) { $plugin.Id } else { $plugin.Name }
+                if ($connectorName) {
                     if ($connectorName -notin $resources.Connectors) {
                         $resources.Connectors += $connectorName
                     }

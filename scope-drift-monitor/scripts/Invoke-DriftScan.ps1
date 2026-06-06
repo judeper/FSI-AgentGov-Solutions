@@ -515,8 +515,12 @@ function Compare-ScopeVsActual {
     # Check connectors from AISystemPlugin
     if ($eventData.AISystemPlugin) {
         foreach ($plugin in @($eventData.AISystemPlugin)) {
-            if ($plugin.Name) {
-                $connectorName = $plugin.Name
+            # In CopilotEventData.AISystemPlugin, .Id is the connector/plugin identity
+            # (e.g. "BingWebSearch") and .Name is the plugin type (e.g. "BuiltIn").
+            # Prefer .Id for the connector identity; fall back to .Name if absent.
+            # Ref: https://learn.microsoft.com/office/office-365-management-api/copilot-schema
+            $connectorName = if ($plugin.Id) { $plugin.Id } else { $plugin.Name }
+            if ($connectorName) {
                 if ($connectorName -notin $allowedConnectors) {
                     $violations += @{
                         Type        = "Unauthorized Connector"
