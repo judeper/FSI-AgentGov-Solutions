@@ -6,6 +6,7 @@ All notable changes to the Conditional Access Automation solution are documented
 
 ### Fixed
 
+- Corrected the `.EXAMPLE` in `scripts/private/Get-CAAValidationResults.ps1` to acquire the Dataverse token via `Get-AzAccessToken -AsSecureString` and extract the plaintext with `[System.Net.NetworkCredential]`. The prior example used `(Get-AzAccessToken ...).Token` as a plaintext string, which is outdated: `Get-AzAccessToken` returns a `SecureString` by default starting with Az.Accounts 5.0.0 ([Microsoft Learn](https://learn.microsoft.com/powershell/module/az.accounts/get-azaccesstoken)). The runtime scripts (`Export-CAAComplianceEvidence.ps1`, `Start-CAAValidationRunbook.ps1`) already used the secure pattern; this aligns the helper's documentation.
 - **Wave 6 P4b:** Empty catch blocks now log via `Write-Verbose` instead of silently swallowing errors. Output is unchanged unless caller passes `-Verbose`.
 - `Test-EvidenceIntegrity.ps1` now processes `ValueFromPipeline` evidence paths inside a `process {}` block so piped file lists are evaluated one item at a time.
 
