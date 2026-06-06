@@ -29,8 +29,11 @@ location: "eastus"
 # -----------------------------------------------------------------------------
 
 # Data retention period in days
-# Default: 730 (2 years) for SEC 17a-4(b)(4) compliance
-# - SEC 17a-4(b)(4) requires 2-year retention for broker-dealer communications
+# Default: 730 (2 years) — covers the SEC 17a-4(b)(4) "easily accessible place" window
+# - SEC 17a-4(b)(4) requires not less than 3-year retention for broker-dealer
+#   communications, the first 2 years in an easily accessible place. This 730-day
+#   Log Analytics setting supports the accessible-window portion; the WORM blob
+#   export (below) must hold communications for the full 3-year minimum.
 # - For longer retention (SEC 17a-4(a) 6 years), use StorageV2 export
 retention_days: 730
 
