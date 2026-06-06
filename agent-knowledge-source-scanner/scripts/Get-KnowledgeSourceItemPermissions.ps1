@@ -131,7 +131,7 @@
     AffectedUsers, RiskScore
 
 .NOTES
-    Version:    1.1.2
+    Version:    1.1.3
     Author:     FSI Agent Governance
     Requires:   PnP.PowerShell 2.5.0+ (3.x supported with -ClientId)
     Requires:   PowerShell 7.2+ (7.4+ for PnP.PowerShell 3.x)
@@ -597,7 +597,18 @@ function Get-ItemPermissionDetails {
                 $affectedUsers = $memberTitle
             }
             elseif ($memberLoginName -eq "c:0(.s|true") {
-                # SharePoint claims encoding for the built-in "Everyone except external users" group.
+                # SharePoint claims encoding for the built-in "Everyone" claim (all users).
+                # This is NOT the same as "Everyone except external users"
+                # (c:0-.f|rolemanager|spo-grid-all-users): the "Everyone" claim can include
+                # external/guest users when the tenant has the Everyone claim enabled
+                # (Set-SPOTenant -ShowEveryoneClaim $true), so flagged items may be a direct
+                # external-exposure path and warrant closer review.
+                $permissionType = "EveryoneClaim"
+                $affectedUsers = "Everyone (all users; includes external users when the Everyone claim is enabled)"
+            }
+            elseif ($memberLoginName -match "^c:0-\.f\|rolemanager\|spo-grid-all-users") {
+                # SharePoint claims encoding for the built-in "Everyone except external users"
+                # group: all internal/licensed tenant members, external/guest users excluded.
                 $permissionType = "EveryoneExceptExternal"
                 $affectedUsers = "Everyone except external users"
             }
@@ -612,7 +623,7 @@ function Get-ItemPermissionDetails {
             # Check if outside agent scope
             $outsideScope = $false
             if ($AgentUserScope.Count -gt 0) {
-                if ($permissionType -in @("AnonymousLink", "OrganizationLink", "EveryoneExceptExternal", "FlexibleLink")) {
+                if ($permissionType -in @("AnonymousLink", "OrganizationLink", "EveryoneClaim", "EveryoneExceptExternal", "FlexibleLink")) {
                     # FlexibleLink encapsulates per-recipient grants we cannot enumerate
                     # without resolving the SharingLink object's grantees. Treat as out-of-scope
                     # so scoring assigns at least LOW; documented limitation in .ralph-config.json.
@@ -716,7 +727,7 @@ try {
     Write-Host ""
     Write-Host "╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "║   Agent Knowledge Source — Item Permission Scanner       ║" -ForegroundColor Cyan
-    Write-Host "║   FSI Agent Governance Framework v1.1.2                  ║" -ForegroundColor Cyan
+    Write-Host "║   FSI Agent Governance Framework v1.1.3                  ║" -ForegroundColor Cyan
     Write-Host "╚══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
 

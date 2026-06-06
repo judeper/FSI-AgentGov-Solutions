@@ -46,7 +46,7 @@
     .\Invoke-GraphPermissionScan.ps1 -DriveId "b!abc123" -ItemIds @("01ABC","02DEF") -AccessToken $token
 
 .NOTES
-    Version:    1.1.2
+    Version:    1.1.3
     Author:     FSI Agent Governance
     Framework:  FSI Agent Governance
     Controls:   4.3, 1.4, 1.5
