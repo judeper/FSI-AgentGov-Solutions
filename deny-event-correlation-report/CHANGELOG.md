@@ -4,6 +4,18 @@ All notable changes to the Deny Event Correlation Report are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Corrected `Get-AzAccessToken` SecureString version claims.** Inline comments
+  in `scripts/Export-RaiTelemetry.ps1` ("Az.Accounts >=2.17 returns SecureString
+  by default") and `docs/troubleshooting.md` ("Az.Accounts ≥3.0 returns Token as
+  SecureString") were wrong. Per Microsoft Learn, the `Token` property changed
+  from a plain-text `String` to a `SecureString` **by default starting in
+  Az.Accounts 5.0.0 (Az 14.0.0)**; the opt-in `-AsSecureString` switch was added
+  in 2.17.0. The script already requests `-AsSecureString` explicitly and keeps a
+  defensive plaintext fallback, so no runtime behavior changed. Source:
+  <https://learn.microsoft.com/powershell/azure/protect-secrets>
+
 ### Changed
 
 - **App Insights query API-key retirement date corrected to September 30, 2026.**

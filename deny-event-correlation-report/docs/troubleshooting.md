@@ -77,7 +77,7 @@ Connect-AzAccount -Identity  # Azure Automation managed identity
 # Or, on non-Azure schedulers:
 # Connect-AzAccount -ServicePrincipal -ApplicationId $AppId -TenantId $TenantId -CertificateThumbprint $Thumbprint
 $tokenResult = Get-AzAccessToken -ResourceUrl "https://api.applicationinsights.io"
-# Az.Accounts ≥3.0 returns Token as SecureString; convert to plaintext for HTTP header
+# Az.Accounts ≥5.0 returns Token as SecureString by default (opt-in via -AsSecureString since 2.17.0); convert to plaintext for HTTP header
 $token = if ($tokenResult.Token -is [System.Security.SecureString]) {
     $tokenResult.Token | ConvertFrom-SecureString -AsPlainText
 } else {
