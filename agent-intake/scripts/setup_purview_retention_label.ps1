@@ -238,6 +238,18 @@ function Add-RetentionLabelResult {
 $results = @()
 $connected = $false
 
+if ($DryRun.IsPresent) {
+    # Offline preview: emit the exact New-ComplianceTag commands without installing the
+    # ExchangeOnlineManagement module or connecting to Security & Compliance PowerShell,
+    # so an operator can de-risk the request before running for real (issue #123).
+    $standardCommand = Get-ComplianceTagCommandText -Name $LabelName -RetentionDuration $RetentionDays -Comment 'FSI agent-intake decision records retained for 7 years.' -IsRecordLabel $false
+    $wormCommand = Get-ComplianceTagCommandText -Name $WormLabelName -RetentionDuration $RetentionDays -Comment 'Immutable FSI agent-intake decision records retained for 7 years.' -IsRecordLabel $true
+    Write-Host 'Dry-run (offline preview, no module install or tenant connection). Planned commands:'
+    Write-Host ("[DRY RUN] {0}" -f $standardCommand)
+    Write-Host ("[DRY RUN] {0}" -f $wormCommand)
+    exit 0
+}
+
 try {
     $module = Install-ExchangeOnlineManagementModule
     Import-Module ExchangeOnlineManagement -MinimumVersion $script:MinimumModuleVersion -ErrorAction Stop | Out-Null

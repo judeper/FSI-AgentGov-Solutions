@@ -15,6 +15,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
+import setup_entra_agent_id  # noqa: E402  (path injected above)
 from setup_entra_agent_id import (
     build_reviewer_evidence,
     normalize_approval_path,
@@ -332,3 +333,169 @@ def test_planned_payload_tags_contain_fsi_agent_intake() -> None:
         approval_path="Express",
     )
     assert "fsi-agent-intake" in payload["tags"]
+
+
+# ---------------------------------------------------------------------------
+# Request-schema + dry-run offline-safety locks (issue #123)
+#
+# Ground truth re-verified by Rusty 2026-06-06 against Microsoft Learn:
+#   Path A create =
+#     POST https://graph.microsoft.com/v1.0/servicePrincipals/microsoft.graph.agentIdentity
+#   GA on graph-rest-1.0; least-privilege create scope = AgentIdentity.Create.All;
+#   `tags` is a documented String-collection body property; PATCH fallback =
+#     PATCH /v1.0/servicePrincipals/{id}/microsoft.graph.agentIdentity
+#   Ref: https://learn.microsoft.com/graph/api/agentidentity-post?view=graph-rest-1.0
+#
+# These tests drive main() directly with monkeypatched argv. The create request
+# SHAPE is unchanged (per Rusty); the value here is catching future drift in the
+# URL, api-version, body keys, or — most importantly — a regression that lets the
+# --dry-run path reconnect/POST to a live tenant.
+# ---------------------------------------------------------------------------
+
+# Exact verified GA create endpoint. If Microsoft moves the resource or the script
+# changes GRAPH_BASE/AGENT_ID_CREATE_PATH, this literal must be updated in lockstep.
+EXPECTED_CREATE_URL = (
+    "https://graph.microsoft.com/v1.0/servicePrincipals/microsoft.graph.agentIdentity"
+)
+
+
+def _no_token(*_args: object, **_kwargs: object) -> str:
+    raise AssertionError(
+        "token fetch attempted — dry-run must stay fully offline (issue #123)"
+    )
+
+
+def _no_http(*_args: object, **_kwargs: object) -> object:
+    raise AssertionError(
+        "outbound HTTP attempted — dry-run must make no Graph call (issue #123)"
+    )
+
+
+@pytest.fixture
+def block_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make every live-path egress raise so a leak fails loudly, not silently.
+
+    Patches the exact symbols the live mint path uses: the two token providers
+    imported into the module namespace and the ``requests`` verbs.
+    """
+    monkeypatch.setattr(setup_entra_agent_id, "get_token_via_managed_identity", _no_token)
+    monkeypatch.setattr(setup_entra_agent_id, "get_token_via_cli", _no_token)
+    for verb in ("get", "post", "patch", "put", "delete"):
+        monkeypatch.setattr(setup_entra_agent_id.requests, verb, _no_http)
+
+
+def _run_main(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> int:
+    monkeypatch.setattr(sys, "argv", ["setup_entra_agent_id.py", *argv])
+    return setup_entra_agent_id.main()
+
+
+def test_dry_run_locks_create_request_shape(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], block_network: None
+) -> None:
+    """--dry-run emits the exact verified POST method/URL/api-version + body keys."""
+    rc = _run_main(
+        monkeypatch,
+        [
+            "--dry-run",
+            "--intake-request-id", "intake-guid-123",
+            "--display-name", "Cash Recon Helper",
+            "--sponsor-upn", "alice@contoso.com",
+            "--blueprint-id", "blueprint-guid-456",
+            "--approval-path", "Express",
+        ],
+    )
+    assert rc == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["dryRun"] is True
+
+    would_post = result["wouldPost"]
+    assert would_post["method"] == "POST"
+    assert would_post["apiVersion"] == "v1.0"
+    assert would_post["url"] == EXPECTED_CREATE_URL
+    # Least-privilege create scope must remain advertised.
+    assert "AgentIdentity.Create.All" in would_post["requiredCreatePermissions"]
+
+    payload = would_post["payload"]
+    # Required body keys per the agentIdentity create reference, incl. the
+    # documented String-collection `tags` property.
+    for required_key in ("displayName", "agentIdentityBlueprintId", "sponsors@odata.bind", "tags"):
+        assert required_key in payload, f"missing required body key: {required_key}"
+    assert payload["displayName"] == "Cash Recon Helper"
+    assert payload["agentIdentityBlueprintId"] == "blueprint-guid-456"
+    assert "fsi-agent-intake" in payload["tags"]
+    assert "intake-request:intake-guid-123" in payload["tags"]
+
+
+def test_dry_run_locks_patch_fallback_shape(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], block_network: None
+) -> None:
+    """Standard/Full dry-run advertises the verified PATCH evidence fallback shape."""
+    items = [VALID_SPONSOR_ATTESTATION, VALID_INFOSEC_ATTESTATION]
+    rc = _run_main(
+        monkeypatch,
+        [
+            "--dry-run",
+            "--intake-request-id", "intake-guid-123",
+            "--display-name", "Cash Recon Helper",
+            "--sponsor-upn", "alice@contoso.com",
+            "--blueprint-id", "blueprint-guid-456",
+            "--approval-path", "Standard",
+            "--reviewer-attestations-json", json.dumps(items),
+        ],
+    )
+    assert rc == 0
+    result = json.loads(capsys.readouterr().out)
+    fallback = result["wouldPatchReviewerEvidenceOnRejection"]
+    assert fallback["method"] == "PATCH"
+    assert fallback["apiVersion"] == "v1.0"
+    # PATCH /v1.0/servicePrincipals/{id}/microsoft.graph.agentIdentity
+    assert fallback["url"].startswith("https://graph.microsoft.com/v1.0/servicePrincipals/")
+    assert fallback["url"].endswith("/microsoft.graph.agentIdentity")
+
+
+def test_dry_run_makes_no_network_or_token_call(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], block_network: None
+) -> None:
+    """Highest-value regression: --dry-run never fetches a token or calls Graph.
+
+    block_network monkeypatches every egress symbol to raise; a clean rc==0
+    proves the dry-run path is fully offline. Standard path (with reviewer
+    evidence) is used so the heavier branch is also exercised offline.
+    """
+    items = [VALID_SPONSOR_ATTESTATION, VALID_INFOSEC_ATTESTATION]
+    rc = _run_main(
+        monkeypatch,
+        [
+            "--dry-run",
+            "--intake-request-id", "intake-guid-123",
+            "--display-name", "Cash Recon Helper",
+            "--sponsor-upn", "alice@contoso.com",
+            "--blueprint-id", "blueprint-guid-456",
+            "--approval-path", "Standard",
+            "--reviewer-attestations-json", json.dumps(items),
+        ],
+    )
+    assert rc == 0
+    assert json.loads(capsys.readouterr().out)["dryRun"] is True
+
+
+def test_live_path_token_sentinel_is_wired(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Positive control: without --dry-run, the token sentinel MUST fire.
+
+    This guards against the offline tests passing vacuously: it proves the
+    blocked symbols actually sit on the live mint path, so silence under
+    --dry-run is meaningful rather than the egress code simply being unreachable.
+    """
+    monkeypatch.setattr(setup_entra_agent_id, "get_token_via_managed_identity", _no_token)
+    monkeypatch.setattr(setup_entra_agent_id, "get_token_via_cli", _no_token)
+    with pytest.raises(AssertionError, match="token fetch attempted"):
+        _run_main(
+            monkeypatch,
+            [
+                "--intake-request-id", "intake-guid-123",
+                "--display-name", "Cash Recon Helper",
+                "--sponsor-upn", "alice@contoso.com",
+                "--blueprint-id", "blueprint-guid-456",
+                "--approval-path", "Express",
+            ],
+        )
