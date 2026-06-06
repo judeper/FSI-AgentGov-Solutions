@@ -71,7 +71,7 @@ param(
     [securestring]$ClientSecret,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("https://manage.office.com", "https://manage.office365.us", "https://manage.office.eaglex.ic.gov", "https://manage.protection.outlook.com")]
+    [ValidateSet("https://manage.office.com", "https://manage-gcc.office.com", "https://manage.office365.us", "https://manage.protection.apps.mil")]
     [string]$ManagementApiEndpoint = "https://manage.office.com",
 
     [Parameter(Mandatory = $false)]
@@ -192,10 +192,9 @@ function Get-AccessToken {
 
     # legacy: dev-only -- replace with managed identity in production
     $loginEndpoint = switch -Wildcard ($Scope) {
-        "*office365.us*"           { "https://login.microsoftonline.us" }
-        "*eaglex.ic.gov*"          { "https://login.microsoftonline.us" }
-        "*protection.outlook.com*" { "https://login.microsoftonline.us" }
-        default                    { "https://login.microsoftonline.com" }
+        "*office365.us*"        { "https://login.microsoftonline.us" }
+        "*protection.apps.mil*" { "https://login.microsoftonline.us" }
+        default                 { "https://login.microsoftonline.com" }
     }
     $tokenUrl = "$loginEndpoint/$TenantId/oauth2/v2.0/token"
     $body = @{

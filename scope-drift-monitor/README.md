@@ -110,7 +110,7 @@ After import, configure these environment variables in Power Apps:
 | `fsi_SDM_ClientSecret` | Legacy dev-only Microsoft Entra ID application secret for local script fallback — use managed identity for Azure-hosted production automation |
 | `fsi_SDM_DetectionWindowMinutes` | Detection lookback window in minutes (default: 15) |
 | `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on fsi_agentscope (default: 10002) |
-| `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL (default: `https://manage.office.com`; use `https://manage.office365.us` for GCC High, `https://manage.office.eaglex.ic.gov` for GCC IC, `https://manage.protection.outlook.com` for DoD) |
+| `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL (default: `https://manage.office.com`; use `https://manage-gcc.office.com` for GCC, `https://manage.office365.us` for GCC High, `https://manage.protection.apps.mil` for DoD) |
 
 ### 3. Configure Connection References
 
