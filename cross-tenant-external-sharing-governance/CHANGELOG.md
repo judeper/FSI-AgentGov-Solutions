@@ -6,6 +6,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed (technical accuracy review vs Microsoft Learn)
+
+- **Fabricated Power Platform API permission scopes removed.** README, `docs/prerequisites.md`,
+  `docs/troubleshooting.md`, and `DELIVERY-CHECKLIST.md` listed
+  `PowerPlatform.Admin.Read.All` and `PowerPlatform.Admin.ReadWrite.All` as Microsoft
+  Graph-style "Application" permissions on a "Power Platform API". No such scopes exist.
+  The Power Platform admin (BAP) API this solution calls does not expose granular
+  application permission scopes; a service principal or managed identity is granted
+  tenant-admin-equivalent access by registering it as a Power Platform admin management
+  application via `New-PowerAppManagementApp`. The Microsoft Graph scopes (Policy.Read.All,
+  User.Read.All, CrossTenantInformation.ReadBasic.All, Organization.Read.All,
+  Policy.ReadWrite.CrossTenantAccess) are unchanged. Added a note that the read-only vs.
+  read-write separation between the two managed identities is enforced operationally, and
+  that the newer `api.powerplatform.com` surface uses delegated permissions plus RBAC roles
+  (Reader/Contributor) for service principals. Source:
+  https://learn.microsoft.com/power-platform/admin/programmability-authentication-v2
+- **Corrected the Power Platform environment-list endpoint in `docs/flow-configuration.md`.**
+  Flow 2 step 8 ("Get All Power Platform Environments") used
+  `/appmanagement/environments?api-version=2022-03-01-preview`. The documented GA
+  listing endpoint is `/environmentmanagement/environments?api-version=2024-10-01`
+  (`appmanagement/environments/{id}/operations` is the app-install operations path, not
+  the environment list). Source:
+  https://learn.microsoft.com/power-platform/admin/programmability-authentication-v2
+
 ### Fixed (lab-readiness validation)
 
 - **`Scan-ManagedEnvBotSharingBaseline.ps1` used non-existent governance

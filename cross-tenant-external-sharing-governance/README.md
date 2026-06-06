@@ -143,10 +143,10 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 
 | Identity | Assigned To | Permissions |
 |----------|-------------|-------------|
-| **MI-CrossTenantReadOnly** | Flows 1, 2, 3, 6 | Policy.Read.All, User.Read.All, CrossTenantInformation.ReadBasic.All, Organization.Read.All, PowerPlatform.Admin.Read.All |
-| **MI-CrossTenantReadWrite** | Flows 4, 5 | Policy.ReadWrite.CrossTenantAccess, User.Read.All, CrossTenantInformation.ReadBasic.All, PowerPlatform.Admin.ReadWrite.All |
+| **MI-CrossTenantReadOnly** | Flows 1, 2, 3, 6 | Graph: Policy.Read.All, User.Read.All, CrossTenantInformation.ReadBasic.All, Organization.Read.All. Power Platform admin (BAP) access via management-application registration (`New-PowerAppManagementApp`) |
+| **MI-CrossTenantReadWrite** | Flows 4, 5 | Graph: Policy.ReadWrite.CrossTenantAccess, User.Read.All, CrossTenantInformation.ReadBasic.All. Power Platform admin (BAP) access via management-application registration (`New-PowerAppManagementApp`) |
 
-> **Note:** `Policy.ReadWrite.CrossTenantAccess` requires Entra Global Admin approval. See [Prerequisites](docs/prerequisites.md) for the consent workflow.
+> **Note:** `Policy.ReadWrite.CrossTenantAccess` requires Entra Global Admin approval. The Power Platform admin (BAP) API used by this solution has no granular read-only vs. read-write application scopes; service principals (including managed identities) are granted tenant-admin-equivalent access via `New-PowerAppManagementApp`, so the read-only/read-write split is enforced operationally. See [Prerequisites](docs/prerequisites.md) for the consent and registration workflow.
 
 ## Quick Start
 

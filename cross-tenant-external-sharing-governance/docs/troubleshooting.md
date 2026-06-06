@@ -117,7 +117,7 @@
 ### Flow 1: Tenant Isolation Audit
 
 - **Issue:** Flow returns empty results for tenant isolation status
-  - **Check:** Verify `MI-CrossTenantReadOnly` has `PowerPlatform.Admin.Read.All` permission
+  - **Check:** Verify `MI-CrossTenantReadOnly` is registered as a Power Platform admin management application (`New-PowerAppManagementApp`)
   - **Check:** Confirm the Power Platform API endpoint URL is correct for your region
 
 - **Issue:** Historical comparison fails on first run
@@ -160,7 +160,7 @@
   - **Check:** Review the Dataverse update action for correct record ID binding
 
 - **Issue:** Agent share removal fails with permission error
-  - **Check:** Verify `MI-CrossTenantReadWrite` has `PowerPlatform.Admin.ReadWrite.All` permission
+  - **Check:** Verify `MI-CrossTenantReadWrite` is registered as a Power Platform admin management application (`New-PowerAppManagementApp`)
   - **Check:** Confirm the target agent share has not already been removed by another process
 
 ### Flow 6: Compliance Event Logging
