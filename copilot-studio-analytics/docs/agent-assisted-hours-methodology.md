@@ -171,19 +171,19 @@ The accuracy of AAH calculations depends on the data tier available.
 
 ---
 
-## Maker-Led Inputs (Viva-Only Limitation)
+## Maker-Led Inputs (Copilot Studio Savings Calculator)
 
-Microsoft Viva Insights includes a feature where agent makers can specify custom time savings values per topic or action directly in Copilot Studio. This "maker-led input" approach allows the person who built the agent to estimate how much time each topic or action saves.
+Copilot Studio includes a native **Savings calculator** on each agent's **Analytics** page, where agent makers enter estimated time or cost savings on a *per run* or *per tool* basis (tools correspond to the agent's actions). This "maker-led input" approach lets the person who built the agent estimate how much time or money each run or tool saves. The feature is built into Copilot Studio (subject to the environment-level **Disable money saving rules** admin setting in the Power Platform admin center) and does **not** require a Microsoft Viva Insights license. See [Analyze time and cost savings for agents](https://learn.microsoft.com/microsoft-copilot-studio/analytics-cost-savings).
 
-**CSA does not replicate this feature** because:
+**CSA does not currently ingest these maker-entered estimates** because:
 
-1. Maker-led inputs are stored in Viva Insights backend, not in Dataverse or App Insights
-2. There is no public API to read or write maker-led estimates
+1. The Savings calculator estimates are surfaced in the Copilot Studio Analytics tab and are not part of the `msdyn_botsession` session records that CSA's Tier 1 sync reads from Dataverse
+2. CSA's automated pipeline derives time savings from session outcomes and configurable multipliers rather than per-agent maker estimates
 3. CSA uses configurable defaults in config.yml as an alternative
 
 ### Workaround
 
-Organizations without Viva Insights can approximate maker-led inputs by:
+Organizations can approximate the maker-entered Savings calculator estimates in CSA by:
 
 1. Surveying agent makers for estimated time savings per topic/action
 2. Updating the `action_time_savings` section in config.yml with these estimates

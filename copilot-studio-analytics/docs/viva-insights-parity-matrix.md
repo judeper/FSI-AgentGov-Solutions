@@ -28,11 +28,11 @@ This matrix documents what CSA covers, what it partially covers, and what remain
 | Topic performance | KQL: Topic Performance query | Partial parity | Tier 1 provides topic name from session data; full per-topic detail requires Tier 2 data *(planned)* |
 | Action execution metrics | KQL: Action Execution query | Partial parity | Requires Tier 2 data *(planned — not yet implemented in sync pipeline)*; Viva has direct access |
 | Trigger analysis | KQL: Trigger Analysis query | Partial parity | CSA derives from session patterns; full trigger telemetry requires Tier 2 *(planned)* |
-| Maker-led time savings inputs | config.yml defaults | No parity | Viva allows per-topic/action maker estimates; CSA uses configurable defaults |
+| Maker-led time savings inputs | config.yml defaults | Copilot Studio native | The maker-entered **Savings calculator** is built into Copilot Studio Analytics (no Viva license); CSA's sync does not ingest those estimates and uses configurable defaults instead |
 | Business outcome data upload | Not available | Viva-only | Custom business outcome correlation (e.g., case closure, sales) |
 | Organizational hierarchy analytics | Not available | Viva-only | Department/team-level rollups based on org hierarchy |
 | Manager dashboard | Not available | Viva-only | Pre-built manager view of team agent adoption |
-| Copilot Studio embedded analytics | Not applicable | Viva-only | In-product analytics within Copilot Studio portal |
+| Copilot Studio embedded analytics | Not applicable | Copilot Studio native | In-product analytics within the Copilot Studio portal (native to Copilot Studio, not Viva) |
 
 ---
 
@@ -45,6 +45,7 @@ This matrix documents what CSA covers, what it partially covers, and what remain
 | **Partial parity** | CSA provides the metric but with reduced precision or additional prerequisites (e.g., Tier 2 data planned but not yet implemented) |
 | **No parity** | CSA provides a workaround but cannot match the Viva feature |
 | **Viva-only** | Feature depends on Viva Insights infrastructure with no CSA equivalent available |
+| **Copilot Studio native** | Feature is built into Copilot Studio (or its Analytics tab) and does not require Viva Insights; CSA provides a configurable alternative rather than replicating the in-product experience |
 
 ---
 
@@ -53,7 +54,6 @@ This matrix documents what CSA covers, what it partially covers, and what remain
 Viva Insights is the better choice when:
 
 - **Quick adoption checks** -- Pre-built dashboards available immediately without deployment
-- **Maker-led time savings inputs** -- Agent builders need to specify per-topic time savings estimates
 - **Business outcome correlation** -- Organization wants to upload custom business outcomes (case closure rates, sales conversion) and correlate with agent usage
 - **Organizational hierarchy** -- Analytics needed at department/team level based on org hierarchy
 - **Manager self-service** -- Managers need pre-built views of their team's agent adoption
@@ -83,17 +83,19 @@ Organizations with Viva Insights licenses may still benefit from CSA for:
 
 ---
 
+## Maker-Led Inputs Are a Copilot Studio Feature (Not Viva-Only)
+
+Copilot Studio provides a native **Savings calculator** on each agent's **Analytics** page, where makers (the people who build agents in Copilot Studio) enter estimated time or cost savings on a *per run* or *per tool* basis. These estimates surface in the agent's Analytics tab. The feature is built into Copilot Studio — gated only by the environment-level **Disable money saving rules** admin setting in the Power Platform admin center — and does not require a Viva Insights license. See [Analyze time and cost savings for agents](https://learn.microsoft.com/microsoft-copilot-studio/analytics-cost-savings).
+
+**CSA does not ingest these estimates:** the Savings calculator values are not part of the `msdyn_botsession` session records that CSA's Tier 1 sync reads from Dataverse, so CSA's automated pipeline cannot pick them up.
+
+**CSA workaround:** Configurable defaults in config.yml. Organizations can survey makers and update defaults accordingly.
+
+---
+
 ## Features That Are Viva-Only
 
 These features depend on Viva Insights infrastructure and cannot be replicated by CSA.
-
-### Maker-Led Inputs
-
-Viva Insights allows agent makers (the people who build agents in Copilot Studio) to specify estimated time savings per topic or action. These estimates feed into the AAH calculation.
-
-**Why CSA cannot replicate:** Maker-led inputs are stored in Viva Insights backend services. There is no public API to read or write these estimates, and the data is not exposed in Dataverse or Application Insights.
-
-**CSA workaround:** Configurable defaults in config.yml. Organizations can survey makers and update defaults accordingly.
 
 ### Business Outcome Data Upload
 
@@ -113,5 +115,5 @@ Viva Insights provides analytics rolled up by organizational hierarchy (departme
 
 ---
 
-*Viva Insights Parity Matrix version: 2.0.1*
+*Viva Insights Parity Matrix version: 2.0.3*
 *Last updated: 2026-Q2*
