@@ -114,8 +114,9 @@ try {
 # ===================================================================
 Write-Verbose "Acquiring Power Platform admin token..."
 
-# Helper: convert SecureString token (Az.Accounts >= 2.17) to plain string
-# while preserving compatibility with earlier versions that returned a String.
+# Helper: convert SecureString token to plain string. Get-AzAccessToken
+# returns a SecureString by default starting with Az.Accounts 5.0.0 (Az 14.0.0);
+# earlier versions returned a plain String. This helper handles both.
 function ConvertFrom-AzAccessTokenValue {
     param([Parameter(Mandatory)]$TokenValue)
     if ($TokenValue -is [System.Security.SecureString]) {
