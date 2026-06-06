@@ -31,7 +31,7 @@ Before creating the flow, ensure you have:
   - 4 connection references created
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
-- [ ] **Power Automate Premium per user** license (required for the premium Azure Automation connector). See [Microsoft licensing](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/types) for current SKU details.
+- [ ] **Power Automate Premium** license, which is sold per user (required for the premium Azure Automation connector). See [Microsoft licensing](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/types) for current SKU details.
 - [ ] **Connection references** bound in Power Automate:
   - `fsi_cr_dataverse_moderationmonitor` (Dataverse)
   - `fsi_cr_teams_moderationmonitor` (Microsoft Teams)
