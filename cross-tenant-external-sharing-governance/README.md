@@ -88,7 +88,7 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 ├─────────────────────────────────────────────────────────────────┤
 │  LAYER 3: Copilot Studio Agent Shares                           │
 │  Scope: Agent-level sharing with external/guest users           │
-│  API: GET .../bots/{botId}/roleAssignments                      │
+│  API: Dataverse RetrieveSharedPrincipalsAndAccess (bot record)  │
 │  Detection: Flow 2 — Detect-ExternalAgentShares-Daily           │
 └─────────────────────────────────────────────────────────────────┘
 ```

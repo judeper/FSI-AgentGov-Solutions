@@ -18,11 +18,11 @@ Pre-deployment validation items for Cross-Tenant External Sharing Governance. Co
   - Write endpoint/cmdlet availability confirmed: Yes / Not available (use manual PPAC steps)
   - Date validated: _______________
 
-- [ ] **Copilot Studio agent role assignments:** `GET .../bots/{botId}/roleAssignments?api-version=<confirmed-version>`
-  - Returns guest user role assignments: Yes / No
-  - Identifiable `principalType` field: Yes / No
+- [ ] **Copilot Studio agent role assignments:** Copilot Studio agents are Dataverse `bot` records; enumerate who an agent is shared with via the Dataverse `RetrieveSharedPrincipalsAndAccess` Web API function on the `bot` record (`GET .../api/data/v9.2/RetrieveSharedPrincipalsAndAccess(Target=@t)?@t={...}`). There is no documented `bots/{botId}/roleAssignments` REST endpoint.
+  - Returns guest/team principals and their access rights: Yes / No
+  - Identifiable principal in the `PrincipalAccess` array (`Principal` + `AccessMask`): Yes / No
   - Confirmed response field names: _______________
-  - If principalType not available, fallback to guestUserIndex comparison: Confirmed / Not needed
+  - If a principal's home tenant is not resolvable from the share, fallback to guestUserIndex comparison: Confirmed / Not needed
 
 ## Dependent Solution Validation
 
