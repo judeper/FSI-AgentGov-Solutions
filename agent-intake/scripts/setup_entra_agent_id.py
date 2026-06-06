@@ -7,13 +7,17 @@ chain closes. The returned service principal ID is written back to
 `fsi_intakerequest.fsi_entraagentid` and forwarded to
 `agent-registry-automation` as the canonical identity for the new agent.
 
-Current Microsoft Graph shape:
+Current Microsoft Graph shape (verified 2026-06-06 against Microsoft Learn
+https://learn.microsoft.com/graph/api/agentidentity-post?view=graph-rest-1.0):
   POST https://graph.microsoft.com/v1.0/servicePrincipals/microsoft.graph.agentIdentity
 
 The create action requires a display name, an `agentIdentityBlueprintId`
 (the blueprint `appId` returned by `setup_agent_identity_blueprint.py`), and a
-sponsor relationship. The least-privileged create permissions documented by
-Microsoft are AgentIdentity.CreateAsManager or AgentIdentity.Create.All.
+valid `sponsors@odata.bind` reference. Per the Learn create reference the
+least-privileged create permission is AgentIdentity.Create.All (delegated and
+application); AgentIdentity.CreateAsManager is an accepted higher-privileged
+application permission. Supported built-in roles for non-owner delegated callers
+are Agent ID Administrator and Agent ID Developer.
 
 Authentication: managed-identity-first. Falls back to Azure CLI for admin
 workstation testing.
@@ -63,7 +67,11 @@ GRAPH_BASE = "https://graph.microsoft.com"
 GRAPH_RESOURCE = "https://graph.microsoft.com/"
 AGENT_ID_CREATE_PATH = "/v1.0/servicePrincipals/microsoft.graph.agentIdentity"
 AGENT_ID_LIST_PATH = "/v1.0/servicePrincipals/microsoft.graph.agentIdentity"
-REQUIRED_CREATE_PERMISSIONS = ("AgentIdentity.CreateAsManager", "AgentIdentity.Create.All")
+# Least-privileged create permission first, per the Microsoft Learn create reference
+# (https://learn.microsoft.com/graph/api/agentidentity-post?view=graph-rest-1.0):
+# AgentIdentity.Create.All is least privileged; AgentIdentity.CreateAsManager is an
+# accepted higher-privileged application permission.
+REQUIRED_CREATE_PERMISSIONS = ("AgentIdentity.Create.All", "AgentIdentity.CreateAsManager")
 OPTIONAL_READ_PERMISSION = "AgentIdentity.Read.All"
 APPROVAL_PATH_CHOICES = ("Express", "Standard", "Full")
 ATTESTATION_ROLES = {
@@ -438,22 +446,35 @@ def main() -> int:
 
     if args.dry_run:
         LOG.info("Dry-run mode")
+        would_post: dict[str, Any] = {
+            "method": "POST",
+            "apiVersion": "v1.0",
+            "url": f"{GRAPH_BASE}{AGENT_ID_CREATE_PATH}",
+            "payload": planned_payload(
+                display_name=args.display_name,
+                sponsor_id="<resolved-sponsor-user-id>",
+                blueprint_id=args.blueprint_id,
+                intake_request_id=args.intake_request_id,
+                approval_path=args.approval_path,
+                reviewer_attestations=reviewer_attestations,
+            ),
+            "requiredCreatePermissions": list(REQUIRED_CREATE_PERMISSIONS),
+        }
         result = {
             "dryRun": True,
             "approvalPath": normalize_approval_path(args.approval_path),
-            "wouldPost": {
-                "url": f"{GRAPH_BASE}{AGENT_ID_CREATE_PATH}",
-                "payload": planned_payload(
-                    display_name=args.display_name,
-                    sponsor_id="<resolved-sponsor-user-id>",
-                    blueprint_id=args.blueprint_id,
-                    intake_request_id=args.intake_request_id,
-                    approval_path=args.approval_path,
-                    reviewer_attestations=reviewer_attestations,
-                ),
-                "requiredCreatePermissions": list(REQUIRED_CREATE_PERMISSIONS),
-            },
+            "wouldPost": would_post,
         }
+        if reviewer_attestations:
+            # The create POST may reject the open-type reviewer fields; the live path then
+            # retries the create without them and PATCHes the evidence on afterwards.
+            result["wouldPatchReviewerEvidenceOnRejection"] = {
+                "method": "PATCH",
+                "apiVersion": "v1.0",
+                "url": f"{GRAPH_BASE}/v1.0/servicePrincipals/<created-agent-id>/microsoft.graph.agentIdentity",
+                "fields": ["notes", REVIEWER_EXTENSION_FIELD],
+                "note": "Conditional fallback only; not sent when the create POST accepts the reviewer fields.",
+            }
     else:
         token = get_token_via_managed_identity(GRAPH_RESOURCE) if args.token_source == "mi" else get_token_via_cli(GRAPH_RESOURCE)
         result = mint_agent_id(

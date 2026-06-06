@@ -28,6 +28,11 @@ DEFAULT_LABEL_NAME = "FSI-AgentIntake-7yr"
 DEFAULT_WORM_LABEL_NAME = "FSI-AgentIntake-7yr-WORM"
 DEFAULT_RETENTION_DAYS = 2555
 
+# Comments must mirror setup_purview_retention_label.ps1 so the offline preview matches
+# the exact New-ComplianceTag commands the PowerShell wrapper runs.
+STANDARD_LABEL_COMMENT = "FSI agent-intake decision records retained for 7 years."
+WORM_LABEL_COMMENT = "Immutable FSI agent-intake decision records retained for 7 years."
+
 MANUAL_STEPS = """
 Primary automation path
 =======================
@@ -45,11 +50,37 @@ Manual fallback - Microsoft Purview portal
 6. Record the exact label names used by the intake decision-log flow.
 7. See docs/identity-records-automation.md for the full Stage 2 sequence.
 
-Graph beta reference (preview / delegated only)
-===============================================
+Graph reference (delegated only)
+================================
+The create API is generally available at v1.0 and is also present in beta:
+POST https://graph.microsoft.com/v1.0/security/labels/retentionLabels
 POST https://graph.microsoft.com/beta/security/labels/retentionLabels
-Permission: delegated RecordsManagement.ReadWrite.All; application permissions are not documented for create.
+Permission: delegated RecordsManagement.ReadWrite.All. Application permissions are
+not supported for this create API, which is why the unattended path uses the
+Security & Compliance PowerShell New-ComplianceTag cmdlet above.
 """
+
+
+def build_compliance_tag_commands(
+    label_name: str, worm_label_name: str, retention_days: int
+) -> list[str]:
+    """Return the exact New-ComplianceTag commands the PowerShell wrapper runs.
+
+    Mirrors Get-ComplianceTagCommandText in setup_purview_retention_label.ps1 so an
+    operator can preview the outbound Security & Compliance PowerShell commands
+    offline (no module install or tenant connection) before running for real.
+    """
+    standard = (
+        f'New-ComplianceTag -Name "{label_name}" -RetentionAction Keep '
+        f"-RetentionDuration {retention_days} -RetentionType CreationAgeInDays "
+        f'-Comment "{STANDARD_LABEL_COMMENT}"'
+    )
+    worm = (
+        f'New-ComplianceTag -Name "{worm_label_name}" -RetentionAction Keep '
+        f"-RetentionDuration {retention_days} -RetentionType CreationAgeInDays "
+        f'-Comment "{WORM_LABEL_COMMENT}" -IsRecordLabel $true'
+    )
+    return [standard, worm]
 
 
 def build_label_spec(label_name: str, worm_label_name: str, retention_days: int) -> dict[str, Any]:
@@ -89,6 +120,9 @@ def build_spec(
     """Build the emitted JSON spec."""
     label_spec = build_label_spec(label_name, worm_label_name, retention_days)
     spec: dict[str, Any] = {"label": label_spec}
+    spec["powerShellCreateCommands"] = build_compliance_tag_commands(
+        label_name, worm_label_name, retention_days
+    )
     if include_graph_beta:
         spec["graphBetaCreateSample"] = {
             "method": "POST",
@@ -166,6 +200,19 @@ def main() -> int:
 
     if args.output:
         write_spec(args.output, spec)
+
+    if args.dry_run:
+        # Offline preview: print the exact outbound commands without installing the
+        # ExchangeOnlineManagement module or connecting to the tenant. This lets a live
+        # operator de-risk the request before running for real (issue #123).
+        print("Path taken: dry-run (offline preview, no module install or tenant connection).")
+        print("Planned Security & Compliance PowerShell commands:")
+        for command in spec["powerShellCreateCommands"]:
+            print(f"  [DRY RUN] {command}")
+        if not args.output:
+            print(json.dumps(spec, indent=2))
+        print(MANUAL_STEPS)
+        return 0
 
     if args.use_powershell_wrapper:
         print("Path taken: Security & Compliance PowerShell wrapper.")

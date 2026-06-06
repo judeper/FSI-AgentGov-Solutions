@@ -68,11 +68,11 @@ These items cannot be validated without live tenant access. They map to the acce
 
 **What:** Execute `setup_entra_agent_id.py` against a tenant with Agent ID capabilities.  
 **Prerequisites:**
-- Tenant with Application Administrator role
-- Custom directory role with `microsoft.directory/agentIdentity/createAsOwner` (or Global Admin)
-- `AgentIdentity.ReadWrite.All` consented
+- Admin role: **Agent ID Administrator** or **Agent ID Developer**
+- Application permission `AgentIdentity.Create.All` (least-privilege) consented tenant-wide; `AgentIdentity.CreateAsManager` or `AgentIdentity.ReadWrite.All` also work. See [Create agentIdentity](https://learn.microsoft.com/graph/api/agentidentity-post?view=graph-rest-1.0)
 - Pre-provisioned Agent Identity blueprint (via `setup_agent_identity_blueprint.py`)
 - Sponsor UPN in the same tenant
+- Full role and admin-consent steps: `docs/identity-records-automation.md` → "Live-tenant prerequisites and admin consent"
 
 **Validation steps:**
 1. Run `python setup_agent_identity_blueprint.py --output blueprint.json` — capture `agentIdentityBlueprintId`
@@ -81,20 +81,22 @@ These items cannot be validated without live tenant access. They map to the acce
 4. Verify Agent Identity visible in Entra Admin Center → Applications → Agent Identities
 5. Confirm sponsor relationship visible
 
-**Risk if blocked:** If Agent ID create returns HTTP 400 on the `fsiReviewerAttestations` open-type field, the PATCH fallback handles it. If HTTP 403, update `docs/setup-prerequisites.md` with explicit consent steps.
+**Risk if blocked:** If Agent ID create returns HTTP 400 on the `fsiReviewerAttestations` open-type field, the PATCH fallback handles it. If HTTP 403, the role or admin-consent prerequisites in `docs/identity-records-automation.md` ("Live-tenant prerequisites and admin consent") are not yet satisfied — confirm the **Agent ID Administrator** / **Agent ID Developer** role and the `AgentIdentity.Create.All` admin consent before retrying.
 
 ### Gap 2 — Purview retention-label create (issue #123 Path B)
 
 **What:** Execute `setup_purview_retention_label.ps1` against a tenant with Purview Compliance.  
 **Prerequisites:**
-- Compliance Administrator or Compliance Data Administrator role
-- ExchangeOnlineManagement module ≥ 3.2.0
+- **Compliance Administrator** or **Records Management** role group in Microsoft Purview
+- ExchangeOnlineManagement module ≥ 3.2.0 for the PowerShell production path
+- For the Microsoft Graph alternative (now GA at v1.0, `POST /v1.0/security/labels/retentionLabels`): delegated `RecordsManagement.ReadWrite.All` (application permissions are not supported). See [Create retentionLabel](https://learn.microsoft.com/graph/api/security-labelsroot-post-retentionlabel?view=graph-rest-1.0)
+- Full role and admin-consent steps: `docs/identity-records-automation.md` → "Live-tenant prerequisites and admin consent"
 
 **Validation steps:**
 1. Run `pwsh setup_purview_retention_label.ps1 -AdminUpn <UPN>`
 2. Confirm both `FSI-AgentIntake-7yr` and `FSI-AgentIntake-7yr-WORM` labels created
 3. Verify labels in Purview Compliance Portal → Information governance → Retention labels
-4. Optionally test `setup_purview_retention_label.py --no-use-powershell-wrapper --include-graph-beta` for beta Graph path confirmation
+4. Optionally test `setup_purview_retention_label.py --no-use-powershell-wrapper --include-graph-beta` to confirm the Microsoft Graph create path (now GA at v1.0; the beta endpoint also remains available)
 
 ### Gap 3 — `fsiReviewerAttestations` open-type field acceptance
 
@@ -105,10 +107,10 @@ These items cannot be validated without live tenant access. They map to the acce
 
 | Failure mode | Classification | Action |
 |---|---|---|
-| HTTP 403 on Agent ID create | Docs gap | Update `setup-prerequisites.md` with consent + role steps |
+| HTTP 403 on Agent ID create | Docs gap | Confirm the **Agent ID Administrator** / **Agent ID Developer** role and `AgentIdentity.Create.All` admin consent in `identity-records-automation.md` |
 | HTTP 400 / schema error on Agent ID create | Solution blocker | File bug issue; block GA promotion |
 | HTTP 403 on Purview create | Docs gap | Update Purview prerequisites |
 | HTTP 400 on Purview create | Solution blocker | File bug issue |
-| Beta endpoint deprecated | Docs update | Switch to production portal path |
+| Beta Graph create endpoint changes | Docs update | The v1.0 Graph create path is GA; fall back to the PowerShell `New-ComplianceTag` production path |
 | `fsiReviewerAttestations` rejected on POST but accepted on PATCH | Expected behavior | Document PATCH as the supported path |
 | `fsiReviewerAttestations` rejected on both POST and PATCH | Graceful degradation | Notes-only path is already implemented |
