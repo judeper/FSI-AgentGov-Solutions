@@ -33,7 +33,15 @@ Grant the following application permissions to the managed identity used by prod
 |-----------|------|-------|---------|
 | `User.Read.All` | Application | Microsoft Graph | Resolve owner and validator UPNs to user profiles (department, display name) |
 | `Sites.ReadWrite.All` | Application | Microsoft Graph / SharePoint | Agent Card document creation, update, and folder management |
-| `PowerPlatform.Admin.Read.All` | Application | Power Platform API | Read agent metadata and environment configurations |
+| `EnvironmentManagement.Settings.Read` | Application | Power Platform API | Read environment management settings via the Power Platform programmability API |
+
+> **Power Platform API scopes are namespaced.** There is no `PowerPlatform.Admin.Read.All`
+> permission; the [Power Platform API permission reference](https://learn.microsoft.com/power-platform/admin/programmability-permission-reference#defined-permissions)
+> defines namespaced scopes such as `EnvironmentManagement.Settings.Read` and
+> `ResourceQuery.Resources.Read`. **Agent (bot) metadata** lives in Dataverse — read it
+> through the [Dataverse Web API](https://learn.microsoft.com/power-apps/developer/data-platform/webapi/overview)
+> using an application user granted a security role (for example, a read-only custom role),
+> not a Power Platform API scope.
 
 Optional Agent 365 registry enrichment depends on which Microsoft Graph preview path your tenant uses:
 

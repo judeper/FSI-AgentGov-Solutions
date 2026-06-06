@@ -97,8 +97,9 @@ changes were required.
   emerging surfaces. The solution gates them behind `IsAgent365LifecycleEnabled`
   (default `false`) and documents "use the API path your tenant has approved" —
   operators must verify against current Microsoft Learn at deployment time.
-- **`PowerPlatform.Admin.Read.All`** is documented as illustrative; confirm the
-  exact Power Platform API scope your tenant exposes during managed-identity setup.
+- **`PowerPlatform.Admin.Read.All` does not exist.** The Power Platform API uses namespaced
+  scopes (e.g. `EnvironmentManagement.Settings.Read`); agent/bot metadata is read via the
+  Dataverse Web API with an application user + security role. Corrected in `docs/prerequisites.md`.
 
 ## Final Assessment
 
