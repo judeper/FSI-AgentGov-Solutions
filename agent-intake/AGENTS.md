@@ -27,32 +27,29 @@ If you skip this step, `Invoke-Deploy.ps1` and every other lab script will fail 
 
 ---
 
-## Active Development Status (2026-05-17)
+## Active Development Status (2026-06-07)
 
 > ⚠️ When work resumes, refresh this section with a new date and new content. Keep the structure; the date-stamp tells the next session whether this is current.
 
-**What just shipped (v1.0.0-preview):**
+**What just shipped (Phase 2 unattended lab cycle):**
 
-- 17 automated workstreams — schema (9 tables · 11 option sets · 1 alt-key), solution containers, reviewer-app provisioning, 12 documented Power Automate flows, identity stage (6 security roles + reviewer-app SP), Purview retention-label hydration, policy hydration, seed-test-data CLI (5 scenarios), smoke-test CLI (8 checks), teardown CLI, deploy orchestrator, lab wrapper, 42 pytest cases, manifest schema 1.5.0 compliance, full docs set.
-- Live-lab e2e validated on the user's Autonomous Demo Sandbox in tenant `M365CPI57786004`: teardown (~646s) → fresh redeploy (~2200s · 8 stages all green) → seed 5 scenarios → post-seed smoke (5 PASS · 2 MANUAL · 1 WARN — all expected).
-- Six bug-fixes from live validation consolidated in commit `53a09c4`.
+- **`-SkipPurviewLabel` switch** on `agent-intake/scripts/deploy.ps1` (threaded through `agent-intake/lab/Invoke-Deploy.ps1` via parameter and `config.local.json` key `deploy.skipPurviewLabel`). Skips Stage 3 Purview retention-label creation step (the interactive `Connect-IPPSSession` path) for lab runs where the two retention labels already exist. Blueprint, consent, and Purview verification probe still run. **Caveat:** skipping assumes labels are pre-provisioned on the target tenant.
+- **`agent-intake/lab/Test-LabAuthReadiness.ps1`** — a t=0 preflight validation script with 5 checks: (1) Conditional Access scan for device-code-block or sign-in-frequency < 2h; (2) token clock-reset + verify for Dataverse + Microsoft Graph; (3) pac fresh-shell `pac org who` (detects the pac-1.30+ WAM-on-Windows trap); (4) environment-SKU report (warns on Trial/Developer/Teams types that cannot use pay-as-you-go); (5) ExchangeOnlineManagement module presence.
+- **Unattended auth design:** one-time delegated `az login` (admin) + `pac auth create --deviceCode`; skip billing (no BillingPolicyId; pay-as-you-go unavailable for Trial/Developer); keep Microsoft Entra Agent ID **feature flag off** (`config.entraAgentId.featureFlagEnabled=false`); set `billing.allowedEnvironmentType="Any"` for Trial/Developer env.
+- **Squad validation pass (baseline 111/111 pytest):** only 3 interactive surfaces remain, all neutralized (Purview label via `-SkipPurviewLabel`, pac via device-code pre-auth, Dataverse via token pre-acquisition).
 
-**PR:** [#142 — feat(agent-intake): v1.0.0-preview customer-deliverable](https://github.com/judeper/FSI-AgentGov-Solutions/pull/142) — **merged** 2026-05-22. The council-review remediation work now lands via `fix/agent-intake-council-review` on top of the merged `main`.
+**PR:** [#142 — feat(agent-intake): v1.0.0-preview customer-deliverable](https://github.com/judeper/FSI-AgentGov-Solutions/pull/142) — **merged** 2026-05-22. Phase 2 work now lands via `validate/agent-intake-lab` on top of the merged `main`.
 
 **In-flight (this session, pending push):**
 
-- Per-solution AGENTS.md pattern landed (this file)
-- Stale version-ref cleanup in `README.md`, `docs/decisions.md`, `docs/onboarding-checklist.md`, `docs/auto-detect-playbook.md`
-- P1 / P2 / P5 polish items (see [Pending Work](#pending-work) below)
-- CI alignment: `agent-intake-ci.yml` language-rules now mirrors the root workflow's `AGENTS.md` exclude
-
-> ✅ Update: all of the above landed in PR #142 across 7 commits (`1730ad8`..`81c80b1`). The "Pending work" checklist below is now fully checked. Refresh this entire status block when next session starts.
+- Documentation: AGENTS.md dated entry (2026-06-07), lab/README.md "Lab authentication readiness" section
+- Reserved for cross-solution integration smoke tests
 
 **Next action when work resumes:**
 
 1. On the new machine, follow [Resuming on a different dev machine](#resuming-on-a-different-dev-machine).
-2. `cd agent-intake/lab; .\Invoke-Deploy.ps1 -DryRun` as a sanity-check before any live test.
-3. Decide next iteration scope (v1.1 follow-ups listed in [Pending work](#pending-work)).
+2. Run `./Test-LabAuthReadiness.ps1 -EnvironmentUrl <url>` to validate auth readiness (see [Lab authentication readiness](#lab-authentication-readiness) in lab/README.md).
+3. Bootstrap → preflight → dry-run → live cycle: `az login` → `pac auth create --deviceCode` → `./Test-LabAuthReadiness.ps1` → `.\Invoke-Deploy.ps1 -DryRun` → `.\Invoke-Deploy.ps1` (see lab/README.md for full example).
 
 ---
 

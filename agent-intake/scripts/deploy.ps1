@@ -27,6 +27,10 @@
 .PARAMETER SkipSmoke
     Skip the smoke test stages.
 
+.PARAMETER SkipPurviewLabel
+    Skip the Stage 3 Purview retention-label creation step (for unattended lab runs where the
+    retention labels already exist; avoids the interactive Connect-IPPSSession path).
+
 .PARAMETER DryRun
     Logs what would be done without making changes.
 
@@ -90,6 +94,8 @@ param(
     [switch]$SeedTestData,
 
     [switch]$SkipSmoke,
+
+    [switch]$SkipPurviewLabel,
 
     [switch]$DryRun,
 
@@ -1327,6 +1333,7 @@ function Test-SolutionShellStage {
 }
 
 function Test-IdentityStage {
+    $labelSkipped = $false
     $labelOutput = Get-StructuredOutputFile -Name 'retention-label.json'
     $blueprintOutput = Get-StructuredOutputFile -Name 'agent-blueprint.json'
     $consentOutput = Get-StructuredOutputFile -Name 'entra-agent-id-ready.json'
@@ -1337,26 +1344,40 @@ function Test-IdentityStage {
     $policy = Get-PolicyDocument
 
     if ($DryRun) {
-        foreach ($requiredScript in @($labelScript, $blueprintScript, $consentScript, $purviewProbe)) {
+        $requiredScripts = if ($SkipPurviewLabel) {
+            @($blueprintScript, $consentScript, $purviewProbe)
+        } else {
+            @($labelScript, $blueprintScript, $consentScript, $purviewProbe)
+        }
+        foreach ($requiredScript in $requiredScripts) {
             if (-not (Test-Path -LiteralPath $requiredScript)) {
                 throw "Required script was not found: $requiredScript"
             }
         }
+        $dryRunDetail = if ($SkipPurviewLabel) {
+            'Dry-run: would prepare blueprint output at {0}, consent output at {1} (Purview label skipped).' -f $blueprintOutput, $consentOutput
+        } else {
+            'Dry-run: would prepare Purview label output at {0}, blueprint output at {1}, and consent output at {2} for label {3}.' -f $labelOutput, $blueprintOutput, $consentOutput, [string]$policy.retention_labels.tier_1
+        }
         return [pscustomobject]@{
             Status = 'Success'
-            Detail = ('Dry-run: would prepare Purview label output at {0}, blueprint output at {1}, and consent output at {2} for label {3}.' -f $labelOutput, $blueprintOutput, $consentOutput, [string]$policy.retention_labels.tier_1)
+            Detail = $dryRunDetail
         }
     }
 
-    $labelArguments = @('--output', $labelOutput)
-    $adminUpn = Get-OverrideValue -Name 'AGENT_INTAKE_PURVIEW_ADMIN_UPN'
-    if (-not [string]::IsNullOrWhiteSpace($adminUpn)) {
-        $labelArguments += @('--admin-upn', $adminUpn)
+    if (-not $SkipPurviewLabel) {
+        $labelArguments = @('--output', $labelOutput)
+        $adminUpn = Get-OverrideValue -Name 'AGENT_INTAKE_PURVIEW_ADMIN_UPN'
+        if (-not [string]::IsNullOrWhiteSpace($adminUpn)) {
+            $labelArguments += @('--admin-upn', $adminUpn)
+        }
+        if ($DryRun) {
+            $labelArguments += '--dry-run'
+        }
+        $null = Invoke-PythonChildScript -ScriptPath $labelScript -Argument $labelArguments
+    } else {
+        $labelSkipped = $true
     }
-    if ($DryRun) {
-        $labelArguments += '--dry-run'
-    }
-    $null = Invoke-PythonChildScript -ScriptPath $labelScript -Argument $labelArguments
 
     $blueprintArguments = @('--token-source', (Get-PythonTokenSource), '--output', $blueprintOutput)
     $blueprintSponsor = Get-OverrideValue -Name 'AGENT_INTAKE_BLUEPRINT_SPONSOR_UPN'
@@ -1376,14 +1397,20 @@ function Test-IdentityStage {
 
     $status = 'Success'
     $detailParts = [System.Collections.Generic.List[string]]::new()
-    $detailParts.Add('Retention label workflow invoked.') | Out-Null
-    if ($purviewResult.ExitCode -eq 0) {
-        $detailParts.Add('Purview label verified.') | Out-Null
+    
+    if ($labelSkipped) {
+        $detailParts.Add('Purview retention label step skipped (-SkipPurviewLabel).') | Out-Null
+    } else {
+        $detailParts.Add('Retention label workflow invoked.') | Out-Null
+        if ($purviewResult.ExitCode -eq 0) {
+            $detailParts.Add('Purview label verified.') | Out-Null
+        }
+        else {
+            $status = 'Warning'
+            $detailParts.Add('Purview label could not be verified automatically; check delegated Purview permissions.') | Out-Null
+        }
     }
-    else {
-        $status = 'Warning'
-        $detailParts.Add('Purview label could not be verified automatically; check delegated Purview permissions.') | Out-Null
-    }
+    
     if ($blueprintResult.ExitCode -eq 0) {
         $detailParts.Add('Blueprint registration verified.') | Out-Null
     }

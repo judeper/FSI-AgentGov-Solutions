@@ -21,6 +21,8 @@
   "deploy": {
     "seedTestData": true,
     "skipSmoke": false,
+    "skipPurviewLabel": false,
+    "_skipPurviewLabelNote": "Set true for unattended lab runs where the retention labels already exist, to skip the interactive Connect-IPPSSession path.",
     "pathScopeForSmoke": "All",
     "_pathScopeOptions": ["Express", "Standard", "Full", "All"]
   },
