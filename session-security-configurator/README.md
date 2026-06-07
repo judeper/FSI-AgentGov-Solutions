@@ -272,8 +272,8 @@ This solution supports the following FSI-AgentGov controls:
 
 | Control | Description |
 |---------|-------------|
-| [1.23](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.23-session-security-step-up-authentication/) | Session Security and Step-Up Authentication |
-| [1.11](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access-and-mfa/) | Conditional Access and MFA |
+| [1.23](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.23-step-up-authentication-for-agent-operations/) | Session Security and Step-Up Authentication |
+| [1.11](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa/) | Conditional Access and MFA |
 
 ## Related Solutions
 

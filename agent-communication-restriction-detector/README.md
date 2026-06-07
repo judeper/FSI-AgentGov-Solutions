@@ -148,7 +148,7 @@ The following placeholder values in solution files must be replaced with your or
 | Control | Relationship |
 |---------|-------------|
 | [2.17 -- Multi-Agent Orchestration Limits](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.17-multi-agent-orchestration-limits/) | Primary -- validates agent-to-agent communication restrictions |
-| [1.8 -- Runtime Protection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-security-monitoring/) | Supporting -- runtime communication validation |
+| [1.8 -- Runtime Protection](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.8-runtime-protection-and-external-threat-detection/) | Supporting -- runtime communication validation |
 | [2.1 -- Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Dependency -- zone classification source |
 | [3.8 -- Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Downstream -- evidence export for governance dashboard |
 

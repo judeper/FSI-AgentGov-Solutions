@@ -41,7 +41,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 
 | Control | Gap | Resolution |
 |---------|-----|------------|
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Telemetry available; KQL queries needed for governance evidence extraction | Delivered in v1.1.0: KQL Query Library (see queries/) |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Telemetry available; KQL queries needed for governance evidence extraction | Delivered in v1.1.0: KQL Query Library (see queries/) |
 
 ---
 
@@ -160,7 +160,7 @@ The governance mapping uses an **artifact-first approach**: each observability c
 | [1.7 - Comprehensive Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Structured audit trail extraction queries |
 | [3.2 - Usage Analytics and Activity Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-3-reporting/3.2-usage-analytics-and-activity-monitoring.md) | Session analytics and trend analysis |
 | [2.9 - Agent Performance Monitoring](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.9-agent-performance-monitoring-and-optimization.md) | P50/P95/P99 latency distribution queries |
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Decision audit trail and model output analysis |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Decision audit trail and model output analysis |
 
 ---
 

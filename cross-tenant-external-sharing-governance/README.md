@@ -29,11 +29,11 @@ The solution continuously detects unauthorized cross-tenant configurations, main
 | Control | Relationship |
 |---------|--------------|
 | [1.1 - Restrict Agent Publishing](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.1-restrict-agent-publishing-by-authorization/) | Publishing authorization enforcement for externally shared agents |
-| [1.18 - RBAC and Access Control](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-rbac-and-access-control/) | Role-based access control for cross-tenant governance workflows |
-| [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-governance/2.1-managed-environments/) | Environment-level governance for cross-tenant policy enforcement |
-| [2.8 - Access Control and Segregation of Duties](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-governance/2.8-access-control-and-segregation-of-duties/) | Dual-approval separation for tenant onboarding |
-| [1.7 - Audit Logging and Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.7-audit-logging-and-monitoring/) | Append-only compliance event logging for cross-tenant activity |
-| [1.11 - Conditional Access](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access/) | Conditional Access policy alignment for external access |
+| [1.18 - RBAC and Access Control](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Role-based access control for cross-tenant governance workflows |
+| [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Environment-level governance for cross-tenant policy enforcement |
+| [2.8 - Access Control and Segregation of Duties](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties/) | Dual-approval separation for tenant onboarding |
+| [1.7 - Audit Logging and Monitoring](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance/) | Append-only compliance event logging for cross-tenant activity |
+| [1.11 - Conditional Access](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.11-conditional-access-and-phishing-resistant-mfa/) | Conditional Access policy alignment for external access |
 
 ## Regulatory Alignment
 

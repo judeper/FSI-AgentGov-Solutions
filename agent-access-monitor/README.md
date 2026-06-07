@@ -113,8 +113,6 @@ agent-access-monitor/
 | Control | Relationship |
 |---------|--------------|
 | [3.8 - Copilot Hub](https://judeper.github.io/FSI-AgentGov/controls/pillar-3-reporting/3.8-copilot-hub-and-governance-dashboard/) | Primary — Agent Access Control settings |
-| [2.5 - Agent Sharing Scope](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.5-agent-sharing-scope/) | Agent sharing scope validation |
-| [2.6 - Restrict Team-Created Agent Sharing](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.6-restrict-team-created-agent-sharing/) | Team-created agent sharing limits |
 | [1.1 - Restrict Publishing](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.1-restrict-agent-publishing-by-authorization/) | Publishing authorization |
 | [2.1 - Managed Environments](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.1-managed-environments/) | Sharing limits |
 
