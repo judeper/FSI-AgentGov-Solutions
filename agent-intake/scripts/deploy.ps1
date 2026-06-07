@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.0
-#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '2.0.0' }, @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.2.0' }
+#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '2.0.0' }, @{ ModuleName = 'powershell-yaml'; ModuleVersion = '0.4.0' }
 
 <#
 .SYNOPSIS
@@ -1211,7 +1211,14 @@ function Test-PreflightStage {
     }
 
     $null = Test-ModuleVersion -ModuleName 'Az.Accounts' -MinimumVersion ([version]'2.0.0')
-    $null = Test-ModuleVersion -ModuleName 'ExchangeOnlineManagement' -MinimumVersion ([version]'3.2.0')
+    $null = Test-ModuleVersion -ModuleName 'powershell-yaml' -MinimumVersion ([version]'0.4.0')
+    
+    if (-not $SkipPurviewLabel) {
+        $null = Test-ModuleVersion -ModuleName 'ExchangeOnlineManagement' -MinimumVersion ([version]'3.2.0')
+    } else {
+        Write-Info 'ExchangeOnlineManagement module check skipped (Purview label creation disabled with -SkipPurviewLabel).'
+    }
+    
     $teamsModule = Test-ModuleVersion -ModuleName 'MicrosoftTeams' -MinimumVersion ([version]'5.0.0') -Optional
     if (-not $teamsModule.Present) {
         Write-WarnMessage 'MicrosoftTeams is optional. Teams-specific manual checks may be required if it is absent.'

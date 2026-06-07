@@ -107,8 +107,13 @@ function Test-ConditionalAccessPolicy {
                 $blocks = $true
             }
             
-            # Check for short sign-in frequency
-            if ($policy.sessionControls.signInFrequency -and
+            # Check for short sign-in frequency (guard nested properties to avoid null-reference)
+            if ($policy.PSObject.Properties.Name -contains 'sessionControls' -and
+                $null -ne $policy.sessionControls -and
+                $policy.sessionControls.PSObject.Properties.Name -contains 'signInFrequency' -and
+                $null -ne $policy.sessionControls.signInFrequency -and
+                $policy.sessionControls.signInFrequency.PSObject.Properties.Name -contains 'value' -and
+                $policy.sessionControls.signInFrequency.PSObject.Properties.Name -contains 'type' -and
                 $policy.sessionControls.signInFrequency.value -lt 2 -and
                 $policy.sessionControls.signInFrequency.type -eq 'hours') {
                 $blocks = $true
@@ -339,6 +344,40 @@ function Test-ExchangeOnlineModule {
     }
 }
 
+function Test-RequiredModules {
+    Write-CheckStart 'Required PowerShell modules'
+    
+    # Az.Accounts (always required)
+    $azModule = Get-Module -ListAvailable -Name Az.Accounts | 
+                Sort-Object Version -Descending | 
+                Select-Object -First 1
+    
+    if (-not $azModule) {
+        Write-CheckFail "Az.Accounts module is not installed. Install with: Install-Module -Name Az.Accounts -Scope CurrentUser"
+    }
+    elseif ($azModule.Version -lt [Version]'2.0.0') {
+        Write-CheckFail "Az.Accounts module version $($azModule.Version) is installed, but < 2.0.0. Update with: Update-Module -Name Az.Accounts"
+    }
+    else {
+        Write-CheckPass "Az.Accounts module version $($azModule.Version) is present."
+    }
+    
+    # powershell-yaml (always required for policy-table parsing)
+    $yamlModule = Get-Module -ListAvailable -Name powershell-yaml | 
+                  Sort-Object Version -Descending | 
+                  Select-Object -First 1
+    
+    if (-not $yamlModule) {
+        Write-CheckFail "powershell-yaml module is not installed. Install with: Install-Module -Name powershell-yaml -Scope CurrentUser"
+    }
+    elseif ($yamlModule.Version -lt [Version]'0.4.0') {
+        Write-CheckFail "powershell-yaml module version $($yamlModule.Version) is installed, but < 0.4.0. Update with: Update-Module -Name powershell-yaml"
+    }
+    else {
+        Write-CheckPass "powershell-yaml module version $($yamlModule.Version) is present."
+    }
+}
+
 # Main execution
 Write-Information "=== Agent Intake Lab Authentication Readiness Check ==="
 Write-Information "Environment URL: $EnvironmentUrl"
@@ -356,6 +395,7 @@ Test-ConditionalAccessPolicy
 Test-TokenAcquisition
 Test-PacFreshShell
 Get-EnvironmentSku
+Test-RequiredModules
 Test-ExchangeOnlineModule
 
 Write-Information "`n=== Summary ==="

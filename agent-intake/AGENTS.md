@@ -31,19 +31,25 @@ If you skip this step, `Invoke-Deploy.ps1` and every other lab script will fail 
 
 > ⚠️ When work resumes, refresh this section with a new date and new content. Keep the structure; the date-stamp tells the next session whether this is current.
 
-**What just shipped (Phase 2 unattended lab cycle):**
+**Unattended lab cycle — LIVE VALIDATED END-TO-END on Autonomous Demo Sandbox (2026-06-07):**
 
-- **`-SkipPurviewLabel` switch** on `agent-intake/scripts/deploy.ps1` (threaded through `agent-intake/lab/Invoke-Deploy.ps1` via parameter and `config.local.json` key `deploy.skipPurviewLabel`). Skips Stage 3 Purview retention-label creation step (the interactive `Connect-IPPSSession` path) for lab runs where the two retention labels already exist. Blueprint, consent, and Purview verification probe still run. **Caveat:** skipping assumes labels are pre-provisioned on the target tenant.
-- **`agent-intake/lab/Test-LabAuthReadiness.ps1`** — a t=0 preflight validation script with 5 checks: (1) Conditional Access scan for device-code-block or sign-in-frequency < 2h; (2) token clock-reset + verify for Dataverse + Microsoft Graph; (3) pac fresh-shell `pac org who` (detects the pac-1.30+ WAM-on-Windows trap); (4) environment-SKU report (warns on Trial/Developer/Teams types that cannot use pay-as-you-go); (5) ExchangeOnlineManagement module presence.
-- **Unattended auth design:** one-time delegated `az login` (admin) + `pac auth create --deviceCode`; skip billing (no BillingPolicyId; pay-as-you-go unavailable for Trial/Developer); keep Microsoft Entra Agent ID **feature flag off** (`config.entraAgentId.featureFlagEnabled=false`); set `billing.allowedEnvironmentType="Any"` for Trial/Developer env.
-- **Squad validation pass (baseline 111/111 pytest):** only 3 interactive surfaces remain, all neutralized (Purview label via `-SkipPurviewLabel`, pac via device-code pre-auth, Dataverse via token pre-acquisition).
+Full teardown → redeploy → seed → smoke cycle completed with exit code 0; no failed stages. Validation confirmed:
+- **End-to-end smoke pass:** All 8 deployment checks passed; 5 deterministic seed scenarios exercised; post-deploy compliance snapshot validated.
+- **`-SkipPurviewLabel` live validation:** Stage 3 Purview retention-label creation correctly skipped when `config.local.json` key `deploy.skipPurviewLabel=true` is set. Blueprint, consent, and Purview verification probe still executed. **Known caveat:** assumes labels are pre-provisioned on target tenant; greenfield deployments must create labels first.
+- **Microsoft Entra Agent ID blueprint registered:** Agent-intake identity registered in Entra ID tenant; reviewer roles blueprint accepted and idempotent.
+- **Idempotent recovery proven:** Second deploy run (same config, same seed) succeeded without conflicts; Dataverse alternate-key resolution robust.
+- **H-3 council fix (Stage 5 table list):** Added `fsi_intakeretentionrecord` to `reviewer-app-spec.json` `tables` array. This table was referenced by all 6 reviewer roles but missing from the table list, which broke Stage 5 model-driven app deployment. Fixed in this cycle.
+
+**Preflight prereq fixes completed (both now live):**
+- **PowerShell module `powershell-yaml` declared (>= 0.4.0):** Required for parsing deployment policy YAML; added to preflight checks. Previously assumed present.
+- **PowerShell module `ExchangeOnlineManagement` made conditional (>= 3.2.0):** Required **only** when creating Purview retention labels (i.e., **not** when using `-SkipPurviewLabel`). For unattended lab runs with `-SkipPurviewLabel`, module is not needed. Updated `Test-LabAuthReadiness.ps1` check #5 to conditionally skip based on flag.
 
 **PR:** [#142 — feat(agent-intake): v1.0.0-preview customer-deliverable](https://github.com/judeper/FSI-AgentGov-Solutions/pull/142) — **merged** 2026-05-22. Phase 2 work now lands via `validate/agent-intake-lab` on top of the merged `main`.
 
 **In-flight (this session, pending push):**
 
-- Documentation: AGENTS.md dated entry (2026-06-07), lab/README.md "Lab authentication readiness" section
-- Reserved for cross-solution integration smoke tests
+- ✅ **Documentation: AGENTS.md dated entry (2026-06-07)** — Added full unattended lab cycle validation results; documented prereq fixes (powershell-yaml declared, ExchangeOnlineManagement conditional); H-3 council fix (fsi_intakeretentionrecord table list). Updated "Resuming on a different dev machine" with PowerShell module installation step, conditional guidance for ExchangeOnlineManagement based on -SkipPurviewLabel flag.
+- ✅ **Documentation: lab/README.md "Lab authentication readiness" section** — Added "Module prerequisites" subsection with three-module conditional guidance (Az.Accounts, powershell-yaml always required; ExchangeOnlineManagement only when creating Purview labels).
 
 **Next action when work resumes:**
 
@@ -74,7 +80,15 @@ az --version           # any recent
 python --version       # 3.11+
 pwsh --version         # 7+
 
-# 4. Recreate your lab config (NOT committed)
+# 4. Install PowerShell module prerequisites
+Install-Module Az.Accounts -MinimumVersion 2.0.0 -Scope CurrentUser -Force
+Install-Module powershell-yaml -MinimumVersion 0.4.0 -Scope CurrentUser -Force
+# Only if you will create Purview retention labels (i.e., NOT using -SkipPurviewLabel):
+Install-Module ExchangeOnlineManagement -MinimumVersion 3.2.0 -Scope CurrentUser -Force
+# Optional (only if you intend to use Teams-related integrations):
+# Install-Module MicrosoftTeams -MinimumVersion 5.0.0 -Scope CurrentUser -Force
+
+# 5. Recreate your lab config (NOT committed)
 cd agent-intake\lab
 Copy-Item config.example.json config.local.json
 # Edit config.local.json with: environment.url / environment.environmentId / tenant.tenantId /
@@ -82,14 +96,14 @@ Copy-Item config.example.json config.local.json
 # password manager, etc.). Real values for the existing Autonomous Demo Sandbox are NOT in
 # this repo and will never be.
 
-# 5. Sign in
+# 6. Sign in
 az login --tenant <your-tenant-id>
 pac auth create --name <profile> --environment <env-url>
 
-# 6. Dry-run first, always
+# 7. Dry-run first, always
 .\Invoke-Deploy.ps1 -DryRun
 
-# 7. Live cycle when ready
+# 8. Live cycle when ready
 .\Invoke-Deploy.ps1                 # full deploy + seed + smoke
 .\Invoke-Deploy.ps1 -Teardown       # destroy everything created
 .\Invoke-Deploy.ps1 -SkipSmoke      # deploy without smoke

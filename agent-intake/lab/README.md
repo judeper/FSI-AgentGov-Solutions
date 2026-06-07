@@ -95,6 +95,28 @@ This script performs 5 checks:
 
 If all checks pass (exit 0), the environment is ready for unattended deployment. If only warnings appear (not errors), you can proceed with manual review of the flagged items.
 
+### 2a. Module prerequisites
+
+Before running the preflight or deployment, install the required PowerShell modules:
+
+```powershell
+# Always required
+Install-Module Az.Accounts -MinimumVersion 2.0.0 -Scope CurrentUser -Force
+Install-Module powershell-yaml -MinimumVersion 0.4.0 -Scope CurrentUser -Force
+
+# Only if you will create Purview retention labels (i.e., NOT using -SkipPurviewLabel):
+Install-Module ExchangeOnlineManagement -MinimumVersion 3.2.0 -Scope CurrentUser -Force
+
+# Optional (only if using Teams-related integrations):
+# Install-Module MicrosoftTeams -MinimumVersion 5.0.0 -Scope CurrentUser -Force
+```
+
+**Module requirements:**
+- **`Az.Accounts` (≥ 2.0.0):** Always required. Provides Azure CLI authentication and token acquisition.
+- **`powershell-yaml` (≥ 0.4.0):** Always required. Parses deployment policy YAML configuration.
+- **`ExchangeOnlineManagement` (≥ 3.2.0):** Required **only** when creating Purview retention labels. When using `-SkipPurviewLabel` (label pre-provisioned), this module is not needed. Check #5 in `Test-LabAuthReadiness.ps1` skips this validation if the flag is set.
+- **`MicrosoftTeams` (≥ 5.0.0):** Optional. Only needed if your lab deployment includes Teams channel integration.
+
 ### 3. Configure for unattended deployment
 
 Edit `config.local.json` with these key settings for unattended runs:
