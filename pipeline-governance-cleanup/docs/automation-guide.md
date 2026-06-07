@@ -297,7 +297,7 @@ Create a dedicated DLP policy for your pipelines host environment:
 3. Block high-risk connectors (anonymous HTTP, social media, etc.)
 4. Document policy for compliance audit
 
-See [FSI-AgentGov Control 1.5: DLP Enforcement](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-enforcement.md) for comprehensive DLP guidance.
+See [FSI-AgentGov Control 1.5: DLP Enforcement](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md) for comprehensive DLP guidance.
 
 ---
 

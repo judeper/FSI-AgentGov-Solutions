@@ -171,4 +171,4 @@ Key configuration options:
 
 ## Related Controls
 
-This solution supports compliance with controls [4.3](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-4-sharepoint/4.3-sharepoint-oversharing-prevention-for-agents.md), [1.4](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-data-boundary-enforcement.md), and [1.5](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-dlp-policy-application.md). Organizations should verify that scanning coverage meets their specific regulatory obligations.
+This solution supports compliance with controls [4.3](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-4-sharepoint/4.3-site-and-document-retention-management.md), [1.4](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.4-advanced-connector-policies-acp.md), and [1.5](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.5-data-loss-prevention-dlp-and-sensitivity-labels.md). Organizations should verify that scanning coverage meets their specific regulatory obligations.

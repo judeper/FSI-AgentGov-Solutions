@@ -169,13 +169,13 @@ This document complements the solution-level [governance-mapping.md](../governan
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
 | [1.7 - Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Complete audit trail of agent interactions | SEC 17a-4(b)(4), FINRA 4511 |
-| [2.12 - FINRA 3110 Supervision](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-ai-supervision-and-review-procedures-finra-3110-alignment.md) | Supervisory procedures documentation | FINRA 3110 |
+| [2.12 - FINRA 3110 Supervision](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-supervision-and-oversight-finra-rule-3110.md) | Supervisory procedures documentation | FINRA 3110 |
 
 **Supporting evidence for:**
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Model decision audit trail | SR 11-7 |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Model decision audit trail | SR 11-7 |
 
 **Sample Output:**
 
@@ -196,7 +196,7 @@ This document complements the solution-level [governance-mapping.md](../governan
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
 | [1.7 - Audit Logging](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-1-security/1.7-comprehensive-audit-logging-and-compliance.md) | Audit trail quality monitoring | SEC 17a-4 record integrity |
-| [2.12 - FINRA 3110 Supervision](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-ai-supervision-and-review-procedures-finra-3110-alignment.md) | Evidence completeness | FINRA 3110 |
+| [2.12 - FINRA 3110 Supervision](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.12-supervision-and-oversight-finra-rule-3110.md) | Evidence completeness | FINRA 3110 |
 
 **Sample Output:**
 
@@ -249,7 +249,7 @@ This document complements the solution-level [governance-mapping.md](../governan
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Model output quality | SR 11-7 outcome analysis |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Model output quality | SR 11-7 outcome analysis |
 
 **Sample Output:**
 
@@ -297,7 +297,7 @@ This document complements the solution-level [governance-mapping.md](../governan
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Ongoing monitoring | SR 11-7 Section III |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Ongoing monitoring | SR 11-7 Section III |
 
 **Sample Output:**
 
@@ -318,7 +318,7 @@ This document complements the solution-level [governance-mapping.md](../governan
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Model recalibration trigger | SR 11-7 Section III |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Model recalibration trigger | SR 11-7 Section III |
 
 **Sample Output:**
 
@@ -339,7 +339,7 @@ This document complements the solution-level [governance-mapping.md](../governan
 
 | Control | Requirement | Regulatory Alignment |
 |---------|-------------|---------------------|
-| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-alignment-with-occ-2011-12-sr-11-7.md) | Validation evidence | SR 11-7 Section II |
+| [2.6 - Model Risk Management](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/pillar-2-management/2.6-model-risk-management-sr-26-2.md) | Validation evidence | SR 11-7 Section II |
 
 **Sample Output:**
 

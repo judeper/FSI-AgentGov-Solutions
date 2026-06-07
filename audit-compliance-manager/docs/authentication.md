@@ -54,7 +54,7 @@ Navigate to **API permissions** → **+ Add a permission** and add the following
 |-----------|------|---------|
 | `Exchange.ManageAsApp` | Application | Service principal access to Exchange Online cmdlets (`Get-AdminAuditLogConfig`, `Search-UnifiedAuditLog`) |
 
-### 2.4 Office 365 Security & Compliance Center (Purview / IPPS)
+### 2.4 Security & Compliance PowerShell (Microsoft Purview / IPPS)
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
