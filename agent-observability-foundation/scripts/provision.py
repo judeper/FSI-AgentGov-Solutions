@@ -42,37 +42,43 @@ from typing import Any, Optional
 
 import yaml
 
-# Azure SDK imports
-from azure.identity import DefaultAzureCredential
-from azure.core.exceptions import (
-    AzureError,
-    ClientAuthenticationError,
-    HttpResponseError,
-    ResourceExistsError,
-    ResourceNotFoundError,
-)
-from azure.mgmt.resource import ResourceManagementClient
-from azure.mgmt.loganalytics import LogAnalyticsManagementClient
-from azure.mgmt.loganalytics.models import Workspace, WorkspaceSku
-from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
-from azure.mgmt.applicationinsights.models import (
-    ApplicationInsightsComponent,
-    ApplicationType,
-)
-from azure.mgmt.monitor import MonitorManagementClient
-from azure.mgmt.monitor.models import (
-    DiagnosticSettingsResource,
-    LogSettings,
-    RetentionPolicy,
-)
-from azure.mgmt.storage import StorageManagementClient
-from azure.mgmt.storage.models import (
-    StorageAccountCreateParameters,
-    Sku,
-    Kind,
-)
-from azure.mgmt.authorization import AuthorizationManagementClient
-from azure.mgmt.authorization.models import RoleAssignmentCreateParameters
+# Azure SDK imports (guarded so --help and arg validation work without the
+# full azure-mgmt stack installed; matches the repo's graceful-degradation
+# pattern, e.g. environment-lifecycle-management/scripts/register_service_principal.py)
+try:
+    from azure.identity import DefaultAzureCredential
+    from azure.core.exceptions import (
+        AzureError,
+        ClientAuthenticationError,
+        HttpResponseError,
+        ResourceExistsError,
+        ResourceNotFoundError,
+    )
+    from azure.mgmt.resource import ResourceManagementClient
+    from azure.mgmt.loganalytics import LogAnalyticsManagementClient
+    from azure.mgmt.loganalytics.models import Workspace, WorkspaceSku
+    from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
+    from azure.mgmt.applicationinsights.models import (
+        ApplicationInsightsComponent,
+        ApplicationType,
+    )
+    from azure.mgmt.monitor import MonitorManagementClient
+    from azure.mgmt.monitor.models import (
+        DiagnosticSettingsResource,
+        LogSettings,
+        RetentionPolicy,
+    )
+    from azure.mgmt.storage import StorageManagementClient
+    from azure.mgmt.storage.models import (
+        StorageAccountCreateParameters,
+        Sku,
+        Kind,
+    )
+    from azure.mgmt.authorization import AuthorizationManagementClient
+    from azure.mgmt.authorization.models import RoleAssignmentCreateParameters
+except ImportError:
+    print("Missing dependencies. Run: pip install -r requirements.txt", file=sys.stderr)
+    sys.exit(4)
 
 
 # Built-in role definition IDs (common roles)

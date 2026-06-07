@@ -42,15 +42,21 @@ from typing import Any, Optional
 
 import yaml
 
-# Azure SDK imports
-from azure.identity import DefaultAzureCredential
-from azure.core.exceptions import (
-    AzureError,
-    ClientAuthenticationError,
-    HttpResponseError,
-    ResourceNotFoundError,
-)
-from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
+# Azure SDK imports (guarded so --help and arg validation work without the
+# full azure-mgmt stack installed; matches the repo's graceful-degradation
+# pattern, e.g. environment-lifecycle-management/scripts/register_service_principal.py)
+try:
+    from azure.identity import DefaultAzureCredential
+    from azure.core.exceptions import (
+        AzureError,
+        ClientAuthenticationError,
+        HttpResponseError,
+        ResourceNotFoundError,
+    )
+    from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
+except ImportError:
+    print("Missing dependencies. Run: pip install -r requirements.txt", file=sys.stderr)
+    sys.exit(4)
 
 # Log query SDK (optional dependency)
 try:
