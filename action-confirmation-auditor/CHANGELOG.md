@@ -4,6 +4,11 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
 
 ## [Unreleased]
 
+### Changed
+
+- **Script auth:** Migrated `scripts/Start-ActionConfirmationValidationRunbook.ps1` from the archived [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) module (last updated September 2023) to `Az.Accounts` certificate-based service-principal sign-in (`Connect-AzAccount -ServicePrincipal -CertificateThumbprint` + `Get-AzAccessToken -ResourceUrl`), matching the established `Start-HitlValidationRunbook.ps1` pattern and removing the `MSAL.PS` dependency. The handler converts the SecureString token returned by Az.Accounts 5.x back to a header string via `[System.Net.NetworkCredential]`.
+- **Script auth:** Migrated `scripts/Export-ActionAuditEvidence.ps1` from the archived [`MSAL.PS`](https://github.com/AzureAD/MSAL.PS) module to `Az.Accounts` (`Get-AzContext` + `Get-AzAccessToken -ResourceUrl` for the interactive path; `Connect-AzAccount -ServicePrincipal -CertificateThumbprint` + `Get-AzAccessToken -ResourceUrl` for the certificate path), matching the `Connect-EnvironmentDataverse.ps1` helper pattern. The `ConvertTo-ACAPlainTextToken` helper unwraps the SecureString token returned by Az.Accounts 5.x.
+
 ### Fixed
 
 - **`scripts/Start-ActionConfirmationRunbook-MI.ps1`**: Corrected an inaccurate version reference in the `ConvertFrom-AzAccessTokenValue` helper comment. It stated `Get-AzAccessToken` returns a `SecureString` "(Az.Accounts >= 2.17)"; Microsoft Learn documents that the default output type changed from plain-text `String` to `SecureString` starting with **Az.Accounts 5.0.0** (Az 14.0.0), not 2.17. No behavior change — the helper already type-checks and handles both shapes (and matches the already-correct note in `Get-PurviewAIHubEvidence.ps1`). (technical-accuracy review; verified against `https://learn.microsoft.com/powershell/azure/context-persistence` / Protect secrets in Azure PowerShell — "the default output type of the `Get-AzAccessToken` cmdlet changed ... starting with Az.Accounts version 5.0.0 and Az version 14.0.0")
