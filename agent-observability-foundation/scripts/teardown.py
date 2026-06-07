@@ -39,19 +39,25 @@ from typing import Any
 
 import yaml
 
-# Azure SDK imports
-from azure.identity import DefaultAzureCredential
-from azure.core.exceptions import (
-    AzureError,
-    ClientAuthenticationError,
-    HttpResponseError,
-    ResourceNotFoundError,
-)
-from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
-from azure.mgmt.loganalytics import LogAnalyticsManagementClient
-from azure.mgmt.monitor import MonitorManagementClient
-from azure.mgmt.storage import StorageManagementClient
-from azure.mgmt.authorization import AuthorizationManagementClient
+# Azure SDK imports (guarded so --help and arg validation work without the
+# full azure-mgmt stack installed; matches the repo's graceful-degradation
+# pattern, e.g. environment-lifecycle-management/scripts/register_service_principal.py)
+try:
+    from azure.identity import DefaultAzureCredential
+    from azure.core.exceptions import (
+        AzureError,
+        ClientAuthenticationError,
+        HttpResponseError,
+        ResourceNotFoundError,
+    )
+    from azure.mgmt.applicationinsights import ApplicationInsightsManagementClient
+    from azure.mgmt.loganalytics import LogAnalyticsManagementClient
+    from azure.mgmt.monitor import MonitorManagementClient
+    from azure.mgmt.storage import StorageManagementClient
+    from azure.mgmt.authorization import AuthorizationManagementClient
+except ImportError:
+    print("Missing dependencies. Run: pip install -r requirements.txt", file=sys.stderr)
+    sys.exit(4)
 
 
 # Built-in role definition IDs (same as provision.py)
