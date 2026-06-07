@@ -100,6 +100,22 @@ function Get-PurviewDLPEvidence {
             # SDK v2.x and reusing a Graph token for Dataverse fails with 401
             # because the audiences differ. Invoke-MgGraphRequest manages the
             # token lifecycle for Graph calls correctly.
+            #
+            # DEPRECATION NOTE (verify before relying on label evidence): the
+            # legacy Information Protection labels API
+            # (informationProtection/policy/labels) is documented as deprecated
+            # on Microsoft Learn and may return no data in some tenants. The
+            # successor list-sensitivityLabels operation lives under the
+            # microsoft.graph.security namespace and returns a DIFFERENT shape
+            # (e.g. displayName instead of name; no color/isActive), so it is
+            # NOT a drop-in URL swap — migrating requires remapping the
+            # properties projected below. Left as v1.0/policy/labels here
+            # pending that property-shape migration. Refs:
+            #   https://learn.microsoft.com/graph/api/informationprotectionpolicy-list-labels
+            #   https://learn.microsoft.com/graph/api/security-informationprotection-list-sensitivitylabels
+            # The call is wrapped in -ErrorAction SilentlyContinue and degrades
+            # to the compliance-cmdlet fallback below, so a deprecated/empty
+            # response does not fail the evidence collection.
             $dlpUri = 'https://graph.microsoft.com/v1.0/informationProtection/policy/labels'
             $dlpResp = Invoke-MgGraphRequest -Uri $dlpUri -Method Get -ErrorAction SilentlyContinue
             $infoLabels = $dlpResp.value
