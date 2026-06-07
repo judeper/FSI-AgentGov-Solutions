@@ -152,6 +152,15 @@
       "displayName": "Intake Decision Log",
       "appUsage": "Read-only immutable decision-pack evidence.",
       "access": "read-only"
+    },
+    {
+      "logicalName": "fsi_intakeretentionrecord",
+      "schemaName": "fsi_IntakeRetentionRecord",
+      "entitySetName": "fsi_intakeretentionrecords",
+      "primaryIdAttribute": "fsi_intakeretentionrecordid",
+      "displayName": "Intake Retention Record",
+      "appUsage": "Read-only Purview retention-stamping evidence for audit visibility.",
+      "access": "read-only"
     }
   ],
   "navigation": [
