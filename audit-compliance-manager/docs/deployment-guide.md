@@ -31,12 +31,19 @@ This guide covers end-to-end deployment of the ALCA solution in Azure Automation
 ### 1.2 Configure Runtime Environment
 
 1. Navigate to your Automation Account → **Runtime Environments**
-2. Verify the default **PowerShell 7.2** runtime is available
+2. Verify a **PowerShell 7.4** runtime is available
 3. If not present, create a new runtime:
-   - **Name:** `PowerShell-7.2`
+   - **Name:** `PowerShell-7.4`
    - **Language:** PowerShell
-   - **Version:** 7.2
+   - **Version:** 7.4
    - **Description:** ALCA runbook runtime
+
+> **Runtime version:** Use **PowerShell 7.4**, the generally available Azure Automation
+> runtime (GA June 2025). The PowerShell 7.1 and 7.2 Azure Automation runtimes are retired
+> by the parent product and no longer recommended. The ALCA helper module and runbooks
+> declare PowerShell 7.2 only as a *minimum* (`#Requires -Version 7.2` and
+> `PowerShellVersion = '7.2'` in `AuditComplianceHelpers.psd1`), so they run unchanged on
+> 7.4. See [What's new in Azure Automation](https://learn.microsoft.com/azure/automation/whats-new).
 
 ### 1.3 Enable System-Assigned Managed Identity
 
@@ -211,7 +218,7 @@ Send-ComplianceNotification `
 2. Navigate to **Automation Account** → **Modules** → **+ Add a module**
 3. Configure:
    - **Upload module file:** Select `AuditComplianceHelpers.zip`
-   - **Runtime version:** 7.2
+   - **Runtime version:** 7.4
 4. Click **Import**
 5. Wait for status to show **Available**
 
@@ -230,13 +237,13 @@ Import these modules from the PowerShell Gallery:
 2. Select **Browse from gallery**
 3. Search for the module name
 4. Select the module → **Select**
-5. **Runtime version:** 7.2
+5. **Runtime version:** 7.4
 6. Click **Import**
 
 ### 4.3 Verify Module Status
 
 1. Navigate to **Automation Account** → **Modules**
-2. Filter by **Runtime version: 7.2**
+2. Filter by **Runtime version: 7.4**
 3. Confirm all three modules show **Status: Available**:
    - ✅ `AuditComplianceHelpers` — Available
    - ✅ `Microsoft.PowerApps.Administration.PowerShell` — Available
@@ -277,7 +284,7 @@ If you skip this step, runbooks fail with `The term 'New-CanaryEvent' is not rec
 2. Configure:
    - **Name:** `Test-AuditLoggingCompliance`
    - **Runbook type:** PowerShell
-   - **Runtime version:** 7.2
+   - **Runtime version:** 7.4
    - **Description:** Scans all Power Platform environments for Purview unified audit and Dataverse audit compliance
 3. Click **Create**
 4. In the editor, paste the contents of `scripts/Test-AuditLoggingCompliance.ps1`
@@ -289,7 +296,7 @@ If you skip this step, runbooks fail with `The term 'New-CanaryEvent' is not rec
 2. Configure:
    - **Name:** `Enable-AuditLogging`
    - **Runbook type:** PowerShell
-   - **Runtime version:** 7.2
+   - **Runtime version:** 7.4
    - **Description:** Enables org-level and entity-level Dataverse auditing on non-compliant environments
 3. Click **Create**
 4. In the editor, paste the contents of `scripts/Enable-AuditLogging.ps1`
@@ -299,7 +306,7 @@ If you skip this step, runbooks fail with `The term 'New-CanaryEvent' is not rec
 
 Both runbooks should show:
 - **Status:** Published
-- **Runtime version:** 7.2
+- **Runtime version:** 7.4
 - **Type:** PowerShell
 
 ---
