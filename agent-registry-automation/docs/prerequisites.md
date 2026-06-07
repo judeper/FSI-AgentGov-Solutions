@@ -181,8 +181,6 @@ The following connectors are used by the solution's Power Automate flows. Verify
 | `login.microsoftonline.com` | HTTPS (443) | OAuth 2.0 authentication |
 | `*.crm.dynamics.com` | HTTPS (443) | Dataverse API operations — registry tables and per-environment `bot` table |
 
-> **Note:** For GCC, GCC High, and DoD environments, substitute the appropriate sovereign cloud endpoints.
-
 ---
 
 ## Validation Checklist

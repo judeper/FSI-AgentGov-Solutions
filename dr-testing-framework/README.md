@@ -412,7 +412,7 @@ RTO/RPO evidence must come from the operator's PPAC/Admin-module restore timesta
 | 1.2.1 | April 2026 | Save-TestResult fix: include required `fsi_name` primary attribute for Dataverse writes |
 | 1.2.0 | April 2026 | Environment variables, connection references, real Dataverse implementations in Invoke-DRTest and Export-DREvidence |
 | 1.1.0 | April 2026 | Dataverse schema script, documentation suite, prerequisites guide |
-| 1.0.2 | March 2026 | Sovereign cloud auth endpoint mapping, ClientId validation, exit code 2 for persistence failures |
+| 1.0.2 | March 2026 | Auth endpoint mapping, ClientId validation, exit code 2 for persistence failures |
 | 1.0.1 | March 2026 | Write-AuditLog stream fix, Retry-After support, SSRF validation, verbose diagnostics |
 | 1.0.0 | February 2026 | Initial release |
 
@@ -422,7 +422,7 @@ RTO/RPO evidence must come from the operator's PPAC/Admin-module restore timesta
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| Authentication failure | Expired access token, insufficient permissions, legacy client secret issue, or wrong auth endpoint for sovereign clouds | Prefer a fresh managed-identity/workload-identity `-AccessToken`; for local development, verify service-principal credentials and Dataverse application-user access. For sovereign tenants, the script auto-selects the correct Entra ID endpoint (China: `login.chinacloudapi.cn`, GCC High: `login.microsoftonline.us`). |
+| Authentication failure | Expired access token, insufficient permissions, or legacy client secret issue | Prefer a fresh managed-identity/workload-identity `-AccessToken`; for local development, verify service-principal credentials and Dataverse application-user access. |
 | Probe budget exceeded | Validation checks took longer than the configured probe budget | Review API latency, Dataverse throttling, and Application Insights telemetry; do not treat this as actual RTO evidence by itself |
 | Validation checks fail | Agent or connectors not restored correctly post-restore | Verify the post-restore agent state in Power Platform admin center; re-run the individual scenario with `-Verbose` |
 | Dataverse save error | Missing schema or insufficient Dataverse capacity | Run `python scripts/create_drt_dataverse_schema.py --output-docs` and deploy the schema with `--access-token`; check storage quota in PPAC |

@@ -101,10 +101,10 @@ Reference: [Use service principal accounts to connect to Power Platform](https:/
 ### Power Platform BAP token audience
 
 The scanner queries Power Platform environment role assignments through the BAP admin REST API
-(`api.bap.microsoft.com` and sovereign equivalents). The OAuth **resource (audience)** for these
+(`api.bap.microsoft.com`). The OAuth **resource (audience)** for these
 calls is the first-party **Power Apps Service** resource `https://service.powerapps.com/`
 (Application ID `475226c6-020e-4fb2-8a90-7a972cbfc1d4`) — the request host is *not* the audience.
-`Invoke-SoDScan.ps1` derives this automatically for commercial cloud. For sovereign clouds, or if
+`Invoke-SoDScan.ps1` derives this automatically. If
 token acquisition fails with `AADSTS500011`, override the audience with `-BapResource` or the
 `FSI_BAP_RESOURCE` environment variable. Reference:
 [Power Platform programmability authentication](https://learn.microsoft.com/en-us/power-platform/admin/programmability-authentication).
@@ -136,20 +136,11 @@ token acquisition fails with `AADSTS500011`, override the audience with `-BapRes
 
 | Endpoint | Purpose |
 |----------|---------|
-| `graph.microsoft.com` | Microsoft Graph API (commercial) |
-| `graph.microsoft.us` | Microsoft Graph API (GCC High) |
-| `microsoftgraph.chinacloudapi.cn` | Microsoft Graph API (China / 21Vianet) |
-| `*.crm.dynamics.com` | Dataverse (commercial) |
-| `*.crm.microsoftdynamics.us` | Dataverse (GCC High) |
-| `*.crm.appsplatform.us` | Dataverse (DoD) |
-| `*.crm.dynamics.cn` | Dataverse (China / 21Vianet) |
+| `graph.microsoft.com` | Microsoft Graph API |
+| `*.crm.dynamics.com` | Dataverse |
 | `*.api.powerplatform.com` | Power Platform API |
-| `api.bap.microsoft.com` | Power Platform BAP API (commercial) |
-| `api.bap.appsplatform.us` | Power Platform BAP API (US sovereign / GCC High) |
-| `api.bap.partner.microsoftonline.cn` | Power Platform BAP API (China sovereign / 21Vianet) |
-| `login.microsoftonline.com` | Authentication (commercial) |
-| `login.microsoftonline.us` | Authentication (GCC High) |
-| `login.partner.microsoftonline.cn` | Authentication (China / 21Vianet) |
+| `api.bap.microsoft.com` | Power Platform BAP API |
+| `login.microsoftonline.com` | Authentication |
 
 ---
 

@@ -11,7 +11,6 @@ Common issues and resolutions for the DR Testing Framework solution.
 | Token acquisition fails | Managed identity is not assigned, workload identity federation is misconfigured, `TenantId`/`ClientId` is incorrect, or a legacy client secret expired | Prefer a fresh `-AccessToken` from managed identity or workload identity. For local development only, verify the legacy service-principal values and rotate the secret. |
 | 401 Unauthorized from Dataverse | Token audience does not match the target Dataverse organization | Acquire the token for the exact Dataverse URL used in `-Environment` (for example, `https://contoso.crm.dynamics.com`) |
 | 403 Forbidden from Dataverse | Executing identity is not configured as a Dataverse application user or lacks table privileges | Add the identity as an application user and assign a security role with read access to agent metadata and write access to `fsi_drtestresult` |
-| Sovereign cloud auth failure | Script auto-selects auth endpoint based on Dataverse URL (`.dynamics.cn` → `login.chinacloudapi.cn`, `.microsoftdynamics.us` / `.appsplatform.us` → `login.microsoftonline.us`) | Verify the Dataverse URL uses the correct sovereign domain; the script selects the matching authority automatically for legacy credential flow |
 | `ConvertFrom-SecureString` error: "A parameter cannot be found that matches parameter name 'AsPlainText'" | Running on Windows PowerShell 5.1 | Install PowerShell 7.1+ and run scripts with `pwsh` (not `powershell`) |
 
 ---
@@ -31,7 +30,7 @@ Common issues and resolutions for the DR Testing Framework solution.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | "AgentId required" error | `AgentReadinessCheck` and `FullValidation` require an agent identifier | Provide the `-AgentId` parameter with a valid GUID |
-| Invalid Environment URL | SSRF validation rejects the URL format | Use the format `https://<org>.crm.dynamics.com` (or the equivalent sovereign cloud domain) |
+| Invalid Environment URL | SSRF validation rejects the URL format | Use the format `https://<org>.crm.dynamics.com` |
 | Probe budget exceeded | Read-only validation checks completed slower than the configured probe budget | Review Dataverse throttling, network latency, and Application Insights `requests` / `dependencies` telemetry. Do not treat this as actual RTO evidence by itself. |
 | Validation checks fail | Agent, connectors, or Dataverse evidence table are not reachable after the operator's recovery procedure | Verify the post-restore agent state in PPAC/Copilot Studio; re-run the individual scenario with `-Verbose` |
 | No prior result for recency check | First run or evidence table was recently created | Treat the run as baseline evidence and schedule the next validation run |

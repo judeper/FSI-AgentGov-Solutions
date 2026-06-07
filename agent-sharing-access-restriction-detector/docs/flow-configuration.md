@@ -61,7 +61,7 @@ Do not mix the two syntaxes within a single card. See each template's `_metadata
 | Variable | Purpose |
 |----------|---------|
 | `fsi_ASARD_AdaptiveCardTemplateUrl` | URL for adaptive card template hosting (exception review flow loads templates via HTTP GET) |
-| `fsi_ASARD_BAPAdminAPIBaseUrl` | BAP Admin API base URL for administrative calls — override for GCC, GCC-High, or DoD sovereign cloud deployments; bot sharing detection/remediation uses the Dataverse Web API `bots` table |
+| `fsi_ASARD_BAPAdminAPIBaseUrl` | BAP Admin API base URL for administrative calls — override the default if needed; bot sharing detection/remediation uses the Dataverse Web API `bots` table |
 | `fsi_ASARD_ApprovalTimeoutDays` | Number of days before an unanswered approval request times out (default: 7) |
 | `fsi_ASARD_GovernanceLeadEmail` | Email address for the governance lead who receives approval requests and exception notifications |
 

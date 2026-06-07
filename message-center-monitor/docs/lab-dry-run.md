@@ -137,8 +137,6 @@ pwsh ./99_Remove-LabDeployment.ps1
 ## Out of scope
 
 - **Production deployment** — use `docs/setup-checklist.md`.
-- **Government cloud** — endpoints in this lab are commercial-cloud defaults.
-  A gov-cloud lab profile is future work.
 - **Real Teams notification validation** — the lab runs headless (empty
   TeamId/Channel are accepted). Verify Teams manually after the lab if needed.
 - **Logic Apps Standard alternative** — this lab uses the existing

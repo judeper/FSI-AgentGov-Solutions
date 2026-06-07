@@ -72,8 +72,6 @@ Key columns on `fsi_agentsharingcompliance`:
 | `*.crm.dynamics.com` | HTTPS 443 | Dataverse Web API — Copilot Studio `bots` table and compliance record management |
 | Adaptive card template URL | HTTPS 443 | Configurable URL for template hosting (exception review flow) |
 
-> **Sovereign clouds:** Override the BAP Admin API endpoint using the `fsi_ASARD_BAPAdminAPIBaseUrl` environment variable. See the [flow configuration guide](flow-configuration.md) for details.
-
 ## Python Dependencies (Detection and Remediation Scripts)
 
 The supporting scripts in this solution's `scripts/` folder require:

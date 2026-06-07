@@ -82,7 +82,7 @@ Configure environment variables for your organization.
 | `fsi_SDM_ActiveScopeStatus` | Option-set value for Active status on `fsi_agentscope` (default: `10002`) | `10002` |
 | `fsi_SDM_ManagementApiEndpoint` | Office 365 Management API base URL | `https://manage.office.com` (commercial) |
 
-> **Security:** The `fsi_SDM_ManagementApiEndpoint` value is validated at runtime against the published Microsoft Office 365 Management Activity API endpoints (`manage.office.com` for Enterprise, `manage-gcc.office.com` for GCC, `manage.office365.us` for GCC High, `manage.protection.apps.mil` for DoD). Unrecognized values are replaced with the commercial default to prevent token leakage to untrusted endpoints. PowerShell scripts now try managed identity first and use client-secret OAuth only as a legacy development fallback.
+> **Security:** The `fsi_SDM_ManagementApiEndpoint` value is validated at runtime against the published Microsoft Office 365 Management Activity API endpoint (`manage.office.com`). Unrecognized values are replaced with the commercial default to prevent token leakage to untrusted endpoints. PowerShell scripts now try managed identity first and use client-secret OAuth only as a legacy development fallback.
 
 ### Configuring Environment Variables
 

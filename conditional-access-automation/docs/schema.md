@@ -128,9 +128,9 @@ Sixteen environment variables control runtime behavior. All use the `fsi_CAA_*` 
 | `fsi_CAA_SubscriptionId` | CAA - Azure Subscription ID | String | *(empty)* | Azure subscription GUID containing the Automation Account |
 | `fsi_CAA_ResourceGroup` | CAA - Resource Group | String | *(empty)* | Azure resource group containing the Automation Account |
 | `fsi_CAA_AutomationAccount` | CAA - Automation Account | String | *(empty)* | Azure Automation account name for validation runbook execution |
-| `fsi_CAA_EntraPortalUrl` | CAA - Entra Portal URL | String | `https://entra.microsoft.com` | Entra admin center base URL (override for sovereign clouds, e.g., `https://entra.microsoft.us` for GCC High) |
-| `fsi_CAA_AzurePortalUrl` | CAA - Azure Portal URL | String | `https://portal.azure.com` | Azure portal base URL (override for sovereign clouds, e.g., `https://portal.azure.us` for GCC High) |
-| `fsi_CAA_PowerPlatformAdminUrl` | CAA - Power Platform Admin URL | String | `https://admin.powerplatform.microsoft.com` | Power Platform admin center base URL (override for sovereign clouds) |
+| `fsi_CAA_EntraPortalUrl` | CAA - Entra Portal URL | String | `https://entra.microsoft.com` | Entra admin center base URL |
+| `fsi_CAA_AzurePortalUrl` | CAA - Azure Portal URL | String | `https://portal.azure.com` | Azure portal base URL |
+| `fsi_CAA_PowerPlatformAdminUrl` | CAA - Power Platform Admin URL | String | `https://admin.powerplatform.microsoft.com` | Power Platform admin center base URL |
 | `fsi_CAA_DataverseUrl` | CAA - Dataverse URL | String | *(empty)* | Dataverse environment URL (e.g., `https://org.crm.dynamics.com`) |
 
 ---

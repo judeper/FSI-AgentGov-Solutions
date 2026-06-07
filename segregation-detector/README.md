@@ -320,7 +320,6 @@ Microsoft has introduced new [REST API endpoints for RBAC role assignments](http
 | Limitation | Description |
 |------------|-------------|
 | **No solution package** | No managed/unmanaged ZIP or `solution.xml` is included. Dataverse tables must be created manually per [dataverse-schema.md](docs/dataverse-schema.md). |
-| **GCC environments** | GCC environments (`crm9.dynamics.com`) are not supported because the BAP API endpoint for GCC is undetermined. Commercial (`crm.dynamics.com`), GCC High (`crm.microsoftdynamics.us`), EMEA (`crm4`), APAC (`crm5`), and other commercial regions are supported. |
 | **No token refresh** | Access tokens expire after ~60 minutes. In large tenants, scans may exceed this duration, causing 401 failures partway through. `Invoke-WithRetry` does not retry 401 errors and no re-authentication is attempted. For large environments, consider splitting scans or refreshing tokens externally. |
 | **No batch violation creation** | `New-Violation` creates individual Dataverse records via separate POST calls. Using the Dataverse `$batch` endpoint would reduce API round-trips and allow atomic creation. For environments with many new violations, this may cause throttling. |
 | **No automated tests** | PowerShell scripts do not have a Pester test suite. Validate with `-DryRun` before production use. Contributions welcome. |

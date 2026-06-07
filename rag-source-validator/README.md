@@ -126,27 +126,6 @@ Register sources directly in the `fsi_knowledgesource` Dataverse table via the m
 
 For a user-assigned managed identity, set `RSV_MANAGED_IDENTITY_CLIENT_ID` or pass `-ManagedIdentityClientId`.
 
-For sovereign cloud environments (GCC High, DoD, China), specify the corresponding Graph and auth endpoints:
-
-```powershell
-# GCC High
-.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.microsoftdynamics.us" `
-    -UseManagedIdentity `
-    -GraphBaseUrl "https://graph.microsoft.us" -AuthBaseUrl "https://login.microsoftonline.us"
-
-# DoD
-.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.appsplatform.us" `
-    -UseManagedIdentity `
-    -GraphBaseUrl "https://dod-graph.microsoft.us" -AuthBaseUrl "https://login.microsoftonline.us"
-
-# 21Vianet China
-.\scripts\Invoke-SourceValidation.ps1 -Environment "https://your-org.crm.dynamics.cn" `
-    -UseManagedIdentity `
-    -GraphBaseUrl "https://microsoftgraph.chinacloudapi.cn" -AuthBaseUrl "https://login.chinacloudapi.cn"
-```
-
-> **Cross-validation:** The script validates that `GraphBaseUrl`, `AuthBaseUrl`, and `Environment` all target the same sovereign cloud. Mismatched combinations (e.g., commercial Graph URL with a GCC-High environment) will produce a clear error at startup.
-
 The script automatically captures baselines on first run for sources without an existing hash.
 
 ## Deployment
@@ -289,11 +268,11 @@ For documents with references, validates all links are accessible.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.3.1 | May 2026 | Council review fixes: sovereign-cloud China endpoint alignment, evidence solutionVersion sync, managed-identity / workload-identity / certificate / access-token auth modes in Python deployment scripts |
+| 1.3.1 | May 2026 | Council review fixes: endpoint alignment, evidence solutionVersion sync, managed-identity / workload-identity / certificate / access-token auth modes in Python deployment scripts |
 | 1.3.0 | May 2026 | Microsoft Learn 2026-Q2 refresh; managed identity-first auth; expanded planned source types; Graph delta/eTag guidance |
-| 1.2.0 | April 2026 | Sovereign-cloud parity and evidence export fixes |
+| 1.2.0 | April 2026 | Evidence export fixes |
 | 1.1.1 | April 2026 | Binary content hashing fix; freshness timezone fix; source status updates; non-zero exit code on validation failures |
-| 1.1.0 | March 2026 | Governance scripts (Export-ValidationEvidence, Get-SourceValidationSummary, Test-EvidenceIntegrity); sovereign cloud support |
+| 1.1.0 | March 2026 | Governance scripts (Export-ValidationEvidence, Get-SourceValidationSummary, Test-EvidenceIntegrity) |
 | 1.0.1 | March 2026 | Binary-safe SHA-256 hashing for non-text content |
 | 1.0.0 | February 2026 | Initial release |
 
@@ -306,7 +285,7 @@ For documents with references, validates all links are accessible.
 | **SharePoint direct URLs** | The script acquires Microsoft Graph and Dataverse tokens only. Sources registered with direct SharePoint REST API URLs (`https://contoso.sharepoint.com/_api/...`) will fail authentication. Use Graph API URLs (`https://graph.microsoft.com/v1.0/sites/...`) instead. |
 | **Binary hash re-baseline** | Upgrading from v1.0.0 changes how binary content is hashed. See [Content Hash Validation](#content-hash-validation) for re-baseline instructions. |
 | **Trust-on-first-use baseline** | On first run (or when no baseline hash exists), the script captures the current content hash as the trusted baseline. If a source is already compromised at that point, the tampered content becomes the trusted reference. Operators should verify source integrity out-of-band before or shortly after the initial baseline capture, especially in SEC Rule 17a-4 and FINRA Rule 4511(a) contexts. |
-| **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC Rule 17a-4, FINRA Rule 4511(a), SOX Section 404), consider adding unit tests for hash computation, SSRF URI validation, sovereign cloud cross-validation, freshness threshold arithmetic, result-to-status mapping, and status-transition logic before production use. |
+| **No automated tests** | `Invoke-SourceValidation.ps1` does not have automated test coverage. For compliance-critical deployments (SEC Rule 17a-4, FINRA Rule 4511(a), SOX Section 404), consider adding unit tests for hash computation, SSRF URI validation, freshness threshold arithmetic, result-to-status mapping, and status-transition logic before production use. |
 
 ### Common Issues
 

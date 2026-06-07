@@ -1,5 +1,7 @@
 # FSI-AgentGov-Solutions
 
+> **Cloud scope:** This content targets US commercial-cloud Microsoft 365. See [SCOPE.md](./SCOPE.md) for details.
+
 Reference implementations for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov), targeting Microsoft 365 AI agents (Copilot Studio, Agent Builder) in regulated financial services.
 
 > **Positioning.** This catalog ships **reference implementations**, not turnkey deployable Power Platform solutions. There are no exported flow `.zip` packages: each solution provides scripts (PowerShell / Python / KQL), Dataverse schema generators, manifests, and step-by-step build instructions that customer architects adapt to their tenant, zone model, and regulatory profile. See [DEPLOYMENT-GUIDE.md](./DEPLOYMENT-GUIDE.md) for the recommended pilot path.
