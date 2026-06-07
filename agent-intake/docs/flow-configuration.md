@@ -52,6 +52,8 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 | `fsi_intake_mrmhandoffstatus` | NotApplicable | `100000002` |
 | `fsi_intake_mrmhandoffstatus` | Failed | `100000003` |
 
+> **Reviewer decision column.** The `fsi_intake_reviewdecision` option set above is bound to the **`fsi_reviewoutcome`** column on `fsi_intakereview` (there is no column named `fsi_reviewdecision`). Use `fsi_reviewoutcome` in OData filters and flow expressions — for example `$filter=fsi_reviewoutcome eq 100000001`.
+
 ## Logical build order
 
 1. `fsi-intake-presubmit-classifier`
@@ -289,7 +291,7 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
    - Note: if the reviewer app uses **My open reviews**, assign ownership of the row to the reviewer or a reviewer team at creation time.
 4. Action: Microsoft Teams — **Post adaptive card in a chat or channel**.
    - Use `templates/reviewer-notification-card.json`.
-   - Inject `${fsi_reviewerattestation}` from the role-specific catalog inside the template and inject `${fsi_reviewerappurl}` from `fsi_intake_reviewerappurl`.
+   - Populate the two card-template placeholders (neither is a Dataverse column): set `${fsi_reviewerattestation}` from the `fsiRoleAttestationCatalog` keyed by reviewer role inside `templates/reviewer-notification-card.json`, and set `${fsi_reviewerappurl}` from the environment variable `fsi_intake_reviewerappurl`.
    - Note: keep the action payload fields `requestId`, `reviewId`, and `reviewerRole` unchanged because Flow 5 uses them as its correlation keys.
 5. Action: Office 365 Outlook — **Create event (V4)** or **Send an email (V2)**.
    - Create a reviewer reminder that ends on `fsi_dueon` and includes the request ID, agent display name, and reviewer-app deep link.
