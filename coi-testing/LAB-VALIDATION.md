@@ -53,8 +53,8 @@ prerequisites, and troubleshooting.
 
 | Claim | Authoritative source |
 |-------|----------------------|
-| Dataverse Web API record create returns **204 No Content** (runner accepts `[201, 204]`) | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/use-insomnia-web-api · https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-entity-web-api |
-| Custom Dataverse Choice (option set) values live in the **100000000+** range | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-update-options-web-api |
+| Dataverse Web API record create returns **204 No Content** (runner accepts `[201, 204]`) | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-entity-web-api |
+| Custom Dataverse Choice (option set) values live in the **100000000+** range | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-update-optionsets |
 | App-only / confidential-client Dataverse token scope is `<environment-url>/.default` (runner uses `f"{environment}/.default"`) | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/authenticate-oauth |
 | `pac admin list` and `pac solution list` support `--json`; `pac connection list` exists but supports only `--environment` (no `--json` flag) | https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/admin · https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/solution · https://learn.microsoft.com/en-us/power-platform/developer/cli/reference/connection |
 | `azure-identity` credential classes used by the runner (`ManagedIdentityCredential`, `WorkloadIdentityCredential`, `CertificateCredential`, `AzureCliCredential`, `DeviceCodeCredential`, `ClientSecretCredential`, `ChainedTokenCredential`) | https://learn.microsoft.com/en-us/python/api/overview/azure/identity-readme |

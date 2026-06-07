@@ -39,7 +39,7 @@ and SOX 302/404 — it does not by itself satisfy any regulation.
 | `conditionalAccessSessionControls` (v1.0 — no `continuousAccessEvaluation`) | https://learn.microsoft.com/graph/api/resources/conditionalaccesssessioncontrols?view=graph-rest-1.0 |
 | `continuousAccessEvaluationSessionControl` (beta-only; `mode` = strictEnforcement/disabled/…) | https://learn.microsoft.com/graph/api/resources/continuousaccessevaluationsessioncontrol?view=graph-rest-beta |
 | Require reauthentication every time (sign-in frequency `everyTime`) | https://learn.microsoft.com/entra/identity/conditional-access/concept-session-lifetime#require-reauthentication-every-time |
-| `Get-AzAccessToken` SecureString change (Az.Accounts 5.0.0 / Az 14.0.0) | https://learn.microsoft.com/powershell/azure/security-features#transition-from-strings-to-securestrings |
+| `Get-AzAccessToken` SecureString change (Az.Accounts 5.0.0 / Az 14.0.0) | https://learn.microsoft.com/powershell/azure/protect-secrets |
 
 ## Gaps found and fixes applied
 
