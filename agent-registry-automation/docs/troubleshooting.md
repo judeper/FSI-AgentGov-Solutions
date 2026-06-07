@@ -35,7 +35,6 @@ Common issues and resolutions for the Agent Registry Automation solution.
 |-------|------------|
 | No Dataverse access | The identity needs a Dataverse security role with **read** on the `bot` table in that environment. Add an application user or assign a read role per environment. |
 | Environment-level restriction | Some environments restrict cross-environment connections — verify tenant isolation / DLP settings |
-| Sovereign cloud mismatch | GCC/GCC High environments use different endpoints |
 
 ### `bot`-table query returns 404 Not Found
 

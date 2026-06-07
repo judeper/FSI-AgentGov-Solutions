@@ -17,7 +17,6 @@ Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources 
 | Dataverse column names | All OData `$select`/`$filter` references in scripts cross-checked against `create_rsv_dataverse_schema.py` (source of truth) and `docs/dataverse-schema.md` — logical names lowercase, no inter-word underscores, consistent |
 | Option-set values | Compact 1–N values (e.g. `fsi_RSV_sourcetype` 1–13, `fsi_RSV_validationresult` 1–8) are intentional and consistent across schema script, PowerShell integer literals, and docs — confirmed by `.ralph-config.json` domain facts |
 | Authentication | Managed-identity-first; IMDS / App Service MSI endpoints and API versions verified; client-secret path marked `# legacy: dev-only` |
-| Sovereign-cloud parity | Graph/Auth/Dataverse endpoint triples cross-validated in-script; China endpoints aligned on `login.chinacloudapi.cn` (prior council fix M1) |
 | Language rules | grep for the four banned compliance-overclaim phrases across `*.md`/`*.ps1`/`*.py` (excluding CHANGELOG history) — zero hits |
 
 ## Authoritative sources cited
@@ -54,5 +53,5 @@ No script logic, schema, option-set, or column changes were required — the cod
 
 ## Second-Pass Command-Existence Re-Verification (2026-06-05)
 
-An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The custom fsi_knowledgesources / validationresults / sourcechanges entity sets and columns match create_rsv schema; option-sets are explicitly valued; Microsoft Graph v1.0 driveItem /content reads, the IMDS / App Service / legacy managed-identity token api-versions, and sovereign-cloud endpoint pairings were all confirmed. No botcomponent usage. The MSAL.PS interactive path (still on PSGallery) is caveated.
+An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The custom fsi_knowledgesources / validationresults / sourcechanges entity sets and columns match create_rsv schema; option-sets are explicitly valued; Microsoft Graph v1.0 driveItem /content reads, the IMDS / App Service / legacy managed-identity token api-versions were all confirmed. No botcomponent usage. The MSAL.PS interactive path (still on PSGallery) is caveated.
 

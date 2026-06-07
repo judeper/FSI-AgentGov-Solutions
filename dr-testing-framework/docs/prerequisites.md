@@ -95,15 +95,8 @@ The scripts communicate with Microsoft cloud endpoints. Verify that firewall and
 
 | Endpoint | Protocol | Purpose |
 |----------|----------|---------|
-| `*.crm.dynamics.com` | HTTPS | Dataverse API (commercial cloud) |
-| `*.microsoftdynamics.us` | HTTPS | Dataverse API (GCC High) |
-| `*.appsplatform.us` | HTTPS | Dataverse API (GCC High alternate) |
-| `*.dynamics.cn` | HTTPS | Dataverse API (China sovereign cloud) |
-| `login.microsoftonline.com` | HTTPS | Microsoft Entra ID token acquisition (commercial) |
-| `login.microsoftonline.us` | HTTPS | Microsoft Entra ID token acquisition (GCC High) |
-| `login.chinacloudapi.cn` | HTTPS | Microsoft Entra ID token acquisition (China) |
-
-Only the endpoints matching your cloud environment are required. Most organizations need only the commercial (`*.crm.dynamics.com` and `login.microsoftonline.com`) endpoints.
+| `*.crm.dynamics.com` | HTTPS | Dataverse API |
+| `login.microsoftonline.com` | HTTPS | Microsoft Entra ID token acquisition |
 
 ## Dependencies
 

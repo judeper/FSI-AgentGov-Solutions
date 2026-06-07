@@ -69,8 +69,8 @@ uses the publisher-prefixed schema name `fsi_CD_NotificationEmail`. Aligned the 
 
 ### Items Verified as Already Correct (no change needed)
 - **`Get-ExchangeComplianceData.ps1`** uses `Invoke-MgGraphRequest` (not a raw token),
-  honors `Retry-After` on 429/503, paginates `@odata.nextLink`, supports sovereign-cloud
-  base URLs, and disconnects in `finally`. Auth is certificate-based app-only or
+  honors `Retry-After` on 429/503, paginates `@odata.nextLink`, and disconnects in `finally`.
+  Auth is certificate-based app-only or
   interactive — no client secret. Required scopes match `docs/prerequisites.md`.
 - **`mailboxSettings/userPurpose eq 'shared'` $filter** on `/users` is best-effort: the
   property is real, but server-side filtering of mailboxSettings across the `/users`

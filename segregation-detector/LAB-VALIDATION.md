@@ -43,8 +43,7 @@ documented roadmap items.
    <https://learn.microsoft.com/en-us/graph/api/rbacapplication-list-roleassignmentscheduleinstances?view=graph-rest-1.0>
    Confirms: endpoint path; `principalId` / `roleDefinitionId` response properties;
    `$expand` / `$filter` / `$select` support; least-privileged application permission
-   `RoleAssignmentSchedule.Read.Directory`; availability in Global, GCC High, DoD, and
-   21Vianet clouds; that active assignments include both PIM-activation and direct
+   `RoleAssignmentSchedule.Read.Directory`; that active assignments include both PIM-activation and direct
    assignments.
 2. **Power Platform programmability authentication (legacy)** —
    <https://learn.microsoft.com/en-us/power-platform/admin/programmability-authentication>
@@ -77,11 +76,8 @@ documented roadmap items.
   - Added `Get-BapResource` to `SoDShared.ps1`. Commercial cloud now resolves the documented
     audience `https://service.powerapps.com/` (yielding the documented `…//.default` scope).
     The BAP **request host** is unchanged (`Get-BapApiBaseUrl`).
-  - Sovereign clouds (GCC High, DoD, 21Vianet) retain the prior base-URL audience because their
-    Power Apps Service resource identifier URIs are **not publicly documented** — flagged for
-    in-tenant verification rather than guessed.
   - Added a `-BapResource` parameter and `FSI_BAP_RESOURCE` environment variable to override the
-    audience for any cloud.
+    audience if needed.
   - Documented in `docs/prerequisites.md`, `docs/troubleshooting.md` (new `AADSTS500011` row),
     README helper list, and CHANGELOG `[Unreleased]` (explicitly superseding the prior M2 note).
 
@@ -110,8 +106,7 @@ documented roadmap items.
    `properties.roleDefinition.displayName`) is assumed from that module's behavior and must be
    confirmed against a live tenant.
 2. **Corrected BAP audience** — the commercial fix to `https://service.powerapps.com/` is grounded
-   in authoritative docs but must still be exercised end-to-end in a tenant. Sovereign-cloud
-   audiences are explicitly unverified (use `-BapResource`).
+   in authoritative docs but must still be exercised end-to-end in a tenant.
 3. **`New-PowerAppManagementApp` registration** — required for BAP queries to return data; cannot be
    exercised here.
 4. **Token lifetime** — long scans in large tenants may exceed ~60 min; no in-script refresh
@@ -130,8 +125,8 @@ corrected for commercial cloud and made overridable for all clouds, with zero ch
 Graph/Dataverse paths.
 
 Before production (vs. lab) use, an operator should run an authenticated `-DryRun -Verbose` scan in a
-real tenant to confirm: (a) the BAP audience succeeds and environment role data is returned, (b)
-`New-PowerAppManagementApp` registration is in place, and (c) sovereign-cloud audiences if applicable.
+real tenant to confirm: (a) the BAP audience succeeds and environment role data is returned, and (b)
+`New-PowerAppManagementApp` registration is in place.
 
 ---
 

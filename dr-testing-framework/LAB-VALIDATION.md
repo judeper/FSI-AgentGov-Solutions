@@ -57,7 +57,7 @@ code to a high standard.
 
 - **API surface:** `bots`, `botcomponents` (`_parentbotid_value`), `connectionreferences`, `organizations`, `WhoAmI`, `fsi_drtestresults` Web API v9.2 paths are valid; `$count=true&$top=0` + `@odata.nextLink` pagination patterns are correct.
 - **Honest scope framing:** README explicitly disclaims that the script initiates restores, fails over regions, or computes regulator-grade RTO/RPO — matching the platform reality verified in source #1 (customer scripts cannot back up / restore tenant-bound environment metadata).
-- **Auth:** managed-identity-first guidance; client-secret paths marked `# legacy: dev-only` with `SuppressMessageAttribute` + justification; secret zeroized in `finally`. Sovereign-cloud authority mapping (`.dynamics.cn`, `.microsoftdynamics.us`, `.appsplatform.us`) is correct.
+- **Auth:** managed-identity-first guidance; client-secret paths marked `# legacy: dev-only` with `SuppressMessageAttribute` + justification; secret zeroized in `finally`.
 - **Token audience:** `"$Environment/.default"` scope targets the Dataverse org — correct audience.
 
 ## Runtime-only caveats (cannot be verified statically)

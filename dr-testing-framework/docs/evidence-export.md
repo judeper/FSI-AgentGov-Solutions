@@ -13,7 +13,7 @@ The export records **validation evidence** only. It does not prove that Power Pl
 | Local audit log packaging from `logs/` directory | ✅ Implemented |
 | JSON metadata generation with timestamps and file inventory | ✅ Implemented |
 | Correlation ID filtering (`-TestRunId` parameter) | ✅ Implemented |
-| SSRF-safe URL validation (commercial, GCC, GCC High, China clouds) | ✅ Implemented |
+| SSRF-safe URL validation | ✅ Implemented |
 | Dataverse query for validation results with pagination | ✅ Implemented |
 | Probe-duration and validation-coverage aggregation | ✅ Implemented |
 | Gap list for failed or missing validation types | ✅ Implemented |
@@ -138,8 +138,5 @@ The script validates the `-Environment` parameter against an allowlist of Datave
 | Cloud | Accepted Pattern |
 |---|---|
 | Commercial | `https://<org>.crm.dynamics.com` |
-| GCC | `https://<org>.crm9.dynamics.com` |
-| GCC High | `https://<org>.crm.microsoftdynamics.us`, `https://<org>.crm.appsplatform.us` |
-| China (21Vianet) | `https://<org>.crm.dynamics.cn` |
 
 Invalid URLs cause the script to terminate before any file operations or network calls.

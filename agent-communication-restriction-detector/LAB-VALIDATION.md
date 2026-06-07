@@ -38,7 +38,7 @@ agent communication topology and policy alignment.
 3. crossTenantAccessPolicyB2BSetting (confirms B2B settings expose `usersAndGroups`/`applications`,
    not `isServiceProvider`) —
    https://learn.microsoft.com/graph/api/resources/crosstenantaccesspolicyb2bsetting
-4. Copilot Studio quotas and limits (connector payload 5 MB / 450 KB GCC; Omnichannel 28 KB;
+4. Copilot Studio quotas and limits (connector payload 5 MB; Omnichannel 28 KB;
    Skills 100/agent) —
    https://learn.microsoft.com/microsoft-copilot-studio/requirements-quotas#copilot-studio-web-app-limits
 5. Add a child agent (child agents have their own orchestration/tool limits) —
@@ -64,7 +64,7 @@ agent communication topology and policy alignment.
    The script asserted a "documented 1 MB Copilot Studio limit" for child-agent input/output and
    cited `microsoft-copilot-studio/advanced-flow-input-output`, which now redirects to generic
    agent-flow guidance with no byte limit. Per source (4), current published limits are a 5 MB
-   connector payload (450 KB GCC) and a 28 KB Omnichannel channel-data limit — there is **no
+   connector payload and a 28 KB Omnichannel channel-data limit — there is **no
    published child-agent input/output byte limit**. **Fix:** reframed the 1 MB value as a
    configurable advisory heuristic via a new `-PayloadLimitKB` parameter (default 1024), widened
    threshold validation ranges, updated finding text + `PlatformReference` URL, and corrected the
@@ -89,7 +89,6 @@ agent communication topology and policy alignment.
   translations (V2)) filter and a non-existent `_botid_value` column.
 - Cross-tenant token-audience fix (C-1), `Get-Date -AsUTC` removal (C-2), and
   `Connect-EnvironmentDataverse` call-operator fix (C-3) from v1.2.1 remain correct.
-- Sovereign-cloud Dataverse URL `ValidatePattern` regexes accept commercial + US Gov + Germany clouds.
 
 ## Runtime-only caveats (cannot be verified without a live tenant)
 

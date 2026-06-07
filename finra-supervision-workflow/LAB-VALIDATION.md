@@ -60,7 +60,7 @@ A second-pass command-existence audit (2026-06-04) added gaps #2 and #3 above â€
 
 ### Minor observations (not changed â€” no action needed for lab)
 
-- `deploy.py` / `export_supervision_evidence.py` Dataverse host-pattern check is **warning-only** and accepts commercial + US/DE sovereign suffixes. GCC High / DoD operators using other suffixes (e.g., `*.crm.appsplatform.us`) will see a non-fatal warning only; behavior is correct.
+- `deploy.py` / `export_supervision_evidence.py` Dataverse host-pattern check is **warning-only** and accepts commercial-cloud suffixes.
 - `templates/SupervisionDashboard.pbit` and `generate_3120_report.py` / `verify_role_privileges.py` are documented as **planned, not yet implemented**; the docs correctly route operators to the manual alternatives. These are intentional roadmap items, not gaps.
 
 ## 5. Runtime-Only Caveats (cannot be validated without a live tenant)
