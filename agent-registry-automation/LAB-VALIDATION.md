@@ -36,7 +36,7 @@ in isolation.
 | Dataverse `bot` (Copilot) table — EntitySetName `bots`, PK `botid`, PrimaryName `name`, no `botFrameworkEndpoint` column | https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot |
 | Copilot Studio Agent Inventory (`bot`/`botcomponent` Dataverse tables) | https://learn.microsoft.com/microsoft-copilot-studio/guidance/kit-agent-inventory-data-source |
 | `ILinkedEnvironmentMetadata.instanceUrl` (environment Dataverse org URL) | https://learn.microsoft.com/javascript/api/@microsoft/powerapps/ilinkedenvironmentmetadata |
-| Cross-environment Dataverse connector usage | https://learn.microsoft.com/power-automate/dataverse/connect-other-environments |
+| Cross-environment Dataverse connector usage | https://learn.microsoft.com/power-automate/dataverse/connect-to-other-environments |
 
 ## Gaps found and fixes applied
 

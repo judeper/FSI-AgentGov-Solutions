@@ -49,7 +49,7 @@ Primary framework controls: **1.1, 1.18, 2.1, 2.8, 1.7, 1.11**.
    `bot-authoringSharingDisabled`; values `noLimit` / `ExcludeSharingToSecurityGroups`,
    `-1` = unlimited).
 6. `Get-AzAccessToken` SecureString behavior (Az.Accounts) —
-   https://learn.microsoft.com/powershell/azure/manage-secrets-with-azure-powershell
+   https://learn.microsoft.com/powershell/azure/protect-secrets
    (confirms the `-AsSecureString` pattern already pinned via `#Requires Az.Accounts 2.17.0`).
 
 ## Gaps found and fixes applied

@@ -43,7 +43,7 @@ GDPR Art. 5(1)(c), GLBA Section 501(b), and CCPA purpose limitation.
    https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-reference
 3. Microsoft Power Platform CLI command groups (authoritative `pac` group list — there is
    **no** `pac flow` group) —
-   https://learn.microsoft.com/power-platform/developer/cli/reference/group
+   https://learn.microsoft.com/power-platform/developer/cli/reference
 4. Retirement of Office 365 connectors within Microsoft Teams (incoming webhooks;
    progressive rollout completing **May 22, 2026**; new webhook creation blocked since
    August 2024) —
