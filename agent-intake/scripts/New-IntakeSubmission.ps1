@@ -45,6 +45,16 @@
     already-proven classifier. The reviewer board (fsi_parallelreviewersjson) is intentionally
     left to the Flow 4 build.
 
+.PARAMETER SponsorUpn
+    Override the fixture's fsi_sponsorupn with a real tenant UPN. Use this for live
+    Teams-approval testing (Flow 3 sponsor card) so the adaptive card is delivered to a
+    real mailbox, e.g. -SponsorUpn admin@M365CPI57786004.onmicrosoft.com for the lab.
+
+.PARAMETER MakerUpn
+    Override the fixture's fsi_makerupn with a real tenant UPN. Keep the maker distinct from
+    the sponsor to avoid the router's self-approval default-deny, or set both equal to
+    exercise the self-approval deny branch.
+
 .PARAMETER DryRun
     Print the payload and the target request without writing to Dataverse.
 
@@ -82,6 +92,12 @@ param(
 
     [Parameter()]
     [switch]$PreClassify,
+
+    [Parameter()]
+    [string]$SponsorUpn,
+
+    [Parameter()]
+    [string]$MakerUpn,
 
     [Parameter()]
     [switch]$DryRun
@@ -256,6 +272,10 @@ if (-not (Test-Path -Path $fixturePath)) {
 $fixture = Get-Content -Path $fixturePath -Raw | ConvertFrom-Json
 $resolvedRequestId = if ($PSBoundParameters.ContainsKey('RequestId')) { $RequestId } else { [guid]::NewGuid().ToString() }
 $payload = ConvertTo-SubmissionPayload -Fixture $fixture -ResolvedRequestId $resolvedRequestId -PreClassify:$PreClassify
+
+# Real-tenant UPN overrides for live Teams-approval testing (e.g. sponsor = admin for the lab).
+if (-not [string]::IsNullOrWhiteSpace($SponsorUpn)) { $payload['fsi_sponsorupn'] = $SponsorUpn }
+if (-not [string]::IsNullOrWhiteSpace($MakerUpn)) { $payload['fsi_makerupn'] = $MakerUpn }
 
 $expectedPath = if ($fixture.PSObject.Properties.Name -contains 'expectedClassification') { [string]$fixture.expectedClassification.pathUsed } else { '(unknown)' }
 Write-Host "Scenario        : $Scenario (expected router path: $expectedPath)" -ForegroundColor Cyan
