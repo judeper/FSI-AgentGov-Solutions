@@ -40,9 +40,9 @@
 
     MICROSOFT GRAPH MIGRATION NOTE: `Search-UnifiedAuditLog` remains the
     documented production extractor for this script as of 2026-Q2. Microsoft
-    Graph audit log search is available in beta at `/security/auditLog/queries`
-    with `AuditLogsQuery.*` permissions; beta Graph APIs are subject to change
-    and are not supported for production use. Track v1.0 readiness before
+    Graph audit log search is generally available at `/security/auditLog/queries`
+    on the v1.0 endpoint with `AuditLogsQuery.Read.All` (or service-specific
+    `AuditLogsQuery-*.Read.All`) permissions; validate query coverage before
     replacing this extractor.
 
 .LINK

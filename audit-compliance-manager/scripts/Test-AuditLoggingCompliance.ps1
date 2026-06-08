@@ -229,7 +229,7 @@ try {
                 $auditResults = Search-UnifiedAuditLog `
                     -StartDate $startDate `
                     -EndDate $endDate `
-                    -RecordType "PowerPlatformAdminActivity" `
+                    -RecordType "PowerPlatformAdministratorActivity" `
                     -ResultSize 1 `
                     -ErrorAction SilentlyContinue
 

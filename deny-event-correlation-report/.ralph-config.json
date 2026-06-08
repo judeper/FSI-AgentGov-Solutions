@@ -1,7 +1,7 @@
 {
   "domainFacts": [
     "Export-RaiTelemetry.ps1 uses Microsoft Entra ID authentication via Connect-AzAccount; no Application Insights API key path is expected.",
-    "CopilotInteraction deny extraction is via Search-UnifiedAuditLog; Microsoft Graph audit search is beta and documented as a migration path until v1.0 readiness.",
+    "CopilotInteraction deny extraction is via Search-UnifiedAuditLog; Microsoft Graph audit search is generally available at /security/auditLog/queries on the v1.0 endpoint and documented as a supported migration path while Search-UnifiedAuditLog remains the production extractor.",
     "Prompt-injection and jailbreak detections are not CopilotInteraction audit fields; they require optional Defender CloudAppEvents advanced hunting data.",
     "DLP correlation should use normalized CSV columns UserId, PolicyNames, and Actions instead of assuming every Office 365 Management Activity API common field maps to the end user.",
     "Application Insights ContentFiltered telemetry is per-agent; classic resources expose customEvents while workspace-based Azure Monitor Logs use AppEvents with Properties."
