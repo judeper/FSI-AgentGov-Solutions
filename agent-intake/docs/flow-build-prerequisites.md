@@ -51,7 +51,7 @@ If the script prints `MANUAL STEP REQUIRED: run create_fsi_intake_dataverse_sche
 
 ## 3. Bind connection references to working connections
 
-Open **Solutions** > **FSI Agent Intake** > **Connection references** and bind every reference before you save the first flow.
+`provision_solution_shell.ps1` creates the connection-reference **definitions** and adds them to the `FSIAgentIntake` solution. **Bind the existing references — do not create new ones.** Open **Solutions** > **FSI Agent Intake**, set the object filter to **Connection references**, open each reference, and choose a working connection before you save the first flow. (Create the underlying Dataverse/Teams/Office 365 connections first if they do not yet exist.)
 
 | Connection reference | Connector | Used by |
 |---|---|---|
@@ -61,7 +61,9 @@ Open **Solutions** > **FSI Agent Intake** > **Connection references** and bind e
 | `fsi_cr_http_agentintake` | HTTP with Microsoft Entra ID | Classifier API calls, MRM handoff, registry handoff, drift handoff, retention callbacks |
 | `fsi_cr_graph_agentintake` | Microsoft Graph custom connector | Graph profile prefill, Agent ID actions, or a customer-specific wrapper around Microsoft Graph |
 
-> The shell script can create the connection-reference definitions. Binding them to actual connections is still an admin step in the maker UI.
+> The shell script creates the connection-reference definitions and adds them to the solution. Binding them to actual connections is still an admin step in the maker UI.
+
+> **Troubleshooting — references missing from the solution.** If the references above do not appear under **Connection references** in the `FSIAgentIntake` solution, they were created in the **Default** solution and never added to this one. Do **not** use the **+ New connection reference** button — that creates a duplicate (for example `fsi_dataverseagentintake`) the flows and scripts will not use, and leaves the real `fsi_cr_*` reference unbound. Instead re-run `provision_solution_shell.ps1` (it now adds each reference by the pac type **name** `connectionreference` and verifies solution membership), or add each existing reference manually: `pac solution add-solution-component --solutionUniqueName FSIAgentIntake --component <connectionreferenceid> --componentType connectionreference`. The pac CLI does not recognize connection references by numeric component type — the **name** `connectionreference` is required.
 
 ## 4. Populate solution environment variables
 

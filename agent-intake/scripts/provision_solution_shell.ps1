@@ -635,7 +635,7 @@ function Test-TableExistsWithPac {
 function Add-SolutionComponent {
     param(
         [Parameter(Mandatory = $true)][string]$Component,
-        [Parameter(Mandatory = $true)][int]$ComponentType,
+        [Parameter(Mandatory = $true)][string]$ComponentType,
         [Parameter(Mandatory = $true)][string]$Description,
         [Parameter()][switch]$AddRequiredComponents
     )
@@ -840,7 +840,7 @@ function Sync-ConnectionReference {
             Add-SummaryRow -Area 'Connection reference' -Status 'Planned update' -Detail $logicalName
         }
 
-        Add-SolutionComponent -Component $connectionReferenceId -ComponentType 371 -Description "Add connection reference $logicalName to solution"
+        Add-SolutionComponent -Component $connectionReferenceId -ComponentType 'connectionreference' -Description "Add connection reference $logicalName to solution"
         return
     }
 
@@ -877,7 +877,54 @@ function Sync-ConnectionReference {
         Add-SummaryRow -Area 'Connection reference' -Status 'Updated' -Detail $logicalName
     }
 
-    Add-SolutionComponent -Component $connectionReferenceId -ComponentType 371 -Description "Add connection reference $logicalName to solution"
+    # Power Platform CLI resolves connection references by type *name* ('connectionreference').
+    # The numeric component-type id is NOT recognized by pac ("Component Type Id ... is not
+    # known"), so passing a number silently leaves the reference in the Default solution instead
+    # of this one. See docs/flow-build-prerequisites.md "Connection references must be solution
+    # components" and agent-intake/AGENTS.md "Provisioning learnings".
+    Add-SolutionComponent -Component $connectionReferenceId -ComponentType 'connectionreference' -Description "Add connection reference $logicalName to solution"
+}
+
+function Assert-ConnectionReferenceInSolution {
+    param(
+        [Parameter(Mandatory = $true)][string]$Token,
+        [Parameter(Mandatory = $true)][string[]]$LogicalNames
+    )
+
+    if ($DryRun) {
+        Write-Info '[DRY RUN] Skipping connection-reference solution-membership verification.'
+        return
+    }
+
+    $solutionFilter = ConvertTo-ODataStringLiteral -Value $SolutionName
+    $solutionResponse = Invoke-DataverseRequest -Method GET -RelativeUri "solutions?`$select=solutionid&`$filter=uniquename eq $solutionFilter" -Token $Token
+    if ($solutionResponse.Body.value.Count -eq 0) {
+        throw "Solution '$SolutionName' not found while verifying connection-reference membership."
+    }
+    $solutionId = $solutionResponse.Body.value[0].solutionid
+
+    $missing = @()
+    foreach ($logicalName in $LogicalNames) {
+        $nameFilter = ConvertTo-ODataStringLiteral -Value $logicalName
+        $referenceResponse = Invoke-DataverseRequest -Method GET -RelativeUri "connectionreferences?`$select=connectionreferenceid&`$filter=connectionreferencelogicalname eq $nameFilter" -Token $Token
+        if ($referenceResponse.Body.value.Count -eq 0) {
+            $missing += "$logicalName (reference not created)"
+            continue
+        }
+
+        $referenceId = $referenceResponse.Body.value[0].connectionreferenceid
+        $componentResponse = Invoke-DataverseRequest -Method GET -RelativeUri "solutioncomponents?`$select=solutioncomponentid&`$filter=_solutionid_value eq $solutionId and objectid eq $referenceId" -Token $Token
+        if ($componentResponse.Body.value.Count -eq 0) {
+            $missing += "$logicalName (created but not added to '$SolutionName')"
+        }
+    }
+
+    if ($missing.Count -gt 0) {
+        throw ("Connection-reference solution-membership verification FAILED. Not components of '{0}' (likely created in the Default solution): {1}. pac resolves this component by name, so add each with: pac solution add-solution-component --solutionUniqueName {0} --component <connectionreferenceid> --componentType connectionreference" -f $SolutionName, ($missing -join '; '))
+    }
+
+    Write-Info ("Verified {0} connection reference(s) are components of solution '{1}'." -f $LogicalNames.Count, $SolutionName)
+    Add-SummaryRow -Area 'Connection reference' -Status 'Verified in solution' -Detail ($LogicalNames -join ', ')
 }
 
 if (-not (Test-PacInstalled)) {
@@ -971,6 +1018,12 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedToken)) {
     else {
         Add-ManualStep 'Create the Microsoft Graph custom connector, then rerun this script with -GraphCustomConnectorApiId <shared_customConnectorId> so the Graph connection reference can be created and added to the solution.'
     }
+
+    $expectedConnectionReferenceNames = @($connectionReferenceDefinitions | ForEach-Object { $_.LogicalName })
+    if (-not [string]::IsNullOrWhiteSpace($GraphCustomConnectorApiId)) {
+        $expectedConnectionReferenceNames += 'fsi_cr_graph_agentintake'
+    }
+    Assert-ConnectionReferenceInSolution -Token $resolvedToken -LogicalNames $expectedConnectionReferenceNames
 }
 else {
     Add-ManualStep 'Bind Azure CLI auth or provide -AccessToken so the script can create or update environment variables.'

@@ -143,6 +143,16 @@ The `fsi_intakerequest` table has an alternate key `fsi_RequestIdUniqueKey` on `
 
 Many `-m` flags hang the PowerShell tool harness silently. For multi-paragraph commit messages use `git commit -F <file>` instead.
 
+### Connection references need the pac type *name*, not a numeric component type
+
+`provision_solution_shell.ps1` creates the five `fsi_cr_*` connection references via the Dataverse Web API (they are born in the **Default** solution) and then adds them to `FSIAgentIntake` with `pac solution add-solution-component`. The Power Platform CLI does **not** recognize connection references by numeric component type — `--componentType 371` (and even the correct id `10137`) fails with *"The provided Component Type Id (10137) is not known, Please provide the Component Type name."* pac only resolves this component by **name**: `--componentType connectionreference`. (Environment variables were unaffected because pac knows type `380` by number.)
+
+**Symptom when this is wrong:** the references exist in the environment but are **not components of `FSIAgentIntake`**, so they never appear under Solutions > FSI Agent Intake > Connection references and cannot be bound from the solution — they sit in the Default solution. The maker is then tempted to click "+ New connection reference", which creates a duplicate (`fsi_dataverseagentintake`) the flows and scripts (which reference `fsi_cr_dataverse_agentintake`) will not use.
+
+**Fix (landed):** `Add-SolutionComponent` now passes `-ComponentType 'connectionreference'`, and a new `Assert-ConnectionReferenceInSolution` step throws if any expected reference is not a solution component, so this can never fail silently again. Verified by a live re-run: *"Verified 4 connection reference(s) are components of solution 'FSIAgentIntake'."*
+
+**Recovery for an already-broken environment:** add each existing reference by id — `pac solution add-solution-component --solutionUniqueName FSIAgentIntake --component <connectionreferenceid> --componentType connectionreference`. (The Web API `AddSolutionComponent` action accepts the numeric type `10137` and is idempotent, if you script it instead.) `Test-IntakeConnectionBinding.ps1` reports bound/unbound state once the references are in the solution.
+
 ---
 
 ## Pending work
