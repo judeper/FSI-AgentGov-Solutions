@@ -36,6 +36,15 @@
     Create the row, report it, then delete it. Useful for validating the helper itself
     without leaving an orphan row when the router flow is not yet built.
 
+.PARAMETER PreClassify
+    Also stamp the validated router outputs (fsi_pathused, fsi_risktier, fsi_zone,
+    fsi_routingtopology, fsi_quorumrequired, fsi_decisionpath, fsi_mrmrequired) from the
+    fixture's expectedClassification/expectedOutcome. Use this for the vertical-slice
+    "Option C" flow build, where the router triggers on fsi_status = Submitted and
+    orchestrates (status transition, self-approval override, fan-out) without re-running the
+    already-proven classifier. The reviewer board (fsi_parallelreviewersjson) is intentionally
+    left to the Flow 4 build.
+
 .PARAMETER DryRun
     Print the payload and the target request without writing to Dataverse.
 
@@ -72,6 +81,9 @@ param(
     [switch]$RemoveAfter,
 
     [Parameter()]
+    [switch]$PreClassify,
+
+    [Parameter()]
     [switch]$DryRun
 )
 
@@ -99,6 +111,15 @@ $script:MakerStringColumns = @(
 $script:MakerBoolColumns = @('fsi_makerattestation', 'fsi_privacyoverride')
 
 $script:SubmittedStatusValue = 100000001
+
+# Option-set values used by -PreClassify to stamp the router outputs (see
+# create_fsi_intake_dataverse_schema.py / seed-test-data.ps1).
+$script:PathUsedChoiceMap = @{ 'Express' = 100000000; 'Standard' = 100000001; 'Full' = 100000002 }
+$script:RiskTierChoiceMap = @{ 'Tier 1 (High)' = 100000000; 'Tier 2 (Medium)' = 100000001; 'Tier 3 (Low)' = 100000002 }
+$script:ZoneChoiceMap = @{ 'Unclassified' = 100000000; 'Zone 1 (Enterprise)' = 100000001; 'Zone 2 (Team)' = 100000002; 'Zone 3 (Personal)' = 100000003 }
+$script:RoutingTopologyChoiceMap = @{ 'Sequential' = 100000000; 'Parallel' = 100000001; 'Quorum' = 100000002 }
+# Router topology per path (mirrors Get-RoutingTopologyLabel in seed-test-data.ps1).
+$script:PathToTopologyMap = @{ 'Express' = 'Sequential'; 'Standard' = 'Quorum'; 'Full' = 'Parallel' }
 
 function Get-DataverseAccessToken {
     if (-not [string]::IsNullOrWhiteSpace($env:DATAVERSE_ACCESS_TOKEN)) {
@@ -166,7 +187,8 @@ function ConvertTo-DeclaredDataSourcesJson {
 function ConvertTo-SubmissionPayload {
     param(
         [Parameter(Mandatory = $true)][psobject]$Fixture,
-        [Parameter(Mandatory = $true)][string]$ResolvedRequestId
+        [Parameter(Mandatory = $true)][string]$ResolvedRequestId,
+        [Parameter()][switch]$PreClassify
     )
 
     $request = $Fixture.fsi_intakerequest
@@ -200,6 +222,28 @@ function ConvertTo-SubmissionPayload {
     $payload['fsi_status'] = $script:SubmittedStatusValue
     $payload['fsi_submittedon'] = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 
+    # -PreClassify (Option C): stamp the validated router outputs from the fixture so the
+    # router flow can orchestrate (status transition, self-approval override, fan-out) without
+    # re-running the already-proven classifier. The reviewer board (fsi_parallelreviewersjson)
+    # is intentionally left for the Flow 4 build, where its consumption contract is defined.
+    if ($PreClassify -and ($Fixture.PSObject.Properties.Name -contains 'expectedClassification')) {
+        $classification = $Fixture.expectedClassification
+        $pathLabel = [string]$classification.pathUsed
+        if ($script:PathUsedChoiceMap.ContainsKey($pathLabel)) { $payload['fsi_pathused'] = $script:PathUsedChoiceMap[$pathLabel] }
+        $tierLabel = [string]$classification.riskTier
+        if ($script:RiskTierChoiceMap.ContainsKey($tierLabel)) { $payload['fsi_risktier'] = $script:RiskTierChoiceMap[$tierLabel] }
+        $zoneLabel = [string]$classification.zone
+        if ($script:ZoneChoiceMap.ContainsKey($zoneLabel)) { $payload['fsi_zone'] = $script:ZoneChoiceMap[$zoneLabel] }
+        if ($script:PathToTopologyMap.ContainsKey($pathLabel)) {
+            $payload['fsi_routingtopology'] = $script:RoutingTopologyChoiceMap[$script:PathToTopologyMap[$pathLabel]]
+        }
+        if ($null -ne $classification.quorumRequired) { $payload['fsi_quorumrequired'] = [int]$classification.quorumRequired }
+        if (-not [string]::IsNullOrWhiteSpace([string]$classification.decisionPath)) { $payload['fsi_decisionpath'] = [string]$classification.decisionPath }
+        if (($Fixture.PSObject.Properties.Name -contains 'expectedOutcome') -and ($null -ne $Fixture.expectedOutcome.mrmExpected)) {
+            $payload['fsi_mrmrequired'] = [bool]$Fixture.expectedOutcome.mrmExpected
+        }
+    }
+
     return $payload
 }
 
@@ -211,7 +255,7 @@ if (-not (Test-Path -Path $fixturePath)) {
 
 $fixture = Get-Content -Path $fixturePath -Raw | ConvertFrom-Json
 $resolvedRequestId = if ($PSBoundParameters.ContainsKey('RequestId')) { $RequestId } else { [guid]::NewGuid().ToString() }
-$payload = ConvertTo-SubmissionPayload -Fixture $fixture -ResolvedRequestId $resolvedRequestId
+$payload = ConvertTo-SubmissionPayload -Fixture $fixture -ResolvedRequestId $resolvedRequestId -PreClassify:$PreClassify
 
 $expectedPath = if ($fixture.PSObject.Properties.Name -contains 'expectedClassification') { [string]$fixture.expectedClassification.pathUsed } else { '(unknown)' }
 Write-Host "Scenario        : $Scenario (expected router path: $expectedPath)" -ForegroundColor Cyan
@@ -238,12 +282,18 @@ $decisionPath = [string]$created.fsi_decisionpath
 
 Write-Host "`nCreated row     : $recordId" -ForegroundColor Green
 Write-Host "fsi_status      : $statusValue (expected $script:SubmittedStatusValue = Submitted)" -ForegroundColor Green
-Write-Host "fsi_decisionpath: '$decisionPath' (expected blank so the router trigger fires)" -ForegroundColor Green
+if ($PreClassify) {
+    Write-Host "fsi_decisionpath: '$decisionPath' (pre-classified; the router triggers on status = Submitted)" -ForegroundColor Green
+    Write-Host "pre-classified  : pathused=$([int]$created.fsi_pathused) risktier=$([int]$created.fsi_risktier) zone=$([int]$created.fsi_zone) quorum=$([int]$created.fsi_quorumrequired) mrm=$($created.fsi_mrmrequired)" -ForegroundColor Green
+}
+else {
+    Write-Host "fsi_decisionpath: '$decisionPath' (expected blank so the router trigger fires)" -ForegroundColor Green
+}
 
 if ($statusValue -ne $script:SubmittedStatusValue) {
     throw "Created row landed in status $statusValue, expected $script:SubmittedStatusValue (Submitted)."
 }
-if (-not [string]::IsNullOrWhiteSpace($decisionPath)) {
+if (-not $PreClassify -and -not [string]::IsNullOrWhiteSpace($decisionPath)) {
     Write-Warning "fsi_decisionpath is not blank ('$decisionPath'); the router trigger guard may skip this row."
 }
 
@@ -260,5 +310,6 @@ return [pscustomobject]@{
     Scenario     = $Scenario
     ExpectedPath = $expectedPath
     Status       = $statusValue
+    PreClassified = [bool]$PreClassify
     Removed      = [bool]$RemoveAfter
 }
