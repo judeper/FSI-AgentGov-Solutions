@@ -111,5 +111,34 @@ Then tell the coordinator — it verifies in Dataverse that the `fsi_intakedecis
 
 ---
 
-## F3 / F4 / F5 / F1
-*Added to this runbook as each is built. F8 first.*
+## F1 — `fsi-intake-router` ✅ BUILT (programmatic POST-create) + VERIFIED both branches
+
+**Trigger:** Dataverse **When a row is added** on `fsi_intakerequest`, scope **Organization** (`OpenApiConnectionWebhook` / `SubscribeWebhookTrigger`, `subscriptionRequest/message=1`, `scope=4`), with trigger **condition** `@equals(triggerOutputs()?['body/fsi_status'], 100000001)` (Submitted). Change-type **Added** (not Added+Modified) — `New-IntakeSubmission` creates one row per run, so Added fires only on creation and the router's own status Update (a Modify) can't self-retrigger; **no loop guard needed** for the slice.
+
+> Trigger + all action `authentication` use `@parameters('$authentication')` (the Dataverse-triggered-flow form) — **not** the `X-MS-APIM-Tokens` form that F8's manual/Request trigger uses.
+
+1. **Update a row** → **Intake Requests** (`fsi_intakerequests`)
+   - **Row ID:** `triggerOutputs()?['body/fsi_intakerequestid']`
+   - **Status** (`fsi_status`): `@if(or(equals(toLower(coalesce(triggerOutputs()?['body/fsi_makerupn'],'')), toLower(coalesce(triggerOutputs()?['body/fsi_sponsorupn'],''))), equals(coalesce(triggerOutputs()?['body/fsi_decisionpath'],''),'DefaultDeny')), 100000005, 100000011)` — Denied if sponsor self-approval **or** pre-stamped DefaultDeny, else InReview.
+   - **Decision Path** (`fsi_decisionpath`): `@if(equals(toLower(coalesce(triggerOutputs()?['body/fsi_makerupn'],'')), toLower(coalesce(triggerOutputs()?['body/fsi_sponsorupn'],''))), 'DefaultDeny', coalesce(triggerOutputs()?['body/fsi_decisionpath'],''))` — force DefaultDeny on self-approval, else keep the pre-stamped path.
+
+2. **Add a new row** → **Audit Events** (`fsi_intakeauditevents`)
+   | Field | Value |
+   |---|---|
+   | **Name** (`fsi_name`) | `@{concat('RouterDecided - ', triggerOutputs()?['body/fsi_requestid'])}` |
+   | **Request ID** (`fsi_requestid`) | `@{triggerOutputs()?['body/fsi_requestid']}` |
+   | **Event Type** (`fsi_eventtype`) | `RouterDecided` |
+   | **Path Phase** (`fsi_pathphase`) | `Routing` |
+   | **Actor UPN** (`fsi_actorupn`) | `system` |
+   | **Event On** (`fsi_eventon`) | `utcNow()` |
+
+**Build method (programmatic):** created from scratch via Dataverse Web API **POST `/workflows`** (`category=5`, `type=1`, `primaryentity="none"`, `clientdata`=definition string) with header `MSCRM.SolutionUniqueName: FSIAgentIntake`, then **activated** via PATCH `statecode=1; statuscode=2`. **The activation registered the Dataverse webhook and the trigger fired in <10s** — proving POST-create (not just PATCH-update) works for a Dataverse-triggered flow. `workflowid` `c1a6d6c2-8663-f111-ab0c-7ced8d3b3597` (pinned).
+
+**Verified live (2026-06-08):**
+- `express-happy` (maker≠sponsor, decisionpath=`Express`) → status **InReview (100000011)**, decisionpath unchanged, one `RouterDecided` audit. ✅
+- `sponsor-self-approval-deny` (maker==sponsor, decisionpath=`DefaultDeny`) → status **Denied (100000005)**, decisionpath `DefaultDeny`, one `RouterDecided` audit. ✅
+
+---
+
+## F3 / F4 / F5
+*Added to this runbook as each is built. F3 (sponsor card) next — needs admin's Teams approval to test (lab recipient = `admin@M365CPI57786004`).*
