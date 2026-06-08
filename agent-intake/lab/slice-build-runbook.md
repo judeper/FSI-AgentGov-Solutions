@@ -140,5 +140,56 @@ Then tell the coordinator — it verifies in Dataverse that the `fsi_intakedecis
 
 ---
 
-## F3 / F4 / F5
-*Added to this runbook as each is built. F3 (sponsor card) next — needs admin's Teams approval to test (lab recipient = `admin@M365CPI57786004`).*
+## F3 — `fsi-intake-sponsor-card` ⏳ TO BUILD (designer) — Express slice, sponsor approval
+
+> **Build in the Power Automate designer, not programmatically.** F3 uses Teams **Post adaptive card and wait for a response** (`operationId PostCardAndWaitForResponse`) whose *flow-continuation subscription body* (recipient + card) is a dynamic schema the designer resolves interactively — fragile to hand-build. No flow in the env uses this pattern, so there is no clientdata template to copy. **Once F3 is built, the coordinator reads its `clientdata` to extract the Teams-wait + Run-a-Child-Flow shapes and builds F4 + F5 programmatically.** Build one flow by hand → get two generated.
+
+**Lab recipient:** all sponsor/reviewer cards go to **`admin@M365CPI57786004.onmicrosoft.com`** (the `-SponsorUpn` override stamps it on the request row).
+
+**Trigger.** Dataverse **When a row is added, modified or deleted** → **Change type = Added and Modified**, **Table = Intake Requests** (`fsi_intakerequest`), **Scope = Organization**.
+- **Trigger Condition** (Settings → Trigger Conditions): `@and(equals(triggerOutputs()?['body/fsi_pathused'],100000000),equals(triggerOutputs()?['body/fsi_status'],100000011))` — fire only on **Express (100000000) + InReview (100000011)**. After F3 sets status to Approved/Denied the row no longer matches InReview, so **no self-retrigger** (no loop guard needed).
+
+**Steps.**
+1. **Get a row by ID** → Intake Requests, Row ID = `triggerOutputs()?['body/fsi_intakerequestid']`.
+2. **Teams → Post adaptive card and wait for a response** (`PostCardAndWaitForResponse`)
+   - **Post as:** Flow bot · **Post in:** Chat with Flow bot · **Recipient:** `fsi_sponsorupn` (= admin)
+   - **Adaptive Card:** paste `templates/sponsor-approval-card.json`; replace each `${…}` with dynamic content from step 1 (`fsi_requestid`, `fsi_agentdisplayname`, `fsi_makerdisplayname`, `fsi_makerupn`, `fsi_intendedaudience`, `fsi_submittedon`, `fsi_risktier`, `fsi_zone`, `fsi_businessjustification`).
+   - The submit returns `data.decision` (`Approved`/`Denied`) + `fsi_sponsornotes`. Read it as `body('Post_card…')?['data']?['decision']` (label may differ — wire from the dynamic output token).
+3. **Add a new row → Approvals** (`fsi_intakeapproval`) — *ApplicationRequired set (CreateRecord enforces all):*
+   | Field | Value |
+   |---|---|
+   | `fsi_name` | `@{concat('Sponsor approval - ', triggerOutputs()?['body/fsi_requestid'])}` |
+   | `fsi_requestid` | `@{triggerOutputs()?['body/fsi_requestid']}` |
+   | `fsi_approverrole` *(choice)* | **Sponsor = 100000005** |
+   | `fsi_approverupn` | the sponsor UPN (admin) |
+   | `fsi_decisionoutcome` *(choice)* | `@{if(equals(<decision>,'Approved'),100000000,100000002)}` (Approved=100000000, Denied=100000002) |
+   | `fsi_decidedon` | `utcNow()` |
+   | `fsi_decisionmethod` | `TeamsAdaptiveCard` |
+4. **Add a new row → Sponsorships** (`fsi_intakesponsorship`) — *ApplicationRequired set:*
+   | Field | Value |
+   |---|---|
+   | `fsi_name` | `@{concat('Sponsor attestation - ', triggerOutputs()?['body/fsi_requestid'])}` |
+   | `fsi_requestid` | `@{triggerOutputs()?['body/fsi_requestid']}` |
+   | `fsi_sponsorupn` | admin |
+   | `fsi_sponsorrole` *(string, not choice)* | `LineOfBusinessSponsor` |
+   | `fsi_attestationmethod` | `TeamsAdaptiveCard` |
+   | `fsi_isvalid` *(boolean)* | `true` |
+5. **Condition:** `<decision>` is equal to `Approved`
+   - **If yes:** **Run a Child Flow** → `fsi-intake-decision-pack-writer` (F8) with `requestId` = `fsi_requestid`, `decisionOutcome` = `Approved`, `decisionSource` = `Sponsor` → then **Update a row** (Intake Requests): `fsi_status` = **Approved (100000004)**, `fsi_decidedon` = `utcNow()`.
+   - **If no:** **Run a Child Flow** → F8 with `decisionOutcome` = `Denied` → **Update a row**: `fsi_status` = **Denied (100000005)**, `fsi_decidedon` = `utcNow()`. *(Maker denial card deferred to F11.)*
+6. **Add a new row → Audit Events** (`fsi_intakeauditevent`) — required: `fsi_name`, `fsi_requestid`, `fsi_eventtype`, `fsi_eventon`:
+   - `fsi_name` = `@{concat('SponsorDecided - ', triggerOutputs()?['body/fsi_requestid'])}` · `fsi_requestid` = request id · `fsi_eventtype` = `SponsorDecided` · `fsi_eventon` = `utcNow()` · *(optional)* `fsi_pathphase` = `SponsorAttestation`, `fsi_actorupn` = sponsor UPN.
+
+**Finish:** **Save → Turn on.** (F8 must already be On — it is — so it appears in the Run-a-Child-Flow picker.)
+
+### Test F3 (after Save + Turn on)
+F3 only fires on an Add/Modify that happens **after** it is on, so create a **fresh** submission (don't reuse a pre-staged row):
+```
+./New-IntakeSubmission.ps1 -Scenario express-happy -EnvironmentUrl https://autojude.crm.dynamics.com/ -PreClassify -SponsorUpn admin@M365CPI57786004.onmicrosoft.com
+```
+F1 routes it to InReview → F3 fires → the sponsor card arrives in **admin's Teams (Flow bot chat)** → click **Approve**. Then tell the coordinator — it verifies in Dataverse: the `fsi_intakeapproval` + `fsi_intakesponsorship` rows, the F8 `fsi_intakedecisionlog` row (child call worked), `fsi_status = Approved (100000004)`, and the `SponsorDecided` audit event.
+
+---
+
+## F4 / F5
+*Built programmatically by the coordinator from F3's extracted Teams-wait + Run-a-Child-Flow templates, after F3 is verified.*
