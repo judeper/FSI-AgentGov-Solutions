@@ -482,8 +482,8 @@ Use Dataverse **logical names** in every OData filter, trigger condition, expres
 3. Action: **Compose** the decision-pack JSON.
    - Use the field names expected by `templates/drift-handoff-payload-schema.json` as the envelope for the decision pack so the registry and drift handoff flows can reuse it without re-shaping the payload later.
    - Include the sponsor chain, `reviewerAttestations`, `mrmHandoffStatus`, `declaredDataSources`, `connectorAllowlist`, and any Standard/Full JSON blob carried in `fsi_standardfullquestionsjson`.
-4. Action: **Compose** the SHA-256 hash.
-   - Use the workflow expression `sha256(outputs('Compose_DecisionPackJson'))`.
+4. Action: compute the decision-pack hash.
+   - Power Automate's expression language has **no native `sha256()` function**. For production tamper-evidence, compute the SHA-256 with an external step — an Office Script (`Run script`) containing a JavaScript SHA-256, an Azure Function called over HTTP, or an internal hashing endpoint via the HTTP with Microsoft Entra ID connector — and store the returned digest in `fsi_decisionpackhash`. For a lab or slice build where tamper-evidence is not yet required, store a clearly marked placeholder (for example `concat('sha256-pending:', guid())`) and replace it with a real digest before the decision log is treated as evidence.
 5. Action: Microsoft Dataverse — **Add a new row** to `fsi_intakedecisionlog`.
    - Set `fsi_name = Decision pack - <requestId>`.
    - Set `fsi_requestid`, `fsi_decisionoutcome`, `fsi_risktier`, `fsi_zone`, `fsi_pathused`, `fsi_policyversionapplied`, `fsi_decisionpackjson`, `fsi_decisionpackhash`, `fsi_decidedon`, and `fsi_retentionlabelapplied` when the label is already known.
