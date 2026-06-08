@@ -118,10 +118,9 @@ Each agent must be connected to the same Application Insights instance used by A
 ### Per-Agent Setup
 
 1. Open **Copilot Studio** > select your agent
-2. Navigate to **Settings** > **Diagnostics**
-3. Enable **Application Insights**
-4. Enter the Application Insights **connection string** (same string used by AOF)
-5. Optionally enable **CSAT survey** (Settings > Customer satisfaction) for CSAT data in analytics
+2. Navigate to **Settings** > **Advanced**
+3. Within the **Application Insights** section, enter the **Connection string** (same string used by AOF)
+4. Optionally enable **CSAT survey** (Settings > Customer satisfaction) for CSAT data in analytics
 
 ### CSAT Survey Enablement
 

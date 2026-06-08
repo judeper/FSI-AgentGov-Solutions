@@ -17,7 +17,7 @@
     The script performs three validation checks:
     1. Retrieves all custom retention policies via Get-UnifiedAuditLogRetentionPolicy
     2. Validates retention duration meets zone-specific minimums
-    3. Identifies record type coverage gaps (CopilotInteraction, PowerPlatformAdmin)
+    3. Identifies record type coverage gaps (CopilotInteraction, PowerPlatformAdministratorActivity)
 
     IMPORTANT: Get-UnifiedAuditLogRetentionPolicy does NOT return the default
     retention policy. Microsoft Purview Audit (Standard) retains records for
@@ -27,7 +27,7 @@
     types need custom retention policies for longer retention.
 
     Record type coverage validation:
-    - CopilotInteraction and PowerPlatformAdmin are critical for AI agent governance
+    - CopilotInteraction and PowerPlatformAdministratorActivity are critical for AI agent governance
     - These record types need explicit retention policies or catch-all policies
     - Catch-all policies (empty RecordTypes property) DO cover all record types
 
@@ -86,16 +86,15 @@
     - GLBA 501(b) (audit logging requirements)
     - SOX Section 302 (internal controls over financial reporting)
 
-    Retention duration mapping:
+    Retention duration mapping (only enum values UnifiedAuditLogRetentionDuration accepts):
     - ThreeMonths = 90 days
     - SixMonths = 180 days
     - NineMonths = 270 days
-    - OneYear = 365 days
-    - TwoYears = 730 days
-    - ThreeYears = 1095 days
-    - FiveYears = 1825 days
-    - SevenYears = 2555 days
+    - TwelveMonths = 365 days
     - TenYears = 3650 days
+    No intermediate enum value exists between TwelveMonths (365 days) and TenYears (3650 days);
+    requirements above 365 days must use TenYears. See Microsoft Learn:
+    https://learn.microsoft.com/en-us/powershell/module/exchangepowershell/new-unifiedauditlogretentionpolicy
 
     Default retention policy:
     Microsoft Purview Audit (Standard) retains audit records for 180 days for
@@ -178,7 +177,7 @@ function Test-PurviewRetention {
     $DefaultAuditStandardRetentionDays = 180
 
     # Critical record types for AI agent governance
-    $RequiredRecordTypes = @("CopilotInteraction", "PowerPlatformAdmin")
+    $RequiredRecordTypes = @("CopilotInteraction", "PowerPlatformAdministratorActivity")
 
     # Retention duration enum to days mapping.
     # Keys are the only values the UnifiedAuditLogRetentionDuration enum accepts
@@ -483,7 +482,7 @@ function Test-PurviewRetention {
         }
         else {
             $overallStatus = "Passed"
-            $reason = "All retention policies meet $Zone minimum requirements. Critical record types (CopilotInteraction, PowerPlatformAdmin) are covered."
+            $reason = "All retention policies meet $Zone minimum requirements. Critical record types (CopilotInteraction, PowerPlatformAdministratorActivity) are covered."
         }
 
         Write-Host "========================================" -ForegroundColor Cyan

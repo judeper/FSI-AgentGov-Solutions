@@ -63,6 +63,7 @@ Add-PowerAppsAccount
 |---------|-------------------|---------------|---------------------|
 | `bot-limitSharingMode` | noLimit | ExcludeSharingToSecurityGroups | ExcludeSharingToSecurityGroups |
 | `bot-authoringSharingDisabled` | false | false | true |
+<!-- NEEDS_HUMAN_REVIEW: The `bot-publishedBotLimitSharingMode` extended setting key is not documented on the canonical Microsoft Learn page (managed-environment-sharing-limits) — that page lists only `bot-limitSharingMode`, `bot-authoringSharingDisabled`, and `bot-maxLimitUserSharing`. A live-tenant check is required to confirm the key is real (Power Platform extended settings include undocumented internals); if it does not exist, the script will read $null and silently report it as "not configured." See `scripts/Get-EnvironmentAccessSettings.ps1:329`. -->
 | `bot-publishedBotLimitSharingMode` | noLimit | ExcludeSharingToSecurityGroups | ExcludeSharingToSecurityGroups |
 
 ## Scope and Microsoft Learn Alignment

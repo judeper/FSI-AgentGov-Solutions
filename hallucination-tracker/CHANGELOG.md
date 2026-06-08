@@ -4,6 +4,14 @@ All notable changes to the Hallucination Feedback Tracker.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Stale Copilot Studio Analytics retention window for comments (`docs/source-configuration.md` line 73).** The doc said reactions/comments are available in the Analytics page for **28 days**. Per Microsoft Learn ([Analyze conversational agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/analytics-improve-agent-effectiveness)), "You can view analytics for events that occurred in the last **90 days**" — this umbrella covers the Effectiveness → Reactions experience where comments appear. The 29-day session-transcript download window is unchanged ([Understand downloaded session data](https://learn.microsoft.com/en-us/microsoft-copilot-studio/analytics-transcripts-studio)). Updated only the 28-day figure to 90 days. (technical accuracy review vs Microsoft Learn)
+
+---
+
 ## [1.2.0] - 2026-05-23 — Microsoft Learn refresh
 
 ### Added

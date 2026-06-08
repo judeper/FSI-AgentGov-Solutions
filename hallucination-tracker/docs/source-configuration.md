@@ -70,7 +70,7 @@ Current Microsoft Learn caveats:
 
 - Reactions/comments are shown on the Copilot Studio **Analytics > Effectiveness > Reactions** experience.
 - Feedback data is stored with conversation transcript data in Dataverse; session transcript CSV downloads also include `CSAT` and `Comments` fields.
-- Comments are available in the Analytics page for 28 days, while session transcript downloads are available for the past 29 days. Dataverse transcript retention defaults to 30 days unless changed by administrators.
+- Comments are available in the Analytics page for 90 days (the Copilot Studio Analytics page shows events from the last 90 days), while session transcript downloads are available for the past 29 days. Dataverse transcript retention defaults to 30 days unless changed by administrators.
 - Agents published to the Microsoft 365 Copilot channel don't support Copilot Studio reactions.
 - Session transcript CSV response text is truncated to 512 characters per agent response; use Dataverse transcript data when complete text is required.
 
