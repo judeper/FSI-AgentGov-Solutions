@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Self-guided administrator configuration guide for the FSI agent-intake governance solution. Covers prerequisites, deployment, connection binding, environment variables, classification zones, reviewer setup, identity management, and day-to-day operations.">
+  <title>Agent Intake — Administrator Configuration Guide</title>
+  <style>
+    /* ---- 1. Color + scale tokens (LIGHT is the default) ---- */
+    :root {
+      --brand-primary:       #0078D4;
+      --brand-primary-dark:  #005A9E;
+      --brand-primary-light: #2B88D8;
+      --brand-accent:        #007A7E;
+      --brand-accent-vivid:  #00B7C3;
+      --bg:          #ffffff;
+      --bg-alt:      #F3F2F1;
+      --surface:     #ffffff;
+      --card:        #ffffff;
+      --border:      #E1DFDD;
+      --border-strong:#C8C6C4;
+      --text:        #201F1E;
+      --text-subtle: #5A5856;
+      --heading:     #11100F;
+      --link:        #005A9E;
+      --info-bg:     rgba(0,120,212,0.08);
+      --info-border: #0078D4;
+      --info-ink:    #084d82;
+      --warn-bg:     rgba(255,185,0,0.13);
+      --warn-border: #C19C00;
+      --warn-ink:    #8a6d00;
+      --reg-bg:      rgba(0,122,126,0.09);
+      --reg-border:  #007A7E;
+      --reg-ink:     #045b5e;
+      --code-bg:   #F3F2F1;
+      --code-ink:  #b3306b;
+      --kw-bg:     rgba(0,120,212,0.10);
+      --kw-ink:    #005A9E;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 10px rgba(0,0,0,.07), 0 12px 28px rgba(0,0,0,.10);
+      --shadow-lg: 0 18px 50px rgba(0,0,0,.16);
+      --focus:     #0078D4;
+      --radius:    12px;
+      --radius-sm: 8px;
+      --maxw:      1080px;
+      --header-h:  64px;
+      --ease: cubic-bezier(.22,.61,.36,1);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+      --mono: "Cascadia Code", "SF Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    /* ---- 2. Dark tokens (system preference) ---- */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --brand-primary:       #429CE3;
+        --brand-primary-dark:  #2B88D8;
+        --brand-primary-light: #6BB3EA;
+        --brand-accent:        #3DD6E0;
+        --brand-accent-vivid:  #3DD6E0;
+        --bg:          #1B1A19;
+        --bg-alt:      #242322;
+        --surface:     #242322;
+        --card:        #2D2C2B;
+        --border:      #3B3A39;
+        --border-strong:#4A4948;
+        --text:        #F3F2F1;
+        --text-subtle: #C8C6C4;
+        --heading:     #ffffff;
+        --link:        #6BB3EA;
+        --info-bg:     rgba(66,156,227,0.14);
+        --info-border: #429CE3;
+        --info-ink:    #9ecbf0;
+        --warn-bg:     rgba(255,185,0,0.14);
+        --warn-border: #E0A800;
+        --warn-ink:    #FFD16A;
+        --reg-bg:      rgba(61,214,224,0.12);
+        --reg-border:  #3DD6E0;
+        --reg-ink:     #8be6ec;
+        --code-bg:   #2D2C2B;
+        --code-ink:  #ff9ec4;
+        --kw-bg:     rgba(66,156,227,0.18);
+        --kw-ink:    #9ecbf0;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+        --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+        --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+      }
+    }
+    /* ---- 3. Explicit toggle wins (data-theme attribute) ---- */
+    :root[data-theme="dark"] {
+      --brand-primary:       #429CE3;
+      --brand-primary-dark:  #2B88D8;
+      --brand-primary-light: #6BB3EA;
+      --brand-accent:        #3DD6E0;
+      --brand-accent-vivid:  #3DD6E0;
+      --bg:          #1B1A19;
+      --bg-alt:      #242322;
+      --surface:     #242322;
+      --card:        #2D2C2B;
+      --border:      #3B3A39;
+      --border-strong:#4A4948;
+      --text:        #F3F2F1;
+      --text-subtle: #C8C6C4;
+      --heading:     #ffffff;
+      --link:        #6BB3EA;
+      --info-bg:     rgba(66,156,227,0.14);
+      --info-border: #429CE3;
+      --info-ink:    #9ecbf0;
+      --warn-bg:     rgba(255,185,0,0.14);
+      --warn-border: #E0A800;
+      --warn-ink:    #FFD16A;
+      --reg-bg:      rgba(61,214,224,0.12);
+      --reg-border:  #3DD6E0;
+      --reg-ink:     #8be6ec;
+      --code-bg:   #2D2C2B;
+      --code-ink:  #ff9ec4;
+      --kw-bg:     rgba(66,156,227,0.18);
+      --kw-ink:    #9ecbf0;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+      --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+    }
+    /* ---- 4. Base / reset ---- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 16px); }
+    body {
+      margin: 0; font-family: var(--font); font-size: 17px; line-height: 1.65;
+      color: var(--text); background: var(--bg);
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+      transition: background-color .3s var(--ease), color .3s var(--ease);
+    }
+    h1, h2, h3, h4 { color: var(--heading); line-height: 1.2; font-weight: 700; }
+    p { margin: 0 0 1em; }
+    a { color: var(--link); }
+    img, svg { max-width: 100%; }
+    ::selection { background: var(--brand-primary); color: #fff; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+    .container { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px); }
+    /* ---- 5. Skip link ---- */
+    .skip-link {
+      position: fixed; top: 8px; left: 8px; z-index: 200;
+      background: var(--brand-primary); color: #fff;
+      padding: 10px 16px; border-radius: 8px; font-weight: 600;
+      transform: translateY(-150%); transition: transform .2s var(--ease);
+    }
+    .skip-link:focus { transform: translateY(0); }
+    /* ---- 6. Header / nav / progress bar ---- */
+    .site-header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg);
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      -webkit-backdrop-filter: saturate(180%) blur(10px);
+      backdrop-filter: saturate(180%) blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .progress-track { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: transparent; }
+    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent-vivid)); transition: width .08s linear; }
+    .nav { display: flex; align-items: center; gap: 16px; height: var(--header-h); }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--heading); text-decoration: none; white-space: nowrap; flex: 0 0 auto; }
+    .brand svg { width: 28px; height: 28px; flex: 0 0 auto; }
+    .brand small { display: block; font-weight: 500; font-size: .72rem; color: var(--text-subtle); letter-spacing: .02em; }
+    .nav-links { display: flex; gap: 4px; margin: 0 auto 0 8px; padding: 0; list-style: none; overflow-x: auto; scrollbar-width: thin; }
+    .nav-links a { display: inline-block; padding: 6px 12px; border-radius: 999px; color: var(--text-subtle); text-decoration: none; font-size: .92rem; font-weight: 600; white-space: nowrap; transition: color .2s, background-color .2s; }
+    .nav-links a:hover { color: var(--heading); background: var(--bg-alt); }
+    .nav-links a.is-active { color: var(--brand-primary); background: var(--info-bg); }
+    .theme-toggle { flex: 0 0 auto; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--heading); cursor: pointer; transition: background-color .2s, transform .2s, border-color .2s; }
+    .theme-toggle:hover { background: var(--bg-alt); transform: translateY(-1px); }
+    .theme-toggle svg { width: 20px; height: 20px; }
+    .theme-toggle .icon-moon { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-sun  { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-moon { display: block; }
+    /* ---- 7. Section rhythm + headings ---- */
+    main { display: block; }
+    .section { padding: clamp(40px, 7vw, 88px) 0; scroll-margin-top: calc(var(--header-h) + 16px); }
+    .section + .section { border-top: 1px solid var(--border); }
+    .section-tint { background: var(--bg-alt); }
+    .eyebrow { display: inline-block; margin: 0 0 10px; font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--brand-accent); }
+    .section h2 { font-size: clamp(1.6rem, 3.4vw, 2.3rem); margin: 0 0 .4em; }
+    .section .lede { font-size: 1.12rem; color: var(--text-subtle); max-width: 64ch; }
+    .subhead { font-size: 1.25rem; margin: 2em 0 .5em; padding-left: 12px; border-left: 4px solid var(--brand-primary); }
+    /* ---- 8. Hero ---- */
+    .hero { position: relative; overflow: hidden; color: #fff; background: radial-gradient(1200px 400px at 85% -10%, rgba(0,183,195,.45), transparent 60%), linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%); scroll-margin-top: var(--header-h); }
+    .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1.4px); background-size: 22px 22px; opacity: .5; }
+    .hero .container { position: relative; z-index: 1; padding-top: clamp(48px, 8vw, 96px); padding-bottom: clamp(48px, 8vw, 96px); }
+    .hero .eyebrow { color: #bfe6ff; }
+    .hero h1 { color: #fff; font-size: clamp(2rem, 5.2vw, 3.4rem); margin: 0 0 .35em; max-width: 18ch; }
+    .hero p.tagline { font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: rgba(255,255,255,.92); max-width: 60ch; }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); color: #fff; padding: 5px 12px; border-radius: 999px; font-size: .82rem; font-weight: 600; }
+    .objectives { margin-top: 28px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); border-radius: var(--radius); padding: 20px 22px; max-width: 640px; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+    .objectives h2 { color: #fff; font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 12px; }
+    .objectives ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+    .objectives li { display: flex; gap: 10px; align-items: flex-start; color: rgba(255,255,255,.95); font-size: .98rem; }
+    .objectives li svg { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; color: var(--brand-accent-vivid); }
+    /* ---- 9. Buttons ---- */
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; font-weight: 600; font-size: .98rem; text-decoration: none; cursor: pointer; border: 1px solid transparent; transition: transform .15s var(--ease), box-shadow .2s, background-color .2s; }
+    .btn-primary { background: #fff; color: var(--brand-primary-dark); box-shadow: var(--shadow-sm); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.6); }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); }
+    /* ---- 10. Animated SVG diagram container ---- */
+    .diagram { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(16px, 3vw, 28px); box-shadow: var(--shadow-sm); margin: 1.5rem 0; }
+    .diagram figcaption { margin-top: 14px; font-size: .92rem; color: var(--text-subtle); text-align: center; }
+    .diagram svg { display: block; width: 100%; height: auto; }
+    .pl-track { stroke: var(--border-strong); stroke-width: 4; fill: none; }
+    .pl-progress { stroke: url(#plGrad); stroke-width: 4; fill: none; stroke-linecap: round; stroke-dasharray: 760; stroke-dashoffset: 760; }
+    [data-animate-svg].animate .pl-progress { animation: plDraw 2.4s var(--ease) forwards; }
+    @keyframes plDraw { to { stroke-dashoffset: 0; } }
+    .pl-node { transform-box: fill-box; transform-origin: center; opacity: .35; transform: scale(.8); }
+    .pl-node .disc { fill: url(#nodeGrad); }
+    .pl-node .num  { fill: #fff; font-weight: 700; font-size: 22px; }
+    .pl-node .lbl  { fill: var(--text); font-size: 15px; font-weight: 600; }
+    .pl-node .sub  { fill: var(--text-subtle); font-size: 12.5px; }
+    [data-animate-svg].animate .pl-node { animation: plPop .55s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes plPop { to { opacity: 1; transform: scale(1); } }
+    .pl-ring { fill: none; stroke: var(--brand-accent-vivid); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
+    [data-animate-svg].animate .pl-ring { animation: plRing 1.4s ease-out forwards; animation-delay: var(--d, 0s); }
+    @keyframes plRing { 0% { opacity: .8; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.9); } }
+    .pl-token { fill: var(--brand-accent-vivid); filter: drop-shadow(0 0 6px var(--brand-accent-vivid)); opacity: 0; }
+    [data-animate-svg].animate .pl-token { animation: plToken 2.4s var(--ease) forwards; }
+    @keyframes plToken { 0% { opacity: 0; transform: translateX(0); } 8% { opacity: 1; } 92% { opacity: 1; } 100% { opacity: 0; transform: translateX(760px); } }
+    .fk-path { fill: none; stroke: var(--border-strong); stroke-width: 3; stroke-dasharray: 420; stroke-dashoffset: 420; }
+    [data-animate-svg].animate .fk-path { animation: fkDraw 1.1s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkDraw { to { stroke-dashoffset: 0; } }
+    .fk-box { opacity: 0; transform-box: fill-box; transform-origin: center; transform: translateX(-12px); }
+    [data-animate-svg].animate .fk-box { animation: fkIn .5s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkIn { to { opacity: 1; transform: translateX(0); } }
+    .fk-title { fill: #fff; font-weight: 700; font-size: 16px; }
+    .fk-desc  { fill: rgba(255,255,255,.92); font-size: 12.5px; }
+    .fk-input { fill: var(--heading); }
+    .fk-input-label { fill: var(--bg); font-weight: 700; font-size: 15px; }
+    /* ---- 11. Scroll-reveal ---- */
+    [data-reveal] { opacity: 0; transform: translateY(24px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: var(--reveal-delay, 0s); will-change: opacity, transform; }
+    [data-reveal].is-visible { opacity: 1; transform: none; }
+    /* ---- 12. Explore (expandable) cards ---- */
+    .card-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 1.5rem 0; }
+    .explore-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow .25s, border-color .25s, transform .25s; }
+    .explore-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-strong); }
+    .explore-card.is-open { border-color: var(--brand-primary); }
+    .explore-card__trigger { width: 100%; text-align: left; cursor: pointer; background: transparent; border: 0; padding: 20px; display: flex; gap: 14px; align-items: flex-start; color: inherit; font: inherit; }
+    .explore-card__icon { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; background: var(--info-bg); color: var(--brand-primary); }
+    .explore-card__icon svg { width: 22px; height: 22px; }
+    .explore-card__head { flex: 1 1 auto; }
+    .explore-card__head h3 { font-size: 1.08rem; margin: 0 0 2px; }
+    .explore-card__head p { margin: 0; color: var(--text-subtle); font-size: .92rem; }
+    .explore-card__chev { flex: 0 0 auto; color: var(--text-subtle); transition: transform .3s var(--ease); margin-top: 4px; }
+    .explore-card.is-open .explore-card__chev { transform: rotate(180deg); color: var(--brand-primary); }
+    .explore-card__body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
+    .explore-card.is-open .explore-card__body { grid-template-rows: 1fr; }
+    .explore-card__bodyinner { overflow: hidden; }
+    .explore-card__detail { padding: 0 20px 20px; color: var(--text-subtle); }
+    .explore-card__detail > :first-child { margin-top: 0; }
+    /* ---- 13. Callouts ---- */
+    .callout { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; border: 1px solid var(--border); border-left-width: 4px; border-radius: var(--radius-sm); padding: 16px 18px; margin: 1.4rem 0; background: var(--surface); }
+    .callout__icon { width: 24px; height: 24px; margin-top: 2px; }
+    .callout__title { font-weight: 700; color: var(--heading); margin: 0 0 4px; font-size: .95rem; letter-spacing: .01em; }
+    .callout__body { margin: 0; color: var(--text); }
+    .callout__body :last-child { margin-bottom: 0; }
+    .callout-info { background: var(--info-bg); border-left-color: var(--info-border); }
+    .callout-info .callout__icon, .callout-info .callout__title { color: var(--info-ink); }
+    .callout-warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout-warn .callout__icon, .callout-warn .callout__title { color: var(--warn-ink); }
+    .callout-reg  { background: var(--reg-bg); border-left-color: var(--reg-border); }
+    .callout-reg .callout__icon, .callout-reg .callout__title { color: var(--reg-ink); }
+    .callout-reg .callout__title { text-transform: uppercase; font-size: .78rem; letter-spacing: .08em; }
+    /* ---- 14. Timeline / stepper ---- */
+    .timeline { position: relative; margin: 1.5rem 0; padding-left: 8px; list-style: none; }
+    .timeline::before { content: ""; position: absolute; left: 19px; top: 6px; bottom: 6px; width: 2px; background: linear-gradient(var(--brand-primary), var(--brand-accent)); }
+    .timeline li { position: relative; padding: 0 0 26px 52px; }
+    .timeline li:last-child { padding-bottom: 0; }
+    .timeline .step-dot { position: absolute; left: 8px; top: 0; width: 24px; height: 24px; border-radius: 999px; background: var(--brand-primary); color: #fff; display: grid; place-items: center; font-size: .8rem; font-weight: 700; box-shadow: 0 0 0 4px var(--bg); }
+    .timeline h3 { font-size: 1.05rem; margin: 0 0 4px; }
+    .timeline p { margin: 0; color: var(--text-subtle); }
+    /* ---- 15. Stat / metric blocks ---- */
+    .stat-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 1.5rem 0; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; text-align: center; box-shadow: var(--shadow-sm); }
+    .stat__num { display: block; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; line-height: 1; background: linear-gradient(120deg, var(--brand-primary), var(--brand-accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .stat__label { display: block; margin-top: 8px; color: var(--text-subtle); font-size: .92rem; }
+    /* ---- 16. Inline code / keyword ---- */
+    code.code, .code { font-family: var(--mono); font-size: .88em; background: var(--code-bg); color: var(--code-ink); padding: .15em .45em; border-radius: 6px; border: 1px solid var(--border); }
+    .kw { font-family: var(--font); font-weight: 600; font-size: .92em; background: var(--kw-bg); color: var(--kw-ink); padding: .1em .5em; border-radius: 6px; white-space: nowrap; }
+    kbd.kbd, .kbd { font-family: var(--mono); font-size: .82em; color: var(--heading); background: var(--bg-alt); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 6px; padding: .12em .5em; }
+    pre.codeblock { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: .86rem; line-height: 1.55; color: var(--text); margin: 1.2rem 0; }
+    /* ---- 17. Key takeaways ---- */
+    .takeaways { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: clamp(20px, 4vw, 32px); margin: 1.5rem 0; position: relative; overflow: hidden; }
+    .takeaways::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: linear-gradient(var(--brand-primary), var(--brand-accent)); }
+    .takeaways h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 1.2rem; }
+    .takeaways h3 svg { width: 24px; height: 24px; color: var(--brand-accent); }
+    .takeaways ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+    .takeaways li { display: flex; gap: 12px; align-items: flex-start; }
+    .takeaways li svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--brand-primary); margin-top: 1px; }
+    /* ---- 18. Footer ---- */
+    .site-footer { border-top: 1px solid var(--border); background: var(--bg-alt); padding: 40px 0; color: var(--text-subtle); font-size: .92rem; }
+    .site-footer .container { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; }
+    .site-footer a { color: var(--link); }
+    .site-footer .foot-brand { display: flex; align-items: center; gap: 10px; color: var(--heading); font-weight: 700; }
+    .site-footer .foot-brand svg { width: 24px; height: 24px; }
+    /* ---- 19. Table (not in scaffold; added for env-var and connection reference tables) ---- */
+    .data-table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; font-size: .93rem; }
+    .data-table th { text-align: left; padding: 10px 12px; background: var(--bg-alt); color: var(--heading); font-weight: 700; border-bottom: 2px solid var(--border-strong); }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .data-table tr:last-child td { border-bottom: none; }
+    /* ---- 20. Responsive ---- */
+    @media (max-width: 720px) {
+      body { font-size: 16px; }
+      .brand small { display: none; }
+      .nav-links { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 90%, transparent); }
+    }
+    /* ---- 21. Reduced motion: curtail everything ---- */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+      [data-reveal] { opacity: 1 !important; transform: none !important; }
+      .pl-node { opacity: 1 !important; transform: none !important; }
+      .pl-progress { stroke-dashoffset: 0 !important; }
+      .fk-box { opacity: 1 !important; transform: none !important; }
+      .fk-path { stroke-dashoffset: 0 !important; }
+      .pl-token, .pl-ring { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header" role="banner">
+    <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+    <nav class="nav container" aria-label="Module navigation">
+      <a class="brand" href="#overview" aria-label="FSI Agent Intake home">
+        <svg viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="24" height="24" rx="7" fill="var(--brand-primary)" opacity=".15"/>
+          <path d="M14 5L7 12l3 3 4-4 4 4 3-3-7-7z" fill="var(--brand-primary)"/>
+          <path d="M9 14l2 2 3-3 3 3 2-2-5-5-5 5z" fill="var(--brand-accent)"/>
+        </svg>
+        <span>Agent Intake
+          <small>ADMIN CONFIGURATION GUIDE</small>
+        </span>
+      </a>
+      <ul class="nav-links" role="list">
+        <li><a href="#overview"       data-nav="overview">Overview</a></li>
+        <li><a href="#prereqs"        data-nav="prereqs">Prerequisites</a></li>
+        <li><a href="#deploy"         data-nav="deploy">Deploy</a></li>
+        <li><a href="#connections"    data-nav="connections">Connections</a></li>
+        <li><a href="#envvars"        data-nav="envvars">Env Vars</a></li>
+        <li><a href="#classification" data-nav="classification">Classification</a></li>
+        <li><a href="#reviewers"      data-nav="reviewers">Reviewers</a></li>
+        <li><a href="#identity"       data-nav="identity">Identity</a></li>
+        <li><a href="#operate"        data-nav="operate">Operate</a></li>
+        <li><a href="#troubleshoot"   data-nav="troubleshoot">Troubleshoot</a></li>
+      </ul>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- =================== HERO / OVERVIEW =================== -->
+    <section class="hero" id="overview" aria-labelledby="hero-heading">
+      <div class="container">
+        <span class="eyebrow">Administrator Guide</span>
+        <h1 id="hero-heading">Configure &amp; Operate the Agent-Intake Gate</h1>
+        <p class="tagline">A self-guided walkthrough for M365 and Power Platform administrators. By the end you will have a pilot-ready configured agent intake pipeline — from Dataverse schema to classification zones, reviewer queues, and retention records. This solution is <strong>v1.0.0-preview</strong>: suitable for pilot validation, not broad production rollout without customer governance sign-off.</p>
+        <div class="hero-badges">
+          <span class="badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Self-guided</span>
+          <span class="badge">FINRA 3110 / 4511</span>
+          <span class="badge">SEC Rule 17a-4</span>
+          <span class="badge">OCC 2011-12 / SR 11-7</span>
+          <span class="badge">GLBA 501(b)</span>
+        </div>
+        <div class="objectives" aria-label="Learning objectives">
+          <h2>By the end of this guide you will:</h2>
+          <ul role="list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Deploy the 9-table Dataverse schema and solution shell</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Bind the four standard connection references (plus the optional Graph reference) inside the FSIAgentIntake solution</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Populate the 7 environment variables and classify agent request paths</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Set up reviewer roles, the Purview retention label, and Entra Agent ID minting</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Monitor the intake pipeline and read the <code class="code">fsi_intakedecisionlog</code> audit trail</li>
+          </ul>
+        </div>
+        <div class="stat-grid" style="margin-top:28px;max-width:700px;" aria-label="Solution overview metrics">
+          <div class="stat" data-reveal>
+            <span class="stat__num">9</span>
+            <span class="stat__label">Dataverse tables</span>
+          </div>
+          <div class="stat" data-reveal style="--reveal-delay:.1s">
+            <span class="stat__num">5</span>
+            <span class="stat__label">Connection references</span>
+          </div>
+          <div class="stat" data-reveal style="--reveal-delay:.2s">
+            <span class="stat__num">7</span>
+            <span class="stat__label">Environment variables</span>
+          </div>
+          <div class="stat" data-reveal style="--reveal-delay:.3s">
+            <span class="stat__num">7yr</span>
+            <span class="stat__label">Retention class</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- =================== PREREQUISITES =================== -->
+    <section class="section section-tint" id="prereqs" aria-labelledby="prereqs-heading">
+      <div class="container">
+        <span class="eyebrow">Step 1</span>
+        <h2 id="prereqs-heading">Prerequisites</h2>
+        <p class="lede">Gather these resources before running any scripts. Missing one will stall the deployment mid-flight.</p>
+
+        <h3 class="subhead">Power Platform environment</h3>
+        <ul>
+          <li>A <strong>Sandbox or Production</strong> environment with Dataverse enabled.</li>
+          <li>Your environment must allow custom solutions (unmanaged) — confirm in the Power Platform admin center under <strong>Settings &gt; Product &gt; Features</strong>.</li>
+          <li>Use <span class="kw">-AllowedEnvironmentType Sandbox</span> to restrict accidental Production deploys.</li>
+        </ul>
+
+        <h3 class="subhead">Licenses</h3>
+        <ul>
+          <li><strong>Power Apps Premium</strong> — required for each maker who submits an intake request (model-driven app).</li>
+          <li><strong>Power Automate Premium</strong> — required for the account running automated flows (HTTP, Dataverse triggers).</li>
+          <li><strong>Microsoft Teams</strong> — required for sponsor and reviewer adaptive-card delivery.</li>
+        </ul>
+
+        <h3 class="subhead">Administrator roles</h3>
+        <ul>
+          <li><strong>Power Platform Administrator</strong> or <strong>Environment Admin</strong> — to deploy solutions, create env vars, and bind connection references.</li>
+          <li><strong>Entra Global Administrator</strong> or <strong>Privileged Role Administrator</strong> — to grant admin consent for the Graph application permissions (<code class="code">AgentIdentity.CreateAsManager</code> or <code class="code">AgentIdentity.Create.All</code>).</li>
+          <li><strong>Compliance Administrator</strong> (Microsoft Purview) — to create and publish the retention label <code class="code">FSI-AgentIntake-7yr</code>.</li>
+        </ul>
+
+        <h3 class="subhead">Toolchain (local workstation)</h3>
+        <p>Install these before running any deployment scripts:</p>
+        <pre class="codeblock"># PowerShell modules (run as administrator)
+Install-Module -Name Az.Accounts          -MinimumVersion 2.0.0  -Scope CurrentUser -Force
+Install-Module -Name powershell-yaml      -MinimumVersion 0.4.0  -Scope CurrentUser -Force
+# Exchange Online is only needed if you are NOT passing -SkipPurviewLabel
+Install-Module -Name ExchangeOnlineManagement -MinimumVersion 3.2.0 -Scope CurrentUser -Force
+
+# Power Platform CLI
+winget install Microsoft.PowerApps.CLI   # or: msiexec /i PowerAppsCLI.msi
+
+# Python 3.10+ (for Agent Identity blueprint script)
+python --version   # verify 3.10 or later</pre>
+
+        <div class="callout callout-info">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <p class="callout__title">Purview label shortcut</p>
+            <p class="callout__body">If your Purview retention label (<code class="code">FSI-AgentIntake-7yr</code>) already exists or will be created separately, add <span class="kw">-SkipPurviewLabel</span> to the deploy call. This also removes the <code class="code">ExchangeOnlineManagement</code> module requirement for that run.</p>
+          </div>
+        </div>
+
+        <h3 class="subhead">Standard connectors needed</h3>
+        <ul>
+          <li><strong>Microsoft Dataverse</strong> — reads and writes intake records.</li>
+          <li><strong>Microsoft Teams</strong> — delivers sponsor and reviewer adaptive cards.</li>
+          <li><strong>Office 365 Outlook</strong> — sends email reminders and escalation fallbacks.</li>
+          <li><strong>HTTP with Microsoft Entra ID</strong> — authenticates calls to the classifier API, MRM system, and drift detector.</li>
+          <li><strong>Microsoft Graph custom connector (optional)</strong> — prefills maker profile data and performs Agent ID actions. The deploy scripts add this reference only when you supply the custom connector; otherwise they emit a manual step for the Graph lookup.</li>
+        </ul>
+        <p>Pre-create connections under your service account in <strong>Power Apps &gt; Connections</strong> before running the solution shell script. The script binds <em>existing</em> connections — it does not create them.</p>
+      </div>
+    </section>
+    <!-- =================== DEPLOY SHELL =================== -->
+    <section class="section" id="deploy" aria-labelledby="deploy-heading">
+      <div class="container">
+        <span class="eyebrow">Step 2</span>
+        <h2 id="deploy-heading">Deploy the Solution Shell</h2>
+        <p class="lede">Two scripts do the heavy lifting: <code class="code">provision_solution_shell.ps1</code> (quick start) or <code class="code">deploy.ps1</code> (full control with all options). Both are idempotent — safe to re-run.</p>
+
+        <h3 class="subhead">Option A — Provision script (recommended first-time)</h3>
+        <pre class="codeblock">pwsh .\scripts\provision_solution_shell.ps1 `
+  -EnvironmentUrl  "https://&lt;org&gt;.crm.dynamics.com" `
+  -EnvVarValues @{
+    fsi_intake_powerplatformenvironmenturl = "https://&lt;org&gt;.crm.dynamics.com"
+    fsi_intake_makerportalurl              = "https://&lt;org&gt;.crm.dynamics.com/main.aspx?appid=&lt;id&gt;"
+    fsi_intake_reviewerappurl              = "https://&lt;org&gt;.crm.dynamics.com/main.aspx?appid=&lt;reviewer-id&gt;"
+    fsi_intake_mrmtargetenv                = "https://&lt;mrm-env&gt;.crm.dynamics.com"
+    fsi_intake_driftdetectorenv            = "https://&lt;drift-env&gt;.crm.dynamics.com"
+    fsi_intake_retentionlabelid            = "&lt;purview-label-guid-or-name&gt;"
+    fsi_intake_sponsorbackupgroup          = "sg-agent-intake-sponsors@contoso.com"
+  }</pre>
+
+        <h3 class="subhead">Option B — Full deploy.ps1 (all environments / CI)</h3>
+        <pre class="codeblock"># Minimal required — prompts for credentials interactively
+pwsh .\scripts\deploy.ps1 -EnvironmentUrl "https://&lt;org&gt;.crm.dynamics.com"
+
+# Typical CI invocation with managed identity
+pwsh .\scripts\deploy.ps1 `
+  -EnvironmentUrl   "https://&lt;org&gt;.crm.dynamics.com" `
+  -AuthMode         ManagedIdentity `
+  -SkipPurviewLabel `
+  -LogPath          ".\logs\deploy-$(Get-Date -Format yyyyMMdd-HHmm).log"
+
+# Validate without making changes (dry run)
+pwsh .\scripts\deploy.ps1 `
+  -EnvironmentUrl   "https://&lt;org&gt;.crm.dynamics.com" `
+  -DryRun</pre>
+
+        <div class="callout callout-info">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <p class="callout__title">deploy.ps1 switches at a glance</p>
+            <p class="callout__body">
+              <code class="code">-EnvironmentUrl</code> (required) — Dataverse org URL.<br>
+              <code class="code">-AuthMode</code> — <span class="kw">AzCli</span> (default), <span class="kw">ManagedIdentity</span>, or <span class="kw">ServicePrincipal</span>.<br>
+              <code class="code">-DryRun</code> — log every step without making changes.<br>
+              <code class="code">-SeedTestData</code> — load 5 deterministic smoke scenarios.<br>
+              <code class="code">-SkipSmoke</code> — skip the smoke-test step.<br>
+              <code class="code">-SkipPurviewLabel</code> — skip Purview label creation (removes ExchangeOnline dependency).<br>
+              <code class="code">-Teardown</code> — remove the solution from the environment (destructive).<br>
+              <code class="code">-BillingPolicyId</code> — attach a pay-as-you-go billing policy.<br>
+              <code class="code">-LogPath</code> — path for the structured JSON log file.
+            </p>
+          </div>
+        </div>
+
+        <h3 class="subhead">What the deployment creates</h3>
+        <p>The 8-stage deploy pipeline provisions the following:</p>
+        <ul class="timeline" role="list">
+          <li><span class="step-dot" aria-hidden="true">1</span><h3>Dataverse schema (9 tables)</h3><p>Publisher <code class="code">FSIPublisher</code> — prefix <code class="code">fsi_</code>. The nine tables are <code class="code">fsi_intakerequest</code>, <code class="code">fsi_intakedatasource</code>, <code class="code">fsi_intakerisksignal</code>, <code class="code">fsi_intakereview</code>, <code class="code">fsi_intakeapproval</code>, <code class="code">fsi_intakedecisionlog</code>, <code class="code">fsi_intakesponsorship</code>, <code class="code">fsi_intakeauditevent</code>, and <code class="code">fsi_intakeretentionrecord</code>. Zone values come from the <code class="code">fsi_acv_zone</code> <em>option set</em> — not a table.</p></li>
+          <li><span class="step-dot" aria-hidden="true">2</span><h3>Unmanaged solution: FSIAgentIntake</h3><p>The outer container for all components. Subsequent steps place connection references, environment variable definitions, and app components inside this solution.</p></li>
+          <li><span class="step-dot" aria-hidden="true">3</span><h3>Model-driven app (reviewer queue)</h3><p>The intake reviewer model-driven app is provisioned inside <code class="code">FSIAgentIntake</code>. Record its app ID — you will need it for the <code class="code">fsi_intake_reviewerappurl</code> environment variable.</p></li>
+          <li><span class="step-dot" aria-hidden="true">4</span><h3>Environment variable definitions (7)</h3><p>Definitions are created; values must be set separately (see <a href="#envvars">Step 5</a>). This separation allows the same solution package to be moved between environments without embedding environment-specific values.</p></li>
+          <li><span class="step-dot" aria-hidden="true">5</span><h3>Connection reference stubs (four standard + one optional Graph)</h3><p>Logical placeholders (<code class="code">fsi_cr_dataverse_agentintake</code>, <code class="code">fsi_cr_teams_agentintake</code>, etc.) are registered inside <code class="code">FSIAgentIntake</code>. The deploy scripts define and validate four standard references — Dataverse, Teams, Office 365 Outlook, and HTTP with Microsoft Entra ID — plus the optional Microsoft Graph reference (added only when the custom connector is supplied, otherwise left as a manual step). You bind actual connections in the next step.</p></li>
+          <li><span class="step-dot" aria-hidden="true">6</span><h3>Identity and security roles</h3><p>Custom Dataverse security roles for reviewers, makers, and the automation service account are created and scoped to the solution.</p></li>
+          <li><span class="step-dot" aria-hidden="true">7</span><h3>Purview retention-label hydration</h3><p>Unless <span class="kw">-SkipPurviewLabel</span> is passed, the script creates and publishes <code class="code">FSI-AgentIntake-7yr</code> via Exchange Online PowerShell. The resulting GUID populates <code class="code">fsi_intake_retentionlabelid</code>.</p></li>
+          <li><span class="step-dot" aria-hidden="true">8</span><h3>Optional seed data + smoke test</h3><p>With <span class="kw">-SeedTestData</span>: five deterministic intake scenarios (Express-happy, Standard-conditional, Full-parallel-board, cross-border-deny, sponsor-self-approval-deny) are loaded. Then <code class="code">pwsh scripts/smoke_test.ps1</code> validates end-to-end flow execution.</p></li>
+        </ul>
+
+        <figure class="diagram" data-animate-svg aria-label="Figure A — deployment pipeline">
+          <svg viewBox="0 0 960 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Five-stage deployment pipeline from Tool Setup to Go Live">
+            <defs>
+              <linearGradient id="plGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="var(--brand-primary)"/>
+                <stop offset="100%" stop-color="var(--brand-accent-vivid)"/>
+              </linearGradient>
+              <radialGradient id="nodeGrad" cx="50%" cy="35%" r="65%">
+                <stop offset="0%" stop-color="var(--brand-primary-light)"/>
+                <stop offset="100%" stop-color="var(--brand-primary-dark)"/>
+              </radialGradient>
+            </defs>
+            <!-- Track -->
+            <line class="pl-track"    x1="100" y1="90" x2="860" y2="90"/>
+            <line class="pl-progress" x1="100" y1="90" x2="860" y2="90"/>
+            <!-- Token -->
+            <circle class="pl-token" cx="100" cy="90" r="7"/>
+            <!-- Nodes -->
+            <g class="pl-node" style="--d:0.1s">
+              <circle class="pl-ring" cx="100" cy="90" r="32" style="--d:.8s"/>
+              <circle class="disc" cx="100" cy="90" r="26"/>
+              <text class="num" x="100" y="97" text-anchor="middle">1</text>
+              <text class="lbl" x="100" y="130" text-anchor="middle">Tool Setup</text>
+              <text class="sub" x="100" y="148" text-anchor="middle">Az + PAC + Python</text>
+            </g>
+            <g class="pl-node" style="--d:0.5s">
+              <circle class="pl-ring" cx="290" cy="90" r="32" style="--d:1.2s"/>
+              <circle class="disc" cx="290" cy="90" r="26"/>
+              <text class="num" x="290" y="97" text-anchor="middle">2</text>
+              <text class="lbl" x="290" y="130" text-anchor="middle">Schema Deploy</text>
+              <text class="sub" x="290" y="148" text-anchor="middle">9 tables + publisher</text>
+            </g>
+            <g class="pl-node" style="--d:0.9s">
+              <circle class="pl-ring" cx="480" cy="90" r="32" style="--d:1.6s"/>
+              <circle class="disc" cx="480" cy="90" r="26"/>
+              <text class="num" x="480" y="97" text-anchor="middle">3</text>
+              <text class="lbl" x="480" y="130" text-anchor="middle">Solution Shell</text>
+              <text class="sub" x="480" y="148" text-anchor="middle">FSIAgentIntake</text>
+            </g>
+            <g class="pl-node" style="--d:1.3s">
+              <circle class="pl-ring" cx="670" cy="90" r="32" style="--d:2.0s"/>
+              <circle class="disc" cx="670" cy="90" r="26"/>
+              <text class="num" x="670" y="97" text-anchor="middle">4</text>
+              <text class="lbl" x="670" y="130" text-anchor="middle">Bind + Configure</text>
+              <text class="sub" x="670" y="148" text-anchor="middle">5 refs / 7 env vars</text>
+            </g>
+            <g class="pl-node" style="--d:1.7s">
+              <circle class="pl-ring" cx="860" cy="90" r="32" style="--d:2.4s"/>
+              <circle class="disc" cx="860" cy="90" r="26"/>
+              <text class="num" x="860" y="97" text-anchor="middle">5</text>
+              <text class="lbl" x="860" y="130" text-anchor="middle">Go Live</text>
+              <text class="sub" x="860" y="148" text-anchor="middle">Smoke test + review</text>
+            </g>
+          </svg>
+          <figcaption>Figure A: Five-stage deployment pipeline. The animated token illustrates data flow from initial setup through go-live validation.</figcaption>
+        </figure>
+      </div>
+    </section>
+    <!-- =================== CONNECTIONS =================== -->
+    <section class="section section-tint" id="connections" aria-labelledby="connections-heading">
+      <div class="container">
+        <span class="eyebrow">Step 3</span>
+        <h2 id="connections-heading">Create &amp; Bind the Connections</h2>
+        <p class="lede">The FSIAgentIntake solution ships with four standard connection reference stubs — Dataverse, Teams, Office 365 Outlook, and HTTP with Microsoft Entra ID — plus an optional Microsoft Graph reference. You bind pre-existing connections to these stubs; you do <em>not</em> create new references.</p>
+
+        <div class="callout callout-warn">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div>
+            <p class="callout__title">Critical — do not click &ldquo;+ New connection reference&rdquo;</p>
+            <p class="callout__body">Creating a new reference in the designer generates a different logical name (e.g., <code class="code">fsi_dataverseagentintake</code>). Flows and scripts reference the <em>original</em> names (e.g., <code class="code">fsi_cr_dataverse_agentintake</code>). The duplicate sits in the Default solution and is never used — binding it does nothing. Always bind the references that already exist inside <strong>Solutions &gt; FSI Agent Intake &gt; Connection references</strong>.</p>
+          </div>
+        </div>
+
+        <h3 class="subhead">Step 3a — Pre-create connections</h3>
+        <p>In <strong>Power Apps &gt; Connections</strong>, create one connection per connector under your service account. You need connections for: Microsoft Dataverse, Microsoft Teams, Office 365 Outlook, HTTP with Microsoft Entra ID, and the Microsoft Graph custom connector.</p>
+
+        <h3 class="subhead">Step 3b — Bind each reference to a connection</h3>
+        <p>Open <strong>Power Apps &gt; Solutions &gt; FSI Agent Intake &gt; Connection references</strong>. For each reference below, select it and choose <strong>Edit</strong> to bind it to the matching connection you pre-created in Step 3a. Bind the four standard references; bind the optional Graph reference only if you created the Graph custom connector.</p>
+
+        <div class="card-grid" aria-label="Connection reference details" data-reveal>
+          <!-- Card 1 -->
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="conn-detail-1" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+              <span class="explore-card__head">
+                <h3>Dataverse</h3>
+                <p>All intake record reads and writes</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="conn-detail-1">
+                <p><strong>Logical name:</strong> <code class="code">fsi_cr_dataverse_agentintake</code></p>
+                <p><strong>Connector:</strong> Microsoft Dataverse</p>
+                <p><strong>Used by:</strong> All flows that read or write <code class="code">fsi_intakerequest</code>, <code class="code">fsi_intakedecisionlog</code>, and related tables.</p>
+                <p><strong>Account:</strong> Use a service account with the <em>System Customizer</em> or solution-specific Dataverse security role.</p>
+              </div>
+            </div>
+          </div>
+          <!-- Card 2 -->
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="conn-detail-2" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+              <span class="explore-card__head">
+                <h3>Microsoft Teams</h3>
+                <p>Sponsor and reviewer adaptive cards</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="conn-detail-2">
+                <p><strong>Logical name:</strong> <code class="code">fsi_cr_teams_agentintake</code></p>
+                <p><strong>Connector:</strong> Microsoft Teams</p>
+                <p><strong>Used by:</strong> Sponsor 1-click approval card, reviewer decision cards, and escalation notifications.</p>
+                <p><strong>Account:</strong> Service account with a Teams licence. Cards are posted on behalf of this account.</p>
+              </div>
+            </div>
+          </div>
+          <!-- Card 3 -->
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="conn-detail-3" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <span class="explore-card__head">
+                <h3>Office 365 Outlook</h3>
+                <p>Reminders and escalation email</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="conn-detail-3">
+                <p><strong>Logical name:</strong> <code class="code">fsi_cr_office365_agentintake</code></p>
+                <p><strong>Connector:</strong> Office 365 Outlook</p>
+                <p><strong>Used by:</strong> Reviewer reminder emails, sponsor escalation fallback when Teams delivery is unavailable, overdue-review notifications.</p>
+                <p><strong>Account:</strong> A shared mailbox or service account with a licensed Exchange Online mailbox.</p>
+              </div>
+            </div>
+          </div>
+          <!-- Card 4 -->
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="conn-detail-4" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></span>
+              <span class="explore-card__head">
+                <h3>HTTP with Entra ID</h3>
+                <p>Classifier API, MRM, and drift calls</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="conn-detail-4">
+                <p><strong>Logical name:</strong> <code class="code">fsi_cr_http_agentintake</code></p>
+                <p><strong>Connector:</strong> HTTP with Microsoft Entra ID</p>
+                <p><strong>Used by:</strong> Automated classification API calls, Model Risk Management handoff, drift-detector handoff at end of Standard and Full intake paths.</p>
+                <p><strong>Account:</strong> Requires an Entra app registration with delegated or application permissions scoped to the classifier and MRM endpoints.</p>
+              </div>
+            </div>
+          </div>
+          <!-- Card 5 -->
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="conn-detail-5" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+              <span class="explore-card__head">
+                <h3>Microsoft Graph (optional)</h3>
+                <p>Profile prefill and Agent ID actions</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="conn-detail-5">
+                <p><strong>Logical name:</strong> <code class="code">fsi_cr_graph_agentintake</code></p>
+                <p><strong>Connector:</strong> Microsoft Graph custom connector <em>(optional — added only when the custom connector is supplied; otherwise a manual step)</em></p>
+                <p><strong>Used by:</strong> Maker profile auto-fill on the intake form, Entra Agent ID minting on approval (Express, Standard, and Full), and Agent Identity blueprint hydration.</p>
+                <p><strong>Account:</strong> Requires admin consent for <code class="code">AgentIdentity.CreateAsManager</code> or <code class="code">AgentIdentity.Create.All</code> Graph application permissions.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="subhead">Troubleshooting — references missing from the solution</h3>
+        <div class="callout callout-info" style="margin-top:1.5rem">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <p class="callout__title">Recovery: reference is in Default solution, not FSIAgentIntake</p>
+            <p class="callout__body">Symptom: the reference exists in the environment but is missing from <strong>Solutions &gt; FSI Agent Intake &gt; Connection references</strong>.<br>Recovery: look up the connection reference ID in the Default solution, then run:<br>
+            <code class="code">pac solution add-solution-component --solutionUniqueName FSIAgentIntake --component &lt;id&gt; --componentType connectionreference</code><br>
+            Pass the component type by its <strong>name</strong> <code class="code">connectionreference</code> — the numeric codes <code class="code">371</code> and <code class="code">10137</code> are rejected with <em>"not known, Please provide the Component Type name"</em>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- =================== ENVIRONMENT VARIABLES =================== -->
+    <section class="section" id="envvars" aria-labelledby="envvars-heading">
+      <div class="container">
+        <span class="eyebrow">Step 4</span>
+        <h2 id="envvars-heading">Populate the Environment Variables</h2>
+        <p class="lede">Seven environment variables control where the intake pipeline sends records, notifications, and handoffs. Set them in <strong>Solutions &gt; FSI Agent Intake &gt; Environment variables</strong> or pass them to the provision script (see Step 2).</p>
+
+        <div class="callout callout-info">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <p class="callout__title">Current value vs. default value</p>
+            <p class="callout__body">Dataverse stores two rows per variable: the <em>definition</em> (default, ships with the solution) and the optional <em>current value</em> override. Always set a <strong>current value</strong> — do not edit the default, as that would be overwritten on the next solution import.</p>
+          </div>
+        </div>
+
+        <table class="data-table" aria-label="Environment variable reference" data-reveal>
+          <thead>
+            <tr>
+              <th>Schema name</th>
+              <th>What to set</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="code">fsi_intake_powerplatformenvironmenturl</code></td>
+              <td>Dataverse org URL, e.g. <code class="code">https://contoso.crm.dynamics.com</code></td>
+              <td>Used by flows to construct OData requests against <code class="code">fsi_intakerequest</code> and related tables.</td>
+            </tr>
+            <tr>
+              <td><code class="code">fsi_intake_makerportalurl</code></td>
+              <td>Full URL of the public-facing maker intake portal page</td>
+              <td>Shared with makers in notification emails and Teams messages. Typically the model-driven app URL for the maker-facing form.</td>
+            </tr>
+            <tr>
+              <td><code class="code">fsi_intake_reviewerappurl</code></td>
+              <td>Full URL of the reviewer model-driven app</td>
+              <td>Included in reviewer notification cards so approvers can open the queue directly. Record the app ID from the deploy output.</td>
+            </tr>
+            <tr>
+              <td><code class="code">fsi_intake_mrmtargetenv</code></td>
+              <td>Model Risk Management environment URL or wrapper endpoint</td>
+              <td>The Full intake path posts a handoff payload here after board approval when MRM criteria are met (OCC 2011-12 / SR 11-7).</td>
+            </tr>
+            <tr>
+              <td><code class="code">fsi_intake_driftdetectorenv</code></td>
+              <td>Drift-detector environment URL or wrapper endpoint</td>
+              <td>Receives a post-approval scope signal so drift detection can be seeded from intake data. May point to the same or a separate environment.</td>
+            </tr>
+            <tr>
+              <td><code class="code">fsi_intake_retentionlabelid</code></td>
+              <td>Purview retention label GUID or the label name <code class="code">FSI-AgentIntake-7yr</code></td>
+              <td>Applied to <code class="code">fsi_intakeretentionrecord</code> rows to support a 7-year retention class. Helps meet FINRA Rule 4511 / SEC Rule 17a-4 record-keeping obligations.</td>
+            </tr>
+            <tr>
+              <td><code class="code">fsi_intake_sponsorbackupgroup</code></td>
+              <td>M365 group alias, distribution list, or individual UPN for sponsor escalation</td>
+              <td>When the named sponsor does not act within the SLA window, escalation notifications are routed here. Recommended: a team alias, not an individual.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 class="subhead">How to set a current value in the maker portal</h3>
+        <ul class="timeline" role="list">
+          <li><span class="step-dot" aria-hidden="true">1</span><h3>Open the solution</h3><p>Navigate to <strong>make.powerapps.com &gt; Solutions &gt; FSI Agent Intake</strong>.</p></li>
+          <li><span class="step-dot" aria-hidden="true">2</span><h3>Find Environment variables</h3><p>In the left filter panel choose <strong>Environment variables</strong>. You should see all 7 variables listed.</p></li>
+          <li><span class="step-dot" aria-hidden="true">3</span><h3>Set the current value</h3><p>Click the variable name, then select <strong>Edit</strong>. Under <em>Current value</em>, enter your environment-specific value. Do not change the <em>Default value</em> field.</p></li>
+          <li><span class="step-dot" aria-hidden="true">4</span><h3>Save and repeat</h3><p>Save each variable. There is no bulk-save; set each of the 7 individually.</p></li>
+          <li><span class="step-dot" aria-hidden="true">5</span><h3>Restart flows</h3><p>After setting all 7 values, open each flow that was suspended and turn it <strong>On</strong>. Power Automate re-reads environment variable values at flow-turn-on time.</p></li>
+        </ul>
+      </div>
+    </section>
+    <!-- =================== CLASSIFICATION ZONES =================== -->
+    <section class="section section-tint" id="classification" aria-labelledby="class-heading">
+      <div class="container">
+        <span class="eyebrow">Step 5</span>
+        <h2 id="class-heading">Classification Zones &amp; Intake Paths</h2>
+        <p class="lede">The intake pipeline routes every agent request through up to six binary deny-gate questions (T1&ndash;T6). Answers determine whether the request follows the <strong>Express</strong>, <strong>Standard</strong>, or <strong>Full</strong> path and which governance zone applies.</p>
+
+        <h3 class="subhead">T1&ndash;T6 deny gates</h3>
+        <p>Each trigger is a yes/no question; <strong>Yes</strong> or <strong>Not sure</strong> both count as a trigger hit and move the request out of Express. Adjust audience-to-zone mappings and quorum thresholds in <code class="code">templates/policy-lookup-tables.yaml</code> if your organization applies different zone boundaries — <code class="code">fsi_acv_zone</code> is the zone <em>option set</em>, not a configuration table.</p>
+        <div class="card-grid" aria-label="T1 through T6 deny gate details" data-reveal>
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="t1-detail" data-card-trigger>
+              <span class="explore-card__icon" style="background:rgba(0,120,212,0.12)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+              <span class="explore-card__head"><h3>T1 — Financial transaction</h3><p>Agent initiates or influences monetary movement</p></span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__detail" id="t1-detail">
+              <p>Applies when an agent can initiate, approve, or trigger a payment, transfer, settlement, or any financial transaction on behalf of a client or the firm.</p>
+              <p><strong>Regulatory relevance:</strong> FINRA Rule 4511 (books and records) and Fed SR 11-7 (model risk). A trigger hit here moves the request out of Express; the final path (Standard or Full) depends on the audience zone and the total number of T1&ndash;T6 hits.</p>
+            </div></div>
+          </div>
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="t2-detail" data-card-trigger>
+              <span class="explore-card__icon" style="background:rgba(0,120,212,0.12)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+              <span class="explore-card__head"><h3>T2 — Customer-facing</h3><p>Agent communicates directly with retail or institutional clients</p></span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__detail" id="t2-detail">
+              <p>Applies when an agent sends responses, recommendations, or disclosures to external clients — retail, institutional, or counterparty.</p>
+              <p><strong>Regulatory relevance:</strong> FINRA Rule 3110 supervision — client-facing communications require designated supervisory review of agent outputs. A trigger hit routes the request to Standard or Full depending on the audience zone and total T1&ndash;T6 hits.</p>
+            </div></div>
+          </div>
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="t3-detail" data-card-trigger>
+              <span class="explore-card__icon" style="background:rgba(0,120,212,0.12)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+              <span class="explore-card__head"><h3>T3 — Autonomous / unmonitored</h3><p>Agent acts without human-in-the-loop checkpoints</p></span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__detail" id="t3-detail">
+              <p>Applies when an agent operates in fully automated mode: no human approval step exists between the agent triggering an action and the action completing.</p>
+              <p><strong>Regulatory relevance:</strong> OCC Bulletin 2011-12 and Fed SR 11-7 model-risk-management expectations for autonomous decision models. This trigger raises review depth; when the request lands on the Full path (Tier 1), the MRM handoff runs at the end of board review.</p>
+            </div></div>
+          </div>
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="t4-detail" data-card-trigger>
+              <span class="explore-card__icon" style="background:rgba(0,120,212,0.12)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <span class="explore-card__head"><h3>T4 — Handles NPI</h3><p>Agent processes non-public personal information</p></span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__detail" id="t4-detail">
+              <p>Applies when an agent accesses, stores, or transmits non-public personal information about retail consumers — account numbers, SSNs, income, transaction history, or health data.</p>
+              <p><strong>Regulatory relevance:</strong> GLBA 501(b) — financial institutions must protect NPI. A trigger hit routes to Standard or Full; the Standard board adds the <strong>Compliance</strong> reviewer to the default InfoSec + Privacy pair when NPI is in scope.</p>
+            </div></div>
+          </div>
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="t5-detail" data-card-trigger>
+              <span class="explore-card__icon" style="background:rgba(0,120,212,0.12)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+              <span class="explore-card__head"><h3>T5 — Handles MNPI</h3><p>Agent accesses material non-public information</p></span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__detail" id="t5-detail">
+              <p>Applies when an agent has access to material non-public information that could influence trading decisions — merger data, undisclosed earnings, regulatory filings before release.</p>
+              <p><strong>Regulatory relevance:</strong> Any positive MNPI answer routes the request directly to the <strong>Full</strong> path by default, because MNPI handling needs the deepest review (Legal and Compliance sit on the five-role board). This supports FINRA Rule 3110 supervisory review and firm information-barrier controls.</p>
+            </div></div>
+          </div>
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="t6-detail" data-card-trigger>
+              <span class="explore-card__icon" style="background:rgba(0,120,212,0.12)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+              <span class="explore-card__head"><h3>T6 — Cross-border data</h3><p>Agent transfers data across jurisdictional boundaries</p></span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__detail" id="t6-detail">
+              <p>Applies when an agent transfers, replicates, or processes data across geographic or jurisdictional borders — for example, data leaving its declared data-residency country.</p>
+              <p><strong>Regulatory relevance:</strong> CFTC Rule 1.31 (records retention). Cross-border data triggers a <strong>default-deny</strong> gate when the maker country differs from the declared data-residency country; Privacy can record an override, and an approved cross-border mismatch still routes to the Full path.</p>
+            </div></div>
+          </div>
+        </div>
+
+        <h3 class="subhead">Three intake paths</h3>
+
+        <figure class="diagram" data-animate-svg aria-label="Figure B — Express, Standard, and Full intake path classification fork" style="margin-top:1rem">
+          <svg viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Classification fork diagram showing Express, Standard, and Full paths based on T1-T6 trigger answers">
+            <defs>
+              <linearGradient id="expGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#107C10"/><stop offset="100%" stop-color="#00B294"/></linearGradient>
+              <linearGradient id="stdGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0078D4"/><stop offset="100%" stop-color="#00BCF2"/></linearGradient>
+              <linearGradient id="fulGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#7719AA"/><stop offset="100%" stop-color="#CA5010"/></linearGradient>
+            </defs>
+            <!-- Trunk line from intake box -->
+            <path class="fk-path" d="M130 80 L130 170" style="--d:0s"/>
+            <!-- Three branch lines -->
+            <path class="fk-path" d="M130 170 L210 170"  style="--d:.35s"/>
+            <path class="fk-path" d="M130 170 L210 230"  style="--d:.45s"/>
+            <path class="fk-path" d="M130 170 L210 290"  style="--d:.55s"/>
+            <!-- Lines from decision to boxes -->
+            <path class="fk-path" d="M210 170 L270 170"  style="--d:.7s"/>
+            <path class="fk-path" d="M210 230 L270 230"  style="--d:.8s"/>
+            <path class="fk-path" d="M210 290 L270 290"  style="--d:.9s"/>
+            <!-- Intake box -->
+            <g class="fk-box" style="--d:0s">
+              <rect x="10" y="48" width="240" height="64" rx="10" fill="url(#nodeGrad)"/>
+              <text class="fk-title" x="130" y="77" text-anchor="middle">Agent Intake Request</text>
+              <text class="fk-desc"  x="130" y="97" text-anchor="middle">T1-T6 gate evaluation</text>
+            </g>
+            <!-- Decision diamond -->
+            <g class="fk-box" style="--d:.3s">
+              <polygon points="210,148 250,170 210,192 170,170" fill="var(--bg-alt)" stroke="var(--border-strong)" stroke-width="2"/>
+              <text class="fk-input" x="210" y="175" text-anchor="middle" font-size="13" font-weight="700">T1-T6</text>
+            </g>
+            <!-- EXPRESS -->
+            <g class="fk-box" style="--d:.65s">
+              <rect x="270" y="142" width="200" height="56" rx="10" fill="url(#expGrad)"/>
+              <text class="fk-title" x="370" y="165" text-anchor="middle">EXPRESS PATH</text>
+              <text class="fk-desc"  x="370" y="183" text-anchor="middle">0 hits + Zone 3  |  Tier 3 / Zone 3</text>
+            </g>
+            <!-- EXPRESS detail -->
+            <g class="fk-box" style="--d:1.0s">
+              <rect x="490" y="132" width="360" height="76" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
+              <text class="fk-input" x="510" y="155" text-anchor="start" font-size="13">10 questions  |  1-click sponsor</text>
+              <text class="fk-input" x="510" y="173" text-anchor="start" font-size="13">Auto-classifies  |  ~15 min</text>
+              <text class="fk-input" x="510" y="191" text-anchor="start" font-size="12" fill="var(--text-subtle)">No MRM handoff  |  Agent ID on approval</text>
+            </g>
+            <!-- STANDARD -->
+            <g class="fk-box" style="--d:.75s">
+              <rect x="270" y="202" width="200" height="56" rx="10" fill="url(#stdGrad)"/>
+              <text class="fk-title" x="370" y="225" text-anchor="middle">STANDARD PATH</text>
+              <text class="fk-desc"  x="370" y="243" text-anchor="middle">Not Express or Full  |  Tier 2 / Zone 2</text>
+            </g>
+            <g class="fk-box" style="--d:1.05s">
+              <rect x="490" y="192" width="360" height="76" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
+              <text class="fk-input" x="510" y="215" text-anchor="start" font-size="13">22 questions  |  Conditional reviewer</text>
+              <text class="fk-input" x="510" y="233" text-anchor="start" font-size="13">InfoSec + Privacy (+ Compliance on NPI)</text>
+              <text class="fk-input" x="510" y="251" text-anchor="start" font-size="12" fill="var(--text-subtle)">Drift-detector handoff at close</text>
+            </g>
+            <!-- FULL -->
+            <g class="fk-box" style="--d:.85s">
+              <rect x="270" y="262" width="200" height="56" rx="10" fill="url(#fulGrad)"/>
+              <text class="fk-title" x="370" y="285" text-anchor="middle">FULL PATH</text>
+              <text class="fk-desc"  x="370" y="303" text-anchor="middle">Zone 1, 3+ hits, or MNPI  |  Tier 1</text>
+            </g>
+            <g class="fk-box" style="--d:1.1s">
+              <rect x="490" y="252" width="360" height="76" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
+              <text class="fk-input" x="510" y="275" text-anchor="start" font-size="13">35 questions  |  Parallel board quorum</text>
+              <text class="fk-input" x="510" y="293" text-anchor="start" font-size="13">5-role board  |  quorum 3 of 5</text>
+              <text class="fk-input" x="510" y="311" text-anchor="start" font-size="12" fill="var(--text-subtle)">MRM handoff (Tier 1)  |  Agent ID minted</text>
+            </g>
+            <!-- Labels on branches -->
+            <text x="152" y="163" font-size="12" fill="var(--text-subtle)" font-weight="600">0 hits + Zone 3</text>
+            <text x="152" y="224" font-size="12" fill="var(--text-subtle)" font-weight="600">1-2 hits / Zone 2</text>
+            <text x="152" y="285" font-size="12" fill="var(--text-subtle)" font-weight="600">Zone 1 / 3+ / MNPI</text>
+          </svg>
+          <figcaption>Figure B: Classification fork. A request with zero T1&ndash;T6 trigger hits <em>and</em> a Zone-3 (personal) audience routes to Express. Full applies to a Zone-1 audience, three or more trigger hits, any MNPI answer, or a Privacy-approved cross-border mismatch; everything else routes to Standard.</figcaption>
+        </figure>
+
+        <div class="callout callout-reg">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div>
+            <p class="callout__title">Regulatory alignment</p>
+            <p class="callout__body">The three-path classification structure is designed to help meet FINRA Rule 3110 (supervision), FINRA Rule 25-07 (AI governance), and SEC Rule 17a-3 (record-keeping). The Full path with board quorum and MRM handoff is required to support OCC 2011-12 and Fed SR 11-7 model risk management obligations for autonomous agents. Zone configuration and classification thresholds must be reviewed by your compliance and legal teams for applicability to your specific regulatory profile.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- =================== REVIEWER ROLES =================== -->
+    <section class="section" id="reviewers" aria-labelledby="reviewers-heading">
+      <div class="container">
+        <span class="eyebrow">Step 6</span>
+        <h2 id="reviewers-heading">Reviewer Roles &amp; the Queue App</h2>
+        <p class="lede">The Full-path reviewer board has <strong>five</strong> roles — InfoSec, Privacy, Compliance, Legal, and MRM — with a default parallel quorum of <strong>3 of 5</strong>. The Standard board is InfoSec + Privacy (default quorum 2 of 3), adding Compliance when the request handles NPI. Each role is a Dataverse security role scoped to the solution.</p>
+
+        <h3 class="subhead">Assign reviewers to security roles</h3>
+        <p>In <strong>Power Platform admin center &gt; Environments &gt; [Your Env] &gt; Settings &gt; Users + permissions &gt; Security roles</strong>, assign users or Microsoft Entra groups to the following roles:</p>
+        <table class="data-table" aria-label="Reviewer security roles" data-reveal>
+          <thead>
+            <tr><th>Reviewer role</th><th>Responsibilities</th><th>Required for</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>InfoSec Reviewer</strong></td>
+              <td>Reviews data handling controls, access scope, and security architecture of the proposed agent.</td>
+              <td>Standard path, Full path</td>
+            </tr>
+            <tr>
+              <td><strong>Privacy Reviewer</strong></td>
+              <td>Evaluates NPI / PII exposure, consent mechanisms, and data minimization compliance.</td>
+              <td>Standard path, Full path</td>
+            </tr>
+            <tr>
+              <td><strong>Compliance Reviewer</strong></td>
+              <td>Assesses alignment with FINRA, SEC, and GLBA requirements applicable to the agent use case.</td>
+              <td>Standard (when NPI is in scope), Full path</td>
+            </tr>
+            <tr>
+              <td><strong>Legal Reviewer</strong></td>
+              <td>Reviews contract implications, liability scope, and regulatory filing obligations.</td>
+              <td>Full path</td>
+            </tr>
+            <tr>
+              <td><strong>MRM Reviewer</strong></td>
+              <td>Validates model risk classification, documentation package, and handoff to the MRM system.</td>
+              <td>Full path (Tier 1 MRM handoff)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-info">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <p class="callout__title">&ldquo;Governance Lead&rdquo; is an app security role, not a board reviewer</p>
+            <p class="callout__body">The five board reviewer roles above (InfoSec, Privacy, Compliance, Legal, MRM) are values in the <code class="code">fsi_intake_reviewerrole</code> option set, alongside <code class="code">Sponsor</code> and <code class="code">Sponsor Manager</code>. <strong>Governance Lead</strong> is a separate concept — a security role defined in the reviewer model-driven app (<code class="code">reviewer-app-spec.json</code>) for app access, not a member of the quorum board. Full-path approval is reached by the 3-of-5 board quorum, not by a single chair.</p>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <p class="callout__title">Group vs. individual assignment</p>
+            <p class="callout__body">Assigning Entra groups (rather than individuals) to security roles allows role membership to be managed through normal Entra group-membership processes without touching Power Platform on every personnel change. Recommended for all reviewer roles.</p>
+          </div>
+        </div>
+
+        <h3 class="subhead">Using the model-driven reviewer queue app</h3>
+        <ul class="timeline" role="list">
+          <li><span class="step-dot" aria-hidden="true">1</span>
+            <h3>Open the app</h3>
+            <p>Navigate to the URL stored in <code class="code">fsi_intake_reviewerappurl</code>. Reviewers can also bookmark it directly or access it from the Teams adaptive card link.</p>
+          </li>
+          <li><span class="step-dot" aria-hidden="true">2</span>
+            <h3>Review the queue view</h3>
+            <p>The default view shows pending intake requests assigned to your reviewer role. Active views: <em>Pending Review</em>, <em>Awaiting Sponsor</em>, <em>Board Quorum</em>, <em>Approved</em>, <em>Denied</em>, <em>All Active</em>.</p>
+          </li>
+          <li><span class="step-dot" aria-hidden="true">3</span>
+            <h3>Open a record</h3>
+            <p>Click a request to open the <code class="code">fsi_intakerequest</code> form. The form shows the maker submission, T1&ndash;T6 classification answers, data source declarations, risk signals, and the full decision log.</p>
+          </li>
+          <li><span class="step-dot" aria-hidden="true">4</span>
+            <h3>Enter your decision</h3>
+            <p>Select <strong>Approve</strong>, <strong>Deny</strong>, or <strong>Request More Information</strong>. Your decision, timestamp, and role are written to <code class="code">fsi_intakedecisionlog</code> automatically.</p>
+          </li>
+          <li><span class="step-dot" aria-hidden="true">5</span>
+            <h3>Monitor the audit trail</h3>
+            <p>The <code class="code">fsi_intakedecisionlog</code> table records every reviewer action with <code class="code">fsi_requestid</code>, reviewer UPN, decision, timestamp, and notes. This log is the primary audit artifact for examination readiness.</p>
+          </li>
+        </ul>
+
+        <div class="callout callout-reg">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div>
+            <p class="callout__title">FINRA Rule 3110 — Supervision</p>
+            <p class="callout__body">Assigning named supervisors to reviewer roles and recording their decisions in <code class="code">fsi_intakedecisionlog</code> helps meet the written supervisory procedure requirements of FINRA Rule 3110. The log should be retained per the <code class="code">FSI-AgentIntake-7yr</code> retention label; see Step 8.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- =================== IDENTITY + RETENTION =================== -->
+    <section class="section section-tint" id="identity" aria-labelledby="identity-heading">
+      <div class="container">
+        <span class="eyebrow">Step 7</span>
+        <h2 id="identity-heading">Retention Label &amp; Microsoft Entra Agent ID</h2>
+        <p class="lede">Two post-deploy tasks complete the governance posture: applying the 7-year retention label and minting a Microsoft Entra Agent ID for each approved agent (Express, Standard, and Full).</p>
+
+        <h3 class="subhead">7a — Purview retention label: FSI-AgentIntake-7yr</h3>
+        <p>If you did not pass <span class="kw">-SkipPurviewLabel</span>, the deploy script attempts to create and publish this label automatically via <code class="code">ExchangeOnlineManagement</code>. To create it manually:</p>
+        <ol>
+          <li>Open <strong>Microsoft Purview compliance portal &gt; Data lifecycle management &gt; Retention labels</strong>.</li>
+          <li>Select <strong>+ Create a label</strong>. Name it exactly <code class="code">FSI-AgentIntake-7yr</code>.</li>
+          <li>Set the retention period to <strong>7 years</strong> (2555 days), counted from when the item was created (<code class="code">CreationAgeInDays</code>).</li>
+          <li>Set the action after the retention period to <strong>Retain and take no action</strong> — this matches the deploy script's <code class="code">RetentionAction Keep</code>. Do not configure auto-delete or disposition review.</li>
+          <li>Create a second, immutable label named <code class="code">FSI-AgentIntake-7yr-WORM</code> with the same 7-year duration and <strong>Mark items as records</strong> enabled. The immutable decision log (<code class="code">fsi_intakedecisionlog</code>) is stamped with this WORM label.</li>
+          <li>Publish both labels to the relevant SharePoint locations and Dataverse environments.</li>
+          <li>Copy the label GUID from the label detail page and paste it into the <code class="code">fsi_intake_retentionlabelid</code> environment variable.</li>
+        </ol>
+
+        <div class="callout callout-reg">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div>
+            <p class="callout__title">FINRA Rule 4511 + SEC Rule 17a-4 — Record retention</p>
+            <p class="callout__body">FINRA Rule 4511 requires broker-dealers to retain required books and records for at least 6 years. SEC Rule 17a-4 additionally requires that records be stored in a non-rewriteable, non-erasable format (WORM) for at least 3 years (first 2 years in an accessible location). The <code class="code">FSI-AgentIntake-7yr</code> label is designed to support this obligation. Consult your Compliance and Legal teams to confirm the label parameters meet your firm-specific requirements before publishing.</p>
+          </div>
+        </div>
+
+        <h3 class="subhead">7b — Microsoft Entra Agent ID setup</h3>
+        <p>On approval, the pipeline mints a Microsoft Entra Agent Identity for the new agent — on every path (Express, Standard, and Full). This step requires admin consent for Graph application permissions.</p>
+
+        <p><strong>Pre-requisites:</strong></p>
+        <ul>
+          <li>Entra <strong>Global Administrator</strong> or <strong>Privileged Role Administrator</strong> must grant admin consent for the Graph application permissions: <code class="code">AgentIdentity.CreateAsManager</code> or <code class="code">AgentIdentity.Create.All</code>.</li>
+          <li>Grant consent in <strong>Microsoft Entra admin center &gt; App registrations &gt; [your app] &gt; API permissions &gt; Grant admin consent</strong>.</li>
+        </ul>
+
+        <p><strong>Generate the Agent Identity blueprint:</strong></p>
+        <pre class="codeblock"># Run from the solution root directory
+python scripts/setup_agent_identity_blueprint.py --output .\agent-identity-blueprint.json</pre>
+        <p>The script returns an <code class="code">agentIdentityBlueprintId</code>. Store this value — it is referenced by the approval flow when it calls the Microsoft Graph custom connector to mint the Agent ID.</p>
+
+        <p><strong>How minting works in the intake pipeline:</strong></p>
+        <ol>
+          <li>When a request is approved — sponsor 1-click for Express, or board quorum for Standard and Full — the approval flow calls the <code class="code">fsi_cr_graph_agentintake</code> connection reference.</li>
+          <li>The Graph custom connector posts a create-agent-identity request using the blueprint ID and the intake request data from <code class="code">fsi_intakerequest</code>.</li>
+          <li>The returned Entra Agent ID (object ID) is written back to the <code class="code">fsi_intakerequest</code> record and recorded in <code class="code">fsi_intakedecisionlog</code>.</li>
+          <li>The maker receives a Teams notification with the Agent ID, enabling them to reference it in downstream governance checks (drift detector, scope monitor).</li>
+        </ol>
+
+        <div class="callout callout-info">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <p class="callout__title">Admin consent is a one-time step per tenant</p>
+            <p class="callout__body">Once a Global or Privileged Role Administrator grants consent for <code class="code">AgentIdentity.CreateAsManager</code>, all subsequent approvals in that tenant can mint Agent IDs without additional admin intervention. Verify consent is in place before processing your first approval.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- =================== OPERATE =================== -->
+    <section class="section" id="operate" aria-labelledby="operate-heading">
+      <div class="container">
+        <span class="eyebrow">Step 8</span>
+        <h2 id="operate-heading">Operate the Pipeline</h2>
+        <p class="lede">Day-to-day operation centers on three activities: monitoring flow health, reading the decision-log audit trail, and managing handoffs to downstream governance systems.</p>
+
+        <div class="card-grid" aria-label="Operational areas" data-reveal>
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="ops-detail-1" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+              <span class="explore-card__head">
+                <h3>Flow health monitoring</h3>
+                <p>Detect and respond to failed or suspended flows</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="ops-detail-1">
+                <p><strong>Power Automate run history:</strong> Open <strong>Power Apps &gt; Solutions &gt; FSI Agent Intake</strong>, select <strong>Cloud flows</strong>, and review run history for each flow. Failed runs show with a red icon; drill into any failure to view the error and affected action.</p>
+                <p><strong>Common suspend reasons:</strong></p>
+                <ul>
+                  <li>Unbound connection reference — flow suspends immediately on first trigger. Fix: bind the reference (Step 3), then turn the flow Off and On to restart it.</li>
+                  <li>Environment variable not set — flow reads a null value and fails on the first HTTP or Teams action. Fix: set the missing variable (Step 4), then restart the flow.</li>
+                  <li>Alt-key latency — a flow that filters by <code class="code">fsi_requestid</code> using the alternate-key URI form may receive HTTP 400 within 30&ndash;90 seconds of table creation. The resilient pattern filters using <code class="code">fsi_requestid eq '...'</code> and retrieves the primary key before constructing the URI.</li>
+                </ul>
+                <p><strong>Smoke test re-run:</strong> After fixing a configuration issue, run <code class="code">pwsh scripts/smoke_test.ps1</code> to validate end-to-end path execution across all three intake paths.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="ops-detail-2" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+              <span class="explore-card__head">
+                <h3>Audit trail: fsi_intakedecisionlog</h3>
+                <p>Read and export the decision-log table</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="ops-detail-2">
+                <p><strong>Structure:</strong> <code class="code">fsi_intakedecisionlog</code> is the immutable decision-pack record — one row per intake decision (per-reviewer votes live in <code class="code">fsi_intakeapproval</code> / <code class="code">fsi_intakereview</code>). Each row contains:</p>
+                <ul>
+                  <li><code class="code">fsi_requestid</code> — links to the parent <code class="code">fsi_intakerequest</code> record.</li>
+                  <li><code class="code">fsi_decisionoutcome</code> — Approved (100000000), AutoApproved (100000001), Denied (100000002), EscalatedToManager (100000003), or WithdrawnByMaker (100000004).</li>
+                  <li><code class="code">fsi_risktier</code>, <code class="code">fsi_zone</code>, and <code class="code">fsi_pathused</code> captured at decision time.</li>
+                  <li><code class="code">fsi_decidedon</code> (UTC), <code class="code">fsi_policyversionapplied</code>, and the tamper-evident <code class="code">fsi_decisionpackjson</code> + <code class="code">fsi_decisionpackhash</code> (SHA-256).</li>
+                  <li><code class="code">fsi_retentionlabelapplied</code> and <code class="code">fsi_retentionlabelappliedon</code> — the stamped Purview label and timestamp.</li>
+                </ul>
+                <p><strong>Querying via OData:</strong></p>
+                <pre class="codeblock">GET https://&lt;org&gt;.crm.dynamics.com/api/data/v9.2/fsi_intakedecisionlogs
+?$select=fsi_requestid,fsi_decisionoutcome,fsi_risktier,fsi_pathused,fsi_decidedon
+&amp;$filter=fsi_decisionoutcome eq 100000000
+&amp;$orderby=fsi_decidedon desc
+&amp;$top=50</pre>
+                <p><strong>Export for examination:</strong> Use Power Automate or the Dataverse OData API to export <code class="code">fsi_intakedecisionlog</code> rows for a given date range. The export should be retained per the <code class="code">FSI-AgentIntake-7yr</code> label.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="explore-card">
+            <button class="explore-card__trigger" aria-expanded="false" aria-controls="ops-detail-3" data-card-trigger>
+              <span class="explore-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+              <span class="explore-card__head">
+                <h3>Handoffs: MRM, drift, and decision packs</h3>
+                <p>Downstream system integration after approval</p>
+              </span>
+              <svg class="explore-card__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="explore-card__body">
+              <div class="explore-card__detail" id="ops-detail-3">
+                <p><strong>MRM handoff (Full path):</strong> When a Full-path (Tier 1) agent is approved and MRM review is required, the flow posts the intake decision pack payload to the URL in <code class="code">fsi_intake_mrmtargetenv</code>. Verify the target URL is reachable and that the HTTP with Entra ID connector is properly scoped to authenticate against it.</p>
+                <p><strong>Drift-detector handoff (Standard + Full):</strong> At close of review, the flow posts an initial scope snapshot to <code class="code">fsi_intake_driftdetectorenv</code>. This seeds the drift-detector baseline for the new agent. Confirm the drift detector is running in the target environment before enabling this path.</p>
+                <p><strong>Decision packs:</strong> The <code class="code">fsi_intakedecisionlog</code> rows associated with a request collectively form the &ldquo;decision pack&rdquo; — the full chronological record of reviewer actions, timestamps, and outcomes. The decision pack is referenced during examination responses and post-incident reviews. Maintain at least one export procedure for on-demand production of decision packs per intake request.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="subhead">Monitoring checklist (recommended weekly)</h3>
+        <ul class="timeline" role="list" data-reveal>
+          <li><span class="step-dot" aria-hidden="true">&#10003;</span><h3>Review suspended flows</h3><p>Open <strong>Solutions &gt; FSI Agent Intake &gt; Cloud flows</strong>. Any flow showing <em>Suspended</em> requires immediate attention — it is not processing intake requests.</p></li>
+          <li><span class="step-dot" aria-hidden="true">&#10003;</span><h3>Check overdue queues</h3><p>In the reviewer queue app, check the <em>Awaiting Sponsor</em> and <em>Board Quorum</em> views for requests that have been open longer than your SLA. Trigger escalation via the <code class="code">fsi_intake_sponsorbackupgroup</code> channel if needed.</p></li>
+          <li><span class="step-dot" aria-hidden="true">&#10003;</span><h3>Verify MRM + drift handoffs</h3><p>Search <code class="code">fsi_intakedecisionlog</code> for Full-path approvals in the past week and confirm corresponding entries in your MRM system and drift-detector baseline table.</p></li>
+          <li><span class="step-dot" aria-hidden="true">&#10003;</span><h3>Confirm retention-label application</h3><p>Spot-check <code class="code">fsi_intakeretentionrecord</code> rows to confirm the <code class="code">FSI-AgentIntake-7yr</code> label is being applied to new decision records.</p></li>
+        </ul>
+      </div>
+    </section>
+    <!-- =================== TROUBLESHOOT + TAKEAWAYS =================== -->
+    <section class="section section-tint" id="troubleshoot" aria-labelledby="trouble-heading">
+      <div class="container">
+        <span class="eyebrow">Step 9</span>
+        <h2 id="trouble-heading">Troubleshoot &amp; Key Takeaways</h2>
+        <p class="lede">Common configuration traps and their resolution steps. If a problem persists after following these steps, enable <span class="kw">-DryRun</span> and review the structured log output for the failing stage.</p>
+
+        <h3 class="subhead">Common traps</h3>
+        <ul class="timeline" role="list">
+          <li>
+            <span class="step-dot" aria-hidden="true">!</span>
+            <h3>Connection reference not found in FSIAgentIntake solution</h3>
+            <p><strong>Symptom:</strong> Flow fails on first trigger with &ldquo;Connection reference was not found.&rdquo; The reference exists in the environment but is in the Default solution.<br>
+            <strong>Cause:</strong> The connection reference was created outside the solution context, or the deploy script ran before the solution container was created.<br>
+            <strong>Fix:</strong> Add the reference to the solution: <code class="code">pac solution add-solution-component --solutionUniqueName FSIAgentIntake --component &lt;id&gt; --componentType connectionreference</code> (use the name, not a numeric code).</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">!</span>
+            <h3>pac componentType numeric code rejected</h3>
+            <p><strong>Symptom:</strong> <code class="code">pac solution add-solution-component</code> returns &ldquo;not known, Please provide the Component Type name.&rdquo;<br>
+            <strong>Cause:</strong> You passed a numeric code such as <code class="code">371</code> or <code class="code">10137</code>.<br>
+            <strong>Fix:</strong> Replace the numeric code with the string <code class="code">connectionreference</code>. The pac CLI resolves component types by name only for this component type.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">!</span>
+            <h3>Flow suspended immediately after turning On</h3>
+            <p><strong>Symptom:</strong> A flow shows <em>Suspended</em> within seconds of being turned on.<br>
+            <strong>Cause:</strong> Usually an unset environment variable or an unbound connection reference.<br>
+            <strong>Fix:</strong> Check all 7 env vars are populated (Step 4) and every connection reference is bound (Step 3) &mdash; the four standard references, plus the optional Graph reference if the custom connector was provided. Turn the flow Off, then On after each fix.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">!</span>
+            <h3>Alt-key HTTP 400 on fsi_requestid lookup</h3>
+            <p><strong>Symptom:</strong> A flow using the alternate-key URI form for <code class="code">fsi_intakerequest</code> receives HTTP 400 immediately after the table was created.<br>
+            <strong>Cause:</strong> Dataverse takes 30&ndash;90 seconds to build the index for the <code class="code">fsi_RequestIdUniqueKey</code> alternate key on <code class="code">fsi_requestid</code>. The index is not available immediately.<br>
+            <strong>Fix:</strong> Use a filter query (<code class="code">$filter=fsi_requestid eq '&lt;value&gt;'</code>) to retrieve the primary GUID, then construct the primary-key URI. This approach is resilient regardless of index state.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">!</span>
+            <h3>Duplicate connection reference created</h3>
+            <p><strong>Symptom:</strong> Binding appears to succeed, but flows still fail because they reference a different logical name.<br>
+            <strong>Cause:</strong> Clicking &ldquo;+ New connection reference&rdquo; in the designer generated a new reference with a different logical name (e.g., <code class="code">fsi_dataverseagentintake</code> instead of <code class="code">fsi_cr_dataverse_agentintake</code>).<br>
+            <strong>Fix:</strong> Delete the duplicate reference and bind the original. Confirm the reference logical names in <strong>Solutions &gt; FSI Agent Intake &gt; Connection references</strong> match exactly those listed in Step 3.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">!</span>
+            <h3>Purview label not published after deploy</h3>
+            <p><strong>Symptom:</strong> <code class="code">fsi_intake_retentionlabelid</code> is empty; <code class="code">fsi_intakeretentionrecord</code> rows are created but not labeled.<br>
+            <strong>Cause:</strong> The <code class="code">-SkipPurviewLabel</code> switch was used and the label was not created manually, or the label was created but not published to the Dataverse environment.<br>
+            <strong>Fix:</strong> Create and publish <code class="code">FSI-AgentIntake-7yr</code> in Purview (Step 7a), then set the GUID in <code class="code">fsi_intake_retentionlabelid</code>.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">!</span>
+            <h3>MRM handoff fails silently</h3>
+            <p><strong>Symptom:</strong> Full-path approval completes but no record appears in the MRM system.<br>
+            <strong>Cause:</strong> The URL in <code class="code">fsi_intake_mrmtargetenv</code> is unreachable from the Power Automate service, or the HTTP with Entra ID connection is not authorized for the MRM endpoint.<br>
+            <strong>Fix:</strong> Test the MRM endpoint URL with a manual HTTP call using the same service account. Verify the Entra app registration has the required permissions on the MRM API. Check the flow run history for the failing HTTP action.</p>
+          </li>
+        </ul>
+
+        <div class="callout callout-reg" data-reveal>
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div>
+            <p class="callout__title">Regulatory scope reminder</p>
+            <p class="callout__body">This solution is designed to help meet obligations under FINRA Rules 3110, 4511, and 25-07; SEC Rules 17a-3 and 17a-4; OCC Bulletin 2011-12; Fed SR 11-7; GLBA 501(b); and CFTC 1.31. Configuration choices made during deployment — zone boundaries, reviewer assignments, SLA thresholds — must be reviewed and approved by your Compliance, Legal, and Risk teams. The solution does not substitute for independent legal and regulatory advice.</p>
+          </div>
+        </div>
+
+        <div class="takeaways" data-reveal>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Key Takeaways
+          </h3>
+          <ul role="list">
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Bind existing references, never create new ones.</strong> Connection references must be components of <code class="code">FSIAgentIntake</code> with the exact logical names listed in Step 3. Creating new ones generates different names that flows will not find.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Use <code class="code">--componentType connectionreference</code> (the string, not a number).</strong> The pac CLI requires the type name; numeric codes are rejected for this component type.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Set current values for all 7 environment variables before turning flows on.</strong> Missing values suspend flows immediately. Always set current values — do not edit the default values.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>T1&ndash;T6 gate answers drive path and zone.</strong> Zero trigger hits <em>and</em> a Zone-3 audience yield Express / Tier 3 / Zone 3; any hit (Yes or Not sure) routes to Standard or Full by audience zone and hit count. Adjust thresholds in <code class="code">templates/policy-lookup-tables.yaml</code> — <code class="code">fsi_acv_zone</code> is the zone option set, not a table.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong><code class="code">fsi_intakedecisionlog</code> is the primary audit artifact.</strong> Every reviewer action, timestamp, and role is recorded here. Export this table per your examination-response procedures and retain it under the <code class="code">FSI-AgentIntake-7yr</code> label.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Admin consent for Entra Agent ID is a one-time tenant-level step.</strong> Grant consent for <code class="code">AgentIdentity.CreateAsManager</code> or <code class="code">AgentIdentity.Create.All</code> before the first approval completes — Agent IDs are minted on every path.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Run smoke tests after every configuration change.</strong> <code class="code">pwsh scripts/smoke_test.ps1</code> validates all three intake paths (Express, Standard, Full) end-to-end, including the denial scenarios.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="foot-brand">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="6" fill="var(--brand-primary)" opacity=".2"/><path d="M12 4L5 11l3 3 4-4 4 4 3-3-7-7z" fill="var(--brand-primary)"/></svg>
+        FSI Agent Intake
+      </div>
+      <p>Administrator Configuration Guide &mdash; agent-intake v1.0.0-preview</p>
+      <p>Controls: 1.2, 1.7, 2.1, 2.13, 3.1 &mdash; Framework: FSI-AgentGov</p>
+      <p style="margin:0">This guide is for information only. Consult your Compliance and Legal teams for regulatory applicability determinations.</p>
+    </div>
+  </footer>
+
+  <script>
+    /* ---- theme toggle (localStorage + system preference) ---- */
+    (function () {
+      const html = document.documentElement;
+      const btn  = document.getElementById('themeToggle');
+      const stored = localStorage.getItem('fsi-theme');
+      const sys    = window.matchMedia('(prefers-color-scheme: dark)');
+      function apply(dark) {
+        html.setAttribute('data-theme', dark ? 'dark' : 'light');
+        btn && btn.setAttribute('data-theme', dark ? 'dark' : 'light');
+        btn && btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      }
+      apply(stored === 'dark' || (!stored && sys.matches));
+      sys.addEventListener('change', e => { if (!localStorage.getItem('fsi-theme')) apply(e.matches); });
+      btn && btn.addEventListener('click', () => {
+        const dark = html.getAttribute('data-theme') !== 'dark';
+        localStorage.setItem('fsi-theme', dark ? 'dark' : 'light');
+        apply(dark);
+      });
+    })();
+
+    /* ---- scroll-progress bar (requestAnimationFrame) ---- */
+    const bar = document.getElementById('progressBar');
+    let ticking = false;
+    function updateBar() {
+      const scrolled = window.scrollY;
+      const total    = document.body.scrollHeight - window.innerHeight;
+      const pct      = total > 0 ? Math.min(100, (scrolled / total) * 100) : 0;
+      if (bar) bar.style.width = pct + '%';
+      ticking = false;
+    }
+    window.addEventListener('scroll', () => {
+      if (!ticking) { requestAnimationFrame(updateBar); ticking = true; }
+    }, { passive: true });
+
+    /* ---- nav active-highlight (IntersectionObserver) ---- */
+    (function () {
+      const sections = document.querySelectorAll('section[id]');
+      const navLinks = document.querySelectorAll('.nav-links a[data-nav]');
+      let active = '';
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) active = e.target.id;
+        });
+        navLinks.forEach(a => {
+          const match = a.getAttribute('data-nav') === active;
+          a.classList.toggle('is-active', match);
+          a.setAttribute('aria-current', match ? 'true' : 'false');
+        });
+      }, { rootMargin: '-15% 0px -60% 0px' });
+      sections.forEach(s => io.observe(s));
+    })();
+
+    /* ---- scroll-reveal ---- */
+    (function () {
+      const els = document.querySelectorAll('[data-reveal]');
+      if (!els.length) return;
+      const ro = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) { e.target.classList.add('is-visible'); ro.unobserve(e.target); }
+        });
+      }, { threshold: 0.08 });
+      els.forEach(el => ro.observe(el));
+    })();
+
+    /* ---- SVG diagram animation ---- */
+    (function () {
+      const diagrams = document.querySelectorAll('[data-animate-svg]');
+      if (!diagrams.length) return;
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('animate');
+            io.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      diagrams.forEach(d => io.observe(d));
+    })();
+
+    /* ---- explore-card expand / collapse ---- */
+    (function () {
+      document.querySelectorAll('[data-card-trigger]').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const card   = this.closest('.explore-card');
+          const open   = card.classList.contains('is-open');
+          const detail = document.getElementById(this.getAttribute('aria-controls'));
+
+          /* close siblings in the same grid */
+          const grid = card.closest('.card-grid');
+          if (grid) {
+            grid.querySelectorAll('.explore-card.is-open').forEach(c => {
+              c.classList.remove('is-open');
+              const tb = c.querySelector('[data-card-trigger]');
+              if (tb) tb.setAttribute('aria-expanded', 'false');
+            });
+          }
+
+          if (!open) {
+            card.classList.add('is-open');
+            this.setAttribute('aria-expanded', 'true');
+            if (detail) detail.focus({ preventScroll: true });
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<!--
+  FSI Agent Governance : agent-intake : Executive briefing (self-guided).
+  Audience: AI Governance Committee, Risk, Compliance, Legal, and business sponsors.
+  Single self-contained HTML file. All CSS, JS, and graphics are inline; zero external requests.
+  Respects prefers-reduced-motion and prefers-color-scheme; keyboard accessible.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Executive briefing: why a pre-build, risk-proportional intake gate for AI agents matters in US financial services — the proliferation risk, the regulatory stakes (FINRA 3110/4511, SEC 17a-4, OCC 2011-12, Fed SR 11-7, GLBA 501(b)), and the examiner-ready evidence it produces. Self-guided module for the agent-intake governance solution.">
+  <title>Agent Intake — Executive Briefing · Why a governance gate for AI agents</title>
+
+  <!-- ======================================================================
+       DESIGN SYSTEM (inline). Tokens mirror the FSI MkDocs theme
+       (site-docs/stylesheets/extra.css): Microsoft Blue #0078D4 primary,
+       WCAG-AA teal #007A7E accent. Dark mode supported via BOTH an explicit
+       toggle (data-theme on <html>) AND prefers-color-scheme.
+       ====================================================================== -->
+  <style>
+    /* ---- 1. Color + scale tokens (LIGHT is the default) ------------------ */
+    :root {
+      /* Brand (from FSI design system) */
+      --brand-primary:       #0078D4;
+      --brand-primary-dark:  #005A9E;
+      --brand-primary-light: #2B88D8;
+      --brand-accent:        #007A7E;
+      --brand-accent-vivid:  #00B7C3;
+
+      /* Semantic surfaces / text */
+      --bg:          #ffffff;
+      --bg-alt:      #F3F2F1;
+      --surface:     #ffffff;
+      --card:        #ffffff;
+      --border:      #E1DFDD;
+      --border-strong:#C8C6C4;
+      --text:        #201F1E;
+      --text-subtle: #5A5856;
+      --heading:     #11100F;
+      --link:        #005A9E;
+
+      /* Callout palettes */
+      --info-bg:     rgba(0,120,212,0.08);
+      --info-border: #0078D4;
+      --info-ink:    #084d82;
+      --warn-bg:     rgba(255,185,0,0.13);
+      --warn-border: #C19C00;
+      --warn-ink:    #8a6d00;
+      --reg-bg:      rgba(0,122,126,0.09);
+      --reg-border:  #007A7E;
+      --reg-ink:     #045b5e;
+
+      /* Code */
+      --code-bg:   #F3F2F1;
+      --code-ink:  #b3306b;
+      --kw-bg:     rgba(0,120,212,0.10);
+      --kw-ink:    #005A9E;
+
+      /* Effects */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 10px rgba(0,0,0,.07), 0 12px 28px rgba(0,0,0,.10);
+      --shadow-lg: 0 18px 50px rgba(0,0,0,.16);
+      --focus:     #0078D4;
+
+      /* Geometry */
+      --radius:    12px;
+      --radius-sm: 8px;
+      --maxw:      1080px;
+      --header-h:  64px;
+
+      --ease: cubic-bezier(.22,.61,.36,1);
+
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+              Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+      --mono: "Cascadia Code", "SF Mono", "Segoe UI Mono", "Roboto Mono",
+              Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    /* ---- 2. Dark tokens. Applied when the system prefers dark AND the user
+         has not explicitly chosen light, OR when the toggle sets data-theme=dark. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --brand-primary:       #429CE3;
+        --brand-primary-dark:  #2B88D8;
+        --brand-primary-light: #6BB3EA;
+        --brand-accent:        #3DD6E0;
+        --brand-accent-vivid:  #3DD6E0;
+
+        --bg:          #1B1A19;
+        --bg-alt:      #242322;
+        --surface:     #242322;
+        --card:        #2D2C2B;
+        --border:      #3B3A39;
+        --border-strong:#4A4948;
+        --text:        #F3F2F1;
+        --text-subtle: #C8C6C4;
+        --heading:     #ffffff;
+        --link:        #6BB3EA;
+
+        --info-bg:     rgba(66,156,227,0.14);
+        --info-border: #429CE3;
+        --info-ink:    #9ecbf0;
+        --warn-bg:     rgba(255,185,0,0.14);
+        --warn-border: #E0A800;
+        --warn-ink:    #FFD16A;
+        --reg-bg:      rgba(61,214,224,0.12);
+        --reg-border:  #3DD6E0;
+        --reg-ink:     #8be6ec;
+
+        --code-bg:   #2D2C2B;
+        --code-ink:  #ff9ec4;
+        --kw-bg:     rgba(66,156,227,0.18);
+        --kw-ink:    #9ecbf0;
+
+        --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+        --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+        --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+      }
+    }
+    /* Explicit toggle wins regardless of system setting. */
+    :root[data-theme="dark"] {
+      --brand-primary:       #429CE3;
+      --brand-primary-dark:  #2B88D8;
+      --brand-primary-light: #6BB3EA;
+      --brand-accent:        #3DD6E0;
+      --brand-accent-vivid:  #3DD6E0;
+
+      --bg:          #1B1A19;
+      --bg-alt:      #242322;
+      --surface:     #242322;
+      --card:        #2D2C2B;
+      --border:      #3B3A39;
+      --border-strong:#4A4948;
+      --text:        #F3F2F1;
+      --text-subtle: #C8C6C4;
+      --heading:     #ffffff;
+      --link:        #6BB3EA;
+
+      --info-bg:     rgba(66,156,227,0.14);
+      --info-border: #429CE3;
+      --info-ink:    #9ecbf0;
+      --warn-bg:     rgba(255,185,0,0.14);
+      --warn-border: #E0A800;
+      --warn-ink:    #FFD16A;
+      --reg-bg:      rgba(61,214,224,0.12);
+      --reg-border:  #3DD6E0;
+      --reg-ink:     #8be6ec;
+
+      --code-bg:   #2D2C2B;
+      --code-ink:  #ff9ec4;
+      --kw-bg:     rgba(66,156,227,0.18);
+      --kw-ink:    #9ecbf0;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+      --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+    }
+
+    /* ---- 3. Base / reset --------------------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 16px); }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      transition: background-color .3s var(--ease), color .3s var(--ease);
+    }
+    h1, h2, h3, h4 { color: var(--heading); line-height: 1.2; font-weight: 700; }
+    p { margin: 0 0 1em; }
+    a { color: var(--link); }
+    img, svg { max-width: 100%; }
+    ::selection { background: var(--brand-primary); color: #fff; }
+
+    /* Visible, consistent focus everywhere. */
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .container { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px); }
+
+    /* ---- 4. Skip link ------------------------------------------------------ */
+    .skip-link {
+      position: fixed; top: 8px; left: 8px; z-index: 200;
+      background: var(--brand-primary); color: #fff;
+      padding: 10px 16px; border-radius: 8px; font-weight: 600;
+      transform: translateY(-150%); transition: transform .2s var(--ease);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    /* ---- 5. Header / nav / progress bar ------------------------------------ */
+    .site-header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg); /* fallback for browsers without color-mix() */
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      -webkit-backdrop-filter: saturate(180%) blur(10px);
+      backdrop-filter: saturate(180%) blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .progress-track {
+      position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+      background: transparent;
+    }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent-vivid));
+      transition: width .08s linear;
+    }
+    .nav {
+      display: flex; align-items: center; gap: 16px;
+      height: var(--header-h);
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--heading); text-decoration: none;
+      white-space: nowrap; flex: 0 0 auto;
+    }
+    .brand svg { width: 28px; height: 28px; flex: 0 0 auto; }
+    .brand small { display: block; font-weight: 500; font-size: .72rem; color: var(--text-subtle); letter-spacing: .02em; }
+    .nav-links {
+      display: flex; gap: 4px; margin: 0 auto 0 8px; padding: 0; list-style: none;
+      overflow-x: auto; scrollbar-width: thin;
+    }
+    .nav-links a {
+      display: inline-block; padding: 6px 12px; border-radius: 999px;
+      color: var(--text-subtle); text-decoration: none; font-size: .92rem; font-weight: 600;
+      white-space: nowrap; transition: color .2s, background-color .2s;
+    }
+    .nav-links a:hover { color: var(--heading); background: var(--bg-alt); }
+    .nav-links a.is-active { color: var(--brand-primary); background: var(--info-bg); }
+
+    .theme-toggle {
+      flex: 0 0 auto;
+      display: inline-grid; place-items: center;
+      width: 40px; height: 40px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--heading);
+      cursor: pointer; transition: background-color .2s, transform .2s, border-color .2s;
+    }
+    .theme-toggle:hover { background: var(--bg-alt); transform: translateY(-1px); }
+    .theme-toggle svg { width: 20px; height: 20px; }
+    .theme-toggle .icon-moon { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-sun  { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-moon { display: block; }
+
+    /* ---- 6. Section rhythm + headings -------------------------------------- */
+    main { display: block; }
+    .section { padding: clamp(40px, 7vw, 88px) 0; scroll-margin-top: calc(var(--header-h) + 16px); }
+    .section + .section { border-top: 1px solid var(--border); }
+    .section-tint { background: var(--bg-alt); }
+
+    .eyebrow {
+      display: inline-block; margin: 0 0 10px;
+      font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--brand-accent);
+    }
+    .section h2 { font-size: clamp(1.6rem, 3.4vw, 2.3rem); margin: 0 0 .4em; }
+    .section .lede { font-size: 1.12rem; color: var(--text-subtle); max-width: 64ch; }
+    .subhead {
+      font-size: 1.25rem; margin: 2em 0 .5em;
+      padding-left: 12px; border-left: 4px solid var(--brand-primary);
+    }
+
+    /* ---- 7. Hero ----------------------------------------------------------- */
+    .hero {
+      position: relative; overflow: hidden;
+      color: #fff;
+      background:
+        radial-gradient(1200px 400px at 85% -10%, rgba(0,183,195,.45), transparent 60%),
+        linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+      scroll-margin-top: var(--header-h);
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background-image: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1.4px);
+      background-size: 22px 22px; opacity: .5;
+    }
+    .hero .container { position: relative; z-index: 1; padding-top: clamp(48px, 8vw, 96px); padding-bottom: clamp(48px, 8vw, 96px); }
+    .hero .eyebrow { color: #bfe6ff; }
+    .hero h1 { color: #fff; font-size: clamp(2rem, 5.2vw, 3.4rem); margin: 0 0 .35em; max-width: 18ch; }
+    .hero p.tagline { font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: rgba(255,255,255,.92); max-width: 60ch; }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+      color: #fff; padding: 5px 12px; border-radius: 999px; font-size: .82rem; font-weight: 600;
+    }
+
+    /* "What you'll learn" objectives card */
+    .objectives {
+      margin-top: 28px; background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.22); border-radius: var(--radius);
+      padding: 20px 22px; max-width: 640px; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    .objectives h2 { color: #fff; font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 12px; }
+    .objectives ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+    .objectives li { display: flex; gap: 10px; align-items: flex-start; color: rgba(255,255,255,.95); font-size: .98rem; }
+    .objectives li svg { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; color: var(--brand-accent-vivid); }
+
+    /* ---- 8. Buttons -------------------------------------------------------- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px; border-radius: 999px; font-weight: 600; font-size: .98rem;
+      text-decoration: none; cursor: pointer; border: 1px solid transparent;
+      transition: transform .15s var(--ease), box-shadow .2s, background-color .2s;
+    }
+    .btn-primary { background: #fff; color: var(--brand-primary-dark); box-shadow: var(--shadow-sm); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.6); }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); }
+
+    /* ---- 9. Animated SVG diagram container --------------------------------- */
+    .diagram {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: clamp(16px, 3vw, 28px);
+      box-shadow: var(--shadow-sm); margin: 1.5rem 0;
+    }
+    .diagram figcaption { margin-top: 14px; font-size: .92rem; color: var(--text-subtle); text-align: center; }
+    .diagram svg { display: block; width: 100%; height: auto; }
+
+    /* Pipeline diagram pieces */
+    .pl-track { stroke: var(--border-strong); stroke-width: 4; fill: none; }
+    .pl-progress {
+      stroke: url(#plGrad); stroke-width: 4; fill: none; stroke-linecap: round;
+      stroke-dasharray: 760; stroke-dashoffset: 760;
+    }
+    [data-animate-svg].animate .pl-progress { animation: plDraw 2.4s var(--ease) forwards; }
+    @keyframes plDraw { to { stroke-dashoffset: 0; } }
+
+    .pl-node { transform-box: fill-box; transform-origin: center; opacity: .35; transform: scale(.8); }
+    .pl-node .disc { fill: url(#nodeGrad); }
+    .pl-node .num  { fill: #fff; font-weight: 700; font-size: 22px; }
+    .pl-node .lbl  { fill: var(--text); font-size: 15px; font-weight: 600; }
+    .pl-node .sub  { fill: var(--text-subtle); font-size: 12.5px; }
+    [data-animate-svg].animate .pl-node { animation: plPop .55s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes plPop { to { opacity: 1; transform: scale(1); } }
+
+    .pl-ring { fill: none; stroke: var(--brand-accent-vivid); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
+    [data-animate-svg].animate .pl-ring { animation: plRing 1.4s ease-out forwards; animation-delay: var(--d, 0s); }
+    @keyframes plRing { 0% { opacity: .8; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.9); } }
+
+    .pl-token { fill: var(--brand-accent-vivid); filter: drop-shadow(0 0 6px var(--brand-accent-vivid)); opacity: 0; }
+    [data-animate-svg].animate .pl-token { animation: plToken 2.4s var(--ease) forwards; }
+    @keyframes plToken {
+      0%   { opacity: 0; transform: translateX(0); }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
+      100% { opacity: 0; transform: translateX(760px); }
+    }
+
+    /* Fork (classification) diagram pieces */
+    .fk-path { fill: none; stroke: var(--border-strong); stroke-width: 3; stroke-dasharray: 420; stroke-dashoffset: 420; }
+    [data-animate-svg].animate .fk-path { animation: fkDraw 1.1s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkDraw { to { stroke-dashoffset: 0; } }
+    .fk-box { opacity: 0; transform-box: fill-box; transform-origin: center; transform: translateX(-12px); }
+    [data-animate-svg].animate .fk-box { animation: fkIn .5s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkIn { to { opacity: 1; transform: translateX(0); } }
+    .fk-title { fill: #fff; font-weight: 700; font-size: 16px; }
+    .fk-desc  { fill: rgba(255,255,255,.92); font-size: 12.5px; }
+    .fk-input { fill: var(--heading); }
+    .fk-input-label { fill: var(--bg); font-weight: 700; font-size: 15px; }
+
+    /* ---- 10. Scroll-reveal ------------------------------------------------- */
+    [data-reveal] {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity .7s var(--ease), transform .7s var(--ease);
+      transition-delay: var(--reveal-delay, 0s);
+      will-change: opacity, transform;
+    }
+    [data-reveal].is-visible { opacity: 1; transform: none; }
+
+    /* ---- 11. Explore (expandable) cards ------------------------------------ */
+    .card-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 1.5rem 0; }
+    .explore-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow .25s, border-color .25s, transform .25s;
+    }
+    .explore-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-strong); }
+    .explore-card.is-open { border-color: var(--brand-primary); }
+    .explore-card__trigger {
+      width: 100%; text-align: left; cursor: pointer; background: transparent; border: 0;
+      padding: 20px; display: flex; gap: 14px; align-items: flex-start; color: inherit; font: inherit;
+    }
+    .explore-card__icon {
+      flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px;
+      display: grid; place-items: center; background: var(--info-bg); color: var(--brand-primary);
+    }
+    .explore-card__icon svg { width: 22px; height: 22px; }
+    .explore-card__head { flex: 1 1 auto; }
+    .explore-card__head h3 { font-size: 1.08rem; margin: 0 0 2px; }
+    .explore-card__head p { margin: 0; color: var(--text-subtle); font-size: .92rem; }
+    .explore-card__chev { flex: 0 0 auto; color: var(--text-subtle); transition: transform .3s var(--ease); margin-top: 4px; }
+    .explore-card.is-open .explore-card__chev { transform: rotate(180deg); color: var(--brand-primary); }
+    .explore-card__body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
+    .explore-card.is-open .explore-card__body { grid-template-rows: 1fr; }
+    .explore-card__bodyinner { overflow: hidden; }
+    .explore-card__detail { padding: 0 20px 20px; color: var(--text-subtle); }
+    .explore-card__detail > :first-child { margin-top: 0; }
+
+    /* ---- 12. Callouts ------------------------------------------------------ */
+    .callout {
+      display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+      border: 1px solid var(--border); border-left-width: 4px;
+      border-radius: var(--radius-sm); padding: 16px 18px; margin: 1.4rem 0;
+      background: var(--surface);
+    }
+    .callout__icon { width: 24px; height: 24px; margin-top: 2px; }
+    .callout__title { font-weight: 700; color: var(--heading); margin: 0 0 4px; font-size: .95rem; letter-spacing: .01em; }
+    .callout__body { margin: 0; color: var(--text); }
+    .callout__body :last-child { margin-bottom: 0; }
+    .callout-info { background: var(--info-bg); border-left-color: var(--info-border); }
+    .callout-info .callout__icon, .callout-info .callout__title { color: var(--info-ink); }
+    .callout-warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout-warn .callout__icon, .callout-warn .callout__title { color: var(--warn-ink); }
+    .callout-reg  { background: var(--reg-bg); border-left-color: var(--reg-border); }
+    .callout-reg .callout__icon, .callout-reg .callout__title { color: var(--reg-ink); }
+    .callout-reg .callout__title { text-transform: uppercase; font-size: .78rem; letter-spacing: .08em; }
+
+    /* ---- 13. Timeline / stepper -------------------------------------------- */
+    .timeline { position: relative; margin: 1.5rem 0; padding-left: 8px; list-style: none; }
+    .timeline::before {
+      content: ""; position: absolute; left: 19px; top: 6px; bottom: 6px; width: 2px;
+      background: linear-gradient(var(--brand-primary), var(--brand-accent));
+    }
+    .timeline li { position: relative; padding: 0 0 26px 52px; }
+    .timeline li:last-child { padding-bottom: 0; }
+    .timeline .step-dot {
+      position: absolute; left: 8px; top: 0; width: 24px; height: 24px; border-radius: 999px;
+      background: var(--brand-primary); color: #fff; display: grid; place-items: center;
+      font-size: .8rem; font-weight: 700; box-shadow: 0 0 0 4px var(--bg);
+    }
+    .timeline h3 { font-size: 1.05rem; margin: 0 0 4px; }
+    .timeline p { margin: 0; color: var(--text-subtle); }
+
+    /* ---- 14. Stat / metric blocks ------------------------------------------ */
+    .stat-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 1.5rem 0; }
+    .stat {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px; text-align: center; box-shadow: var(--shadow-sm);
+    }
+    .stat__num {
+      display: block; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; line-height: 1;
+      background: linear-gradient(120deg, var(--brand-primary), var(--brand-accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .stat__label { display: block; margin-top: 8px; color: var(--text-subtle); font-size: .92rem; }
+
+    /* ---- 15. Inline code / keyword ----------------------------------------- */
+    code.code, .code {
+      font-family: var(--mono); font-size: .88em;
+      background: var(--code-bg); color: var(--code-ink);
+      padding: .15em .45em; border-radius: 6px; border: 1px solid var(--border);
+    }
+    .kw {
+      font-family: var(--font); font-weight: 600; font-size: .92em;
+      background: var(--kw-bg); color: var(--kw-ink);
+      padding: .1em .5em; border-radius: 6px; white-space: nowrap;
+    }
+    kbd.kbd, .kbd {
+      font-family: var(--mono); font-size: .82em; color: var(--heading);
+      background: var(--bg-alt); border: 1px solid var(--border-strong);
+      border-bottom-width: 2px; border-radius: 6px; padding: .12em .5em;
+    }
+    pre.codeblock {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: .86rem; line-height: 1.55;
+      color: var(--text); margin: 1.2rem 0;
+    }
+
+    /* ---- 16. Key takeaways ------------------------------------------------- */
+    .takeaways {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-sm); padding: clamp(20px, 4vw, 32px); margin: 1.5rem 0;
+      position: relative; overflow: hidden;
+    }
+    .takeaways::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+      background: linear-gradient(var(--brand-primary), var(--brand-accent));
+    }
+    .takeaways h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 1.2rem; }
+    .takeaways h3 svg { width: 24px; height: 24px; color: var(--brand-accent); }
+    .takeaways ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+    .takeaways li { display: flex; gap: 12px; align-items: flex-start; }
+    .takeaways li svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--brand-primary); margin-top: 1px; }
+
+    /* ---- 17. Footer -------------------------------------------------------- */
+    .site-footer {
+      border-top: 1px solid var(--border); background: var(--bg-alt);
+      padding: 40px 0; color: var(--text-subtle); font-size: .92rem;
+    }
+    .site-footer .container { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; }
+    .site-footer a { color: var(--link); }
+    .site-footer .foot-brand { display: flex; align-items: center; gap: 10px; color: var(--heading); font-weight: 700; }
+    .site-footer .foot-brand svg { width: 24px; height: 24px; }
+
+    /* small helper used by the "component note" labels in the demo page */
+    .demo-note {
+      font-size: .82rem; color: var(--text-subtle); margin: 0 0 1rem;
+      border: 1px dashed var(--border-strong); border-radius: 8px; padding: 8px 12px;
+      background: var(--bg-alt);
+    }
+    .demo-note code { font-family: var(--mono); color: var(--brand-primary); }
+
+    /* ---- 18. Responsive ---------------------------------------------------- */
+    @media (max-width: 720px) {
+      body { font-size: 16px; }
+      .brand small { display: none; }
+      .nav-links { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 90%, transparent); }
+    }
+
+    /* ---- 19. Reduced motion: curtail everything ---------------------------- */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+      [data-reveal] { opacity: 1 !important; transform: none !important; }
+      .pl-node { opacity: 1 !important; transform: none !important; }
+      .pl-progress { stroke-dashoffset: 0 !important; }
+      .fk-box { opacity: 1 !important; transform: none !important; }
+      .fk-path { stroke-dashoffset: 0 !important; }
+      .pl-token, .pl-ring { display: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- Sticky header: section nav, scroll-progress bar, and theme toggle. -->
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Section navigation">
+        <a class="brand" href="#overview">
+          <!-- inline FSI shield + circuit motif (no external image) -->
+          <svg viewBox="0 0 32 32" aria-hidden="true" fill="none">
+            <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" fill="var(--brand-primary)"/>
+            <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" stroke="var(--brand-accent-vivid)" stroke-width="1.2" opacity=".6"/>
+            <circle cx="16" cy="13" r="2.4" fill="#fff"/>
+            <path d="M16 15.4V20M11 20h10M11.5 13H8M24 13h-3.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="8" cy="13" r="1.3" fill="#fff"/><circle cx="24" cy="13" r="1.3" fill="#fff"/>
+          </svg>
+          <span>Agent Intake<small>Executive briefing</small></span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#overview"  data-nav>Overview</a></li>
+          <li><a href="#shift"     data-nav>The shift</a></li>
+          <li><a href="#stakes"    data-nav>Regulatory stakes</a></li>
+          <li><a href="#gate"      data-nav>The gate</a></li>
+          <li><a href="#value"     data-nav>The value</a></li>
+          <li><a href="#takeaways" data-nav>Takeaways</a></li>
+        </ul>
+
+        <!-- Dark-mode toggle: light, dark, or system. -->
+        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+          </svg>
+        </button>
+      </nav>
+    </div>
+    <div class="progress-track" role="progressbar" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- HERO -->
+    <section id="overview" class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <span class="eyebrow">Executive briefing · AI Governance Committee · Risk · Compliance · Legal · Sponsors</span>
+        <h1 id="hero-title">Anyone can build an AI agent now. Who decided it was safe?</h1>
+        <p class="tagline">
+          A business user can stand up a Copilot Studio or Agent Builder agent in an afternoon — with no security review, no accountable owner, and no record of the decision. This briefing explains why a <span class="kw">pre-build governance gate</span> is the control that closes that gap, and what value it delivers for a US financial-services firm.
+        </p>
+
+        <div class="hero-badges" aria-hidden="false">
+          <span class="badge">⏱ ~12 min read</span>
+          <span class="badge">Non-technical</span>
+          <span class="badge">Self-paced</span>
+          <span class="badge">Decision-oriented</span>
+        </div>
+
+        <div class="objectives">
+          <h2>What you'll be able to decide</h2>
+          <ul>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Why ungoverned, business-built AI agents create supervisory, records, model-risk, and data-protection exposure.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Which regulations are in play — by name and section — and what examiners expect for each.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>How a risk-proportional Express / Standard / Full intake gate answers those expectations.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>What value the gate delivers: examiner-ready evidence, velocity with control, one immutable record per decision.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>What we are asking you to validate before this moves beyond pilot.</span>
+            </li>
+          </ul>
+        </div>
+
+        <p style="margin-top:28px">
+          <a class="btn btn-primary" href="#shift">See the risk ↓</a>
+          <a class="btn btn-ghost" href="#takeaways">Jump to the ask</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ORIENTATION: one-sentence framing -->
+    <section class="section" aria-label="What agent-intake is">
+      <div class="container">
+        <div class="callout callout-info" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" stroke-linecap="round"/></svg>
+          <div>
+            <p class="callout__title">In one sentence</p>
+            <p class="callout__body"><span class="kw">agent-intake</span> is a pre-build gate: before a business user (a <em>maker</em>) can create an AI agent, they submit a short request; the system classifies its risk, routes the right approval, and writes a permanent, non-editable record of the decision — then hands the approved agent to identity, registry, and monitoring systems automatically.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: THE SHIFT + THE RISK -->
+    <section id="shift" class="section section-tint" aria-labelledby="h-shift">
+      <div class="container">
+        <span class="eyebrow" data-reveal>The shift</span>
+        <h2 id="h-shift" data-reveal>The build button moved to the business — the controls didn't follow</h2>
+        <p class="lede" data-reveal>Building an AI agent has stopped being an IT project. With Copilot Studio and Microsoft Agent Builder, a business user can assemble an agent — wired to documents, data, and automated actions — in an afternoon. The capability is genuinely valuable. The gap is that the approval, ownership, and record-keeping that govern every other regulated system did not move with it.</p>
+
+        <h3 class="subhead" data-reveal>What changed</h3>
+        <p data-reveal>A <span class="kw">maker</span> is any business user who builds an agent. They can now connect an agent to SharePoint sites, customer data, and actions taken on the firm's behalf without a security review, a named owner, or a written decision. The same request that would convene a change-control board for a traditional application can now happen silently in a chat window.</p>
+
+        <h3 class="subhead" data-reveal>What goes wrong without a gate</h3>
+        <p data-reveal>When a user wants a new agent, somebody has to decide: is it low-risk enough for fast approval, or does it need security, compliance, and model-risk review? What data, environment, and retention class does it get? Is there a sponsor accountable for it? Without a structured intake, those decisions happen in chat threads, in tickets that never close, or not at all. These are the specific exposures that creates:</p>
+
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="exp-owner">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>No accountable owner</h3>
+                <p>Nobody is on record as having approved it.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="exp-owner">
+                <p>An agent built in a chat window has no named sponsor accountable for what it does. When something goes wrong — or an examiner asks who signed off — there is no answer. Supervision expectations assume a person, not a tool, owns the activity.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="exp-record">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h10l4 4v11.5"/><path d="M16 4v4h4"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>No supervisory record</h3>
+                <p>The decision lives in a chat thread, or nowhere.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="exp-record">
+                <p>If the approval happened in a direct message or a ticket that was later closed, there is no durable, retrievable record of who decided what, when, and why. Books-and-records expectations assume that decision is captured and retained.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="exp-npi">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>NPI / MNPI exposure</h3>
+                <p>Sensitive data reached with no privacy check.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="exp-npi">
+                <p>An agent can be pointed at non-public personal information (NPI) or material non-public information (MNPI) without anyone in privacy or compliance reviewing the data sources. Safeguards obligations assume sensitive data is identified and protected by design.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="exp-border">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Cross-border data movement</h3>
+                <p>Data crossing boundaries with no residency review.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="exp-border">
+                <p>An agent can move data across country boundaries that the firm's data-residency policy does not permit — a quiet path to a privacy or contractual breach that no one chose deliberately.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="exp-mrm">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7h14M5 7l-3 6h6zM19 7l-3 6h6z"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>No model-risk review</h3>
+                <p>An agent that recommends or decides, never tiered.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="exp-mrm">
+                <p>An agent that recommends, prices, or approves is acting like a model. If it is never identified or tiered, it sits entirely outside the firm's model-risk-management program — exactly the blind spot supervisory model-risk guidance is written to close.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="exp-prolif">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 7l4 9M17 7l-4 9"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Ungoverned proliferation</h3>
+                <p>Dozens of shadow agents, no inventory.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="exp-prolif">
+                <p>The exposures above multiply. The firm ends up with no single inventory of which agents exist, who owns them, or what they were approved to do — until the question is asked under examination.</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+
+        <aside class="callout callout-warn" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17v.5"/></svg>
+          <div>
+            <p class="callout__title">The quiet failure mode</p>
+            <p class="callout__body">The danger is rarely one reckless agent. It is fifty reasonable-looking agents, each built in good faith, none of them inventoried, owned, or reviewed — discovered for the first time during an examination.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- SECTION 2: REGULATORY STAKES -->
+    <section id="stakes" class="section" aria-labelledby="h-stakes">
+      <div class="container">
+        <span class="eyebrow" data-reveal>Regulatory stakes</span>
+        <h2 id="h-stakes" data-reveal>What examiners expect — and where an ungoverned agent fails the test</h2>
+        <p class="lede" data-reveal>Regulators do not need rules that name "AI agents." An agent that recommends, decides, touches customer data, or acts on the firm's behalf is already inside long-standing supervision, books-and-records, model-risk, and safeguards obligations. Here is what examiners expect for each — by name and section — and how the intake gate maps to it.</p>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">FINRA Rule 3110 — Supervision</p>
+            <p class="callout__body"><strong>What examiners expect:</strong> a named, accountable person supervises the activity and approved it. An agent built in a chat window has no such person. <strong>How the gate maps:</strong> every request routes to a designated <span class="kw">sponsor</span> who must attest before the agent is built — a one-click attestation on the Express path — and a maker cannot approve their own request (a default-deny). This <strong>supports compliance with</strong> FINRA Rule 3110. Implementation requires firms to confirm sponsor assignments match their supervisory structure.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">FINRA Rule 4511 &amp; SEC Rule 17a-4 — Books and records</p>
+            <p class="callout__body"><strong>What examiners expect:</strong> accurate records of business decisions, retained for a defined period in a non-rewritable form. <strong>How the gate maps:</strong> every decision is written to an immutable decision log (<code class="code">fsi_intakedecisionlog</code>) under a 7-year Purview retention label (<code class="code">FSI-AgentIntake-7yr</code>), capturing who asked, what the agent does, the risk classification, and the sponsor's timestamped attestation. This <strong>supports</strong> books-and-records expectations under FINRA Rule 4511 and <strong>helps meet</strong> the retention expectations of SEC Rule 17a-4. Implementation requires a Purview Compliance Admin to create the retention label.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">OCC Bulletin 2011-12 &amp; Federal Reserve SR 11-7 — Model risk</p>
+            <p class="callout__body"><strong>What examiners expect:</strong> models — including AI that recommends or decides — are identified, inventoried, and validated in proportion to their risk. <strong>How the gate maps:</strong> the risk triggers route model-bearing and high-impact requests onto the Full path, which includes a handoff to model risk management (the <span class="kw">model-risk-management-automation</span> solution). This <strong>aids in</strong> model-risk tiering consistent with OCC Bulletin 2011-12 and Federal Reserve SR 11-7. Implementation requires firms to align tiering thresholds with their MRM policy.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">GLBA Section 501(b) — Safeguarding customer information</p>
+            <p class="callout__body"><strong>What examiners expect:</strong> non-public personal information is safeguarded by design. <strong>How the gate maps:</strong> three risk questions ask whether an agent will handle NPI, handle material non-public information, or move data across borders; any "Yes" — or even "Not sure" — routes the request out of the low-risk path to privacy and compliance review and zone / data-residency handling. This <strong>helps meet</strong> the safeguards expectations of GLBA Section 501(b). Implementation requires firms to confirm data-residency policy before production rollout.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-info" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" stroke-linecap="round"/></svg>
+          <div>
+            <p class="callout__title">Also referenced</p>
+            <p class="callout__body">The same retained decision log <strong>aids in</strong> the 7-year records-retention expectations of CFTC Rule 1.31, and the intake captures the firm-policy governance posture relevant to current OCC guidance on AI use. No single control satisfies any of these rules in isolation; the gate contributes the intake-stage evidence.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- SECTION 3: THE GATE -->
+    <section id="gate" class="section section-tint" aria-labelledby="h-gate">
+      <div class="container">
+        <span class="eyebrow" data-reveal>How it closes the loop</span>
+        <h2 id="h-gate" data-reveal>One gate, sized to the risk</h2>
+        <p class="lede" data-reveal>The instinct is to add a review board. But a board in front of every request would bury low-risk work and push makers to route around the control. The design principle is <strong>risk-proportional</strong>: the effort to get approved scales with the risk of the agent. Every request follows the same five-stage path, then branches into one of three lanes.</p>
+
+        <!-- Figure A: pipeline -->
+        <figure class="diagram" data-reveal>
+          <svg viewBox="0 0 920 210" role="img" aria-label="Agent-intake pipeline: a request flows left to right through Submit, Classify, Approve, Record, and Handoff.">
+            <defs>
+              <linearGradient id="plGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="var(--brand-primary)"/>
+                <stop offset="1" stop-color="var(--brand-accent-vivid)"/>
+              </linearGradient>
+              <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="var(--brand-primary-light)"/>
+                <stop offset="1" stop-color="var(--brand-primary-dark)"/>
+              </linearGradient>
+            </defs>
+
+            <line class="pl-track"    x1="100" y1="78" x2="860" y2="78"/>
+            <path  class="pl-progress" d="M100 78 H860"/>
+            <circle class="pl-token" cx="100" cy="78" r="7"/>
+
+            <g class="pl-node" style="--d:0s">
+              <circle class="pl-ring" cx="100" cy="78" r="34"/>
+              <circle class="disc" cx="100" cy="78" r="34"/>
+              <text class="num" x="100" y="78" text-anchor="middle" dominant-baseline="central">1</text>
+              <text class="lbl" x="100" y="135" text-anchor="middle">Submit</text>
+              <text class="sub" x="100" y="153" text-anchor="middle">maker intake form</text>
+            </g>
+            <g class="pl-node" style="--d:.5s">
+              <circle class="pl-ring" cx="290" cy="78" r="34"/>
+              <circle class="disc" cx="290" cy="78" r="34"/>
+              <text class="num" x="290" y="78" text-anchor="middle" dominant-baseline="central">2</text>
+              <text class="lbl" x="290" y="135" text-anchor="middle">Classify</text>
+              <text class="sub" x="290" y="153" text-anchor="middle">Express / Std / Full</text>
+            </g>
+            <g class="pl-node" style="--d:1s">
+              <circle class="pl-ring" cx="480" cy="78" r="34"/>
+              <circle class="disc" cx="480" cy="78" r="34"/>
+              <text class="num" x="480" y="78" text-anchor="middle" dominant-baseline="central">3</text>
+              <text class="lbl" x="480" y="135" text-anchor="middle">Approve</text>
+              <text class="sub" x="480" y="153" text-anchor="middle">sponsor / reviewer</text>
+            </g>
+            <g class="pl-node" style="--d:1.5s">
+              <circle class="pl-ring" cx="670" cy="78" r="34"/>
+              <circle class="disc" cx="670" cy="78" r="34"/>
+              <text class="num" x="670" y="78" text-anchor="middle" dominant-baseline="central">4</text>
+              <text class="lbl" x="670" y="135" text-anchor="middle">Record</text>
+              <text class="sub" x="670" y="153" text-anchor="middle">immutable decision</text>
+            </g>
+            <g class="pl-node" style="--d:2s">
+              <circle class="pl-ring" cx="860" cy="78" r="34"/>
+              <circle class="disc" cx="860" cy="78" r="34"/>
+              <text class="num" x="860" y="78" text-anchor="middle" dominant-baseline="central">5</text>
+              <text class="lbl" x="860" y="135" text-anchor="middle">Handoff</text>
+              <text class="sub" x="860" y="153" text-anchor="middle">Entra Agent ID</text>
+            </g>
+          </svg>
+          <figcaption>Figure A — Every request follows the same path: Submit → Classify → Approve → Record → Handoff. The record is written before any agent is provisioned, so there is a decision on file for every agent approved through this intake gate.</figcaption>
+        </figure>
+
+        <!-- Figure B: classification fork -->
+        <figure class="diagram" data-reveal>
+          <svg viewBox="0 0 920 300" role="img" aria-label="Classification fork: one intake request branches into Express, Standard, or Full review paths by risk.">
+            <g class="fk-box" style="--d:0s">
+              <rect class="fk-input" x="36" y="118" width="170" height="64" rx="12"/>
+              <text class="fk-input-label" x="121" y="146" text-anchor="middle">Intake request</text>
+              <text class="fk-input-label" x="121" y="166" text-anchor="middle" style="font-size:12px;opacity:.85">classify by risk</text>
+            </g>
+
+            <path class="fk-path" style="--d:.15s" d="M206 150 C 320 150, 360 60, 520 60"/>
+            <path class="fk-path" style="--d:.3s"  d="M206 150 C 340 150, 380 150, 520 150"/>
+            <path class="fk-path" style="--d:.45s" d="M206 150 C 320 150, 360 240, 520 240"/>
+
+            <g class="fk-box" style="--d:.55s">
+              <rect x="520" y="26" width="360" height="68" rx="12" fill="var(--brand-accent)"/>
+              <text class="fk-title" x="544" y="55">Express</text>
+              <text class="fk-desc"  x="544" y="76">low risk · sponsor 1-click · ~minutes</text>
+            </g>
+            <g class="fk-box" style="--d:.7s">
+              <rect x="520" y="116" width="360" height="68" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="544" y="145">Standard</text>
+              <text class="fk-desc"  x="544" y="166">team scope · conditional reviewer</text>
+            </g>
+            <g class="fk-box" style="--d:.85s">
+              <rect x="520" y="206" width="360" height="68" rx="12" fill="var(--brand-primary-dark)"/>
+              <text class="fk-title" x="544" y="235">Full</text>
+              <text class="fk-desc"  x="544" y="256">firm-wide, MNPI, 3+ risks · board quorum + MRM</text>
+            </g>
+          </svg>
+          <figcaption>Figure B — The same request routes to one of three lanes by risk. Low-risk requests take minutes; the highest-risk requests get a reviewer board and a model-risk handoff. Expand the cards below for what each lane means.</figcaption>
+        </figure>
+
+        <h3 class="subhead" data-reveal>Three lanes, one record</h3>
+        <p data-reveal>Six risk questions (does the agent initiate a financial transaction, face customers, run unmonitored, handle NPI, handle MNPI, or move data across borders) plus the intended audience determine the lane. The work effort is proportional to the answers.</p>
+
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="path-express">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Express — minutes</h3>
+                <p>Low-risk personal agents · one sponsor click.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="path-express">
+                <p>For low-risk personal-agent requests where all six risk questions are "No" and the audience is personal-scope. The maker answers a <strong>10-question</strong> form; the system auto-classifies; the sponsor receives a Teams card with FINRA Rule 3110 attestation language and approves in one click; the Microsoft Entra Agent ID and registry entry are provisioned automatically; InfoSec receives a passive 10% sample-audit notice. Elapsed time: minutes.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="path-standard">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Standard — team scope</h3>
+                <p>One conditional reviewer · approve, change, or escalate.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="path-standard">
+                <p>For mid-risk, team-scope requests (or one to two non-MNPI risk hits). The maker answers a <strong>22-question</strong> catalog; the request routes to a conditional reviewer — InfoSec and Privacy, plus Compliance when the agent handles NPI — who can approve, request changes, or escalate.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="path-full">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.4 7.5 8 9 4.6-1.5 8-4 8-9V6l-8-3Z"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Full — highest risk</h3>
+                <p>Parallel reviewer board with quorum · MRM handoff.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="path-full">
+                <p>For the highest-risk requests — firm-wide (enterprise) audiences, any material non-public information, three or more risk hits, or a Privacy-approved cross-border exception. A customer-facing agent that is not otherwise high-risk stays in Standard. The maker answers a <strong>35-question</strong> catalog; the request enters a parallel reviewer board with quorum tracking (InfoSec, Privacy, Compliance, Legal, and Model Risk Management) and, where applicable, a model-risk handoff.</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+
+        <aside class="callout callout-info" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" stroke-linecap="round"/></svg>
+          <div>
+            <p class="callout__title">Conservative by default</p>
+            <p class="callout__body">A maker who answers "Not sure" is treated the same as "Yes." Uncertainty routes a request <em>up</em> to more review, never down — so the fast lane stays reserved for requests that are genuinely low-risk.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-warn" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17v.5"/></svg>
+          <div>
+            <p class="callout__title">Two automatic stops</p>
+            <p class="callout__body">A request is denied by default when the sponsor and the maker are the same person (no self-approval), and when data would cross a border that the declared data-residency does not allow without a recorded privacy override. These are designed as safeguards; firms confirm the routing policy before production.</p>
+          </div>
+        </aside>
+
+        <h3 class="subhead" data-reveal>The lifecycle, end to end</h3>
+        <ol class="timeline" data-reveal>
+          <li>
+            <span class="step-dot" aria-hidden="true">1</span>
+            <h3>Submit</h3>
+            <p>The maker answers a risk-proportional catalog (10, 22, or 35 questions) in the intake portal — the firm's first point of maker onboarding.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">2</span>
+            <h3>Classify</h3>
+            <p>The engine scores the six risk questions and the audience and assigns Express, Standard, or Full — or a default-deny when a safeguard fires.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">3</span>
+            <h3>Approve</h3>
+            <p>The sponsor attests (Express) or the reviewer board reaches quorum (Standard and Full). A maker can never approve their own request.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">4</span>
+            <h3>Record</h3>
+            <p>An immutable decision-log entry is written under the 7-year retention label — the examiner-ready evidence for that agent.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">5</span>
+            <h3>Hand off</h3>
+            <p>On approval, the system mints the Microsoft Entra Agent ID, writes the registry entry, and notifies drift monitors — with no manual steps.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- SECTION 4: THE VALUE -->
+    <section id="value" class="section" aria-labelledby="h-value">
+      <div class="container">
+        <span class="eyebrow" data-reveal>The value</span>
+        <h2 id="h-value" data-reveal>Velocity with control — not a blocker</h2>
+        <p class="lede" data-reveal>Governance that only adds friction gets bypassed, and a bypassed control is no control at all. This gate is built to deliver evidence and speed at the same time.</p>
+
+        <div class="stat-grid" data-reveal>
+          <div class="stat"><span class="stat__num">3</span><span class="stat__label">Intake lanes sized to risk (Express / Standard / Full)</span></div>
+          <div class="stat"><span class="stat__num">6</span><span class="stat__label">Risk questions screened on every request</span></div>
+          <div class="stat"><span class="stat__num">1</span><span class="stat__label">Immutable decision record per agent</span></div>
+          <div class="stat"><span class="stat__num">7 yr</span><span class="stat__label">Retention on every decision log</span></div>
+        </div>
+
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="val-evidence">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M4 19.5V6a2 2 0 0 1 2-2h10l4 4v11.5"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Defensible, examiner-ready evidence</h3>
+                <p>A record, not a search through chat history.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="val-evidence">
+                <p>Every request produces one decision pack: the business case, the risk classification, the approver, the timestamp, and the attestation — written once, retained for seven years, and not editable after the fact. When an examiner asks "who approved this agent and why," the answer is a record, not a reconstruction.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="val-velocity">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>A fast lane, not a roadblock</h3>
+                <p>Low-risk requests clear in minutes.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="val-velocity">
+                <p>Low-risk requests clear in minutes with a single sponsor click. Reviewer time is spent only on the requests that warrant it. Because the fast lane is genuinely fast, it removes the incentive that drives makers to route around the gate — which is what helps keep shadow agents from appearing in the first place.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="val-owner">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>One owner and identity from day one</h3>
+                <p>Every agent inventoried, owned, and named.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="val-owner">
+                <p>On approval, every agent gets an accountable sponsor, a registry entry, and a Microsoft Entra Agent ID. The firm gains a single inventory of which agents exist, who owns them, and what they were approved to do — the opposite of the shadow-agent problem.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="val-wiring">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 7l4 9M17 7l-4 9"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Automatic downstream wiring</h3>
+                <p>Approval triggers identity, registry, and monitoring.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="val-wiring">
+                <p>Approval automatically mints the Entra Agent ID, writes the registry record, and notifies drift monitors that watch for an agent later exceeding what it was approved to do. There are no manual handoffs to forget — the evidence and the controls travel together.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="val-controls">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Framework control coverage</h3>
+                <p>Where this sits in the governance framework.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="val-controls">
+                <p>The intake gate is the primary implementation of framework controls <strong>1.2</strong> (Agent Registry), <strong>1.7</strong> (Comprehensive Audit Logging), and <strong>2.13</strong> (Documentation and Record-Keeping), and it contributes to <strong>2.1</strong> (Managed Environments) and <strong>3.1</strong> (Maker Onboarding and Training).</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: TAKEAWAYS + THE ASK -->
+    <section id="takeaways" class="section section-tint" aria-labelledby="h-takeaways">
+      <div class="container">
+        <span class="eyebrow" data-reveal>Recap &amp; the ask</span>
+        <h2 id="h-takeaways" data-reveal>Key takeaways</h2>
+        <p class="lede" data-reveal>Five things to carry out of this briefing.</p>
+
+        <div class="takeaways" data-reveal>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            What to remember
+          </h3>
+          <ul>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>The ability to build AI agents has moved to business users; governance has to meet it <strong>before</strong> the build, not after.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>An ungoverned agent already sits inside existing FINRA, SEC, OCC / Federal Reserve, and GLBA obligations — examiners will treat it that way.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>A risk-proportional gate (Express / Standard / Full) puts the right amount of review on each request without blocking low-risk work.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Every decision becomes one immutable, examiner-ready record, retained for seven years, with an accountable sponsor and an automatic identity, registry, and monitoring handoff.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>This is velocity <em>with</em> control — a fast lane for low risk and real scrutiny for high risk — not a blanket slowdown.</span>
+            </li>
+          </ul>
+        </div>
+
+        <h3 class="subhead" data-reveal>What we're asking you to validate</h3>
+        <p data-reveal>This solution is at <span class="kw">v1.0.0-preview</span> — suitable for pilot validation, not broad rollout, until the firm's own governance signs off. Five gates stand between the pilot and production:</p>
+
+        <ol class="timeline" data-reveal>
+          <li>
+            <span class="step-dot" aria-hidden="true">1</span>
+            <h3>Walk the locked design decisions</h3>
+            <p>Review the product-owner-locked decisions — risk thresholds, the sponsor-sufficiency rule, and the deny gates — for fit with firm policy.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">2</span>
+            <h3>Convene the cross-functional review</h3>
+            <p>The AI Governance Committee with InfoSec, Compliance, Legal, and IT architecture confirms the approach is right for the firm.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">3</span>
+            <h3>Approve the access consent</h3>
+            <p>Grant admin consent for the documented Microsoft Graph permissions the workflow needs.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">4</span>
+            <h3>Create the retention label</h3>
+            <p>A Purview Compliance Admin provisions the <code class="code">FSI-AgentIntake-7yr</code> label so decision records are retained.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">5</span>
+            <h3>Run the 30-day sample audit</h3>
+            <p>Confirm that no undetected high-risk request slipped through the Express fast lane before scaling beyond pilot.</p>
+          </li>
+        </ol>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">Compliance note</p>
+            <p class="callout__body">This briefing and the <span class="kw">agent-intake</span> solution <strong>support compliance with</strong> the rules cited above — FINRA Rule 3110, FINRA Rule 4511, SEC Rule 17a-4, OCC Bulletin 2011-12, Federal Reserve SR 11-7, and GLBA Section 501(b) — but do not, on their own, satisfy any regulation. Customer-specific policy, legal interpretation, operational controls, and evidence retention determine compliance outcomes. Organizations should verify configuration against their own obligations.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer. -->
+  <footer class="site-footer">
+    <div class="container">
+      <span class="foot-brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true" fill="none">
+          <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" fill="var(--brand-primary)"/>
+          <circle cx="16" cy="13" r="2.4" fill="#fff"/><path d="M16 15.4V20M11 20h10" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        FSI Agent Governance · agent-intake
+      </span>
+      <span>Self-guided executive briefing for the <strong>agent-intake</strong> governance solution (v1.0.0-preview). Built as a single self-contained HTML file — no external requests. These materials describe controls that <em>support compliance with</em> the cited rules; they do not by themselves satisfy any regulation, and implementation requires organizations to verify configuration against their own obligations.</span>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       BEHAVIOR LAYER (inline). Keep intact. Handles: theme toggle (+ system
+       sync + localStorage), scroll-progress bar, nav active-highlight,
+       scroll-reveal, SVG diagram triggers, explore-card toggles, and the
+       prefers-reduced-motion guard. Vanilla JS, no dependencies.
+       ===================================================================== -->
+  <script>
+  (function () {
+    'use strict';
+    var root = document.documentElement;
+
+    // Cross-browser MediaQueryList listener (Safari < 14 used addListener).
+    function onMQ(mq, fn) {
+      if (mq.addEventListener) mq.addEventListener('change', fn);
+      else if (mq.addListener) mq.addListener(fn);
+    }
+    var reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var darkMQ   = window.matchMedia('(prefers-color-scheme: dark)');
+
+    /* ---------- Theme toggle (explicit choice wins over system) ---------- */
+    var THEME_KEY = 'fsi-training-theme';
+    var toggle = document.getElementById('themeToggle');
+    function effectiveTheme() {
+      var explicit = root.getAttribute('data-theme');
+      if (explicit === 'dark' || explicit === 'light') return explicit;
+      return darkMQ.matches ? 'dark' : 'light';
+    }
+    function syncToggle() {
+      var t = effectiveTheme();
+      if (!toggle) return;
+      toggle.setAttribute('aria-pressed', String(t === 'dark'));
+      toggle.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+      toggle.setAttribute('data-theme', t);
+    }
+    try { var saved = localStorage.getItem(THEME_KEY); if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved); } catch (e) {}
+    syncToggle();
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+        syncToggle();
+      });
+    }
+    // If the user never chose explicitly, follow system changes live.
+    onMQ(darkMQ, function () { if (!root.getAttribute('data-theme')) syncToggle(); });
+
+    /* ---------- Scroll-progress bar (rAF-throttled) ---------- */
+    var bar = document.getElementById('progressBar');
+    var track = bar ? bar.parentNode : null;
+    var ticking = false;
+    function updateProgress() {
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      var top = window.pageYOffset || h.scrollTop || 0;
+      var pct = max > 0 ? (top / max) * 100 : 0;
+      pct = Math.max(0, Math.min(100, pct));
+      if (bar) bar.style.width = pct + '%';
+      if (track) track.setAttribute('aria-valuenow', String(Math.round(pct)));
+      ticking = false;
+    }
+    function onScroll() { if (!ticking) { ticking = true; window.requestAnimationFrame(updateProgress); } }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    updateProgress();
+
+    /* ---------- Nav active-section highlight ---------- */
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+    var sections = navLinks
+      .map(function (l) { return document.getElementById((l.getAttribute('href') || '').slice(1)); })
+      .filter(Boolean);
+    function setActive(id) {
+      navLinks.forEach(function (l) {
+        var on = l.getAttribute('href') === '#' + id;
+        l.classList.toggle('is-active', on);
+        if (on) l.setAttribute('aria-current', 'true'); else l.removeAttribute('aria-current');
+      });
+    }
+    if ('IntersectionObserver' in window && sections.length) {
+      var navObs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (en.isIntersecting) setActive(en.target.id); });
+      }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+      sections.forEach(function (s) { navObs.observe(s); });
+    }
+
+    /* ---------- Reveal + SVG diagram animation (reduced-motion aware) ---------- */
+    function revealAll() {
+      document.querySelectorAll('[data-reveal]').forEach(function (el) { el.classList.add('is-visible'); });
+      document.querySelectorAll('[data-animate-svg]').forEach(function (el) { el.classList.add('animate'); });
+    }
+    if (reduceMQ.matches || !('IntersectionObserver' in window)) {
+      revealAll();
+    } else {
+      var revObs = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('is-visible'); obs.unobserve(en.target); }
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.15 });
+      document.querySelectorAll('[data-reveal]').forEach(function (el) { revObs.observe(el); });
+
+      var svgObs = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('animate'); obs.unobserve(en.target); }
+        });
+      }, { threshold: 0.35 });
+      document.querySelectorAll('[data-animate-svg]').forEach(function (el) { svgObs.observe(el); });
+    }
+    // If the user switches on reduced-motion at runtime, settle to final state.
+    onMQ(reduceMQ, function (e) { if (e.matches) revealAll(); });
+
+    /* ---------- Explore-card expand / collapse ---------- */
+    document.querySelectorAll('[data-card-trigger]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var card = btn.closest('.explore-card');
+        if (!card) return;
+        var open = card.classList.toggle('is-open');
+        btn.setAttribute('aria-expanded', String(open));
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

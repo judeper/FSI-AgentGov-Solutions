@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  FSI AGENT-INTAKE TRAINING SCAFFOLD  (_scaffold.html)
+  ============================================================================
+  Shared design + interaction scaffold for the three self-guided learning
+  modules (Executive / Admin / Developer) about the "agent-intake" governance
+  solution.
+
+  HOW TO USE THIS FILE (content authors read this):
+    1. Copy this file to your module name, e.g.  module-executive.html
+    2. Update <title>, the <meta name="description">, the hero, and the nav
+       links so the section anchors match YOUR sections.
+    3. Build your page by copy-pasting the demo blocks below. Each component
+       is wrapped in an HTML comment starting with "USAGE:" that tells you the exact
+       class / data-attribute to invoke and what to replace.
+    4. Replace every "PLACEHOLDER" / "SECTION TITLE HERE" / lorem-ish string.
+    5. KEEP the <style> and <script> blocks intact — they are the shared
+       design system and behavior layer. Do not split them into other files;
+       this file must stay 100% self-contained (the FSI network blocks all
+       external CDNs, fonts, and images, so ZERO external requests are allowed).
+
+  HARD RULES (do not break):
+    - No external requests. No CDN, no Google Fonts, no <img src="http...">.
+      All CSS/JS inline; all graphics are inline SVG; system font stack only.
+    - Respect prefers-reduced-motion and prefers-color-scheme.
+    - Keep it accessible: semantic landmarks, ARIA, keyboard, visible focus.
+
+  See README.md in this folder for the component invocation cheat-sheet.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Self-guided training scaffold for the FSI agent-intake governance solution. Replace this description per module.">
+  <title>Agent Intake — Training Scaffold (replace per module)</title>
+
+  <!-- ======================================================================
+       DESIGN SYSTEM (inline). Tokens mirror the FSI MkDocs theme
+       (site-docs/stylesheets/extra.css): Microsoft Blue #0078D4 primary,
+       WCAG-AA teal #007A7E accent. Dark mode supported via BOTH an explicit
+       toggle (data-theme on <html>) AND prefers-color-scheme.
+       ====================================================================== -->
+  <style>
+    /* ---- 1. Color + scale tokens (LIGHT is the default) ------------------ */
+    :root {
+      /* Brand (from FSI design system) */
+      --brand-primary:       #0078D4;
+      --brand-primary-dark:  #005A9E;
+      --brand-primary-light: #2B88D8;
+      --brand-accent:        #007A7E;
+      --brand-accent-vivid:  #00B7C3;
+
+      /* Semantic surfaces / text */
+      --bg:          #ffffff;
+      --bg-alt:      #F3F2F1;
+      --surface:     #ffffff;
+      --card:        #ffffff;
+      --border:      #E1DFDD;
+      --border-strong:#C8C6C4;
+      --text:        #201F1E;
+      --text-subtle: #5A5856;
+      --heading:     #11100F;
+      --link:        #005A9E;
+
+      /* Callout palettes */
+      --info-bg:     rgba(0,120,212,0.08);
+      --info-border: #0078D4;
+      --info-ink:    #084d82;
+      --warn-bg:     rgba(255,185,0,0.13);
+      --warn-border: #C19C00;
+      --warn-ink:    #8a6d00;
+      --reg-bg:      rgba(0,122,126,0.09);
+      --reg-border:  #007A7E;
+      --reg-ink:     #045b5e;
+
+      /* Code */
+      --code-bg:   #F3F2F1;
+      --code-ink:  #b3306b;
+      --kw-bg:     rgba(0,120,212,0.10);
+      --kw-ink:    #005A9E;
+
+      /* Effects */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 10px rgba(0,0,0,.07), 0 12px 28px rgba(0,0,0,.10);
+      --shadow-lg: 0 18px 50px rgba(0,0,0,.16);
+      --focus:     #0078D4;
+
+      /* Geometry */
+      --radius:    12px;
+      --radius-sm: 8px;
+      --maxw:      1080px;
+      --header-h:  64px;
+
+      --ease: cubic-bezier(.22,.61,.36,1);
+
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+              Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+      --mono: "Cascadia Code", "SF Mono", "Segoe UI Mono", "Roboto Mono",
+              Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    /* ---- 2. Dark tokens. Applied when the system prefers dark AND the user
+         has not explicitly chosen light, OR when the toggle sets data-theme=dark. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --brand-primary:       #429CE3;
+        --brand-primary-dark:  #2B88D8;
+        --brand-primary-light: #6BB3EA;
+        --brand-accent:        #3DD6E0;
+        --brand-accent-vivid:  #3DD6E0;
+
+        --bg:          #1B1A19;
+        --bg-alt:      #242322;
+        --surface:     #242322;
+        --card:        #2D2C2B;
+        --border:      #3B3A39;
+        --border-strong:#4A4948;
+        --text:        #F3F2F1;
+        --text-subtle: #C8C6C4;
+        --heading:     #ffffff;
+        --link:        #6BB3EA;
+
+        --info-bg:     rgba(66,156,227,0.14);
+        --info-border: #429CE3;
+        --info-ink:    #9ecbf0;
+        --warn-bg:     rgba(255,185,0,0.14);
+        --warn-border: #E0A800;
+        --warn-ink:    #FFD16A;
+        --reg-bg:      rgba(61,214,224,0.12);
+        --reg-border:  #3DD6E0;
+        --reg-ink:     #8be6ec;
+
+        --code-bg:   #2D2C2B;
+        --code-ink:  #ff9ec4;
+        --kw-bg:     rgba(66,156,227,0.18);
+        --kw-ink:    #9ecbf0;
+
+        --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+        --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+        --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+      }
+    }
+    /* Explicit toggle wins regardless of system setting. */
+    :root[data-theme="dark"] {
+      --brand-primary:       #429CE3;
+      --brand-primary-dark:  #2B88D8;
+      --brand-primary-light: #6BB3EA;
+      --brand-accent:        #3DD6E0;
+      --brand-accent-vivid:  #3DD6E0;
+
+      --bg:          #1B1A19;
+      --bg-alt:      #242322;
+      --surface:     #242322;
+      --card:        #2D2C2B;
+      --border:      #3B3A39;
+      --border-strong:#4A4948;
+      --text:        #F3F2F1;
+      --text-subtle: #C8C6C4;
+      --heading:     #ffffff;
+      --link:        #6BB3EA;
+
+      --info-bg:     rgba(66,156,227,0.14);
+      --info-border: #429CE3;
+      --info-ink:    #9ecbf0;
+      --warn-bg:     rgba(255,185,0,0.14);
+      --warn-border: #E0A800;
+      --warn-ink:    #FFD16A;
+      --reg-bg:      rgba(61,214,224,0.12);
+      --reg-border:  #3DD6E0;
+      --reg-ink:     #8be6ec;
+
+      --code-bg:   #2D2C2B;
+      --code-ink:  #ff9ec4;
+      --kw-bg:     rgba(66,156,227,0.18);
+      --kw-ink:    #9ecbf0;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+      --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+    }
+
+    /* ---- 3. Base / reset --------------------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 16px); }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      transition: background-color .3s var(--ease), color .3s var(--ease);
+    }
+    h1, h2, h3, h4 { color: var(--heading); line-height: 1.2; font-weight: 700; }
+    p { margin: 0 0 1em; }
+    a { color: var(--link); }
+    img, svg { max-width: 100%; }
+    ::selection { background: var(--brand-primary); color: #fff; }
+
+    /* Visible, consistent focus everywhere. */
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .container { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px); }
+
+    /* ---- 4. Skip link ------------------------------------------------------ */
+    .skip-link {
+      position: fixed; top: 8px; left: 8px; z-index: 200;
+      background: var(--brand-primary); color: #fff;
+      padding: 10px 16px; border-radius: 8px; font-weight: 600;
+      transform: translateY(-150%); transition: transform .2s var(--ease);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    /* ---- 5. Header / nav / progress bar ------------------------------------ */
+    .site-header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg); /* fallback for browsers without color-mix() */
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      -webkit-backdrop-filter: saturate(180%) blur(10px);
+      backdrop-filter: saturate(180%) blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .progress-track {
+      position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+      background: transparent;
+    }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent-vivid));
+      transition: width .08s linear;
+    }
+    .nav {
+      display: flex; align-items: center; gap: 16px;
+      height: var(--header-h);
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--heading); text-decoration: none;
+      white-space: nowrap; flex: 0 0 auto;
+    }
+    .brand svg { width: 28px; height: 28px; flex: 0 0 auto; }
+    .brand small { display: block; font-weight: 500; font-size: .72rem; color: var(--text-subtle); letter-spacing: .02em; }
+    .nav-links {
+      display: flex; gap: 4px; margin: 0 auto 0 8px; padding: 0; list-style: none;
+      overflow-x: auto; scrollbar-width: thin;
+    }
+    .nav-links a {
+      display: inline-block; padding: 6px 12px; border-radius: 999px;
+      color: var(--text-subtle); text-decoration: none; font-size: .92rem; font-weight: 600;
+      white-space: nowrap; transition: color .2s, background-color .2s;
+    }
+    .nav-links a:hover { color: var(--heading); background: var(--bg-alt); }
+    .nav-links a.is-active { color: var(--brand-primary); background: var(--info-bg); }
+
+    .theme-toggle {
+      flex: 0 0 auto;
+      display: inline-grid; place-items: center;
+      width: 40px; height: 40px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--heading);
+      cursor: pointer; transition: background-color .2s, transform .2s, border-color .2s;
+    }
+    .theme-toggle:hover { background: var(--bg-alt); transform: translateY(-1px); }
+    .theme-toggle svg { width: 20px; height: 20px; }
+    .theme-toggle .icon-moon { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-sun  { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-moon { display: block; }
+
+    /* ---- 6. Section rhythm + headings -------------------------------------- */
+    main { display: block; }
+    .section { padding: clamp(40px, 7vw, 88px) 0; scroll-margin-top: calc(var(--header-h) + 16px); }
+    .section + .section { border-top: 1px solid var(--border); }
+    .section-tint { background: var(--bg-alt); }
+
+    .eyebrow {
+      display: inline-block; margin: 0 0 10px;
+      font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--brand-accent);
+    }
+    .section h2 { font-size: clamp(1.6rem, 3.4vw, 2.3rem); margin: 0 0 .4em; }
+    .section .lede { font-size: 1.12rem; color: var(--text-subtle); max-width: 64ch; }
+    .subhead {
+      font-size: 1.25rem; margin: 2em 0 .5em;
+      padding-left: 12px; border-left: 4px solid var(--brand-primary);
+    }
+
+    /* ---- 7. Hero ----------------------------------------------------------- */
+    .hero {
+      position: relative; overflow: hidden;
+      color: #fff;
+      background:
+        radial-gradient(1200px 400px at 85% -10%, rgba(0,183,195,.45), transparent 60%),
+        linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+      scroll-margin-top: var(--header-h);
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background-image: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1.4px);
+      background-size: 22px 22px; opacity: .5;
+    }
+    .hero .container { position: relative; z-index: 1; padding-top: clamp(48px, 8vw, 96px); padding-bottom: clamp(48px, 8vw, 96px); }
+    .hero .eyebrow { color: #bfe6ff; }
+    .hero h1 { color: #fff; font-size: clamp(2rem, 5.2vw, 3.4rem); margin: 0 0 .35em; max-width: 18ch; }
+    .hero p.tagline { font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: rgba(255,255,255,.92); max-width: 60ch; }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+      color: #fff; padding: 5px 12px; border-radius: 999px; font-size: .82rem; font-weight: 600;
+    }
+
+    /* "What you'll learn" objectives card */
+    .objectives {
+      margin-top: 28px; background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.22); border-radius: var(--radius);
+      padding: 20px 22px; max-width: 640px; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    .objectives h2 { color: #fff; font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 12px; }
+    .objectives ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+    .objectives li { display: flex; gap: 10px; align-items: flex-start; color: rgba(255,255,255,.95); font-size: .98rem; }
+    .objectives li svg { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; color: var(--brand-accent-vivid); }
+
+    /* ---- 8. Buttons -------------------------------------------------------- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px; border-radius: 999px; font-weight: 600; font-size: .98rem;
+      text-decoration: none; cursor: pointer; border: 1px solid transparent;
+      transition: transform .15s var(--ease), box-shadow .2s, background-color .2s;
+    }
+    .btn-primary { background: #fff; color: var(--brand-primary-dark); box-shadow: var(--shadow-sm); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.6); }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); }
+
+    /* ---- 9. Animated SVG diagram container --------------------------------- */
+    .diagram {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: clamp(16px, 3vw, 28px);
+      box-shadow: var(--shadow-sm); margin: 1.5rem 0;
+    }
+    .diagram figcaption { margin-top: 14px; font-size: .92rem; color: var(--text-subtle); text-align: center; }
+    .diagram svg { display: block; width: 100%; height: auto; }
+
+    /* Pipeline diagram pieces */
+    .pl-track { stroke: var(--border-strong); stroke-width: 4; fill: none; }
+    .pl-progress {
+      stroke: url(#plGrad); stroke-width: 4; fill: none; stroke-linecap: round;
+      stroke-dasharray: 760; stroke-dashoffset: 760;
+    }
+    [data-animate-svg].animate .pl-progress { animation: plDraw 2.4s var(--ease) forwards; }
+    @keyframes plDraw { to { stroke-dashoffset: 0; } }
+
+    .pl-node { transform-box: fill-box; transform-origin: center; opacity: .35; transform: scale(.8); }
+    .pl-node .disc { fill: url(#nodeGrad); }
+    .pl-node .num  { fill: #fff; font-weight: 700; font-size: 22px; }
+    .pl-node .lbl  { fill: var(--text); font-size: 15px; font-weight: 600; }
+    .pl-node .sub  { fill: var(--text-subtle); font-size: 12.5px; }
+    [data-animate-svg].animate .pl-node { animation: plPop .55s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes plPop { to { opacity: 1; transform: scale(1); } }
+
+    .pl-ring { fill: none; stroke: var(--brand-accent-vivid); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
+    [data-animate-svg].animate .pl-ring { animation: plRing 1.4s ease-out forwards; animation-delay: var(--d, 0s); }
+    @keyframes plRing { 0% { opacity: .8; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.9); } }
+
+    .pl-token { fill: var(--brand-accent-vivid); filter: drop-shadow(0 0 6px var(--brand-accent-vivid)); opacity: 0; }
+    [data-animate-svg].animate .pl-token { animation: plToken 2.4s var(--ease) forwards; }
+    @keyframes plToken {
+      0%   { opacity: 0; transform: translateX(0); }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
+      100% { opacity: 0; transform: translateX(760px); }
+    }
+
+    /* Fork (classification) diagram pieces */
+    .fk-path { fill: none; stroke: var(--border-strong); stroke-width: 3; stroke-dasharray: 420; stroke-dashoffset: 420; }
+    [data-animate-svg].animate .fk-path { animation: fkDraw 1.1s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkDraw { to { stroke-dashoffset: 0; } }
+    .fk-box { opacity: 0; transform-box: fill-box; transform-origin: center; transform: translateX(-12px); }
+    [data-animate-svg].animate .fk-box { animation: fkIn .5s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkIn { to { opacity: 1; transform: translateX(0); } }
+    .fk-title { fill: #fff; font-weight: 700; font-size: 16px; }
+    .fk-desc  { fill: rgba(255,255,255,.92); font-size: 12.5px; }
+    .fk-input { fill: var(--heading); }
+    .fk-input-label { fill: var(--bg); font-weight: 700; font-size: 15px; }
+
+    /* ---- 10. Scroll-reveal ------------------------------------------------- */
+    [data-reveal] {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity .7s var(--ease), transform .7s var(--ease);
+      transition-delay: var(--reveal-delay, 0s);
+      will-change: opacity, transform;
+    }
+    [data-reveal].is-visible { opacity: 1; transform: none; }
+
+    /* ---- 11. Explore (expandable) cards ------------------------------------ */
+    .card-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 1.5rem 0; }
+    .explore-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow .25s, border-color .25s, transform .25s;
+    }
+    .explore-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-strong); }
+    .explore-card.is-open { border-color: var(--brand-primary); }
+    .explore-card__trigger {
+      width: 100%; text-align: left; cursor: pointer; background: transparent; border: 0;
+      padding: 20px; display: flex; gap: 14px; align-items: flex-start; color: inherit; font: inherit;
+    }
+    .explore-card__icon {
+      flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px;
+      display: grid; place-items: center; background: var(--info-bg); color: var(--brand-primary);
+    }
+    .explore-card__icon svg { width: 22px; height: 22px; }
+    .explore-card__head { flex: 1 1 auto; }
+    .explore-card__head h3 { font-size: 1.08rem; margin: 0 0 2px; }
+    .explore-card__head p { margin: 0; color: var(--text-subtle); font-size: .92rem; }
+    .explore-card__chev { flex: 0 0 auto; color: var(--text-subtle); transition: transform .3s var(--ease); margin-top: 4px; }
+    .explore-card.is-open .explore-card__chev { transform: rotate(180deg); color: var(--brand-primary); }
+    .explore-card__body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
+    .explore-card.is-open .explore-card__body { grid-template-rows: 1fr; }
+    .explore-card__bodyinner { overflow: hidden; }
+    .explore-card__detail { padding: 0 20px 20px; color: var(--text-subtle); }
+    .explore-card__detail > :first-child { margin-top: 0; }
+
+    /* ---- 12. Callouts ------------------------------------------------------ */
+    .callout {
+      display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+      border: 1px solid var(--border); border-left-width: 4px;
+      border-radius: var(--radius-sm); padding: 16px 18px; margin: 1.4rem 0;
+      background: var(--surface);
+    }
+    .callout__icon { width: 24px; height: 24px; margin-top: 2px; }
+    .callout__title { font-weight: 700; color: var(--heading); margin: 0 0 4px; font-size: .95rem; letter-spacing: .01em; }
+    .callout__body { margin: 0; color: var(--text); }
+    .callout__body :last-child { margin-bottom: 0; }
+    .callout-info { background: var(--info-bg); border-left-color: var(--info-border); }
+    .callout-info .callout__icon, .callout-info .callout__title { color: var(--info-ink); }
+    .callout-warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout-warn .callout__icon, .callout-warn .callout__title { color: var(--warn-ink); }
+    .callout-reg  { background: var(--reg-bg); border-left-color: var(--reg-border); }
+    .callout-reg .callout__icon, .callout-reg .callout__title { color: var(--reg-ink); }
+    .callout-reg .callout__title { text-transform: uppercase; font-size: .78rem; letter-spacing: .08em; }
+
+    /* ---- 13. Timeline / stepper -------------------------------------------- */
+    .timeline { position: relative; margin: 1.5rem 0; padding-left: 8px; list-style: none; }
+    .timeline::before {
+      content: ""; position: absolute; left: 19px; top: 6px; bottom: 6px; width: 2px;
+      background: linear-gradient(var(--brand-primary), var(--brand-accent));
+    }
+    .timeline li { position: relative; padding: 0 0 26px 52px; }
+    .timeline li:last-child { padding-bottom: 0; }
+    .timeline .step-dot {
+      position: absolute; left: 8px; top: 0; width: 24px; height: 24px; border-radius: 999px;
+      background: var(--brand-primary); color: #fff; display: grid; place-items: center;
+      font-size: .8rem; font-weight: 700; box-shadow: 0 0 0 4px var(--bg);
+    }
+    .timeline h3 { font-size: 1.05rem; margin: 0 0 4px; }
+    .timeline p { margin: 0; color: var(--text-subtle); }
+
+    /* ---- 14. Stat / metric blocks ------------------------------------------ */
+    .stat-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 1.5rem 0; }
+    .stat {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px; text-align: center; box-shadow: var(--shadow-sm);
+    }
+    .stat__num {
+      display: block; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; line-height: 1;
+      background: linear-gradient(120deg, var(--brand-primary), var(--brand-accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .stat__label { display: block; margin-top: 8px; color: var(--text-subtle); font-size: .92rem; }
+
+    /* ---- 15. Inline code / keyword ----------------------------------------- */
+    code.code, .code {
+      font-family: var(--mono); font-size: .88em;
+      background: var(--code-bg); color: var(--code-ink);
+      padding: .15em .45em; border-radius: 6px; border: 1px solid var(--border);
+    }
+    .kw {
+      font-family: var(--font); font-weight: 600; font-size: .92em;
+      background: var(--kw-bg); color: var(--kw-ink);
+      padding: .1em .5em; border-radius: 6px; white-space: nowrap;
+    }
+    kbd.kbd, .kbd {
+      font-family: var(--mono); font-size: .82em; color: var(--heading);
+      background: var(--bg-alt); border: 1px solid var(--border-strong);
+      border-bottom-width: 2px; border-radius: 6px; padding: .12em .5em;
+    }
+    pre.codeblock {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: .86rem; line-height: 1.55;
+      color: var(--text); margin: 1.2rem 0;
+    }
+
+    /* ---- 16. Key takeaways ------------------------------------------------- */
+    .takeaways {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-sm); padding: clamp(20px, 4vw, 32px); margin: 1.5rem 0;
+      position: relative; overflow: hidden;
+    }
+    .takeaways::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+      background: linear-gradient(var(--brand-primary), var(--brand-accent));
+    }
+    .takeaways h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 1.2rem; }
+    .takeaways h3 svg { width: 24px; height: 24px; color: var(--brand-accent); }
+    .takeaways ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+    .takeaways li { display: flex; gap: 12px; align-items: flex-start; }
+    .takeaways li svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--brand-primary); margin-top: 1px; }
+
+    /* ---- 17. Footer -------------------------------------------------------- */
+    .site-footer {
+      border-top: 1px solid var(--border); background: var(--bg-alt);
+      padding: 40px 0; color: var(--text-subtle); font-size: .92rem;
+    }
+    .site-footer .container { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; }
+    .site-footer a { color: var(--link); }
+    .site-footer .foot-brand { display: flex; align-items: center; gap: 10px; color: var(--heading); font-weight: 700; }
+    .site-footer .foot-brand svg { width: 24px; height: 24px; }
+
+    /* small helper used by the "component note" labels in the demo page */
+    .demo-note {
+      font-size: .82rem; color: var(--text-subtle); margin: 0 0 1rem;
+      border: 1px dashed var(--border-strong); border-radius: 8px; padding: 8px 12px;
+      background: var(--bg-alt);
+    }
+    .demo-note code { font-family: var(--mono); color: var(--brand-primary); }
+
+    /* ---- 18. Responsive ---------------------------------------------------- */
+    @media (max-width: 720px) {
+      body { font-size: 16px; }
+      .brand small { display: none; }
+      .nav-links { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 90%, transparent); }
+    }
+
+    /* ---- 19. Reduced motion: curtail everything ---------------------------- */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+      [data-reveal] { opacity: 1 !important; transform: none !important; }
+      .pl-node { opacity: 1 !important; transform: none !important; }
+      .pl-progress { stroke-dashoffset: 0 !important; }
+      .fk-box { opacity: 1 !important; transform: none !important; }
+      .fk-path { stroke-dashoffset: 0 !important; }
+      .pl-token, .pl-ring { display: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- =====================================================================
+       USAGE: STICKY HEADER + SCROLL-PROGRESS BAR + NAV
+       Copy this whole <header>. Then:
+         - Edit the <a class="brand"> label for your module.
+         - Edit the <li> nav items so each href="#xyz" matches a
+           <section id="xyz"> below. Add data-nav to every nav link you
+           want auto-highlighted on scroll.
+         - Keep id="progressBar" and id="themeToggle" — the JS hooks them.
+       ===================================================================== -->
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Section navigation">
+        <a class="brand" href="#overview">
+          <!-- inline FSI shield + circuit motif (no external image) -->
+          <svg viewBox="0 0 32 32" aria-hidden="true" fill="none">
+            <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" fill="var(--brand-primary)"/>
+            <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" stroke="var(--brand-accent-vivid)" stroke-width="1.2" opacity=".6"/>
+            <circle cx="16" cy="13" r="2.4" fill="#fff"/>
+            <path d="M16 15.4V20M11 20h10M11.5 13H8M24 13h-3.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="8" cy="13" r="1.3" fill="#fff"/><circle cx="24" cy="13" r="1.3" fill="#fff"/>
+          </svg>
+          <span>Agent Intake<small>Self-guided training</small></span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#overview"  data-nav>Overview</a></li>
+          <li><a href="#headings"  data-nav>Headings</a></li>
+          <li><a href="#diagrams"  data-nav>Diagrams</a></li>
+          <li><a href="#reveal"    data-nav>Reveal</a></li>
+          <li><a href="#cards"     data-nav>Cards</a></li>
+          <li><a href="#callouts"  data-nav>Callouts</a></li>
+          <li><a href="#timeline"  data-nav>Timeline</a></li>
+          <li><a href="#stats"     data-nav>Stats</a></li>
+          <li><a href="#takeaways" data-nav>Takeaways</a></li>
+        </ul>
+
+        <!-- USAGE: DARK-MODE TOGGLE — keep id="themeToggle"; JS swaps icon + aria. -->
+        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+          </svg>
+        </button>
+      </nav>
+    </div>
+    <div class="progress-track" role="progressbar" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- =====================================================================
+         USAGE: HERO / INTRO  +  "WHAT YOU'LL LEARN"
+         The hero is section id="overview". Replace the eyebrow, h1, tagline,
+         badges, and the <ul> learning objectives. The objectives card is the
+         self-guided contract with the reader: list 3-5 things they will be
+         able to do after reading. Keep one <h1> per page (here).
+         ===================================================================== -->
+    <section id="overview" class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <span class="eyebrow">MODULE TYPE HERE · e.g. Executive / Admin / Developer</span>
+        <h1 id="hero-title">SELF-GUIDED MODULE TITLE HERE</h1>
+        <p class="tagline">
+          One or two sentences that frame the module for a reader browsing alone.
+          Replace this with a plain-language promise — what this page helps them
+          understand about the <span class="kw">agent-intake</span> governance gate
+          and why it matters in US financial services.
+        </p>
+
+        <div class="hero-badges" aria-hidden="false">
+          <span class="badge">⏱ ~12 min read</span>
+          <span class="badge">No prior setup needed</span>
+          <span class="badge">Self-paced</span>
+        </div>
+
+        <!-- "What you'll learn" objectives -->
+        <div class="objectives">
+          <h2>What you'll learn</h2>
+          <ul>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Learning objective #1 — replace with a concrete, verifiable outcome.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Learning objective #2 — what the reader can do after this section.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Learning objective #3 — keep to 3–5 items, action-oriented.</span>
+            </li>
+          </ul>
+        </div>
+
+        <p style="margin-top:28px">
+          <a class="btn btn-primary" href="#diagrams">Start exploring ↓</a>
+          <a class="btn btn-ghost" href="#takeaways">Jump to takeaways</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- Orientation callout for content authors (also demos .callout-info) -->
+    <section class="section" aria-label="How to use this scaffold">
+      <div class="container">
+        <div class="callout callout-info" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" stroke-linecap="round"/></svg>
+          <div>
+            <p class="callout__title">This page is the shared scaffold</p>
+            <p class="callout__body">Every block below is a reusable component with a live demo and an
+              HTML-comment usage note. Copy the demos into your module, replace the
+              <span class="kw">PLACEHOLDER</span> text, and keep the <span class="code">&lt;style&gt;</span> /
+              <span class="code">&lt;script&gt;</span> intact. Toggle the theme (top-right) and try keyboard
+              navigation (<span class="kbd">Tab</span> / <span class="kbd">Enter</span>) to feel the interaction bar.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: SECTION + SUBSECTION HEADING PATTERN
+         Wrap each content area in <section id="..." class="section">. Use:
+           <span class="eyebrow">  small label above the H2
+           <h2>                     the section title
+           <p class="lede">         one-paragraph intro
+           <h3 class="subhead">     subsection headings within the section
+         Add class="section-tint" to alternate the background. Every section
+         you want in the nav needs a matching <li><a href="#id" data-nav>.
+         ===================================================================== -->
+    <section id="headings" class="section section-tint" aria-labelledby="h-headings">
+      <div class="container">
+        <span class="eyebrow" data-reveal>SECTION EYEBROW HERE</span>
+        <h2 id="h-headings" data-reveal>Section title heading pattern</h2>
+        <p class="lede" data-reveal>This lede paragraph explains the section in one or two sentences for a
+          reader arriving by scroll. Replace it. Generous on-screen explanation is the
+          point — assume no narrator is present.</p>
+
+        <h3 class="subhead" data-reveal>Subsection heading here</h3>
+        <p data-reveal>Body copy goes here. Write to be read alone: define terms inline, link concepts,
+          and prefer short paragraphs. Example domain sentence: the <span class="kw">agent-intake</span>
+          gate classifies each request as <span class="kw">Express</span>, <span class="kw">Standard</span>,
+          or <span class="kw">Full</span> before a maker can build an agent.</p>
+
+        <h3 class="subhead" data-reveal>Another subsection</h3>
+        <p data-reveal>Lorem-ish placeholder: phasellus governance proportional to risk, sponsor accountability,
+          immutable decision record, downstream handoff. Replace with real teaching content.</p>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: ANIMATED SVG DIAGRAMS
+         Wrap an inline <svg> in <figure class="diagram"> and put
+         data-animate-svg on the <svg> (or any ancestor element) — the JS adds
+         class "animate" when it scrolls into view, which triggers the CSS
+         keyframes. Two ready diagrams are provided:
+           (A) Left-to-right PIPELINE with sequential node highlights + a
+               traveling token + a drawing progress line.
+           (B) Classification FORK (one input -> Express / Standard / Full).
+         Per-node stagger is set with an inline per-node delay property (see the demo). Animations are
+         pure CSS, so prefers-reduced-motion (see <style>) curtails them.
+         To make your own: keep the class names (.pl-* / .fk-*) or copy the
+         keyframes block and rename. Always provide a <figcaption> so the
+         diagram is understandable without motion.
+         ===================================================================== -->
+    <section id="diagrams" class="section" aria-labelledby="h-diagrams">
+      <div class="container">
+        <span class="eyebrow" data-reveal>ANIMATED DIAGRAMS</span>
+        <h2 id="h-diagrams" data-reveal>Diagrams that animate on scroll</h2>
+        <p class="lede" data-reveal>Use inline-SVG diagrams to teach a process. They animate the first time they
+          enter the viewport, and degrade to a static, labelled state under reduced motion.</p>
+
+        <p class="demo-note">Invoke: <code>&lt;figure class="diagram"&gt;&lt;svg data-animate-svg …&gt;</code>. Stagger nodes with <code>style="--d:0.5s"</code>.</p>
+
+        <!-- (A) PIPELINE DIAGRAM -->
+        <figure class="diagram" data-reveal>
+          <svg viewBox="0 0 920 210" role="img" aria-label="Agent-intake pipeline: a request flows left to right through Submit, Classify, Approve, Record, and Handoff.">
+            <defs>
+              <linearGradient id="plGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="var(--brand-primary)"/>
+                <stop offset="1" stop-color="var(--brand-accent-vivid)"/>
+              </linearGradient>
+              <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="var(--brand-primary-light)"/>
+                <stop offset="1" stop-color="var(--brand-primary-dark)"/>
+              </linearGradient>
+            </defs>
+
+            <!-- connector: gray track + animated colored progress + traveling token -->
+            <line class="pl-track"    x1="100" y1="78" x2="860" y2="78"/>
+            <path  class="pl-progress" d="M100 78 H860"/>
+            <circle class="pl-token" cx="100" cy="78" r="7"/>
+
+            <!-- nodes (group g.pl-node; a per-node delay property sets the entrance stagger) -->
+            <g class="pl-node" style="--d:0s">
+              <circle class="pl-ring" cx="100" cy="78" r="34"/>
+              <circle class="disc" cx="100" cy="78" r="34"/>
+              <text class="num" x="100" y="78" text-anchor="middle" dominant-baseline="central">1</text>
+              <text class="lbl" x="100" y="135" text-anchor="middle">Submit</text>
+              <text class="sub" x="100" y="153" text-anchor="middle">maker intake form</text>
+            </g>
+            <g class="pl-node" style="--d:.5s">
+              <circle class="pl-ring" cx="290" cy="78" r="34"/>
+              <circle class="disc" cx="290" cy="78" r="34"/>
+              <text class="num" x="290" y="78" text-anchor="middle" dominant-baseline="central">2</text>
+              <text class="lbl" x="290" y="135" text-anchor="middle">Classify</text>
+              <text class="sub" x="290" y="153" text-anchor="middle">Express / Std / Full</text>
+            </g>
+            <g class="pl-node" style="--d:1s">
+              <circle class="pl-ring" cx="480" cy="78" r="34"/>
+              <circle class="disc" cx="480" cy="78" r="34"/>
+              <text class="num" x="480" y="78" text-anchor="middle" dominant-baseline="central">3</text>
+              <text class="lbl" x="480" y="135" text-anchor="middle">Approve</text>
+              <text class="sub" x="480" y="153" text-anchor="middle">sponsor / reviewer</text>
+            </g>
+            <g class="pl-node" style="--d:1.5s">
+              <circle class="pl-ring" cx="670" cy="78" r="34"/>
+              <circle class="disc" cx="670" cy="78" r="34"/>
+              <text class="num" x="670" y="78" text-anchor="middle" dominant-baseline="central">4</text>
+              <text class="lbl" x="670" y="135" text-anchor="middle">Record</text>
+              <text class="sub" x="670" y="153" text-anchor="middle">immutable decision</text>
+            </g>
+            <g class="pl-node" style="--d:2s">
+              <circle class="pl-ring" cx="860" cy="78" r="34"/>
+              <circle class="disc" cx="860" cy="78" r="34"/>
+              <text class="num" x="860" y="78" text-anchor="middle" dominant-baseline="central">5</text>
+              <text class="lbl" x="860" y="135" text-anchor="middle">Handoff</text>
+              <text class="sub" x="860" y="153" text-anchor="middle">Entra Agent ID</text>
+            </g>
+          </svg>
+          <figcaption>Figure A — Placeholder pipeline. Each request flows Submit → Classify → Approve → Record → Handoff. Replace labels with your module's process.</figcaption>
+        </figure>
+
+        <!-- (B) CLASSIFICATION FORK DIAGRAM -->
+        <figure class="diagram" data-reveal>
+          <svg viewBox="0 0 920 300" role="img" aria-label="Classification fork: one intake request branches into Express, Standard, or Full review paths.">
+            <!-- input node -->
+            <g class="fk-box" style="--d:0s">
+              <rect class="fk-input" x="36" y="118" width="170" height="64" rx="12"/>
+              <text class="fk-input-label" x="121" y="146" text-anchor="middle">Intake request</text>
+              <text class="fk-input-label" x="121" y="166" text-anchor="middle" style="font-size:12px;opacity:.85">classify by risk</text>
+            </g>
+
+            <!-- branch connectors -->
+            <path class="fk-path" style="--d:.15s" d="M206 150 C 320 150, 360 60, 520 60"/>
+            <path class="fk-path" style="--d:.3s"  d="M206 150 C 340 150, 380 150, 520 150"/>
+            <path class="fk-path" style="--d:.45s" d="M206 150 C 320 150, 360 240, 520 240"/>
+
+            <!-- branch boxes -->
+            <g class="fk-box" style="--d:.55s">
+              <rect x="520" y="26" width="360" height="68" rx="12" fill="var(--brand-accent)"/>
+              <text class="fk-title" x="544" y="55">Express</text>
+              <text class="fk-desc"  x="544" y="76">low risk · sponsor 1-click · ~minutes</text>
+            </g>
+            <g class="fk-box" style="--d:.7s">
+              <rect x="520" y="116" width="360" height="68" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="544" y="145">Standard</text>
+              <text class="fk-desc"  x="544" y="166">team scope · conditional reviewer</text>
+            </g>
+            <g class="fk-box" style="--d:.85s">
+              <rect x="520" y="206" width="360" height="68" rx="12" fill="var(--brand-primary-dark)"/>
+              <text class="fk-title" x="544" y="235">Full</text>
+              <text class="fk-desc"  x="544" y="256">customer-facing · board quorum + MRM</text>
+            </g>
+          </svg>
+          <figcaption>Figure B — Placeholder classification fork. One request routes to one of three paths by risk. Swap the path names/descriptions for your content.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: SCROLL-REVEAL WRAPPER
+         Add  data-reveal  to ANY element to fade + slide it in when scrolled
+         into view (IntersectionObserver). Stagger siblings with an inline reveal-delay custom property (see the demo and README). Under prefers-reduced-motion the JS
+         reveals everything immediately (no transform). It reveals once.
+         ===================================================================== -->
+    <section id="reveal" class="section section-tint" aria-labelledby="h-reveal">
+      <div class="container">
+        <span class="eyebrow" data-reveal>PROGRESSIVE DISCLOSURE</span>
+        <h2 id="h-reveal" data-reveal>Scroll-reveal &amp; staggering</h2>
+        <p class="lede" data-reveal>Anything with <span class="code">data-reveal</span> animates in on scroll. Add
+          <span class="code">style="--reveal-delay:.15s"</span> to stagger a sequence.</p>
+
+        <p class="demo-note">Invoke: add <code>data-reveal</code> to an element. Stagger with <code>style="--reveal-delay:.2s"</code>.</p>
+
+        <div class="card-grid">
+          <div class="stat" data-reveal style="--reveal-delay:0s"><span class="stat__num">A</span><span class="stat__label">Reveals first</span></div>
+          <div class="stat" data-reveal style="--reveal-delay:.12s"><span class="stat__num">B</span><span class="stat__label">Reveals second</span></div>
+          <div class="stat" data-reveal style="--reveal-delay:.24s"><span class="stat__num">C</span><span class="stat__label">Reveals third</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: INTERACTIVE "EXPLORE" CARDS (click / keyboard to expand)
+         Structure per card:
+           <article class="explore-card">
+             <button class="explore-card__trigger" data-card-trigger
+                     aria-expanded="false" aria-controls="UNIQUE_ID">
+               icon + head (h3 + teaser) + chevron
+             </button>
+             <div class="explore-card__body"><div class="explore-card__bodyinner">
+               <div class="explore-card__detail" id="UNIQUE_ID"> hidden content </div>
+             </div></div>
+           </article>
+         The trigger is a real <button>, so Enter/Space work for free. JS toggles
+         aria-expanded + the .is-open class (smooth height via CSS grid rows).
+         Give each aria-controls / id a UNIQUE value per card.
+         ===================================================================== -->
+    <section id="cards" class="section" aria-labelledby="h-cards">
+      <div class="container">
+        <span class="eyebrow" data-reveal>EXPLORE</span>
+        <h2 id="h-cards" data-reveal>Click-to-expand explore cards</h2>
+        <p class="lede" data-reveal>Use these for optional depth — a reader sees the headline, then expands the
+          detail if they want it. Keyboard accessible by default.</p>
+
+        <p class="demo-note">Invoke: <code>.explore-card</code> + a <code>button.explore-card__trigger[data-card-trigger]</code> with unique <code>aria-controls</code>.</p>
+
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="card-detail-1">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h10l4 4v11.5"/><path d="M16 4v4h4"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>EXPLORE CARD TITLE</h3>
+                <p>One-line teaser the reader sees before expanding.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="card-detail-1">
+                <p>Hidden detail content. Replace with the deeper explanation, an example, or a small
+                  list. Example: an <span class="kw">Express</span> request auto-classifies to Tier 3 / Zone 3
+                  and needs a single sponsor approval.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="card-detail-2">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.4 7.5 8 9 4.6-1.5 8-4 8-9V6l-8-3Z"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>ANOTHER CARD TITLE</h3>
+                <p>Teaser two — keep these short and parallel.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="card-detail-2">
+                <p>Hidden detail content #2. Each card's <span class="code">aria-controls</span> and the detail's
+                  <span class="code">id</span> must match and be unique on the page.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="card-detail-3">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>THIRD CARD TITLE</h3>
+                <p>Teaser three — the grid auto-fits and reflows on mobile.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="card-detail-3">
+                <p>Hidden detail content #3. Replace freely.</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: CALLOUT / ASIDE BOXES (three variants)
+         <aside class="callout callout-info" role="note">
+           <svg class="callout__icon">…</svg>
+           <div><p class="callout__title">Title</p><p class="callout__body">…</p></div>
+         </aside>
+         callout-info : neutral tip / definition (blue)
+         callout-warn : caution / gotcha (amber)
+         callout-reg  : regulation reference (teal). Cite the rule by name + section,
+                   e.g. "FINRA Rule 3110". Use FSI-compliant language —
+                   "supports compliance with", "helps meet" — never
+                   "ensures/guarantees/will prevent".
+         ===================================================================== -->
+    <section id="callouts" class="section section-tint" aria-labelledby="h-callouts">
+      <div class="container">
+        <span class="eyebrow" data-reveal>ASIDES</span>
+        <h2 id="h-callouts" data-reveal>Callout boxes</h2>
+        <p class="lede" data-reveal>Three variants for tips, cautions, and regulation references.</p>
+
+        <p class="demo-note">Invoke: <code>.callout.callout-info</code> · <code>.callout-warn</code> · <code>.callout-reg</code>.</p>
+
+        <aside class="callout callout-info" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" stroke-linecap="round"/></svg>
+          <div>
+            <p class="callout__title">Info — definition or tip</p>
+            <p class="callout__body">Use this for a neutral aside or to define a term inline, e.g. a
+              <span class="kw">decision pack</span> is the immutable record of who approved a request and why.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-warn" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17v.5"/></svg>
+          <div>
+            <p class="callout__title">Warning — caution or gotcha</p>
+            <p class="callout__body">Use this to flag a common mistake or an irreversible step. Replace with your caveat.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">Regulation reference</p>
+            <p class="callout__body">Cite the rule by name and section. Example: sponsor accountability and the
+              immutable decision log <strong>support compliance with</strong> FINRA Rule 3110 (supervision) and
+              the record-keeping expectations of FINRA Rule 4511 / SEC Rule 17a-4. Implementation requires
+              organizations to verify configuration against their own obligations.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: TIMELINE / STEPPER
+         <ol class="timeline"> with <li> items; each <li> starts with
+         <span class="step-dot">N</span> then <h3> + <p>. Ordered list keeps it
+         semantic. Good for sequential processes / runbooks.
+         ===================================================================== -->
+    <section id="timeline" class="section" aria-labelledby="h-timeline">
+      <div class="container">
+        <span class="eyebrow" data-reveal>SEQUENCE</span>
+        <h2 id="h-timeline" data-reveal>Timeline / stepper</h2>
+        <p class="lede" data-reveal>For ordered processes — onboarding steps, an approval lifecycle, a deployment runbook.</p>
+
+        <p class="demo-note">Invoke: <code>ol.timeline &gt; li</code> with a leading <code>span.step-dot</code>.</p>
+
+        <ol class="timeline" data-reveal>
+          <li>
+            <span class="step-dot" aria-hidden="true">1</span>
+            <h3>STEP ONE TITLE</h3>
+            <p>What happens in this step. Replace with real content — e.g. the maker submits the intake form.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">2</span>
+            <h3>STEP TWO TITLE</h3>
+            <p>The classification engine assigns Express / Standard / Full based on the risk triggers.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">3</span>
+            <h3>STEP THREE TITLE</h3>
+            <p>The sponsor or reviewer approves, requests changes, or escalates.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">4</span>
+            <h3>STEP FOUR TITLE</h3>
+            <p>On approval the system writes the decision pack and hands off to downstream systems.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: STAT / METRIC HIGHLIGHT BLOCKS
+         <div class="stat-grid"> of <div class="stat"> each with
+         <span class="stat__num"> and <span class="stat__label">. Auto-fits.
+         Keep numbers honest and sourced; avoid implying guarantees.
+         ===================================================================== -->
+    <section id="stats" class="section section-tint" aria-labelledby="h-stats">
+      <div class="container">
+        <span class="eyebrow" data-reveal>BY THE NUMBERS</span>
+        <h2 id="h-stats" data-reveal>Stat / metric blocks</h2>
+        <p class="lede" data-reveal>Anchor a point with a few headline figures. Replace with real, sourced numbers.</p>
+
+        <p class="demo-note">Invoke: <code>.stat-grid &gt; .stat</code> with <code>.stat__num</code> + <code>.stat__label</code>.</p>
+
+        <div class="stat-grid" data-reveal>
+          <div class="stat"><span class="stat__num">3</span><span class="stat__label">Intake paths (Express / Standard / Full)</span></div>
+          <div class="stat"><span class="stat__num">7 yr</span><span class="stat__label">Decision-log retention class</span></div>
+          <div class="stat"><span class="stat__num">1</span><span class="stat__label">Sponsor click on the Express path</span></div>
+          <div class="stat"><span class="stat__num">00</span><span class="stat__label">Placeholder metric</span></div>
+        </div>
+
+        <h3 class="subhead" data-reveal>Inline code &amp; keyword styling</h3>
+        <p data-reveal>Use <span class="code">.code</span> for literal identifiers like
+          <code class="code">fsi_intakedecisionlog</code>, <span class="code">.kw</span> for emphasised domain
+          terms like <span class="kw">decision pack</span>, and <span class="code">.kbd</span> for keys like
+          <span class="kbd">Ctrl</span> + <span class="kbd">S</span>. Multi-line snippets use
+          <span class="code">pre.codeblock</span>:</p>
+        <pre class="codeblock" data-reveal><code>// PLACEHOLDER snippet — replace per module
+classify(request) =&gt; request.triggers.any(t =&gt; t) ? "Full" : "Express";</code></pre>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: KEY TAKEAWAYS RECAP
+         Close each major section (or the page) with a recap. Use
+         <div class="takeaways"> + <h3> + <ul> of checkmarked <li> items.
+         Mirror the hero's "What you'll learn" objectives so the reader can
+         self-check what they retained.
+         ===================================================================== -->
+    <section id="takeaways" class="section" aria-labelledby="h-takeaways">
+      <div class="container">
+        <span class="eyebrow" data-reveal>RECAP</span>
+        <h2 id="h-takeaways" data-reveal>Key takeaways</h2>
+        <p class="lede" data-reveal>End the module by reinforcing the objectives. Keep it to 3–5 crisp statements.</p>
+
+        <p class="demo-note">Invoke: <code>.takeaways</code> with an <code>h3</code> + checkmarked <code>ul</code>.</p>
+
+        <div class="takeaways" data-reveal>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            What to remember
+          </h3>
+          <ul>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Takeaway #1 — restate the first objective as a remembered fact.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Takeaway #2 — the second objective, in plain language.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Takeaway #3 — the third objective. Replace all three.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- =====================================================================
+       USAGE: FOOTER — replace links/text per module. Keep it lightweight.
+       ===================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <span class="foot-brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true" fill="none">
+          <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" fill="var(--brand-primary)"/>
+          <circle cx="16" cy="13" r="2.4" fill="#fff"/><path d="M16 15.4V20M11 20h10" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        FSI Agent Governance · agent-intake
+      </span>
+      <span>Self-guided training module — replace this footer text. Built as a self-contained HTML file (no external requests).</span>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       BEHAVIOR LAYER (inline). Keep intact. Handles: theme toggle (+ system
+       sync + localStorage), scroll-progress bar, nav active-highlight,
+       scroll-reveal, SVG diagram triggers, explore-card toggles, and the
+       prefers-reduced-motion guard. Vanilla JS, no dependencies.
+       ===================================================================== -->
+  <script>
+  (function () {
+    'use strict';
+    var root = document.documentElement;
+
+    // Cross-browser MediaQueryList listener (Safari < 14 used addListener).
+    function onMQ(mq, fn) {
+      if (mq.addEventListener) mq.addEventListener('change', fn);
+      else if (mq.addListener) mq.addListener(fn);
+    }
+    var reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var darkMQ   = window.matchMedia('(prefers-color-scheme: dark)');
+
+    /* ---------- Theme toggle (explicit choice wins over system) ---------- */
+    var THEME_KEY = 'fsi-training-theme';
+    var toggle = document.getElementById('themeToggle');
+    function effectiveTheme() {
+      var explicit = root.getAttribute('data-theme');
+      if (explicit === 'dark' || explicit === 'light') return explicit;
+      return darkMQ.matches ? 'dark' : 'light';
+    }
+    function syncToggle() {
+      var t = effectiveTheme();
+      if (!toggle) return;
+      toggle.setAttribute('aria-pressed', String(t === 'dark'));
+      toggle.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+      toggle.setAttribute('data-theme', t);
+    }
+    try { var saved = localStorage.getItem(THEME_KEY); if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved); } catch (e) {}
+    syncToggle();
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+        syncToggle();
+      });
+    }
+    // If the user never chose explicitly, follow system changes live.
+    onMQ(darkMQ, function () { if (!root.getAttribute('data-theme')) syncToggle(); });
+
+    /* ---------- Scroll-progress bar (rAF-throttled) ---------- */
+    var bar = document.getElementById('progressBar');
+    var track = bar ? bar.parentNode : null;
+    var ticking = false;
+    function updateProgress() {
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      var top = window.pageYOffset || h.scrollTop || 0;
+      var pct = max > 0 ? (top / max) * 100 : 0;
+      pct = Math.max(0, Math.min(100, pct));
+      if (bar) bar.style.width = pct + '%';
+      if (track) track.setAttribute('aria-valuenow', String(Math.round(pct)));
+      ticking = false;
+    }
+    function onScroll() { if (!ticking) { ticking = true; window.requestAnimationFrame(updateProgress); } }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    updateProgress();
+
+    /* ---------- Nav active-section highlight ---------- */
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+    var sections = navLinks
+      .map(function (l) { return document.getElementById((l.getAttribute('href') || '').slice(1)); })
+      .filter(Boolean);
+    function setActive(id) {
+      navLinks.forEach(function (l) {
+        var on = l.getAttribute('href') === '#' + id;
+        l.classList.toggle('is-active', on);
+        if (on) l.setAttribute('aria-current', 'true'); else l.removeAttribute('aria-current');
+      });
+    }
+    if ('IntersectionObserver' in window && sections.length) {
+      var navObs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (en.isIntersecting) setActive(en.target.id); });
+      }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+      sections.forEach(function (s) { navObs.observe(s); });
+    }
+
+    /* ---------- Reveal + SVG diagram animation (reduced-motion aware) ---------- */
+    function revealAll() {
+      document.querySelectorAll('[data-reveal]').forEach(function (el) { el.classList.add('is-visible'); });
+      document.querySelectorAll('[data-animate-svg]').forEach(function (el) { el.classList.add('animate'); });
+    }
+    if (reduceMQ.matches || !('IntersectionObserver' in window)) {
+      revealAll();
+    } else {
+      var revObs = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('is-visible'); obs.unobserve(en.target); }
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.15 });
+      document.querySelectorAll('[data-reveal]').forEach(function (el) { revObs.observe(el); });
+
+      var svgObs = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('animate'); obs.unobserve(en.target); }
+        });
+      }, { threshold: 0.35 });
+      document.querySelectorAll('[data-animate-svg]').forEach(function (el) { svgObs.observe(el); });
+    }
+    // If the user switches on reduced-motion at runtime, settle to final state.
+    onMQ(reduceMQ, function (e) { if (e.matches) revealAll(); });
+
+    /* ---------- Explore-card expand / collapse ---------- */
+    document.querySelectorAll('[data-card-trigger]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var card = btn.closest('.explore-card');
+        if (!card) return;
+        var open = card.classList.toggle('is-open');
+        btn.setAttribute('aria-expanded', String(open));
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

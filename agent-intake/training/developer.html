@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  FSI AGENT-INTAKE TRAINING SCAFFOLD  (_scaffold.html)
+  ============================================================================
+  Shared design + interaction scaffold for the three self-guided learning
+  modules (Executive / Admin / Developer) about the "agent-intake" governance
+  solution.
+
+  HOW TO USE THIS FILE (content authors read this):
+    1. Copy this file to your module name, e.g.  module-executive.html
+    2. Update <title>, the <meta name="description">, the hero, and the nav
+       links so the section anchors match YOUR sections.
+    3. Build your page by copy-pasting the demo blocks below. Each component
+       is wrapped in an HTML comment starting with "USAGE:" that tells you the exact
+       class / data-attribute to invoke and what to replace.
+    4. Replace every "PLACEHOLDER" / "SECTION TITLE HERE" / lorem-ish string.
+    5. KEEP the <style> and <script> blocks intact — they are the shared
+       design system and behavior layer. Do not split them into other files;
+       this file must stay 100% self-contained (the FSI network blocks all
+       external CDNs, fonts, and images, so ZERO external requests are allowed).
+
+  HARD RULES (do not break):
+    - No external requests. No CDN, no Google Fonts, no <img src="http...">.
+      All CSS/JS inline; all graphics are inline SVG; system font stack only.
+    - Respect prefers-reduced-motion and prefers-color-scheme.
+    - Keep it accessible: semantic landmarks, ARIA, keyboard, visible focus.
+
+  See README.md in this folder for the component invocation cheat-sheet.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Self-guided developer module for the FSI agent-intake governance solution: the 9-table Dataverse schema and its soft-FK evidence design, the 12-flow orchestration and their contracts, the classifier engine, Power Automate flow-build mechanics, extension points, the automation harness, and the contracts to preserve.">
+  <title>Agent Intake — Developer Module (how to extend it)</title>
+
+  <!-- ======================================================================
+       DESIGN SYSTEM (inline). Tokens mirror the FSI MkDocs theme
+       (site-docs/stylesheets/extra.css): Microsoft Blue #0078D4 primary,
+       WCAG-AA teal #007A7E accent. Dark mode supported via BOTH an explicit
+       toggle (data-theme on <html>) AND prefers-color-scheme.
+       ====================================================================== -->
+  <style>
+    /* ---- 1. Color + scale tokens (LIGHT is the default) ------------------ */
+    :root {
+      /* Brand (from FSI design system) */
+      --brand-primary:       #0078D4;
+      --brand-primary-dark:  #005A9E;
+      --brand-primary-light: #2B88D8;
+      --brand-accent:        #007A7E;
+      --brand-accent-vivid:  #00B7C3;
+
+      /* Semantic surfaces / text */
+      --bg:          #ffffff;
+      --bg-alt:      #F3F2F1;
+      --surface:     #ffffff;
+      --card:        #ffffff;
+      --border:      #E1DFDD;
+      --border-strong:#C8C6C4;
+      --text:        #201F1E;
+      --text-subtle: #5A5856;
+      --heading:     #11100F;
+      --link:        #005A9E;
+
+      /* Callout palettes */
+      --info-bg:     rgba(0,120,212,0.08);
+      --info-border: #0078D4;
+      --info-ink:    #084d82;
+      --warn-bg:     rgba(255,185,0,0.13);
+      --warn-border: #C19C00;
+      --warn-ink:    #8a6d00;
+      --reg-bg:      rgba(0,122,126,0.09);
+      --reg-border:  #007A7E;
+      --reg-ink:     #045b5e;
+
+      /* Code */
+      --code-bg:   #F3F2F1;
+      --code-ink:  #b3306b;
+      --kw-bg:     rgba(0,120,212,0.10);
+      --kw-ink:    #005A9E;
+
+      /* Effects */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
+      --shadow-md: 0 4px 10px rgba(0,0,0,.07), 0 12px 28px rgba(0,0,0,.10);
+      --shadow-lg: 0 18px 50px rgba(0,0,0,.16);
+      --focus:     #0078D4;
+
+      /* Geometry */
+      --radius:    12px;
+      --radius-sm: 8px;
+      --maxw:      1080px;
+      --header-h:  64px;
+
+      --ease: cubic-bezier(.22,.61,.36,1);
+
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+              Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+      --mono: "Cascadia Code", "SF Mono", "Segoe UI Mono", "Roboto Mono",
+              Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    /* ---- 2. Dark tokens. Applied when the system prefers dark AND the user
+         has not explicitly chosen light, OR when the toggle sets data-theme=dark. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --brand-primary:       #429CE3;
+        --brand-primary-dark:  #2B88D8;
+        --brand-primary-light: #6BB3EA;
+        --brand-accent:        #3DD6E0;
+        --brand-accent-vivid:  #3DD6E0;
+
+        --bg:          #1B1A19;
+        --bg-alt:      #242322;
+        --surface:     #242322;
+        --card:        #2D2C2B;
+        --border:      #3B3A39;
+        --border-strong:#4A4948;
+        --text:        #F3F2F1;
+        --text-subtle: #C8C6C4;
+        --heading:     #ffffff;
+        --link:        #6BB3EA;
+
+        --info-bg:     rgba(66,156,227,0.14);
+        --info-border: #429CE3;
+        --info-ink:    #9ecbf0;
+        --warn-bg:     rgba(255,185,0,0.14);
+        --warn-border: #E0A800;
+        --warn-ink:    #FFD16A;
+        --reg-bg:      rgba(61,214,224,0.12);
+        --reg-border:  #3DD6E0;
+        --reg-ink:     #8be6ec;
+
+        --code-bg:   #2D2C2B;
+        --code-ink:  #ff9ec4;
+        --kw-bg:     rgba(66,156,227,0.18);
+        --kw-ink:    #9ecbf0;
+
+        --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+        --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+        --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+      }
+    }
+    /* Explicit toggle wins regardless of system setting. */
+    :root[data-theme="dark"] {
+      --brand-primary:       #429CE3;
+      --brand-primary-dark:  #2B88D8;
+      --brand-primary-light: #6BB3EA;
+      --brand-accent:        #3DD6E0;
+      --brand-accent-vivid:  #3DD6E0;
+
+      --bg:          #1B1A19;
+      --bg-alt:      #242322;
+      --surface:     #242322;
+      --card:        #2D2C2B;
+      --border:      #3B3A39;
+      --border-strong:#4A4948;
+      --text:        #F3F2F1;
+      --text-subtle: #C8C6C4;
+      --heading:     #ffffff;
+      --link:        #6BB3EA;
+
+      --info-bg:     rgba(66,156,227,0.14);
+      --info-border: #429CE3;
+      --info-ink:    #9ecbf0;
+      --warn-bg:     rgba(255,185,0,0.14);
+      --warn-border: #E0A800;
+      --warn-ink:    #FFD16A;
+      --reg-bg:      rgba(61,214,224,0.12);
+      --reg-border:  #3DD6E0;
+      --reg-ink:     #8be6ec;
+
+      --code-bg:   #2D2C2B;
+      --code-ink:  #ff9ec4;
+      --kw-bg:     rgba(66,156,227,0.18);
+      --kw-ink:    #9ecbf0;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+      --shadow-lg: 0 20px 50px rgba(0,0,0,.6);
+    }
+
+    /* ---- 3. Base / reset --------------------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 16px); }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 17px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      transition: background-color .3s var(--ease), color .3s var(--ease);
+    }
+    h1, h2, h3, h4 { color: var(--heading); line-height: 1.2; font-weight: 700; }
+    p { margin: 0 0 1em; }
+    a { color: var(--link); }
+    img, svg { max-width: 100%; }
+    ::selection { background: var(--brand-primary); color: #fff; }
+
+    /* Visible, consistent focus everywhere. */
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .container { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px); }
+
+    /* ---- 4. Skip link ------------------------------------------------------ */
+    .skip-link {
+      position: fixed; top: 8px; left: 8px; z-index: 200;
+      background: var(--brand-primary); color: #fff;
+      padding: 10px 16px; border-radius: 8px; font-weight: 600;
+      transform: translateY(-150%); transition: transform .2s var(--ease);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    /* ---- 5. Header / nav / progress bar ------------------------------------ */
+    .site-header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg); /* fallback for browsers without color-mix() */
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      -webkit-backdrop-filter: saturate(180%) blur(10px);
+      backdrop-filter: saturate(180%) blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .progress-track {
+      position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+      background: transparent;
+    }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent-vivid));
+      transition: width .08s linear;
+    }
+    .nav {
+      display: flex; align-items: center; gap: 16px;
+      height: var(--header-h);
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-weight: 700; color: var(--heading); text-decoration: none;
+      white-space: nowrap; flex: 0 0 auto;
+    }
+    .brand svg { width: 28px; height: 28px; flex: 0 0 auto; }
+    .brand small { display: block; font-weight: 500; font-size: .72rem; color: var(--text-subtle); letter-spacing: .02em; }
+    .nav-links {
+      display: flex; gap: 4px; margin: 0 auto 0 8px; padding: 0; list-style: none;
+      overflow-x: auto; scrollbar-width: thin;
+    }
+    .nav-links a {
+      display: inline-block; padding: 6px 12px; border-radius: 999px;
+      color: var(--text-subtle); text-decoration: none; font-size: .92rem; font-weight: 600;
+      white-space: nowrap; transition: color .2s, background-color .2s;
+    }
+    .nav-links a:hover { color: var(--heading); background: var(--bg-alt); }
+    .nav-links a.is-active { color: var(--brand-primary); background: var(--info-bg); }
+
+    .theme-toggle {
+      flex: 0 0 auto;
+      display: inline-grid; place-items: center;
+      width: 40px; height: 40px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--heading);
+      cursor: pointer; transition: background-color .2s, transform .2s, border-color .2s;
+    }
+    .theme-toggle:hover { background: var(--bg-alt); transform: translateY(-1px); }
+    .theme-toggle svg { width: 20px; height: 20px; }
+    .theme-toggle .icon-moon { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-sun  { display: none; }
+    .theme-toggle[data-theme="dark"] .icon-moon { display: block; }
+
+    /* ---- 6. Section rhythm + headings -------------------------------------- */
+    main { display: block; }
+    .section { padding: clamp(40px, 7vw, 88px) 0; scroll-margin-top: calc(var(--header-h) + 16px); }
+    .section + .section { border-top: 1px solid var(--border); }
+    .section-tint { background: var(--bg-alt); }
+
+    .eyebrow {
+      display: inline-block; margin: 0 0 10px;
+      font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--brand-accent);
+    }
+    .section h2 { font-size: clamp(1.6rem, 3.4vw, 2.3rem); margin: 0 0 .4em; }
+    .section .lede { font-size: 1.12rem; color: var(--text-subtle); max-width: 64ch; }
+    .subhead {
+      font-size: 1.25rem; margin: 2em 0 .5em;
+      padding-left: 12px; border-left: 4px solid var(--brand-primary);
+    }
+
+    /* ---- 7. Hero ----------------------------------------------------------- */
+    .hero {
+      position: relative; overflow: hidden;
+      color: #fff;
+      background:
+        radial-gradient(1200px 400px at 85% -10%, rgba(0,183,195,.45), transparent 60%),
+        linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+      scroll-margin-top: var(--header-h);
+    }
+    .hero::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background-image: radial-gradient(rgba(255,255,255,.10) 1px, transparent 1.4px);
+      background-size: 22px 22px; opacity: .5;
+    }
+    .hero .container { position: relative; z-index: 1; padding-top: clamp(48px, 8vw, 96px); padding-bottom: clamp(48px, 8vw, 96px); }
+    .hero .eyebrow { color: #bfe6ff; }
+    .hero h1 { color: #fff; font-size: clamp(2rem, 5.2vw, 3.4rem); margin: 0 0 .35em; max-width: 18ch; }
+    .hero p.tagline { font-size: clamp(1.05rem, 2.2vw, 1.3rem); color: rgba(255,255,255,.92); max-width: 60ch; }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+      color: #fff; padding: 5px 12px; border-radius: 999px; font-size: .82rem; font-weight: 600;
+    }
+
+    /* "What you'll learn" objectives card */
+    .objectives {
+      margin-top: 28px; background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.22); border-radius: var(--radius);
+      padding: 20px 22px; max-width: 640px; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    .objectives h2 { color: #fff; font-size: 1rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 12px; }
+    .objectives ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+    .objectives li { display: flex; gap: 10px; align-items: flex-start; color: rgba(255,255,255,.95); font-size: .98rem; }
+    .objectives li svg { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; color: var(--brand-accent-vivid); }
+
+    /* ---- 8. Buttons -------------------------------------------------------- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px; border-radius: 999px; font-weight: 600; font-size: .98rem;
+      text-decoration: none; cursor: pointer; border: 1px solid transparent;
+      transition: transform .15s var(--ease), box-shadow .2s, background-color .2s;
+    }
+    .btn-primary { background: #fff; color: var(--brand-primary-dark); box-shadow: var(--shadow-sm); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.6); }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); }
+
+    /* ---- 9. Animated SVG diagram container --------------------------------- */
+    .diagram {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: clamp(16px, 3vw, 28px);
+      box-shadow: var(--shadow-sm); margin: 1.5rem 0;
+    }
+    .diagram figcaption { margin-top: 14px; font-size: .92rem; color: var(--text-subtle); text-align: center; }
+    .diagram svg { display: block; width: 100%; height: auto; }
+
+    /* Pipeline diagram pieces */
+    .pl-track { stroke: var(--border-strong); stroke-width: 4; fill: none; }
+    .pl-progress {
+      stroke: url(#plGrad); stroke-width: 4; fill: none; stroke-linecap: round;
+      stroke-dasharray: 760; stroke-dashoffset: 760;
+    }
+    [data-animate-svg].animate .pl-progress { animation: plDraw 2.4s var(--ease) forwards; }
+    @keyframes plDraw { to { stroke-dashoffset: 0; } }
+
+    .pl-node { transform-box: fill-box; transform-origin: center; opacity: .35; transform: scale(.8); }
+    .pl-node .disc { fill: url(#nodeGrad); }
+    .pl-node .num  { fill: #fff; font-weight: 700; font-size: 22px; }
+    .pl-node .lbl  { fill: var(--text); font-size: 15px; font-weight: 600; }
+    .pl-node .sub  { fill: var(--text-subtle); font-size: 12.5px; }
+    [data-animate-svg].animate .pl-node { animation: plPop .55s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes plPop { to { opacity: 1; transform: scale(1); } }
+
+    .pl-ring { fill: none; stroke: var(--brand-accent-vivid); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
+    [data-animate-svg].animate .pl-ring { animation: plRing 1.4s ease-out forwards; animation-delay: var(--d, 0s); }
+    @keyframes plRing { 0% { opacity: .8; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.9); } }
+
+    .pl-token { fill: var(--brand-accent-vivid); filter: drop-shadow(0 0 6px var(--brand-accent-vivid)); opacity: 0; }
+    [data-animate-svg].animate .pl-token { animation: plToken 2.4s var(--ease) forwards; }
+    @keyframes plToken {
+      0%   { opacity: 0; transform: translateX(0); }
+      8%   { opacity: 1; }
+      92%  { opacity: 1; }
+      100% { opacity: 0; transform: translateX(760px); }
+    }
+
+    /* Fork (classification) diagram pieces */
+    .fk-path { fill: none; stroke: var(--border-strong); stroke-width: 3; stroke-dasharray: 420; stroke-dashoffset: 420; }
+    [data-animate-svg].animate .fk-path { animation: fkDraw 1.1s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkDraw { to { stroke-dashoffset: 0; } }
+    .fk-box { opacity: 0; transform-box: fill-box; transform-origin: center; transform: translateX(-12px); }
+    [data-animate-svg].animate .fk-box { animation: fkIn .5s var(--ease) forwards; animation-delay: var(--d, 0s); }
+    @keyframes fkIn { to { opacity: 1; transform: translateX(0); } }
+    .fk-title { fill: #fff; font-weight: 700; font-size: 16px; }
+    .fk-desc  { fill: rgba(255,255,255,.92); font-size: 12.5px; }
+    .fk-input { fill: var(--heading); }
+    .fk-input-label { fill: var(--bg); font-weight: 700; font-size: 15px; }
+
+    /* ---- 10. Scroll-reveal ------------------------------------------------- */
+    [data-reveal] {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity .7s var(--ease), transform .7s var(--ease);
+      transition-delay: var(--reveal-delay, 0s);
+      will-change: opacity, transform;
+    }
+    [data-reveal].is-visible { opacity: 1; transform: none; }
+
+    /* ---- 11. Explore (expandable) cards ------------------------------------ */
+    .card-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 1.5rem 0; }
+    .explore-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-sm); overflow: hidden; transition: box-shadow .25s, border-color .25s, transform .25s;
+    }
+    .explore-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-strong); }
+    .explore-card.is-open { border-color: var(--brand-primary); }
+    .explore-card__trigger {
+      width: 100%; text-align: left; cursor: pointer; background: transparent; border: 0;
+      padding: 20px; display: flex; gap: 14px; align-items: flex-start; color: inherit; font: inherit;
+    }
+    .explore-card__icon {
+      flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px;
+      display: grid; place-items: center; background: var(--info-bg); color: var(--brand-primary);
+    }
+    .explore-card__icon svg { width: 22px; height: 22px; }
+    .explore-card__head { flex: 1 1 auto; }
+    .explore-card__head h3 { font-size: 1.08rem; margin: 0 0 2px; }
+    .explore-card__head p { margin: 0; color: var(--text-subtle); font-size: .92rem; }
+    .explore-card__chev { flex: 0 0 auto; color: var(--text-subtle); transition: transform .3s var(--ease); margin-top: 4px; }
+    .explore-card.is-open .explore-card__chev { transform: rotate(180deg); color: var(--brand-primary); }
+    .explore-card__body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .35s var(--ease); }
+    .explore-card.is-open .explore-card__body { grid-template-rows: 1fr; }
+    .explore-card__bodyinner { overflow: hidden; }
+    .explore-card__detail { padding: 0 20px 20px; color: var(--text-subtle); }
+    .explore-card__detail > :first-child { margin-top: 0; }
+
+    /* ---- 12. Callouts ------------------------------------------------------ */
+    .callout {
+      display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+      border: 1px solid var(--border); border-left-width: 4px;
+      border-radius: var(--radius-sm); padding: 16px 18px; margin: 1.4rem 0;
+      background: var(--surface);
+    }
+    .callout__icon { width: 24px; height: 24px; margin-top: 2px; }
+    .callout__title { font-weight: 700; color: var(--heading); margin: 0 0 4px; font-size: .95rem; letter-spacing: .01em; }
+    .callout__body { margin: 0; color: var(--text); }
+    .callout__body :last-child { margin-bottom: 0; }
+    .callout-info { background: var(--info-bg); border-left-color: var(--info-border); }
+    .callout-info .callout__icon, .callout-info .callout__title { color: var(--info-ink); }
+    .callout-warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
+    .callout-warn .callout__icon, .callout-warn .callout__title { color: var(--warn-ink); }
+    .callout-reg  { background: var(--reg-bg); border-left-color: var(--reg-border); }
+    .callout-reg .callout__icon, .callout-reg .callout__title { color: var(--reg-ink); }
+    .callout-reg .callout__title { text-transform: uppercase; font-size: .78rem; letter-spacing: .08em; }
+
+    /* ---- 13. Timeline / stepper -------------------------------------------- */
+    .timeline { position: relative; margin: 1.5rem 0; padding-left: 8px; list-style: none; }
+    .timeline::before {
+      content: ""; position: absolute; left: 19px; top: 6px; bottom: 6px; width: 2px;
+      background: linear-gradient(var(--brand-primary), var(--brand-accent));
+    }
+    .timeline li { position: relative; padding: 0 0 26px 52px; }
+    .timeline li:last-child { padding-bottom: 0; }
+    .timeline .step-dot {
+      position: absolute; left: 8px; top: 0; width: 24px; height: 24px; border-radius: 999px;
+      background: var(--brand-primary); color: #fff; display: grid; place-items: center;
+      font-size: .8rem; font-weight: 700; box-shadow: 0 0 0 4px var(--bg);
+    }
+    .timeline h3 { font-size: 1.05rem; margin: 0 0 4px; }
+    .timeline p { margin: 0; color: var(--text-subtle); }
+
+    /* ---- 14. Stat / metric blocks ------------------------------------------ */
+    .stat-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 1.5rem 0; }
+    .stat {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 22px; text-align: center; box-shadow: var(--shadow-sm);
+    }
+    .stat__num {
+      display: block; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; line-height: 1;
+      background: linear-gradient(120deg, var(--brand-primary), var(--brand-accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .stat__label { display: block; margin-top: 8px; color: var(--text-subtle); font-size: .92rem; }
+
+    /* ---- 15. Inline code / keyword ----------------------------------------- */
+    code.code, .code {
+      font-family: var(--mono); font-size: .88em;
+      background: var(--code-bg); color: var(--code-ink);
+      padding: .15em .45em; border-radius: 6px; border: 1px solid var(--border);
+    }
+    .kw {
+      font-family: var(--font); font-weight: 600; font-size: .92em;
+      background: var(--kw-bg); color: var(--kw-ink);
+      padding: .1em .5em; border-radius: 6px; white-space: nowrap;
+    }
+    kbd.kbd, .kbd {
+      font-family: var(--mono); font-size: .82em; color: var(--heading);
+      background: var(--bg-alt); border: 1px solid var(--border-strong);
+      border-bottom-width: 2px; border-radius: 6px; padding: .12em .5em;
+    }
+    pre.codeblock {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: .86rem; line-height: 1.55;
+      color: var(--text); margin: 1.2rem 0;
+    }
+
+    /* ---- 16. Key takeaways ------------------------------------------------- */
+    .takeaways {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-sm); padding: clamp(20px, 4vw, 32px); margin: 1.5rem 0;
+      position: relative; overflow: hidden;
+    }
+    .takeaways::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+      background: linear-gradient(var(--brand-primary), var(--brand-accent));
+    }
+    .takeaways h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 1.2rem; }
+    .takeaways h3 svg { width: 24px; height: 24px; color: var(--brand-accent); }
+    .takeaways ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+    .takeaways li { display: flex; gap: 12px; align-items: flex-start; }
+    .takeaways li svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--brand-primary); margin-top: 1px; }
+
+    /* ---- 17. Footer -------------------------------------------------------- */
+    .site-footer {
+      border-top: 1px solid var(--border); background: var(--bg-alt);
+      padding: 40px 0; color: var(--text-subtle); font-size: .92rem;
+    }
+    .site-footer .container { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; align-items: center; }
+    .site-footer a { color: var(--link); }
+    .site-footer .foot-brand { display: flex; align-items: center; gap: 10px; color: var(--heading); font-weight: 700; }
+    .site-footer .foot-brand svg { width: 24px; height: 24px; }
+
+    /* small helper used by the "component note" labels in the demo page */
+    .demo-note {
+      font-size: .82rem; color: var(--text-subtle); margin: 0 0 1rem;
+      border: 1px dashed var(--border-strong); border-radius: 8px; padding: 8px 12px;
+      background: var(--bg-alt);
+    }
+    .demo-note code { font-family: var(--mono); color: var(--brand-primary); }
+
+    /* ---- 18. Responsive ---------------------------------------------------- */
+    @media (max-width: 720px) {
+      body { font-size: 16px; }
+      .brand small { display: none; }
+      .nav-links { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 90%, transparent); }
+    }
+
+    /* ---- 19. Reduced motion: curtail everything ---------------------------- */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+      [data-reveal] { opacity: 1 !important; transform: none !important; }
+      .pl-node { opacity: 1 !important; transform: none !important; }
+      .pl-progress { stroke-dashoffset: 0 !important; }
+      .fk-box { opacity: 1 !important; transform: none !important; }
+      .fk-path { stroke-dashoffset: 0 !important; }
+      .pl-token, .pl-ring { display: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- =====================================================================
+       USAGE: STICKY HEADER + SCROLL-PROGRESS BAR + NAV
+       Copy this whole <header>. Then:
+         - Edit the <a class="brand"> label for your module.
+         - Edit the <li> nav items so each href="#xyz" matches a
+           <section id="xyz"> below. Add data-nav to every nav link you
+           want auto-highlighted on scroll.
+         - Keep id="progressBar" and id="themeToggle" — the JS hooks them.
+       ===================================================================== -->
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Section navigation">
+        <a class="brand" href="#overview">
+          <!-- inline FSI shield + circuit motif (no external image) -->
+          <svg viewBox="0 0 32 32" aria-hidden="true" fill="none">
+            <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" fill="var(--brand-primary)"/>
+            <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" stroke="var(--brand-accent-vivid)" stroke-width="1.2" opacity=".6"/>
+            <circle cx="16" cy="13" r="2.4" fill="#fff"/>
+            <path d="M16 15.4V20M11 20h10M11.5 13H8M24 13h-3.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="8" cy="13" r="1.3" fill="#fff"/><circle cx="24" cy="13" r="1.3" fill="#fff"/>
+          </svg>
+          <span>Agent Intake<small>Developer module</small></span>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="#overview"     data-nav>Overview</a></li>
+          <li><a href="#architecture" data-nav>Schema</a></li>
+          <li><a href="#flows"        data-nav>Flows</a></li>
+          <li><a href="#classifier"   data-nav>Classifier</a></li>
+          <li><a href="#mechanics"    data-nav>Flow build</a></li>
+          <li><a href="#extend"       data-nav>Extend</a></li>
+          <li><a href="#harness"      data-nav>Harness</a></li>
+          <li><a href="#contracts"    data-nav>Contracts</a></li>
+          <li><a href="#takeaways"    data-nav>Takeaways</a></li>
+        </ul>
+
+        <!-- USAGE: DARK-MODE TOGGLE — keep id="themeToggle"; JS swaps icon + aria. -->
+        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+          </svg>
+        </button>
+      </nav>
+    </div>
+    <div class="progress-track" role="progressbar" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- =====================================================================
+         USAGE: HERO / INTRO  +  "WHAT YOU'LL LEARN"
+         The hero is section id="overview". Replace the eyebrow, h1, tagline,
+         badges, and the <ul> learning objectives. The objectives card is the
+         self-guided contract with the reader: list 3-5 things they will be
+         able to do after reading. Keep one <h1> per page (here).
+         ===================================================================== -->
+    <section id="overview" class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <span class="eyebrow">Developer module · how to extend the solution</span>
+        <h1 id="hero-title">Extending agent-intake: schema, flows, and the contracts that hold them together</h1>
+        <p class="tagline">
+          A self-guided tour for developers and DevOps engineers who will extend the
+          <span class="kw">agent-intake</span> governance gate. You will learn how the solution is built —
+          its <span class="kw">soft-FK</span> evidence schema, its twelve Power Automate flows, the classifier
+          engine, and the hand-build mechanics — so you can add reviewer roles, classification rules, and
+          handoff targets without breaking the immutable records that support FINRA Rule 4511 and SEC Rule 17a-4.
+        </p>
+
+        <div class="hero-badges" aria-hidden="false">
+          <span class="badge">⏱ ~18 min read</span>
+          <span class="badge">No environment needed</span>
+          <span class="badge">v1.0.0-preview</span>
+        </div>
+
+        <p class="tagline">
+          <span class="kw">v1.0.0-preview</span> — pilot-validation content: suitable for pilot validation and extension work, not broad
+          production rollout without the firm's own governance sign-off.
+        </p>
+
+        <!-- "What you'll learn" objectives -->
+        <div class="objectives">
+          <h2>What you'll learn</h2>
+          <ul>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Read the 9-table Dataverse schema and explain why child tables carry <code class="code">fsi_requestid</code> as a string, not a Dataverse lookup.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Trace a request through the 12 flows and name the contract each one preserves.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Apply the Power Automate flow-build consensus — child-flow contract, router trigger, choice integers, and SHA-256 deferral.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Add a reviewer role, a classification rule, or a handoff target without breaking a downstream payload contract.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Drive and verify the solution with the automation harness scripts.</span>
+            </li>
+          </ul>
+        </div>
+
+        <p style="margin-top:28px">
+          <a class="btn btn-primary" href="#architecture">Start with the schema ↓</a>
+          <a class="btn btn-ghost" href="#takeaways">Jump to takeaways</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- Orientation callout for the reader -->
+    <section class="section" aria-label="How to read this module">
+      <div class="container">
+        <div class="callout callout-info" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5" stroke-linecap="round"/></svg>
+          <div>
+            <p class="callout__title">How to read this module</p>
+            <p class="callout__body">Work top to bottom: the <strong>schema</strong> explains where evidence lives, the
+              <strong>flows</strong> explain how a request moves, and the <strong>flow-build mechanics</strong> explain how to
+              hand-build those flows correctly. Identifiers in <span class="code">monospace</span> are real Dataverse logical
+              names and repository file names — every name here is derived from
+              <code class="code">create_fsi_intake_dataverse_schema.py</code> and
+              <code class="code">docs/flow-configuration.md</code>, not invented. Expand the
+              <span class="kw">explore cards</span> for depth, and toggle the theme (top-right) for comfortable reading.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: SECTION + SUBSECTION HEADING PATTERN
+         Wrap each content area in <section id="..." class="section">. Use:
+           <span class="eyebrow">  small label above the H2
+           <h2>                     the section title
+           <p class="lede">         one-paragraph intro
+           <h3 class="subhead">     subsection headings within the section
+         Add class="section-tint" to alternate the background. Every section
+         you want in the nav needs a matching <li><a href="#id" data-nav>.
+         ===================================================================== -->
+    <section id="architecture" class="section section-tint" aria-labelledby="h-architecture">
+      <div class="container">
+        <span class="eyebrow" data-reveal>ARCHITECTURE · THE EVIDENCE SCHEMA</span>
+        <h2 id="h-architecture" data-reveal>Nine tables, one soft foreign key</h2>
+        <p class="lede" data-reveal>Agent-intake stores its decision pack across nine Dataverse tables. One is the parent request;
+          the other eight are evidence. The design choice that makes the evidence defensible is a
+          <span class="kw">soft foreign key</span>: every child table carries the request identifier as a
+          <em>string</em> column — <code class="code">fsi_requestid</code> — not a Dataverse lookup relationship.</p>
+
+        <figure class="diagram" data-reveal>
+          <svg viewBox="0 0 940 500" role="img" data-animate-svg aria-label="The nine agent-intake tables. fsi_intakerequest is the parent. Eight evidence tables each carry fsi_requestid as a string soft foreign key: datasource, risksignal, review, approval (left) and sponsorship, decisionlog, auditevent, retentionrecord (right). The decision log, audit event, and retention record tables are organization-owned immutable evidence.">
+            <!-- parent -->
+            <g class="fk-box" style="--d:0s">
+              <rect x="350" y="14" width="240" height="60" rx="12" fill="var(--brand-primary-dark)"/>
+              <text class="fk-title" x="470" y="40" text-anchor="middle">fsi_intakerequest</text>
+              <text class="fk-desc"  x="470" y="59" text-anchor="middle">parent · UserOwned · holds routing outputs</text>
+            </g>
+
+            <!-- soft-FK rail (structural, dashed = not an enforced relationship) -->
+            <line x1="470" y1="74" x2="470" y2="482" stroke="var(--brand-accent-vivid)" stroke-width="2.5" stroke-dasharray="7 6" opacity=".75"/>
+            <text transform="rotate(-90 452 300)" x="452" y="300" text-anchor="middle" style="font-size:12px;font-weight:600;fill:var(--text-subtle)">fsi_requestid · string soft-FK</text>
+
+            <!-- branch connectors (short, draw on scroll) -->
+            <path class="fk-path" style="--d:.45s" d="M470 150 H420"/>
+            <path class="fk-path" style="--d:.55s" d="M470 250 H420"/>
+            <path class="fk-path" style="--d:.65s" d="M470 350 H420"/>
+            <path class="fk-path" style="--d:.75s" d="M470 450 H420"/>
+            <path class="fk-path" style="--d:.5s"  d="M470 150 H520"/>
+            <path class="fk-path" style="--d:.6s"  d="M470 250 H520"/>
+            <path class="fk-path" style="--d:.7s"  d="M470 350 H520"/>
+            <path class="fk-path" style="--d:.8s"  d="M470 450 H520"/>
+
+            <!-- left column: UserOwned evidence children -->
+            <g class="fk-box" style="--d:.45s">
+              <rect x="40" y="118" width="380" height="64" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="64" y="146">fsi_intakedatasource</text>
+              <text class="fk-desc"  x="64" y="166">declared data sources · 1..N · UserOwned</text>
+            </g>
+            <g class="fk-box" style="--d:.55s">
+              <rect x="40" y="218" width="380" height="64" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="64" y="246">fsi_intakerisksignal</text>
+              <text class="fk-desc"  x="64" y="266">T1–T6 answers + derived signals · UserOwned</text>
+            </g>
+            <g class="fk-box" style="--d:.65s">
+              <rect x="40" y="318" width="380" height="64" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="64" y="346">fsi_intakereview</text>
+              <text class="fk-desc"  x="64" y="366">reviewer outcomes (fsi_reviewoutcome) · UserOwned</text>
+            </g>
+            <g class="fk-box" style="--d:.75s">
+              <rect x="40" y="418" width="380" height="64" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="64" y="446">fsi_intakeapproval</text>
+              <text class="fk-desc"  x="64" y="466">per-approver decisions · UserOwned</text>
+            </g>
+
+            <!-- right column: sponsorship + immutable OrganizationOwned evidence -->
+            <g class="fk-box" style="--d:.5s">
+              <rect x="520" y="118" width="380" height="64" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="544" y="146">fsi_intakesponsorship</text>
+              <text class="fk-desc"  x="544" y="166">sponsor attestation (FINRA 3110) · UserOwned</text>
+            </g>
+            <g class="fk-box" style="--d:.6s">
+              <rect x="520" y="218" width="380" height="64" rx="12" fill="var(--brand-accent)"/>
+              <text class="fk-title" x="544" y="246">fsi_intakedecisionlog ★</text>
+              <text class="fk-desc"  x="544" y="266">immutable decision pack · OrganizationOwned</text>
+            </g>
+            <g class="fk-box" style="--d:.7s">
+              <rect x="520" y="318" width="380" height="64" rx="12" fill="var(--brand-accent)"/>
+              <text class="fk-title" x="544" y="346">fsi_intakeauditevent ★</text>
+              <text class="fk-desc"  x="544" y="366">lifecycle audit trail · OrganizationOwned</text>
+            </g>
+            <g class="fk-box" style="--d:.8s">
+              <rect x="520" y="418" width="380" height="64" rx="12" fill="var(--brand-accent)"/>
+              <text class="fk-title" x="544" y="446">fsi_intakeretentionrecord ★</text>
+              <text class="fk-desc"  x="544" y="466">retention-label evidence · OrganizationOwned</text>
+            </g>
+          </svg>
+          <figcaption>Figure 1 — The 9-table schema. The dashed rail is the <code class="code">fsi_requestid</code> string carried by every child;
+            it is a <em>soft</em> foreign key, not an enforced Dataverse lookup. ★ marks the three OrganizationOwned tables that hold immutable evidence.</figcaption>
+        </figure>
+
+        <h3 class="subhead" data-reveal>Why a string, not a lookup?</h3>
+        <p data-reveal>A Dataverse lookup enforces referential integrity: delete the parent and the platform cascades or blocks.
+          That is exactly the wrong behavior for books-and-records evidence. Agent-intake instead writes the parent's
+          <code class="code">fsi_requestid</code> GUID into a plain text column on each child. The link is resolved at query time
+          (<code class="code">$filter=fsi_requestid eq '&lt;id&gt;'</code>), so an immutable
+          <code class="code">fsi_intakedecisionlog</code> record <strong>survives parent deletion</strong> — the evidence does not vanish
+          when a maker withdraws or a request row is later cleaned up.</p>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">Why this design supports the records rules</p>
+            <p class="callout__body">The immutable <code class="code">fsi_intakedecisionlog</code> (OrganizationOwned, 7-year retention label
+              <code class="code">FSI-AgentIntake-7yr</code>) <strong>supports compliance with</strong> FINRA Rule 4511 and SEC Rule 17a-4
+              (books &amp; records / retention) and CFTC Rule 1.31. The soft-FK keeps that record readable after the operational parent is gone.
+              Implementation requires organizations to verify the retention label and access model against their own obligations.</p>
+          </div>
+        </aside>
+
+        <h3 class="subhead" data-reveal>Read the schema as three layers</h3>
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="arch-parent">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h10l4 4v11.5"/><path d="M16 4v4h4"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>The parent: fsi_intakerequest</h3>
+                <p>The maker's submission and every routing output.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="arch-parent">
+                <p>Holds the maker inputs (agent details, sponsor, the <code class="code">fsi_t1initiatesfinancialtxn</code> …
+                  <code class="code">fsi_t6crossborderdata</code> trigger answers) <em>and</em> the router's outputs:
+                  <code class="code">fsi_pathused</code>, <code class="code">fsi_risktier</code>, <code class="code">fsi_zone</code>,
+                  <code class="code">fsi_decisionpath</code>, <code class="code">fsi_quorumrequired</code>,
+                  <code class="code">fsi_parallelreviewersjson</code>, <code class="code">fsi_mrmrequired</code>,
+                  <code class="code">fsi_mrmhandoffstatus</code>, and <code class="code">fsi_status</code>. An alternate key
+                  <code class="code">fsi_RequestIdUniqueKey</code> covers <code class="code">fsi_requestid</code>.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="arch-children">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>UserOwned evidence children</h3>
+                <p>Five tables, one row set per request.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="arch-children">
+                <p><code class="code">fsi_intakedatasource</code> (declared connectors, 1..N),
+                  <code class="code">fsi_intakerisksignal</code> (one row per trigger answer),
+                  <code class="code">fsi_intakereview</code> (reviewer outcomes in <code class="code">fsi_reviewoutcome</code>, not a column named
+                  <code class="code">fsi_reviewdecision</code>), <code class="code">fsi_intakeapproval</code> (per-approver decisions), and
+                  <code class="code">fsi_intakesponsorship</code> (the sponsor attestation surface). Each carries
+                  <code class="code">fsi_requestid</code> as a string.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="arch-immutable">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>OrganizationOwned immutable evidence</h3>
+                <p>The three records examiners may read years later.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="arch-immutable">
+                <p><code class="code">fsi_intakedecisionlog</code> stores the full decision pack in
+                  <code class="code">fsi_decisionpackjson</code> plus a SHA-256 in <code class="code">fsi_decisionpackhash</code>;
+                  <code class="code">fsi_intakeauditevent</code> is the lifecycle trail (<code class="code">fsi_eventtype</code> is a
+                  <em>string</em>, so customers can extend the event vocabulary without a schema change);
+                  <code class="code">fsi_intakeretentionrecord</code> records each retention-label stamp. All three are
+                  <code class="code">OrganizationOwned</code> so they are not tied to a single user's records.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="arch-altkey">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M16 6l3 3"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Gotcha: query by filter, not the alt-key URI</h3>
+                <p>The soft-FK resolves through a filter, resiliently.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="arch-altkey">
+                <p>A new alternate key takes 30–90 seconds to build its index, during which the alt-key URI form
+                  <code class="code">fsi_intakerequests(fsi_requestid='…')</code> returns HTTP 400. The resilient pattern used in the seed
+                  and smoke scripts is: filter by <code class="code">fsi_requestid eq '…'</code>, read the GUID
+                  <code class="code">fsi_intakerequestid</code> from the result, then operate via the primary-key URI. Keep this pattern when you
+                  extend the scripts — do not revert to the alt-key URI form.</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: ANIMATED SVG DIAGRAMS
+         Wrap an inline <svg> in <figure class="diagram"> and put
+         data-animate-svg on the <svg> (or any ancestor element) — the JS adds
+         class "animate" when it scrolls into view, which triggers the CSS
+         keyframes. Two ready diagrams are provided:
+           (A) Left-to-right PIPELINE with sequential node highlights + a
+               traveling token + a drawing progress line.
+           (B) Classification FORK (one input -> Express / Standard / Full).
+         Per-node stagger is set with an inline per-node delay property (see the demo). Animations are
+         pure CSS, so prefers-reduced-motion (see <style>) curtails them.
+         To make your own: keep the class names (.pl-* / .fk-*) or copy the
+         keyframes block and rename. Always provide a <figcaption> so the
+         diagram is understandable without motion.
+         ===================================================================== -->
+    <section id="flows" class="section" aria-labelledby="h-flows">
+      <div class="container">
+        <span class="eyebrow" data-reveal>ORCHESTRATION · 12 FLOWS</span>
+        <h2 id="h-flows" data-reveal>How a request moves through twelve flows</h2>
+        <p class="lede" data-reveal>Twelve documented Power Automate cloud flows carry a request from submission to live tracking.
+          The macro lifecycle has five beats; the flows below implement them. By repo policy the flows are documented for manual
+          build — there is no exported flow JSON.</p>
+
+        <!-- (A) PIPELINE DIAGRAM -->
+        <figure class="diagram" data-reveal>
+          <svg viewBox="0 0 920 210" role="img" aria-label="Agent-intake pipeline: a request flows left to right through Submit, Classify, Approve, Record, and Handoff.">
+            <defs>
+              <linearGradient id="plGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="var(--brand-primary)"/>
+                <stop offset="1" stop-color="var(--brand-accent-vivid)"/>
+              </linearGradient>
+              <linearGradient id="nodeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="var(--brand-primary-light)"/>
+                <stop offset="1" stop-color="var(--brand-primary-dark)"/>
+              </linearGradient>
+            </defs>
+
+            <!-- connector: gray track + animated colored progress + traveling token -->
+            <line class="pl-track"    x1="100" y1="78" x2="860" y2="78"/>
+            <path  class="pl-progress" d="M100 78 H860"/>
+            <circle class="pl-token" cx="100" cy="78" r="7"/>
+
+            <!-- nodes (group g.pl-node; a per-node delay property sets the entrance stagger) -->
+            <g class="pl-node" style="--d:0s">
+              <circle class="pl-ring" cx="100" cy="78" r="34"/>
+              <circle class="disc" cx="100" cy="78" r="34"/>
+              <text class="num" x="100" y="78" text-anchor="middle" dominant-baseline="central">1</text>
+              <text class="lbl" x="100" y="135" text-anchor="middle">Submit</text>
+              <text class="sub" x="100" y="153" text-anchor="middle">status → Submitted</text>
+            </g>
+            <g class="pl-node" style="--d:.5s">
+              <circle class="pl-ring" cx="290" cy="78" r="34"/>
+              <circle class="disc" cx="290" cy="78" r="34"/>
+              <text class="num" x="290" y="78" text-anchor="middle" dominant-baseline="central">2</text>
+              <text class="lbl" x="290" y="135" text-anchor="middle">Route</text>
+              <text class="sub" x="290" y="153" text-anchor="middle">Flow 1 + classifier</text>
+            </g>
+            <g class="pl-node" style="--d:1s">
+              <circle class="pl-ring" cx="480" cy="78" r="34"/>
+              <circle class="disc" cx="480" cy="78" r="34"/>
+              <text class="num" x="480" y="78" text-anchor="middle" dominant-baseline="central">3</text>
+              <text class="lbl" x="480" y="135" text-anchor="middle">Approve</text>
+              <text class="sub" x="480" y="153" text-anchor="middle">sponsor · reviewers · MRM</text>
+            </g>
+            <g class="pl-node" style="--d:1.5s">
+              <circle class="pl-ring" cx="670" cy="78" r="34"/>
+              <circle class="disc" cx="670" cy="78" r="34"/>
+              <text class="num" x="670" y="78" text-anchor="middle" dominant-baseline="central">4</text>
+              <text class="lbl" x="670" y="135" text-anchor="middle">Record</text>
+              <text class="sub" x="670" y="153" text-anchor="middle">Flow 8 decision pack</text>
+            </g>
+            <g class="pl-node" style="--d:2s">
+              <circle class="pl-ring" cx="860" cy="78" r="34"/>
+              <circle class="disc" cx="860" cy="78" r="34"/>
+              <text class="num" x="860" y="78" text-anchor="middle" dominant-baseline="central">5</text>
+              <text class="lbl" x="860" y="135" text-anchor="middle">Handoff</text>
+              <text class="sub" x="860" y="153" text-anchor="middle">Entra · registry · drift</text>
+            </g>
+          </svg>
+          <figcaption>Figure 2 — The macro lifecycle. A submitted request is routed (Flow 1), approved by the path-appropriate board,
+            recorded as an immutable decision pack (Flow 8), then handed off to Microsoft Entra Agent ID, the registry, and drift monitoring.</figcaption>
+        </figure>
+
+        <h3 class="subhead" data-reveal>The twelve flows, grouped</h3>
+        <p data-reveal>Each card names the flow, its trigger, and the contract it preserves. The numeric choice values
+          (for example <code class="code">fsi_status = Submitted (100000001)</code>) are the real option-set integers used in trigger conditions.</p>
+
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="flow-router">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h6l2-3 2 6 2-3h6"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Flows 1–2 · Router &amp; classifier</h3>
+                <p>Dataverse trigger in, routing decision out.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="flow-router">
+                <p><code class="code">fsi-intake-router</code> triggers on <code class="code">fsi_intakerequest</code> where
+                  <code class="code">fsi_status = Submitted (100000001)</code>, calls the classifier contract, re-checks the sponsor self-approval
+                  gate, writes <code class="code">fsi_pathused</code>, <code class="code">fsi_decisionpath</code>,
+                  <code class="code">fsi_risktier</code>, <code class="code">fsi_zone</code>, <code class="code">fsi_quorumrequired</code>,
+                  <code class="code">fsi_parallelreviewersjson</code>, then sets <code class="code">fsi_status = InReview (100000011)</code> or
+                  <code class="code">Denied (100000005)</code>. <code class="code">fsi-intake-presubmit-classifier</code> is the stateless HTTP
+                  endpoint that returns the same shape the Power Pages form consumes — it writes nothing.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="flow-sponsor">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Flow 3 · Sponsor card (Express)</h3>
+                <p>One Teams adaptive card, one click.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="flow-sponsor">
+                <p><code class="code">fsi-intake-sponsor-card</code> triggers where <code class="code">fsi_pathused = Express (100000000)</code>
+                  and <code class="code">fsi_status = InReview</code>. It posts <code class="code">templates/sponsor-approval-card.json</code>
+                  with the FINRA Rule 3110 attestation language, writes an <code class="code">fsi_intakeapproval</code> row and an
+                  <code class="code">fsi_intakesponsorship</code> row, then on approval calls Flow 8 and sets
+                  <code class="code">fsi_status = Approved (100000004)</code>. Express keeps a single sponsor approval as its only reviewer evidence.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="flow-reviewers">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 7a3 3 0 0 1 0 6M21 20a6 6 0 0 0-3-5.2"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Flows 4–6 · Reviewers, decisions, escalation</h3>
+                <p>Parallel board with weighted quorum.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="flow-reviewers">
+                <p><code class="code">fsi-intake-parallel-reviewers</code> fans out one <code class="code">fsi_intakereview</code> row per reviewer
+                  parsed from <code class="code">fsi_parallelreviewersjson</code>. <code class="code">fsi-intake-reviewer-decision-handler</code>
+                  processes each Teams response, recomputes weighted quorum against <code class="code">fsi_quorumrequired</code> (any
+                  <code class="code">Denied</code> ends the request, no override), and sets <code class="code">fsi_nonmrmquorummet</code>.
+                  <code class="code">fsi-intake-escalation</code> is a daily recurrence that chases overdue
+                  <code class="code">Pending (100000000)</code> reviews past <code class="code">fsi_dueon</code>.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="flow-mrm">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 8l7-5 7 5M5 8v8l7 5 7-5V8"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Flow 7 · MRM handoff (Full)</h3>
+                <p>Model risk review for Tier 1 requests.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="flow-mrm">
+                <p><code class="code">fsi-intake-mrm-handoff</code> triggers where <code class="code">fsi_pathused = Full (100000002)</code>,
+                  <code class="code">fsi_mrmrequired = true</code>, <code class="code">fsi_nonmrmquorummet = true</code>, and
+                  <code class="code">fsi_mrmhandoffstatus</code> is <code class="code">Pending (100000000)</code> or
+                  <code class="code">Failed (100000003)</code>. It composes the <code class="code">templates/mrm-handoff-payload-schema.json</code>
+                  payload, upserts <span class="kw">model-risk-management-automation</span>, and sets
+                  <code class="code">fsi_mrmhandoffstatus = Handed off (100000001)</code>. This step <strong>supports compliance with</strong>
+                  OCC 2011-12 and Federal Reserve SR 11-7.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="flow-pack">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Flow 8 · Decision-pack-writer (shared child)</h3>
+                <p>The immutable record. Called by Flows 3, 5, 7.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="flow-pack">
+                <p><code class="code">fsi-intake-decision-pack-writer</code> is a <strong>child flow</strong> invoked by Flows 3, 5, and 7. It reads
+                  the request plus all evidence rows, composes the decision-pack JSON in the drift-envelope shape, computes the SHA-256 hash,
+                  and inserts the immutable <code class="code">fsi_intakedecisionlog</code> row. Idempotency is a <strong>flow step, not a database
+                  constraint</strong>: before inserting, it queries <code class="code">fsi_intakedecisionlog</code> for the same
+                  <code class="code">fsi_requestid</code> + <code class="code">fsi_decisionpackhash</code> and skips the insert when a match already
+                  exists. Because every other approval path depends on it, this is the flow you build and turn on <em>first</em> (see Flow-build
+                  mechanics).</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="flow-handoff">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h12M12 6l6 6-6 6M18 4h2v16h-2"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Flows 9–10 · Entra, registry &amp; drift</h3>
+                <p>Mint identity, register, monitor for drift.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="flow-handoff">
+                <p><code class="code">fsi-intake-registry-handoff</code> fires on <code class="code">fsi_status = Approved</code>, mints the
+                  Microsoft Entra Agent ID into <code class="code">fsi_entraagentid</code>, hands the decision-pack envelope to
+                  <span class="kw">agent-registry-automation</span> (writing <code class="code">fsi_registryrecordid</code>), and sets
+                  <code class="code">fsi_status = LiveTracking (100000012)</code>. <code class="code">fsi-intake-drift-handoff</code> then posts the
+                  <code class="code">templates/drift-handoff-payload-schema.json</code> payload to the detector configured in
+                  <code class="code">fsi_intake_driftdetectorenv</code>.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="flow-appeal">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 4v4h4"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Flows 11–12 · Appeal &amp; retention</h3>
+                <p>Re-enter the gate; stamp the retention label.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="flow-appeal">
+                <p><code class="code">fsi-intake-denial-appeal</code> listens for the denial-card <code class="code">denialAppeal</code> action, checks the
+                  per-path appeal cap, and creates a fresh <code class="code">fsi_intakerequest</code> with
+                  <code class="code">fsi_appealofid</code> preserving lineage (Flow 1 re-picks it up once it reaches
+                  <code class="code">Submitted</code>). <code class="code">fsi-intake-retention-tagger</code> stamps the retention label and writes
+                  <code class="code">fsi_intakeretentionrecord</code> evidence for new decision-log, audit, and final-state rows — it is a logical
+                  pattern, since one cloud flow cannot trigger on multiple Dataverse tables.</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: SCROLL-REVEAL WRAPPER
+         Add  data-reveal  to ANY element to fade + slide it in when scrolled
+         into view (IntersectionObserver). Stagger siblings with an inline reveal-delay custom property (see the demo and README). Under prefers-reduced-motion the JS
+         reveals everything immediately (no transform). It reveals once.
+         ===================================================================== -->
+    <section id="classifier" class="section section-tint" aria-labelledby="h-classifier">
+      <div class="container">
+        <span class="eyebrow" data-reveal>CLASSIFIER ENGINE</span>
+        <h2 id="h-classifier" data-reveal>How a request becomes Express, Standard, or Full</h2>
+        <p class="lede" data-reveal>The classifier in <code class="code">seed_classification_rules.py</code> reads the maker's six trigger answers
+          and the agent's audience/zone, then derives a path, a risk tier, a governance zone, the reviewer roster, and the quorum.
+          Flow 1 (router) calls the same logic at runtime; the HTTP classifier (Flow 2) mirrors it for the pre-submit preview.</p>
+
+        <!-- (B) CLASSIFICATION FORK DIAGRAM -->
+        <figure class="diagram" data-reveal>
+          <svg viewBox="0 0 920 300" role="img" aria-label="Classification fork: one intake request branches into Express, Standard, or Full review paths by risk.">
+            <g class="fk-box" style="--d:0s">
+              <rect class="fk-input" x="36" y="118" width="170" height="64" rx="12"/>
+              <text class="fk-input-label" x="121" y="143" text-anchor="middle">Intake request</text>
+              <text class="fk-input-label" x="121" y="163" text-anchor="middle" style="font-size:12px;opacity:.85">count T1–T6 hits + zone</text>
+            </g>
+
+            <path class="fk-path" style="--d:.15s" d="M206 150 C 320 150, 360 60, 520 60"/>
+            <path class="fk-path" style="--d:.3s"  d="M206 150 C 340 150, 380 150, 520 150"/>
+            <path class="fk-path" style="--d:.45s" d="M206 150 C 320 150, 360 240, 520 240"/>
+
+            <g class="fk-box" style="--d:.55s">
+              <rect x="520" y="26" width="370" height="68" rx="12" fill="var(--brand-accent)"/>
+              <text class="fk-title" x="544" y="55">Express · Tier 3 · Zone 3</text>
+              <text class="fk-desc"  x="544" y="76">0 hits · sponsor-only · quorum 1</text>
+            </g>
+            <g class="fk-box" style="--d:.7s">
+              <rect x="520" y="116" width="370" height="68" rx="12" fill="var(--brand-primary)"/>
+              <text class="fk-title" x="544" y="145">Standard · Tier 2 · Zone 2</text>
+              <text class="fk-desc"  x="544" y="166">1–2 non-MNPI hits · 2-of-3 quorum</text>
+            </g>
+            <g class="fk-box" style="--d:.85s">
+              <rect x="520" y="206" width="370" height="68" rx="12" fill="var(--brand-primary-dark)"/>
+              <text class="fk-title" x="544" y="235">Full · Tier 1 · Zone 1</text>
+              <text class="fk-desc"  x="544" y="256">≥3 hits / any T5 MNPI · 3-of-5 + MRM</text>
+            </g>
+          </svg>
+          <figcaption>Figure 3 — The classification fork. The provisional path is the highest tier any single rule reaches; a deny gate can
+            override the path entirely. "Yes" and "Not sure" both count as positive trigger hits.</figcaption>
+        </figure>
+
+        <h3 class="subhead" data-reveal>The three-step derivation</h3>
+        <ol class="timeline" data-reveal>
+          <li>
+            <span class="step-dot" aria-hidden="true">1</span>
+            <h3>Count the trigger hits</h3>
+            <p>Each of <code class="code">fsi_t1initiatesfinancialtxn</code> through <code class="code">fsi_t6crossborderdata</code> is a
+              three-state answer. <strong>Yes</strong> and <strong>Not sure</strong> both count as a positive hit; only an explicit
+              <strong>No</strong> is zero. T5 marks material non-public information (MNPI); T6 marks cross-border personal data.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">2</span>
+            <h3>Derive the provisional path</h3>
+            <p><strong>Express</strong> needs zero hits and a Zone 3 audience → Tier 3, sponsor-only, quorum 1.
+              <strong>Standard</strong> is 1–2 non-MNPI hits or a Zone 2 audience → Tier 2, InfoSec + Privacy
+              (+ Compliance when a T4 NPI hit is present), 2-of-3 quorum. <strong>Full</strong> is three or more hits, any T5 MNPI hit,
+              a Zone 1 audience, or a Privacy-approved cross-border case → Tier 1, InfoSec + Privacy + Compliance + Legal + MRM,
+              3-of-5 quorum. The path is the highest any single rule reaches.</p>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">3</span>
+            <h3>Apply the deny gates</h3>
+            <p>Two gates can override the derived path with an immediate <code class="code">Denied (100000005)</code> outcome before any
+              reviewer is engaged — see the warning below. Otherwise the router writes the path, tier, zone, roster, and quorum onto the
+              parent request and moves it to <code class="code">InReview (100000011)</code>.</p>
+          </li>
+        </ol>
+
+        <aside class="callout callout-warn" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17v.5"/></svg>
+          <div>
+            <p class="callout__title">Two deny gates short-circuit the path</p>
+            <p class="callout__body"><strong>Sponsor self-approval (ADR-008):</strong> when <code class="code">fsi_sponsorupn</code> equals
+              <code class="code">fsi_makerupn</code>, the request is denied — a maker cannot sponsor their own agent.
+              <strong>Cross-border default-deny (ADR-005):</strong> a T6 hit where the maker's country differs from the data-residency
+              region and no <code class="code">fsi_privacyoverride</code> is set denies by default. Both gates re-run inside Flow 1, not just in
+              the pre-submit preview, so a client that skips the preview is still gated.</p>
+          </div>
+        </aside>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">Regulation reference</p>
+            <p class="callout__body">The MNPI (T5) and cross-border personal-data (T6) triggers route handling that
+              <strong>supports compliance with</strong> GLBA 501(b) safeguards for non-public personal information. Tier 1 / Full requests
+              add a model-risk review that <strong>helps meet</strong> OCC 2011-12 and Federal Reserve SR 11-7 expectations. The thresholds are
+              policy inputs you tune in <code class="code">policy-lookup-tables.yaml</code>, not guarantees of a regulatory outcome.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: INTERACTIVE "EXPLORE" CARDS (click / keyboard to expand)
+         Structure per card:
+           <article class="explore-card">
+             <button class="explore-card__trigger" data-card-trigger
+                     aria-expanded="false" aria-controls="UNIQUE_ID">
+               icon + head (h3 + teaser) + chevron
+             </button>
+             <div class="explore-card__body"><div class="explore-card__bodyinner">
+               <div class="explore-card__detail" id="UNIQUE_ID"> hidden content </div>
+             </div></div>
+           </article>
+         The trigger is a real <button>, so Enter/Space work for free. JS toggles
+         aria-expanded + the .is-open class (smooth height via CSS grid rows).
+         Give each aria-controls / id a UNIQUE value per card.
+         ===================================================================== -->
+    <section id="mechanics" class="section" aria-labelledby="h-mechanics">
+      <div class="container">
+        <span class="eyebrow" data-reveal>FLOW-BUILD MECHANICS</span>
+        <h2 id="h-mechanics" data-reveal>The Power Automate consensus that keeps flows from failing silently</h2>
+        <p class="lede" data-reveal>These six patterns come from the three-report build research recorded in <code class="code">AGENTS.md</code>. Most
+          failures here are <em>silent</em> — the flow reports success while writing nothing — so treat each card as a checklist item
+          when you add or modify a flow.</p>
+
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="mech-child">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6M12 15v6M5 12h14"/><circle cx="12" cy="12" r="3"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>The child-flow contract</h3>
+                <p>Manually-trigger + Respond on every path + same-solution.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="mech-child">
+                <p>A callable child flow (Flow 8) must use the <strong>"Manually trigger a flow"</strong> trigger with Text inputs that you
+                  <code class="code">json()</code>-parse inside. It must hit a <strong>"Respond to a Power App or flow"</strong> action on
+                  <em>every</em> branch — if any path can finish without responding, the parent waits roughly 30 days. The child must also live in
+                  the same <code class="code">FSIAgentIntake</code> solution and be saved, published, and turned ON, or the
+                  <strong>"Run a Child Flow"</strong> picker silently omits it.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="mech-router">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h6l2-3 2 6 2-3h6"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Router: trigger on Added + Modified, guard twice</h3>
+                <p>Guards stop the self-retrigger loop — no loop guard needed.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="mech-router">
+                <p>The canonical contract is the Dataverse trigger <strong>"When a row is added, modified or deleted"</strong> with
+                  <strong>Change type = Added and Modified</strong>, <strong>Table = Intake Requests</strong>, and
+                  <strong>Scope = Organization</strong>, guarded twice so a replay or the router's own write-back cannot re-route the row: a
+                  <strong>Filter rows</strong> OData expression on <code class="code">fsi_status eq 100000001</code> (Submitted) plus a blank or
+                  stale <code class="code">fsi_decisionpath</code>, and a <strong>Trigger condition</strong>
+                  <code class="code">@equals(triggerOutputs()?['body/fsi_status'], 100000001)</code> — note the bare leading
+                  <code class="code">@</code>, which Power Automate requires on trigger conditions only. Once the router stamps
+                  <code class="code">fsi_decisionpath</code> and flips <code class="code">fsi_status</code> to <code class="code">InReview</code>, the
+                  Modified re-fire no longer passes the guard. <strong>Change type = Added only</strong> is a lab/slice optimization on top of this
+                  contract — valid because <code class="code">New-IntakeSubmission.ps1</code> writes a fresh <code class="code">Submitted</code> row per
+                  run, so an Added-only trigger fires on creation and sidesteps self-retrigger without leaning on the guards. Treat it as a lab
+                  shortcut, not the universal rule.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="mech-choice">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M4 12h16M4 17h7"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Choice columns take the integer, not the label</h3>
+                <p>A label writes a silent NULL and returns 204.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="mech-choice">
+                <p>When an Update or Add row action sets a choice column, supply the option-set <strong>integer</strong>
+                  (for example <code class="code">fsi_status = 100000004</code> for Approved), never the display label "Approved". A label
+                  posts a NULL for that column and Dataverse still returns HTTP 204, so the step looks green while the value never lands. Every
+                  status, path, tier, and zone value in this solution is an integer in the <code class="code">100000000+</code> range — keep a
+                  copy of the choice-value table from <code class="code">flow-configuration.md</code> open while you build.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="mech-list">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>List rows → first() behind an empty() guard</h3>
+                <p>Indexing an empty array fails the run.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="mech-list">
+                <p>The soft-FK means you resolve a request through <strong>List rows</strong> with a
+                  <code class="code">fsi_requestid eq '…'</code> filter, then read the single match with
+                  <code class="code">first(outputs('List_rows')?['body/value'])</code>. Always branch on
+                  <code class="code">empty(outputs('List_rows')?['body/value'])</code> first — calling <code class="code">first()</code> on an empty
+                  collection fails the run. This is the same resilient pattern the seed and smoke scripts use instead of the alternate-key URI.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="mech-hash">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 4 21M14 3l-2 18M3 8h18M2 16h18"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>SHA-256 is deferred, not computed inline</h3>
+                <p>Power Automate has no native hash function.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="mech-hash">
+                <p>There is no expression to compute SHA-256 inside a cloud flow. Flow 8 writes a deferred marker —
+                  <code class="code">concat('sha256-pending:', guid())</code> — into <code class="code">fsi_decisionpackhash</code>, and a downstream
+                  job (an Azure Function or the registry handoff) computes the real digest over the canonical
+                  <code class="code">fsi_decisionpackjson</code> bytes and updates the row. Keep the marker prefix stable so consumers can tell a
+                  pending hash from a final one.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="mech-order">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V6M4 6l4-3M4 6l4 3M20 6v12M20 18l-4 3M20 18l-4-3"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Build order &amp; adversarial tests</h3>
+                <p>Decision-pack-writer first, router last.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="mech-order">
+                <p>Build the shared child (Flow 8) first so the callers can bind to it, and wire the router (Flow 1) last so nothing fires
+                  before its dependencies are ON. Validate with the three adversarial checks from the research: a <strong>loop test</strong>
+                  (confirm the router does not re-fire on its own writes), a <strong>child-null-return test</strong> (confirm a child that
+                  responds with no payload does not wedge the parent), and a <strong>connection-identity test</strong> (confirm the flow runs as
+                  the intended service identity, not the maker).</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+
+        <aside class="callout callout-warn" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17v.5"/></svg>
+          <div>
+            <p class="callout__title">The failure mode here is silence</p>
+            <p class="callout__body">A mislabeled choice value, a child flow left in the Default solution, or a missing Respond branch all
+              produce a run that reports success while doing nothing. Verify writes by reading the row back — the
+              <code class="code">Get-IntakeFlowState.ps1</code> harness exists for exactly this reason.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: CALLOUT / ASIDE BOXES (three variants)
+         <aside class="callout callout-info" role="note">
+           <svg class="callout__icon">…</svg>
+           <div><p class="callout__title">Title</p><p class="callout__body">…</p></div>
+         </aside>
+         callout-info : neutral tip / definition (blue)
+         callout-warn : caution / gotcha (amber)
+         callout-reg  : regulation reference (teal). Cite the rule by name + section,
+                   e.g. "FINRA Rule 3110". Use FSI-compliant language —
+                   "supports compliance with", "helps meet" — never
+                   "ensures/guarantees/will prevent".
+         ===================================================================== -->
+    <section id="extend" class="section section-tint" aria-labelledby="h-extend">
+      <div class="container">
+        <span class="eyebrow" data-reveal>EXTENSION POINTS</span>
+        <h2 id="h-extend" data-reveal>Five ways to extend without breaking the evidence chain</h2>
+        <p class="lede" data-reveal>Each extension point has a supported seam. The rule that ties them together: the immutable evidence tables and the
+          handoff payloads are <em>contracts</em>. You can add to them, but renaming or removing a top-level key breaks downstream consumers.</p>
+
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="ext-reviewer">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M17 11l2 2 4-4"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Add a reviewer role</h3>
+                <p>Option set + policy table + roster JSON.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="ext-reviewer">
+                <p>Add the new role as an option in the <code class="code">fsi_intake_reviewerrole</code> option set (next integer in the
+                  <code class="code">100000000+</code> sequence), map it to the paths and quorum weights in
+                  <code class="code">policy-lookup-tables.yaml</code>, and the classifier will emit it inside
+                  <code class="code">fsi_parallelreviewersjson</code>. Flow 4 fans out one <code class="code">fsi_intakereview</code> row per
+                  entry, so no flow edit is needed — the roster is data-driven. Re-run the classifier self-test to confirm the new role appears in
+                  the expected paths.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="ext-rule">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h16"/><circle cx="18" cy="12" r="2"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Add or tune a classification rule</h3>
+                <p>A tier change is a major modification.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="ext-rule">
+                <p>Thresholds, zone mappings, and quorum sizes live in <code class="code">policy-lookup-tables.yaml</code> and the rule logic in
+                  <code class="code">seed_classification_rules.py</code>. Per ADR-009 a change that moves a request's tier (T1–T6 weighting,
+                  a new trigger, a quorum size) is a <strong>major modification</strong>: bump the policy version so existing decision packs stay
+                  pinned to the rules in force when they were approved, and add a pytest case alongside the existing 42 so the new branch is
+                  covered. Avoid editing tier outcomes inline in a flow — keep the logic in the classifier.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="ext-handoff">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h12M12 6l6 6-6 6"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Add a handoff target</h3>
+                <p>Reuse the envelope; preserve the top-level keys.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="ext-handoff">
+                <p>To hand the approved agent to another downstream solution, add a flow that triggers on
+                  <code class="code">fsi_status = LiveTracking (100000012)</code> and composes a payload that <em>extends</em> the existing
+                  drift envelope rather than redefining it. Keep all 18 required top-level keys (from
+                  <code class="code">drift-handoff-payload-schema.json</code>) so existing consumers keep parsing; add your fields under a nested
+                  object. Carry <code class="code">requestId</code> and <code class="code">decisionPackHash</code> as the correlation keys.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="ext-connector">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3M5 8h14v6a5 5 0 0 1-5 5h-4a5 5 0 0 1-5-5z"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Add a custom connector</h3>
+                <p>Bind by connection-reference <em>name</em>.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="ext-connector">
+                <p>The solution ships five connection references — <code class="code">fsi_cr_dataverse_agentintake</code>,
+                  <code class="code">fsi_cr_teams_agentintake</code>, <code class="code">fsi_cr_office365_agentintake</code>,
+                  <code class="code">fsi_cr_http_agentintake</code>, and <code class="code">fsi_cr_graph_agentintake</code>. When you add another,
+                  register it with the solution by its <strong>name</strong>
+                  (<code class="code">--componentType connectionreference</code>), not the numeric component type — otherwise it lands in the
+                  Default solution and never appears under <code class="code">FSIAgentIntake</code>. Then gate deployment with
+                  <code class="code">Test-IntakeConnectionBinding.ps1</code>.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="ext-envelope">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>Extend the decision-pack envelope</h3>
+                <p>Add nested fields; never rename top-level keys.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="ext-envelope">
+                <p>The decision pack stored in <code class="code">fsi_decisionpackjson</code> is the canonical evidence object, and its SHA-256 in
+                  <code class="code">fsi_decisionpackhash</code> is computed over its bytes — so any change to the serialization changes the hash.
+                  Add new evidence under a nested object and keep the existing top-level keys and their ordering stable. The
+                  <code class="code">fsi_eventtype</code> string column on <code class="code">fsi_intakeauditevent</code> is the deliberate
+                  no-schema-change seam for new lifecycle event names. Update the decision-pack-writer (Flow 8) and re-run the smoke test after any
+                  envelope change.</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+
+        <aside class="callout callout-reg" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+          <div>
+            <p class="callout__title">Regulation reference</p>
+            <p class="callout__body">Versioning classification rules and pinning each decision pack to the policy version in force
+              <strong>supports compliance with</strong> the record-keeping expectations of FINRA Rule 4511 and SEC Rule 17a-4. It remains the
+              deploying organization's responsibility to verify the configuration against its own supervisory obligations.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: TIMELINE / STEPPER
+         <ol class="timeline"> with <li> items; each <li> starts with
+         <span class="step-dot">N</span> then <h3> + <p>. Ordered list keeps it
+         semantic. Good for sequential processes / runbooks.
+         ===================================================================== -->
+    <section id="harness" class="section" aria-labelledby="h-harness">
+      <div class="container">
+        <span class="eyebrow" data-reveal>AUTOMATION HARNESS</span>
+        <h2 id="h-harness" data-reveal>The four scripts that provision, seed, and validate</h2>
+        <p class="lede" data-reveal>A repeatable loop wraps the manual flow build: provision the solution shell, gate on bound connections, drop a
+          test submission, then activate the flows child-first. Run them in this order on a fresh environment.</p>
+
+        <ol class="timeline" data-reveal>
+          <li>
+            <span class="step-dot" aria-hidden="true">1</span>
+            <h3>Provision the solution shell</h3>
+            <p><code class="code">provision_solution_shell.ps1</code> creates the <code class="code">FSIAgentIntake</code> unmanaged solution,
+              its environment variables, and the five connection references — idempotently, so re-runs are safe. Watch its output for
+              <code class="code">MANUAL STEP REQUIRED:</code> lines, which flag the designer actions a script cannot perform.</p>
+            <pre class="codeblock" data-reveal><code>pwsh ./scripts/provision_solution_shell.ps1 -EnvironmentUrl &lt;org-url&gt;</code></pre>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">2</span>
+            <h3>Gate on bound connections</h3>
+            <p><code class="code">Test-IntakeConnectionBinding.ps1</code> verifies each connection reference resolves to a live connection before
+              you build flows on top of it. Pass <code class="code">-RequireBound</code> to fail the run unless the named references are bound —
+              use it as a deployment gate in CI.</p>
+            <pre class="codeblock" data-reveal><code>pwsh ./scripts/Test-IntakeConnectionBinding.ps1 -EnvironmentUrl &lt;org-url&gt; `
+  -RequireBound fsi_cr_dataverse_agentintake,fsi_cr_teams_agentintake</code></pre>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">3</span>
+            <h3>Drop a test submission</h3>
+            <p><code class="code">New-IntakeSubmission.ps1</code> writes a pristine <code class="code">Submitted</code> request to trigger the router.
+              Pick a <code class="code">-Scenario</code> to exercise a path (for example <code class="code">express-happy</code>,
+              <code class="code">full-parallel-board</code>, <code class="code">cross-border-deny</code>, or
+              <code class="code">sponsor-self-approval-deny</code>). Add <code class="code">-PreClassify</code> to stamp the router outputs so you can
+              test a single downstream flow as a vertical slice without standing up Flow 1 first.</p>
+            <pre class="codeblock" data-reveal><code>pwsh ./scripts/New-IntakeSubmission.ps1 -EnvironmentUrl &lt;org-url&gt; `
+  -Scenario full-parallel-board -PreClassify</code></pre>
+          </li>
+          <li>
+            <span class="step-dot" aria-hidden="true">4</span>
+            <h3>Activate the flows child-first</h3>
+            <p><code class="code">Get-IntakeFlowState.ps1</code> reports each flow's on/off state and, with <code class="code">-Activate</code>, turns
+              them on in a safe order. Pass <code class="code">-ActivationOrder</code> with the child flow first so the parents never bind to a
+              child that is not yet published — this avoids the ChildFlowNeverPublished race. Use <code class="code">-ExpectedCount</code> to assert
+              the full set is present.</p>
+            <pre class="codeblock" data-reveal><code>pwsh ./scripts/Get-IntakeFlowState.ps1 -EnvironmentUrl &lt;org-url&gt; `
+  -Activate -ActivationOrder fsi-intake-decision-pack-writer -ExpectedCount 12</code></pre>
+          </li>
+        </ol>
+
+        <aside class="callout callout-warn" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17v.5"/></svg>
+          <div>
+            <p class="callout__title">Two ordering rules the harness encodes</p>
+            <p class="callout__body">Register connection references by <strong>name</strong> so they land in the
+              <code class="code">FSIAgentIntake</code> solution, and activate the shared child (Flow 8) <strong>before</strong> its callers so the
+              "Run a Child Flow" binding resolves. The scripts encode both — keep that order if you extend them.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: STAT / METRIC HIGHLIGHT BLOCKS
+         <div class="stat-grid"> of <div class="stat"> each with
+         <span class="stat__num"> and <span class="stat__label">. Auto-fits.
+         Keep numbers honest and sourced; avoid implying guarantees.
+         ===================================================================== -->
+    <section id="contracts" class="section section-tint" aria-labelledby="h-contracts">
+      <div class="container">
+        <span class="eyebrow" data-reveal>CONTRACTS &amp; TESTING</span>
+        <h2 id="h-contracts" data-reveal>What you must not break — and how to prove you didn't</h2>
+        <p class="lede" data-reveal>Three things are load-bearing for downstream consumers: the handoff payload shapes, the decision-pack hash, and the
+          correlation keys that stitch flows together. Treat their top-level structure as a published contract.</p>
+
+        <div class="stat-grid" data-reveal>
+          <div class="stat"><span class="stat__num">9</span><span class="stat__label">Dataverse tables in the evidence model</span></div>
+          <div class="stat"><span class="stat__num">12</span><span class="stat__label">Documented Power Automate flows</span></div>
+          <div class="stat"><span class="stat__num">18</span><span class="stat__label">Required keys in the drift payload</span></div>
+          <div class="stat"><span class="stat__num">13</span><span class="stat__label">Required keys in the MRM payload</span></div>
+        </div>
+
+        <h3 class="subhead" data-reveal>Contracts to preserve</h3>
+        <div class="card-grid" data-reveal>
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="con-drift">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>The two handoff payloads</h3>
+                <p>18 drift keys, 13 MRM keys — keep them all.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="con-drift">
+                <p><code class="code">drift-handoff-payload-schema.json</code> requires 18 top-level keys —
+                  <code class="code">payloadVersion</code>, <code class="code">originIntakeId</code>, <code class="code">pathUsed</code>,
+                  <code class="code">riskTier</code>, <code class="code">zone</code>, <code class="code">declaredDataSources</code>,
+                  <code class="code">connectorAllowlist</code>, <code class="code">reviewerAttestations</code>,
+                  <code class="code">mrmHandoffStatus</code>, <code class="code">decisionPackHash</code>,
+                  <code class="code">entraAgentId</code>, and others. <code class="code">mrm-handoff-payload-schema.json</code> requires 13,
+                  including <code class="code">$schema</code>, <code class="code">intake</code>, <code class="code">agent</code>,
+                  <code class="code">model</code>, <code class="code">controls</code>, <code class="code">reviewers</code>, and
+                  <code class="code">decisionPackHash</code>. Add fields under nested objects; do not rename or drop a top-level key.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="con-hash">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3 4 21M14 3l-2 18M3 8h18M2 16h18"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>The decision-pack hash</h3>
+                <p>SHA-256 over the canonical JSON bytes.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="con-hash">
+                <p><code class="code">fsi_decisionpackhash</code> is a SHA-256 digest of the canonical
+                  <code class="code">fsi_decisionpackjson</code> bytes. Both handoff payloads echo it as <code class="code">decisionPackHash</code>,
+                  so a consumer can confirm it received the same evidence the intake recorded. Any change to how the pack is serialized changes the
+                  hash — which is the point. Keep the serialization deterministic and keep the <code class="code">sha256-pending:</code> marker prefix
+                  for the brief window before the digest is finalized.</p>
+              </div>
+            </div></div>
+          </article>
+
+          <article class="explore-card">
+            <button class="explore-card__trigger" type="button" data-card-trigger aria-expanded="false" aria-controls="con-keys">
+              <span class="explore-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M16 6l3 3"/></svg>
+              </span>
+              <span class="explore-card__head">
+                <h3>The correlation keys</h3>
+                <p>How a request stays traceable across flows.</p>
+              </span>
+              <span class="explore-card__chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="explore-card__body"><div class="explore-card__bodyinner">
+              <div class="explore-card__detail" id="con-keys">
+                <p><code class="code">fsi_requestid</code> (surfaced as <code class="code">requestId</code> / <code class="code">originIntakeId</code>)
+                  is the spine that links every evidence row and every handoff back to one intake. Reviewer rows additionally carry their review
+                  identifier and <code class="code">fsi_reviewerrole</code>, and the <code class="code">decisionPackHash</code> ties the immutable
+                  decision log to the payloads. Preserve these when you add a flow so a request stays traceable end to end.</p>
+              </div>
+            </div></div>
+          </article>
+        </div>
+
+        <h3 class="subhead" data-reveal>Prove it before you ship</h3>
+        <p data-reveal>Three commands cover the unit, classifier, and deployment layers. Run all three after any schema, classifier, or flow
+          change:</p>
+        <pre class="codeblock" data-reveal><code># 1. Unit + integration suite (schema, identity, retention, classifier)
+python -m pytest agent-intake/tests
+
+# 2. Classifier self-test — re-derive every path from the rule fixtures
+python agent-intake/scripts/seed_classification_rules.py --self-test
+
+# 3. Deployment smoke test against a live environment
+pwsh agent-intake/scripts/smoke_test.ps1 -EnvironmentUrl &lt;org-url&gt;</code></pre>
+
+        <aside class="callout callout-warn" data-reveal role="note">
+          <svg class="callout__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 9v5M12 17v.5"/></svg>
+          <div>
+            <p class="callout__title">A renamed key is a silent break</p>
+            <p class="callout__body">Downstream solutions parse these payloads by key name. Renaming or removing a top-level key compiles and
+              deploys cleanly but breaks the consumer at runtime. When in doubt, add under a nested object and bump
+              <code class="code">payloadVersion</code> rather than reshaping the envelope.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         USAGE: KEY TAKEAWAYS RECAP
+         Close each major section (or the page) with a recap. Use
+         <div class="takeaways"> + <h3> + <ul> of checkmarked <li> items.
+         Mirror the hero's "What you'll learn" objectives so the reader can
+         self-check what they retained.
+         ===================================================================== -->
+    <section id="takeaways" class="section" aria-labelledby="h-takeaways">
+      <div class="container">
+        <span class="eyebrow" data-reveal>RECAP</span>
+        <h2 id="h-takeaways" data-reveal>Key takeaways</h2>
+        <p class="lede" data-reveal>If you remember five things from this module, make it these. Each maps to an objective from the top of the page.</p>
+
+        <div class="takeaways" data-reveal>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            What to remember
+          </h3>
+          <ul>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>The evidence model is nine tables joined by a <strong>string soft-FK</strong> (<code class="code">fsi_requestid</code>),
+                not lookups — so the OrganizationOwned <code class="code">fsi_intakedecisionlog</code>,
+                <code class="code">fsi_intakeauditevent</code>, and <code class="code">fsi_intakeretentionrecord</code> rows outlive their parent,
+                which supports compliance with FINRA 4511 / SEC 17a-4.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Twelve flows implement one lifecycle. Build the shared child
+                <code class="code">fsi-intake-decision-pack-writer</code> first and the router last, and let the data-driven roster in
+                <code class="code">fsi_parallelreviewersjson</code> do the fan-out.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>The classifier derives Express / Standard / Full from six trigger hits and the zone, where
+                <strong>Yes and Not sure both count</strong>; two deny gates (sponsor self-approval, cross-border) can override the path before any
+                reviewer is engaged.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Most flow-build failures are <strong>silent</strong>: write choice columns as integers, give a callable child a Respond on
+                every path inside the same solution, trigger the router on Added + Modified behind the Submitted and stale-path guards, and guard
+                <code class="code">first()</code> with <code class="code">empty()</code>. Verify writes by reading the row back.</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Extend by adding, never by renaming: keep the 18 drift and 13 MRM top-level payload keys and the
+                <code class="code">decisionPackHash</code> stable, register connection references by name, and prove every change with pytest, the
+                classifier self-test, and the smoke test.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- =====================================================================
+       USAGE: FOOTER — replace links/text per module. Keep it lightweight.
+       ===================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <span class="foot-brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true" fill="none">
+          <path d="M16 2 27 6v9c0 7-4.7 12.4-11 15C9.7 27.4 5 22 5 15V6L16 2Z" fill="var(--brand-primary)"/>
+          <circle cx="16" cy="13" r="2.4" fill="#fff"/><path d="M16 15.4V20M11 20h10" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        FSI Agent Governance · agent-intake
+      </span>
+      <span>Developer module — a self-contained, self-guided HTML file with no external requests. Derived from the agent-intake schema, flow docs, and harness scripts.</span>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       BEHAVIOR LAYER (inline). Keep intact. Handles: theme toggle (+ system
+       sync + localStorage), scroll-progress bar, nav active-highlight,
+       scroll-reveal, SVG diagram triggers, explore-card toggles, and the
+       prefers-reduced-motion guard. Vanilla JS, no dependencies.
+       ===================================================================== -->
+  <script>
+  (function () {
+    'use strict';
+    var root = document.documentElement;
+
+    // Cross-browser MediaQueryList listener (Safari < 14 used addListener).
+    function onMQ(mq, fn) {
+      if (mq.addEventListener) mq.addEventListener('change', fn);
+      else if (mq.addListener) mq.addListener(fn);
+    }
+    var reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var darkMQ   = window.matchMedia('(prefers-color-scheme: dark)');
+
+    /* ---------- Theme toggle (explicit choice wins over system) ---------- */
+    var THEME_KEY = 'fsi-training-theme';
+    var toggle = document.getElementById('themeToggle');
+    function effectiveTheme() {
+      var explicit = root.getAttribute('data-theme');
+      if (explicit === 'dark' || explicit === 'light') return explicit;
+      return darkMQ.matches ? 'dark' : 'light';
+    }
+    function syncToggle() {
+      var t = effectiveTheme();
+      if (!toggle) return;
+      toggle.setAttribute('aria-pressed', String(t === 'dark'));
+      toggle.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+      toggle.setAttribute('data-theme', t);
+    }
+    try { var saved = localStorage.getItem(THEME_KEY); if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved); } catch (e) {}
+    syncToggle();
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+        syncToggle();
+      });
+    }
+    // If the user never chose explicitly, follow system changes live.
+    onMQ(darkMQ, function () { if (!root.getAttribute('data-theme')) syncToggle(); });
+
+    /* ---------- Scroll-progress bar (rAF-throttled) ---------- */
+    var bar = document.getElementById('progressBar');
+    var track = bar ? bar.parentNode : null;
+    var ticking = false;
+    function updateProgress() {
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      var top = window.pageYOffset || h.scrollTop || 0;
+      var pct = max > 0 ? (top / max) * 100 : 0;
+      pct = Math.max(0, Math.min(100, pct));
+      if (bar) bar.style.width = pct + '%';
+      if (track) track.setAttribute('aria-valuenow', String(Math.round(pct)));
+      ticking = false;
+    }
+    function onScroll() { if (!ticking) { ticking = true; window.requestAnimationFrame(updateProgress); } }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    updateProgress();
+
+    /* ---------- Nav active-section highlight ---------- */
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+    var sections = navLinks
+      .map(function (l) { return document.getElementById((l.getAttribute('href') || '').slice(1)); })
+      .filter(Boolean);
+    function setActive(id) {
+      navLinks.forEach(function (l) {
+        var on = l.getAttribute('href') === '#' + id;
+        l.classList.toggle('is-active', on);
+        if (on) l.setAttribute('aria-current', 'true'); else l.removeAttribute('aria-current');
+      });
+    }
+    if ('IntersectionObserver' in window && sections.length) {
+      var navObs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) { if (en.isIntersecting) setActive(en.target.id); });
+      }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+      sections.forEach(function (s) { navObs.observe(s); });
+    }
+
+    /* ---------- Reveal + SVG diagram animation (reduced-motion aware) ---------- */
+    function revealAll() {
+      document.querySelectorAll('[data-reveal]').forEach(function (el) { el.classList.add('is-visible'); });
+      document.querySelectorAll('[data-animate-svg]').forEach(function (el) { el.classList.add('animate'); });
+    }
+    if (reduceMQ.matches || !('IntersectionObserver' in window)) {
+      revealAll();
+    } else {
+      var revObs = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('is-visible'); obs.unobserve(en.target); }
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.15 });
+      document.querySelectorAll('[data-reveal]').forEach(function (el) { revObs.observe(el); });
+
+      var svgObs = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('animate'); obs.unobserve(en.target); }
+        });
+      }, { threshold: 0.35 });
+      document.querySelectorAll('[data-animate-svg]').forEach(function (el) { svgObs.observe(el); });
+    }
+    // If the user switches on reduced-motion at runtime, settle to final state.
+    onMQ(reduceMQ, function (e) { if (e.matches) revealAll(); });
+
+    /* ---------- Explore-card expand / collapse ---------- */
+    document.querySelectorAll('[data-card-trigger]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var card = btn.closest('.explore-card');
+        if (!card) return;
+        var open = card.classList.toggle('is-open');
+        btn.setAttribute('aria-expanded', String(open));
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
