@@ -29,7 +29,8 @@ Follow **this** document to hand-build the slice flows in the Power Automate des
 ### Steps
 
 1. **List rows** → Table **Intake Requests** (`fsi_intakerequests`)
-   - **Filter rows:** `fsi_requestid eq '@{triggerBody()['text']}'`  *(the requestId input)*
+   - **Filter rows:** `fsi_requestid eq '@{triggerBody()?['text']}'`
+     > ⚠️ **The value MUST be wrapped in single quotes** — it is a string OData filter. Easiest reliable way: type `fsi_requestid eq '`, then **Add dynamic content → requestId**, then type the closing `'`. Without the surrounding single quotes the filter is invalid and the designer silently will not keep it (the "it doesn't stick" symptom). (`?['text']` is the first Text input; confirm the 3 trigger inputs exist so the token binds.)
    - **Row count:** `1`
 
 2. **Condition** — *not-found guard*
