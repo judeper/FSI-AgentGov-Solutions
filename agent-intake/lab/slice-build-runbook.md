@@ -35,7 +35,7 @@ Follow **this** document to hand-build the slice flows in the Power Automate des
 
 2. **Condition** — *not-found guard*
    - Expression: `empty(outputs('List_rows')?['body/value'])`
-   - **If yes** → add **Respond to a Power App or flow** returning `decisionPackHash = "not-found"` (or a Terminate), then stop.
+   - **If yes** → add **Respond to a Power App or flow** returning `decisionPackHash = "not-found"`, then stop. *(Do not use Terminate here — a child flow must reach a **Respond** on every branch, or the parent's "Run a Child Flow" call hangs until timeout.)*
    - **If no** → continue with the steps below.
 
 3. **Compose** — name it `RequestRow`
@@ -69,7 +69,7 @@ Follow **this** document to hand-build the slice flows in the Power Automate des
    |---|---|
    | **Name** (`fsi_name`) | `@{concat('Decision pack - ', triggerBody()['text'])}` |
    | **Request ID** (`fsi_requestid`) | `@{triggerBody()['text']}` |
-   | **Decision Outcome** (`fsi_decisionoutcome`) | `if(equals(triggerBody()['text_1'],'Denied'),100000002,100000000)` *(Approved=100000000, Denied=100000002 — an integer)* |
+   | **Decision Outcome** (`fsi_decisionoutcome`) | `if(equals(triggerBody()['text_1'],'Denied'),100000002,100000000)` *(must return an integer; **verified live in this env**: Approved=100000000, Denied=100000002. If you redeploy to another environment, re-check the `fsi_intake_decisionoutcome` option set in the maker portal — Dataverse can assign different integers.)* |
    | **Risk Tier** (`fsi_risktier`) | `outputs('RequestRow')?['fsi_risktier']` |
    | **Zone** (`fsi_zone`) | `outputs('RequestRow')?['fsi_zone']` |
    | **Path Used** (`fsi_pathused`) | `outputs('RequestRow')?['fsi_pathused']` |
