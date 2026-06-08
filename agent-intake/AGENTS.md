@@ -155,6 +155,33 @@ Many `-m` flags hang the PowerShell tool harness silently. For multi-paragraph c
 
 ---
 
+## Power Automate flow-build mechanics (3-report research consensus, 2026)
+
+Consensus from three independent Microsoft-Learn-grounded research reports (June 2026) for hand-building the interconnected slice flows. These are durable build rules; the per-report detail lived in the session's `research_findings`.
+
+**Child-flow contract (the backbone — `fsi-intake-decision-pack-writer` is the shared child):**
+- **Child trigger** = "Manually trigger a flow" (Instant) with typed **Text** inputs. There is no Object/JSON input type — pass structured data as a Text (JSON string) and `json()`-parse it inside the child.
+- **Return** = "Respond to a Power App or flow" (Power Apps connector, standard) as the **final** action. **Every termination path must reach a Respond**, or the parent call hangs until the flow timeout (~30 days), not a fast failure.
+- **Parent invokes** via "Run a Child Flow" (Built-in → "Flows"; search "child"). The child must be **created inside the FSIAgentIntake solution** (not added via "Add existing"), and **saved + published + Turned ON** before any parent can see it in the picker. Drafts and cross-solution children are silently omitted (no error).
+- **Licensing:** standard with Dataverse/Teams/Outlook only. An HTTP-Request child trigger, premium connectors inside the child, or an HTTP-action call cross into premium.
+- **Connection embedding:** for a child that uses Teams/Outlook, open the child → **Run only users → Edit** → switch those connections to "Use this connection". Dataverse is built-in (no embedding). `decision-pack-writer` is Dataverse-only, so it needs none.
+- **Connection identity (FSI governance):** child actions run as the **child's** connection identity, not the caller's — Dataverse `modifiedby` shows the connection account (our lab uses `admin@…`). For production, dedicate a service account per child and confirm audit attribution accepts it.
+
+**Dataverse trigger (the router, `fsi-intake-router`):**
+- Trigger = "When a row is added, modified or deleted". **Prefer Change type = Added.** Because `New-IntakeSubmission.ps1` creates a new row per run, Added fires only on creation, and the router's own status update (a Modify) cannot self-retrigger — so **no loop guard is required**. (If a Modify trigger is ever unavoidable: exclude the service-account `_modifiedby_value` in the trigger condition, or write a separate status column excluded from Select columns.)
+- Use **both** guard layers: **Filter rows** (OData, server-side, pre-delivery) `fsi_status eq 100000001` and a **Trigger condition** (trigger Settings tab) `@equals(triggerOutputs()?['body/fsi_status'], 100000001)`. Trigger conditions use a bare `@` prefix (Logic Apps expression), **not** `@{...}` interpolation. Confirm the exact body token via *peek code* in the env (2 of 3 reports use `triggerOutputs()?['body/<logical>']`; `triggerBody()?['<logical>']` also works).
+- **Scope = Organization** (the connection user needs org read on `fsi_intakerequest`, else the flow is enabled but silently never fires).
+
+**Dataverse Add/Update-row actions:**
+- **Choice columns:** always write the **integer** option value, never the label. An expression must evaluate to an integer (`int(...)`-wrap a stringified number) or Dataverse silently stores NULL (the action still returns HTTP 204) — verify with a Get-row after the first test. Pass-through tokens are already integers and are safe only when source and destination share the same option set (ours do: global `fsi_intake_risktier`, `fsi_acv_zone`, `fsi_intake_pathused`).
+- **Read one row by a non-GUID key:** "List rows" with **Filter rows** `fsi_requestid eq '<id>'` + **Row count = 1**, then `first(outputs('List_rows')?['body/value'])?['<field>']`. Guard with a Condition on `empty(outputs('List_rows')?['body/value'])` first — `first()` on an empty array returns null silently. Index any non-PK filter column for large tables. (Alternate-key indexes build asynchronously — not immediately queryable; see the alt-key latency gotcha above.)
+
+**SHA-256:** there is no native expression function. **Defer it from the slice** (placeholder `concat('sha256-pending:', guid())`). The only no-premium option is an Office Script (Excel Online (Business) "Run script"), but it requires a workbook host on SharePoint/OneDrive, may lack Web Crypto in the sandbox (inline ~100 lines of JS), is rate-limited, and is DLP-sensitive. A Dataverse plugin (C#) or an HTTP/Entra hashing endpoint is the correct production path.
+
+**Build order + mandatory tests:** build `decision-pack-writer` (F8) **first** — all Respond paths, Turn ON, confirm it appears in a parent's "Run a Child Flow" picker — then `reviewer-decision-handler`, then `parallel-reviewers` / `sponsor-card`, then the `router` **last**. Adversarial tests before declaring the slice complete: (1) **loop** — router updates status, verify no second fire; (2) **child-null-return** — force an F8 error branch, verify the parent fails fast rather than hanging; (3) **connection-identity** — confirm Dataverse `modifiedby` shows the expected account.
+
+---
+
 ## Pending work
 
 P1 polish items from the v1.0 rubber-duck pass. All landed in PR #142.
