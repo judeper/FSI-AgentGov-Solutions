@@ -81,7 +81,7 @@ The following table documents known Copilot Studio telemetry fields in the `Prop
 
 **Steps:**
 1. Open Copilot Studio
-2. Navigate to Settings > Application Insights
+2. Navigate to Settings > Advanced, then the Application Insights section
 3. Ensure "Log sensitive Activity properties" is **disabled**
 4. Save configuration
 

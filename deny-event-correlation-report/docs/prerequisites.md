@@ -121,9 +121,9 @@ Connect-ExchangeOnline `
     -ExchangeOrganization "example.onmicrosoft.com"
 ```
 
-### Microsoft Graph Audit Search Preview
+### Microsoft Graph Audit Search (v1.0)
 
-The production extractors currently use `Search-UnifiedAuditLog`. Microsoft Graph exposes Microsoft Purview audit search in beta at `GET/POST /security/auditLog/queries` with `AuditLogsQuery.*` permissions (for example, `AuditLogsQuery.Read.All` or service-specific permissions). Because Microsoft Graph beta APIs are subject to change and are not supported for production use, treat this as a preview migration path until the endpoint is available in v1.0 and validated for your tenant.
+The production extractors currently use `Search-UnifiedAuditLog`. Microsoft Graph also exposes Microsoft Purview audit search at `POST /security/auditLog/queries` (create an `auditLogQuery`), generally available on the Microsoft Graph v1.0 endpoint with `AuditLogsQuery.Read.All` (or service-specific `AuditLogsQuery-*.Read.All`) permissions. This is a supported migration path; validate query coverage and latency for your tenant before switching production evidence collection to it.
 
 ### Application Insights Access
 
@@ -181,8 +181,8 @@ For RAI telemetry, each Copilot Studio agent requires Application Insights confi
 
 1. Open **Copilot Studio** portal
 2. Select the agent
-3. Navigate to **Settings** > **Generative AI**
-4. Enable **Advanced settings**
+3. Navigate to **Settings** > **Advanced**
+4. Locate the **Application Insights** section
 5. Enter Application Insights **Connection String** (not Instrumentation Key)
 6. **Save** and **Publish** the agent
 

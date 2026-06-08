@@ -82,7 +82,7 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 #### Microsoft Purview Unified Audit Log
 
 - **CopilotInteraction events** - Logged automatically when users interact with Copilot/Copilot Studio
-- **Production extractor:** `Search-UnifiedAuditLog`; Microsoft Graph audit search is currently beta at `/security/auditLog/queries` and should be treated as a migration path until v1.0 readiness.
+- **Production extractor:** `Search-UnifiedAuditLog`; Microsoft Graph audit search is generally available at `/security/auditLog/queries` on the v1.0 endpoint and is a supported migration path (validate coverage for your tenant before switching).
 - **Key deny indicators:**
   - `AccessedResources[].Status = "failure"`
   - `AccessedResources[].PolicyDetails` (present when blocked)

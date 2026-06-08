@@ -44,9 +44,12 @@
     }
 
 .EXAMPLE
-    # Using current Graph context token
-    Connect-MgGraph -Scopes "https://contoso.crm.dynamics.com/.default"
-    Get-DataverseThreshold -DataverseUrl "https://contoso.crm.dynamics.com" -Zone Zone2
+    # Acquire a Dataverse-scoped token. Connect-MgGraph only issues Microsoft Graph-audience
+    # tokens, which the Dataverse Web API rejects; Get-AzAccessToken targets the Dataverse
+    # resource directly. Get-AzAccessToken returns a SecureString by default (Az.Accounts 5.x).
+    $token = (Get-AzAccessToken -ResourceUrl "https://contoso.crm.dynamics.com").Token |
+        ConvertFrom-SecureString -AsPlainText
+    Get-DataverseThreshold -DataverseUrl "https://contoso.crm.dynamics.com" -Zone Zone2 -AccessToken $token
 
     Returns:
     @{
