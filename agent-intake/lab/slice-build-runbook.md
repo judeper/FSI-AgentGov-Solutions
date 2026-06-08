@@ -65,6 +65,8 @@ Follow **this** document to hand-build the slice flows in the Power Automate des
    - *Slice placeholder — real SHA-256 is deferred (no native flow function; see flow-configuration.md step 4).*
 
 6. **Add a new row** → Table **Decision Logs** (`fsi_intakedecisionlogs`)
+   > ⚠️ This table has **11 application-required fields** — Create will fail validation if any are missing. All of the rows below are required (plus the auto `…id`).
+
    | Field (display) | Value |
    |---|---|
    | **Name** (`fsi_name`) | `@{concat('Decision pack - ', triggerBody()['text'])}` |
@@ -73,6 +75,9 @@ Follow **this** document to hand-build the slice flows in the Power Automate des
    | **Risk Tier** (`fsi_risktier`) | `outputs('RequestRow')?['fsi_risktier']` |
    | **Zone** (`fsi_zone`) | `outputs('RequestRow')?['fsi_zone']` |
    | **Path Used** (`fsi_pathused`) | `outputs('RequestRow')?['fsi_pathused']` |
+   | **Policy Version Applied** (`fsi_policyversionapplied`) | `coalesce(outputs('RequestRow')?['fsi_policyversionapplied'], '1.0.0')` *(required)* |
+   | **Retention Label Applied** (`fsi_retentionlabelapplied`) | `FSI-AgentIntake-7yr` *(required)* |
+   | **Retention Label Applied On** (`fsi_retentionlabelappliedon`) | `utcNow()` *(required)* |
    | **Decision Pack JSON** (`fsi_decisionpackjson`) | `string(outputs('DecisionPackJson'))` |
    | **Decision Pack Hash** (`fsi_decisionpackhash`) | `outputs('DecisionPackHash')` |
    | **Decided On** (`fsi_decidedon`) | `utcNow()` |
