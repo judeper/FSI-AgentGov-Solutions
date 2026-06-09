@@ -1,0 +1,39 @@
+id: copilot-billing-governance
+name: Copilot Billing Governance
+description: Governance for Copilot consumption billing — PAYG and prepaid credit policies, a switch-on-pathway entitlement engine, per-agent caps, and pre-enforcement coverage-gap analysis.
+version: 0.1.0-preview
+status: preview
+domain: compliance-audit
+tier: '2'
+controls:
+- '3.5'
+- '1.18'
+- '1.14'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-billing-governance/
+prerequisites:
+  m365-admin: Microsoft 365 admin for Copilot billing and credit policy read/configuration in the Microsoft 365 admin center.
+  azure-admin: Azure subscription Owner or Contributor for the pay-as-you-go (PAYG) billing subscription backing metered Copilot consumption.
+  security-admin: Entra security-group administrator to register maker, audience, and billing groups in the admission-gated group registry.
+  power-platform-admin: Power Platform Admin or System Administrator for Dataverse schema deployment and scheduled flows.
+verification: Run the coverage-gap analysis in monitor-only mode and confirm per-agent rows are written to fsi_cbgcoveragegap.
+dependencies:
+- copilot-agent-inventory
+- work-iq-usage-detection
+
+# ASSUMPTION (flagged for Jude's ratification): dependencies reference sibling
+# solutions built in the same feat/copilot-agent-governance wave
+# (copilot-agent-inventory supplies ARG createdIn; work-iq-usage-detection supplies
+# configuredTier). Both siblings are present with valid manifests; catalog
+# regeneration is owned by the orchestrator, not this folder.
+# See README "Assumptions & build-time verifications".
+
+# zones: team + enterprise only. Consumption billing and entitlement governance
+# apply to managed (team) and regulated (enterprise) tenants; personal/Default
+# makers are governed upstream by copilot-agent-inventory.
+zones:
+- team
+- enterprise
+dataClassification: confidential
+upstreamDependency:
+  status: mixed
+  note: Copilot Credits consumption billing from June 16 2026; credit policies Chat-only today

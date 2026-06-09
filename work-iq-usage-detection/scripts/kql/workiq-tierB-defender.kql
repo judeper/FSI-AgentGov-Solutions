@@ -1,0 +1,84 @@
+// workiq-tierB-defender.kql
+// =============================================================================
+// Tier-B (telemetry) Work IQ invocation signal from Microsoft Defender XDR
+// Advanced Hunting CloudAppEvents.
+//
+// Purpose:
+//   Detect runtime invocations of the Work IQ MCP tool by Copilot Studio /
+//   Copilot agents. This is the TELEMETRY tier. It must be joined with the
+//   Tier-A configuration output (Get-WorkIqConfigState.ps1) before asserting
+//   the canonical four-state observedstatus. Never treat a configuration signal
+//   as an invocation, or vice-versa.
+//
+// Verified base query (do not alter the two filter lines):
+//   CloudAppEvents
+//   | where ActionType in ("ExecuteToolByGateway")
+//   | where RawEventData contains "tool name"
+//
+//   "tool name" is a placeholder for the Work IQ MCP tool identifier. Set the
+//   WorkIqToolToken parameter below to that identifier (preview: use-work-iq).
+//
+// Parameters:
+//   LookbackDefender - time window (default 30d; the 30-day KPI lookback).
+//   WorkIqToolToken  - the Work IQ MCP tool identifier to match in RawEventData.
+//
+// Output Schema:
+//   Timestamp       (datetime) - event time
+//   ToolName        (string)   - invoked tool identifier
+//   AgentId         (string)   - invoking agent identifier (join key to Tier-A)
+//   UserId          (string)   - invoking account (for business-user KPI)
+//   AccountType     (string)   - account type, used to exclude service/test
+//   TelemetrySource (string)   - constant "DefenderCloudAppEvents"
+//
+// Supports:
+//   Control 3.2 (Primary)    - usage analytics / business impact reporting
+//   Control 2.9 (Supporting) - agent performance / runtime monitoring
+//   Control 2.24 (Supporting) - feature-enablement governance evidence
+//
+// Notes:
+//   - CloudAppEvents requires Defender for Cloud Apps connected to Defender XDR.
+//   - The Defender connector is in preview for some tenants at scaffold time;
+//     verify availability before relying on it (build-time assumption).
+//   - RawEventData is a dynamic JSON blob; the exact field paths used to extract
+//     ToolName / AgentId / UserId are build-time assumptions and should be
+//     validated against your tenant's payloads.
+// =============================================================================
+
+// Parameterized time range (KQL convention).
+let LookbackDefender = 30d;
+// Work IQ MCP tool identifier to match in RawEventData. Preview default
+// 'use-work-iq', kept consistent with the App Insights sibling
+// (workiq-tierB-appinsights.kql). The verified base query used the literal
+// placeholder "tool name"; confirm this token against live CloudAppEvents
+// payloads before relying on it (the RawEventData field layout is tenant-specific).
+let WorkIqToolToken = "use-work-iq";
+CloudAppEvents
+| where Timestamp > ago(LookbackDefender)
+| where ActionType in ("ExecuteToolByGateway")
+| where RawEventData contains WorkIqToolToken
+| extend Raw = todynamic(RawEventData)
+| extend ToolName = tostring(Raw.ToolName)
+| extend AgentId = tostring(coalesce(Raw.AgentId, Raw.BotId, Raw.AppId))
+| extend UserId = tostring(coalesce(Raw.UserId, AccountId))
+| project
+    Timestamp,
+    ToolName,
+    AgentId,
+    UserId,
+    AccountType = tostring(AccountType),
+    TelemetrySource = "DefenderCloudAppEvents"
+| order by Timestamp desc
+
+// -----------------------------------------------------------------------------
+// Tier-A posture companion (reference only -- not an invocation signal).
+// Defender surfaces configured agent tools in AgentsInfo / AgentToolsDetails.
+// NOTE: AgentsInfo was named AIAgentsInfo; the rename cutover is 2026-07-01.
+// Use this only to corroborate Tier-A configuration, never to assert invocation.
+//
+//   let LookbackPosture = 30d;
+//   AgentsInfo                     // was AIAgentsInfo before 2026-07-01
+//   | where Timestamp > ago(LookbackPosture)
+//   | join kind=leftouter AgentToolsDetails on $left.AgentId == $right.AgentId
+//   | where ToolName has WorkIqToolToken
+//   | project Timestamp, AgentId, ToolName
+// -----------------------------------------------------------------------------

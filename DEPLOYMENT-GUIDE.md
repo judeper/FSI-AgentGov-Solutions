@@ -66,6 +66,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 |----------|------|---------|
 | [Agent Intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | v1.0.0-preview |
 | [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.4 |
+| [Copilot Agent Inventory](./copilot-agent-inventory/) | Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. | v0.1.0-preview |
 
 ### Layer 2: Tier 2 Governance Solutions
 
@@ -89,11 +90,13 @@ All other solutions operate independently and can be deployed in any order based
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.2.1 | personal, team, enterprise |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.5 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.2.1 | team, enterprise |
+| [Agent Eligibility Gateway](./agent-eligibility-gateway/) | 3 | v0.1.0-preview | enterprise |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.3 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.1 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.2 | team, enterprise |
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.2 | team, enterprise |
 | [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.5 | enterprise |
+| [Copilot Billing Governance](./copilot-billing-governance/) | 2 | v0.1.0-preview | team, enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.2 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.1 | personal, team, enterprise |
 | [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.3 | personal, team, enterprise |
@@ -114,6 +117,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Scope Drift Monitor](./scope-drift-monitor/) | 2 | v1.2.2 | personal, team, enterprise |
 | [Segregation of Duties Detector](./segregation-detector/) | 2 | v1.2.1 | team, enterprise |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | 2 | v2.0.1 | team, enterprise |
+| [Work IQ Usage Detection](./work-iq-usage-detection/) | 2 | v0.1.0-preview | team, enterprise |
 
 <!-- END:DEPLOY_LAYERS -->
 
@@ -180,6 +184,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 |----------|----------|------|------------|------------|
 | [Agent Intake](./agent-intake/) | ✅ | ✅ | ✅ | confidential |
 | [Agent Observability Foundation](./agent-observability-foundation/) | ✅ | ✅ | ✅ | internal |
+| [Copilot Agent Inventory](./copilot-agent-inventory/) | — | ✅ | ✅ | internal |
 
 ### Tier 2 (Governance)
 
@@ -197,6 +202,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Conditional Access Automation](./conditional-access-automation/) | — | ✅ | ✅ | confidential |
 | [Conflict of Interest Testing](./coi-testing/) | — | ✅ | ✅ | confidential |
 | [Content Moderation Monitor](./content-moderation-monitor/) | ✅ | ✅ | ✅ | internal |
+| [Copilot Billing Governance](./copilot-billing-governance/) | — | ✅ | ✅ | confidential |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | ✅ | ✅ | ✅ | internal |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | ✅ | ✅ | ✅ | confidential |
 | [Cross-Solution Integration](./cross-solution-integration/) | ✅ | ✅ | ✅ | internal |
@@ -219,6 +225,13 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Segregation of Duties Detector](./segregation-detector/) | — | ✅ | ✅ | confidential |
 | [Session Security Configurator](./session-security-configurator/) | — | ✅ | ✅ | internal |
 | [Unrestricted Agent Sharing Detector](./unrestricted-agent-sharing-detector/) | — | ✅ | ✅ | confidential |
+| [Work IQ Usage Detection](./work-iq-usage-detection/) | — | ✅ | ✅ | internal |
+
+### Tier 3 (Enterprise)
+
+| Solution | Personal | Team | Enterprise | Data class |
+|----------|----------|------|------------|------------|
+| [Agent Eligibility Gateway](./agent-eligibility-gateway/) | — | — | ✅ | confidential |
 
 <!-- END:ZONE_ROADMAP -->
 

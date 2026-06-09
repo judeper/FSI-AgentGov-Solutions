@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **36 solution implementations (35 live, 1 preview)** mapped to the 78-control framework across all 4 pillars
+- **40 solution implementations (35 live, 5 preview)** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
@@ -18,6 +18,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | agent-365-lifecycle-governance | v1.1.5 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.1.2 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.2.1 | 2.17 | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
+| agent-eligibility-gateway | v0.1.0-preview | 1.1, 1.18, 3.8 | Optional runtime allow/deny gateway (Azure API Management) for owned custom-web and Direct Line agent channels |
 | agent-knowledge-source-scanner | v1.1.3 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
 | agent-registry-automation | v2.1.1 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
 | agent-observability-foundation | v1.2.4 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
@@ -27,6 +28,8 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | compliance-dashboard | v1.0.5 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
 | conditional-access-automation | v2.0.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
 | content-moderation-monitor | v1.1.2 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
+| copilot-agent-inventory | v0.1.0-preview | 1.2, 1.7, 2.1, 2.13 | Foundation system-of-record for Copilot agents — three-layer tenant-wide discovery feeding a canonical governance store |
+| copilot-billing-governance | v0.1.0-preview | 3.5, 1.18, 1.14 | Governance for Copilot consumption billing — PAYG/prepaid credit policies, entitlement engine, per-agent caps, coverage-gap analysis |
 | copilot-studio-analytics | v2.0.2 | 3.2 | Business impact analytics for Copilot Studio agents |
 | credential-oversharing-detector | v2.1.1 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
 | cross-solution-integration | v2.0.3 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14, 1.18 | Wires Tier 2 solutions into Compliance Dashboard |
@@ -49,6 +52,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | segregation-detector | v1.2.1 | 2.8, 2.1, 2.3 | Role conflict detection for Maker/Checker enforcement |
 | session-security-configurator | v1.3.0 | 1.23, 1.11 | Session security validation per governance zone with drift detection |
 | unrestricted-agent-sharing-detector | v2.0.1 | 1.1, 3.8 | Continuous detection of overly permissive agent sharing |
+| work-iq-usage-detection | v0.1.0-preview | 2.24, 3.2, 2.9 | Two-tier detection of Microsoft 365 Work IQ usage by Copilot agents with a four-state observed-usage model |
 
 ## Directory Structure
 
