@@ -6,9 +6,10 @@
 .DESCRIPTION
     Implements the entitlement contract in docs/entitlement-contract.md. For each
     agent it classifies the consumption pathway FIRST (none / mcp-cs /
-    mcp-agentbuilder / api-direct / metered / unmapped) from createdIn (Azure Resource
-    Graph) and configuredTier (Work IQ), then applies pathway-specific eligibility for
-    each intended user:
+    mcp-agentbuilder / api-direct / metered / unmapped) — mapping the authoritative
+    Work IQ configuredTier first and falling back to the createdIn (Azure Resource
+    Graph) signal only when configuredTier is empty or unrecognized — then applies
+    pathway-specific eligibility for each intended user:
 
       - none              -> ALLOW (eligibility N/A); unblocks the agent majority.
       - mcp-agentbuilder  -> license required.
@@ -163,26 +164,35 @@ function Get-AgentPathway {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][AllowNull()][string]$CreatedIn,
-        [Parameter(Mandatory)][AllowNull()][string]$ConfiguredTier
+        [Parameter(Mandatory)][AllowNull()][AllowEmptyString()][string]$CreatedIn,
+        [Parameter(Mandatory)][AllowNull()][AllowEmptyString()][string]$ConfiguredTier
     )
 
     $createdNorm = ("$CreatedIn").Trim().ToLowerInvariant()
     $tierNorm = ("$ConfiguredTier").Trim().ToLowerInvariant()
 
-    # No metered features -> the agent majority.
-    if ($tierNorm -in @('none', 'classic', 'non-metered', 'nonmetered')) {
+    # configuredTier is the AUTHORITATIVE signal and is mapped FIRST. The sibling
+    # work-iq-usage-detection classifier emits one of NotConfigured |
+    # NativeMcpCopilotStudio | NativeApiDirect | Adjacent (compared lowercased);
+    # NotConfigured and Adjacent are non-metered, so they resolve to 'none' (the agent
+    # majority -> Allow). 'none'/'classic'/'non-metered'/'nonmetered' are accepted
+    # synonyms; the metered synonyms cover legacy tier labels. createdIn is consulted
+    # ONLY as a last-resort fallback when configuredTier is empty or unrecognized, so a
+    # Copilot-Studio createdIn can no longer override an authoritative non-metered tier.
+    if ($tierNorm -eq 'nativemcpcopilotstudio') { return 'mcp-cs' }
+    if ($tierNorm -eq 'nativeapidirect') { return 'api-direct' }
+    if ($tierNorm -in @('notconfigured', 'adjacent', 'none', 'classic', 'non-metered', 'nonmetered')) {
         return 'none'
     }
-
-    switch -Regex ($createdNorm) {
-        'copilot.?studio|^cs$|mcp-cs'        { return 'mcp-cs' }
-        'agent.?builder|mcp-agentbuilder'    { return 'mcp-agentbuilder' }
-        'api|declarative|direct.?line|custom' { return 'api-direct' }
-    }
-
     if ($tierNorm -in @('metered', 'generative', 'grounded', 'agent-action', 'premium')) {
         return 'metered'
+    }
+
+    # Fallback only when configuredTier is empty/unrecognized: infer from createdIn.
+    switch -Regex ($createdNorm) {
+        'copilot.?studio|^cs$|mcp-cs'         { return 'mcp-cs' }
+        'agent.?builder|mcp-agentbuilder'     { return 'mcp-agentbuilder' }
+        'api|declarative|direct.?line|custom' { return 'api-direct' }
     }
 
     # Missing or contradictory signals -> anomaly.
@@ -195,7 +205,8 @@ function Resolve-EntitlementDecision {
         Apply the switch-on-pathway contract to one (agent, user) pair.
     .DESCRIPTION
         Returns a hashtable with Decision and Reason as fsi_cbg_decision /
-        fsi_cbg_blockreason integer values (Reason is $null for allows).
+        fsi_cbg_blockreason integer values (Reason is $null for allows), plus a short
+        Note string (eval trace) materialized to fsi_notes.
     #>
     [CmdletBinding()]
     param(
@@ -207,43 +218,43 @@ function Resolve-EntitlementDecision {
     switch ($PathwayName) {
         'none' {
             # The agent majority: no metered consumption, eligibility not applicable.
-            return @{ Decision = $script:Decision.AllowEligibilityNA; Reason = $null }
+            return @{ Decision = $script:Decision.AllowEligibilityNA; Reason = $null; Note = 'pathway=none -> ALLOW (eligibility N/A); non-metered agent, no billing decision required.' }
         }
         'mcp-agentbuilder' {
             if ($User.hasCopilotLicense) {
-                return @{ Decision = $script:Decision.Allow; Reason = $null }
+                return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=mcp-agentbuilder; user holds a Copilot license -> ALLOW.' }
             }
-            return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.MissingLicense }
+            return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.MissingLicense; Note = 'pathway=mcp-agentbuilder; no Copilot license -> BLOCK (Missing license).' }
         }
         'api-direct' {
             if ($User.inApiAudienceGroup) {
-                return @{ Decision = $script:Decision.Allow; Reason = $null }
+                return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=api-direct; user in API audience cohort -> ALLOW.' }
             }
-            return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.NoEligibleCohort }
+            return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.NoEligibleCohort; Note = 'pathway=api-direct; user not in API audience cohort -> BLOCK (No eligible cohort).' }
         }
         'mcp-cs' {
             # Zero-rating CONFLICT -> fail-closed interim.
             if (-not $User.hasCopilotLicense) {
-                return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.MissingLicense }
+                return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.MissingLicense; Note = 'pathway=mcp-cs; no Copilot license -> BLOCK (Missing license).' }
             }
             if ($ZeroRatingIsResolved -and $User.surfaceZeroRated) {
-                return @{ Decision = $script:Decision.Allow; Reason = $null }
+                return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=mcp-cs; zero-rating resolved and surface zero-rated -> ALLOW.' }
             }
             if ($User.inCreditScopeGroup) {
-                return @{ Decision = $script:Decision.Allow; Reason = $null }
+                return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=mcp-cs; user in credit scope -> ALLOW.' }
             }
-            return @{ Decision = $script:Decision.FailClosedZeroRating; Reason = $script:BlockReason.ZeroRatingUnresolved }
+            return @{ Decision = $script:Decision.FailClosedZeroRating; Reason = $script:BlockReason.ZeroRatingUnresolved; Note = 'pathway=mcp-cs; licensed but zero-rating unresolved and not in credit scope -> FAIL-CLOSED. Re-evaluate after the June 2026 Licensing Guide.' }
         }
         'metered' {
             # The only unbounded-population ELSE, bounded to a metered pathway.
             if ($User.inEligibleCohort) {
-                return @{ Decision = $script:Decision.Allow; Reason = $null }
+                return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=metered; user in eligible cohort -> ALLOW.' }
             }
-            return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.NoEligibleCohort }
+            return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.NoEligibleCohort; Note = 'pathway=metered; bounded ELSE -> BLOCK (No eligible cohort).' }
         }
         default {
             # unmapped: a detection defect must not deny a user.
-            return @{ Decision = $script:Decision.FailOpenAnomaly; Reason = $script:BlockReason.UnmappedPathway }
+            return @{ Decision = $script:Decision.FailOpenAnomaly; Reason = $script:BlockReason.UnmappedPathway; Note = "pathway=$PathwayName -> FAIL-OPEN with anomaly; classifier could not map the pathway." }
         }
     }
 }
@@ -284,6 +295,16 @@ function Get-CoverageGapAggregate {
 
     $sampleUpns = @($blocked | Select-Object -First $SampleCapValue | ForEach-Object { $_.fsi_userupn })
 
+    # M-2: fsi_blockedsampleupns must always be a JSON array for any cardinality (0/1/n).
+    # Piping an empty @() to ConvertTo-Json emits nothing (pipeline unrolls to zero items),
+    # and a single element serializes as a bare string without -AsArray; guard both cases.
+    $sampleUpnsJson = if (@($sampleUpns).Count -gt 0) {
+        @($sampleUpns) | ConvertTo-Json -Depth 3 -Compress -AsArray
+    }
+    else {
+        '[]'
+    }
+
     $dominantReason = $null
     if ($blocked.Count -gt 0) {
         $dominantReason = ($blocked |
@@ -312,7 +333,7 @@ function Get-CoverageGapAggregate {
         fsi_pathway            = $PathwayValue
         fsi_eligibleusers      = $eligibleCount
         fsi_blockeduserscount  = $blocked.Count
-        fsi_blockedsampleupns  = ($sampleUpns | ConvertTo-Json -Compress)
+        fsi_blockedsampleupns  = $sampleUpnsJson
         fsi_blockreasonsummary = $dominantReason
         fsi_spendscope         = $spendScope
         fsi_groupsizepartition = $partition
@@ -368,6 +389,7 @@ foreach ($agent in $agents) {
             fsi_sourcepolicyid = $(if ($agent.PSObject.Properties.Name -contains 'sourcePolicyId') { $agent.sourcePolicyId } else { $null })
             fsi_evaluatedat    = $now.ToString('o')
             fsi_ttlexpiresat   = $ttlExpiry
+            fsi_notes          = $resolved.Note
         }
         $agentDecisions.Add($record)
         $allDecisions.Add($record)

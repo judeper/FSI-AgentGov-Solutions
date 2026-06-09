@@ -54,17 +54,48 @@ their specific obligations.
 
 ## 3. Pathway classification
 
-`ClassifyPathway(agent)` maps `createdIn` + `configuredTier` to one option of the
-`fsi_cbg_pathway` global option set.
+`ClassifyPathway(agent)` maps an agent to one option of the `fsi_cbg_pathway` global
+option set. **`configuredTier` is the authoritative signal and is evaluated first**;
+`createdIn` is consulted **only as a last-resort fallback** when `configuredTier` is
+empty or unrecognized. This ordering is load-bearing: it keeps a Copilot-Studio
+`createdIn` from overriding an authoritative non-metered tier and forcing the agent
+majority into the fail-closed `mcp-cs` arm.
 
-| Pathway (`fsi_cbg_pathway`) | Meaning | Typical signal |
-|---|---|---|
-| `none` | Consumes no metered Copilot features (classic / no generative, no grounding) | `configuredTier` indicates no metered features |
-| `mcp-cs` | Copilot Studio–built MCP agent | `createdIn` = a Copilot Studio environment |
-| `mcp-agentbuilder` | Microsoft 365 Copilot Agent Builder MCP agent | `createdIn` = Agent Builder |
-| `api-direct` | Direct API / declarative agent on an owned channel | `createdIn` = API / declarative |
-| `metered` | Agent on a metered consumption path not covered above | `configuredTier` indicates metered usage |
-| `unmapped` | Classification could not be resolved | Missing or contradictory signals → anomaly |
+The sibling `work-iq-usage-detection` classifier emits one of the following
+`configuredTier` values (compared lowercased): `NotConfigured`,
+`NativeMcpCopilotStudio`, `NativeApiDirect`, `Adjacent`.
+
+### 3a. Authoritative `configuredTier` mapping (evaluated first)
+
+| `configuredTier` (Work IQ) | Pathway (`fsi_cbg_pathway`) |
+|---|---|
+| `NativeMcpCopilotStudio` | `mcp-cs` |
+| `NativeApiDirect` | `api-direct` |
+| `NotConfigured`, `Adjacent` (and `none` / `classic` / `non-metered` synonyms) | `none` |
+| `metered` / `generative` / `grounded` / `agent-action` / `premium` | `metered` |
+
+`NotConfigured` and `Adjacent` are **non-metered → `none` → ALLOW (eligibility N/A)**,
+which unblocks the agent majority.
+
+### 3b. `createdIn` fallback (only when `configuredTier` is empty / unrecognized)
+
+| `createdIn` signal | Pathway (`fsi_cbg_pathway`) |
+|---|---|
+| Copilot Studio environment | `mcp-cs` |
+| Agent Builder | `mcp-agentbuilder` |
+| API / declarative / direct-line / custom | `api-direct` |
+| Missing or contradictory signals | `unmapped` (fail-open with anomaly) |
+
+The resulting pathway carries the meaning below regardless of which signal produced it:
+
+| Pathway (`fsi_cbg_pathway`) | Meaning |
+|---|---|
+| `none` | Consumes no metered Copilot features (classic / no generative, no grounding) |
+| `mcp-cs` | Copilot Studio–built MCP agent |
+| `mcp-agentbuilder` | Microsoft 365 Copilot Agent Builder MCP agent |
+| `api-direct` | Direct API / declarative agent on an owned channel |
+| `metered` | Agent on a metered consumption path not covered above |
+| `unmapped` | Classification could not be resolved (missing or contradictory signals) |
 
 ---
 
@@ -72,7 +103,7 @@ their specific obligations.
 
 ```
 EvaluateEntitlement(agent, user):
-  pathway ← ClassifyPathway(agent)        # ARG createdIn + Work IQ configuredTier
+  pathway ← ClassifyPathway(agent)        # Work IQ configuredTier first; createdIn fallback
 
   switch pathway:
 

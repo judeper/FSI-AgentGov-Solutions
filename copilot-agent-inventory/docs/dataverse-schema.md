@@ -4,7 +4,7 @@ Auto-generated schema documentation. Do not edit manually — regenerate with `p
 
 ## Overview
 
-The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-specific option sets**, and **1 shared option set(s)**, with **95 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
+The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-specific option sets**, and **1 shared option set(s)**, with **96 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
 
 > **Logical-name convention.** Dataverse logical names are the SchemaName lowercased with NO underscores between words (`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> `fsi_agentid`). Always use logical names in OData `$select` / `$filter` / `$orderby`.
 
@@ -25,7 +25,7 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-
 | `fsi_cai_createdin` | Copilot Studio (100000000), Microsoft 365 Copilot Agent Builder (100000001), Unknown (100000002) |
 | `fsi_cai_agenttype` | Standard (100000000), Lite / Agent Builder (100000001), Declarative Agent (100000002), Classic V1 (excluded) (100000003), Unknown (100000004) |
 | `fsi_cai_discoverysource` | Azure Resource Graph (100000000), Per-Environment Dataverse Scan (100000001), PPAC Reconciliation (100000002), Reconciled (multi-source) (100000003) |
-| `fsi_cai_featuretype` | Topic (100000000), Skill (100000001), Knowledge Source (100000002), Custom GPT (100000003), Copilot Settings (100000004), External Trigger (100000005), File Attachment (100000006), Bot Variable (100000007), Bot Entity (100000008), Dialog (100000009), Trigger (100000010), Language Understanding (100000011), Language Generation (100000012), Bot Translations (100000013), Test Case (100000014), Tool / Plugin (100000015), Connector (100000016), Power Automate Flow (100000017), Environment Variable (100000018), Dataverse Search Grounding (100000019), AI Builder Model (100000020), Other / Unrecognized (100000099) |
+| `fsi_cai_featuretype` | Topic (100000000), Skill (100000001), Knowledge Source (100000002), Custom GPT (100000003), Copilot Settings (100000004), External Trigger (100000005), File Attachment (100000006), Bot Variable (100000007), Bot Entity (100000008), Dialog (100000009), Dialog Schema (100000021), Trigger (100000010), Language Understanding (100000011), Language Generation (100000012), Bot Translations (100000013), Test Case (100000014), Tool / Plugin (100000015), Connector (100000016), Power Automate Flow (100000017), Environment Variable (100000018), Dataverse Search Grounding (100000019), AI Builder Model (100000020), Other / Unrecognized (100000099) |
 | `fsi_cai_componentversion` | V1 (100000000), V2 (100000001), Not Applicable (100000002) |
 | `fsi_cai_policytype` | PAYG Billing Policy (100000000), Prepaid Credit Policy (100000001), None (100000002), Unknown (100000003) |
 | `fsi_cai_spendscope` | Chat (100000000), SharePoint (100000001), All Surfaces (100000002), Unknown (100000003) |
@@ -85,6 +85,7 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-
 | `fsi_Name` | `fsi_name` | String(850) | Yes | Primary name attribute |
 | `fsi_EnvironmentId` | `fsi_environmentid` | String(100) | Yes | Power Platform environment GUID |
 | `fsi_EnvironmentName` | `fsi_environmentname` | String(500) | Yes | Environment display name |
+| `fsi_EnvironmentUrl` | `fsi_environmenturl` | String(400) | No | Source-environment Dataverse Web API base URL; the Work IQ solution joins this to resolve per-env URLs |
 | `fsi_Region` | `fsi_region` | String(100) | No | Environment region / location |
 | `fsi_EnvironmentType` | `fsi_environmenttype` | String(100) | No | Production / Sandbox / Trial / Default / Developer |
 | `fsi_IsManaged` | `fsi_ismanaged` | Boolean (default: false) | No | Whether this is a Managed Environment |

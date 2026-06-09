@@ -120,6 +120,7 @@ CAI_OPTIONSETS = {
             ("Bot Variable", 100000007),
             ("Bot Entity", 100000008),
             ("Dialog", 100000009),
+            ("Dialog Schema", 100000021),  # componenttype code 8 (distinct from code 4 Dialog)
             ("Trigger", 100000010),
             ("Language Understanding", 100000011),
             ("Language Generation", 100000012),
@@ -405,6 +406,9 @@ ENVIRONMENT_COLUMNS = [
                 description="Power Platform environment GUID"),
     _string_col("fsi_EnvironmentName", "Environment Name", 500,
                 description="Environment display name"),
+    _string_col("fsi_EnvironmentUrl", "Environment URL", 400, required=False,
+                description="Source-environment Dataverse Web API base URL; the "
+                            "Work IQ solution joins this to resolve per-env URLs"),
     _string_col("fsi_Region", "Region", 100, required=False,
                 description="Environment region / location"),
     _string_col("fsi_EnvironmentType", "Environment Type", 100, required=False,

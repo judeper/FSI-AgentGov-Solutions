@@ -47,7 +47,7 @@ The policy fragments reference these named values. Create them under **API Manag
 | `aeg-decision-logger` | `aeg-decision-eventhub` | eligibility-check | API Management logger ID for the decision telemetry sink |
 | `aeg-policy-version` | `2026.06.09` | eligibility-check | Policy version string stamped on every decision |
 | `aeg-channel` | `custom-web` | eligibility-check | Owned channel label for this API (`custom-web` or `direct-line`) |
-| `aeg-agent-id` | `contoso-kb-assistant` | eligibility-check | Default agent identifier when the request omits the `X-Agent-Id` header |
+| `aeg-agent-id` | `contoso-kb-assistant` | eligibility-check | The single agent this API operation is bound to. The gateway reads the agent identity **only** from this named value and does not read any client header, so each operation is scoped to exactly one agent. |
 
 Example for one value:
 
@@ -60,7 +60,7 @@ az apim nv create \
   --value 00000000-0000-0000-0000-000000000000
 ```
 
-Repeat for each row. For a multi-agent gateway, set `aeg-agent-id` as a per-API or per-operation default and have clients send the `X-Agent-Id` header to override it.
+Repeat for each row. Each API operation is bound to **exactly one agent** via its own `aeg-agent-id` named value (set it at operation scope). For a multi-agent gateway, create one operation per agent, each with its own `aeg-agent-id`. The gateway does not read an agent identifier from any client header, so a caller cannot pivot the entitlement lookup to a different agent.
 
 ## Step 3 — Import the policy fragments
 

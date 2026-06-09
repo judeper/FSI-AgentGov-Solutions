@@ -7,7 +7,12 @@
     Reads the agent master record (fsi_copilotagent, owned by the
     copilot-agent-inventory solution) and, for each agent, samples Dataverse
     botcomponent and aipluginoperation metadata to classify the agent's Work IQ
-    configuration pathway (configuredTier). This is the configuration tier only;
+    configuration pathway (configuredTier). The agent master carries
+    fsi_environmentid (the source-environment GUID) but not that environment's
+    Dataverse URL; the per-environment URL is resolved from the sibling
+    fsi_caienvironment table (fsi_environmenturl) so each botcomponent sample runs
+    against the agent's own environment, never the governance environment. This is
+    the configuration tier only;
     it deliberately does NOT assert that Work IQ was invoked at runtime. Observed
     usage is established by joining this output with the Tier-B telemetry queries
     (scripts/kql/workiq-tierB-*.kql) in the nightly classify flow, which then
@@ -41,12 +46,6 @@
 .PARAMETER DataverseUrl
     URL of the governance Dataverse environment that hosts fsi_copilotagent
     (e.g. https://org.crm.dynamics.com).
-
-.PARAMETER AgentEnvironmentUrlColumn
-    Logical name of the fsi_copilotagent column that stores each agent's source
-    environment Dataverse URL, used to query that environment's botcomponent
-    rows. Defaults to fsi_environmenturl. ASSUMPTION: exact logical names resolve
-    from the copilot-agent-inventory published schema.
 
 .PARAMETER WorkIqMcpToolNames
     One or more Work IQ MCP tool identifiers to match in botcomponent /
@@ -233,6 +232,91 @@ function Invoke-WiqDataverseQuery {
     return $response.value
 }
 
+function Resolve-WiqEnvironment {
+    <#
+    .SYNOPSIS
+        Resolves a source environment's Dataverse URL and name from the sibling
+        fsi_caienvironment table.
+
+    .DESCRIPTION
+        The agent master (fsi_copilotagent) carries fsi_environmentid but not the
+        environment's Dataverse URL. Per-environment details -- including
+        fsi_environmenturl -- live on fsi_caienvironment (entity set
+        fsi_caienvironments), owned by copilot-agent-inventory and co-located in
+        the governance Dataverse. This filters that table on fsi_environmentid and
+        caches the result so each environment is resolved at most once per run.
+
+        When the environment row or its fsi_environmenturl is absent, EnvironmentUrl
+        is returned null so the caller can skip that environment's component scan
+        instead of scanning the wrong (governance) environment.
+
+    .PARAMETER GovernanceUrl
+        Governance Dataverse URL hosting fsi_copilotagent and fsi_caienvironment.
+
+    .PARAMETER EnvironmentId
+        Power Platform environment GUID (fsi_environmentid) to resolve.
+
+    .PARAMETER AccessToken
+        Bearer token from Get-WiqDataverseToken.
+
+    .PARAMETER Cache
+        Hashtable used to memoize resolved environments across agents.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param(
+        [Parameter(Mandatory)]
+        [string]$GovernanceUrl,
+
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$EnvironmentId,
+
+        [Parameter(Mandatory)]
+        [string]$AccessToken,
+
+        [Parameter(Mandatory)]
+        [hashtable]$Cache
+    )
+
+    if ([string]::IsNullOrWhiteSpace($EnvironmentId)) {
+        return [pscustomobject]@{
+            EnvironmentId   = $EnvironmentId
+            EnvironmentName = $null
+            EnvironmentUrl  = $null
+        }
+    }
+
+    if ($Cache.ContainsKey($EnvironmentId)) {
+        return $Cache[$EnvironmentId]
+    }
+
+    # Logical names only. Filter fsi_caienvironments on fsi_environmentid; single
+    # quotes in the value are escaped per the OData string-literal rule.
+    $escapedId = $EnvironmentId.Replace("'", "''")
+    $envQuery = "fsi_caienvironments?`$select=fsi_environmentid,fsi_environmentname,fsi_environmenturl&`$filter=fsi_environmentid eq '$escapedId'"
+
+    $resolved = [pscustomobject]@{
+        EnvironmentId   = $EnvironmentId
+        EnvironmentName = $null
+        EnvironmentUrl  = $null
+    }
+    try {
+        $row = @(Invoke-WiqDataverseQuery -BaseUrl $GovernanceUrl -Query $envQuery -AccessToken $AccessToken) |
+            Select-Object -First 1
+        if ($row) {
+            $resolved.EnvironmentName = [string]$row.fsi_environmentname
+            $resolved.EnvironmentUrl  = [string]$row.fsi_environmenturl
+        }
+    }
+    catch {
+        Write-Warning "Failed to resolve environment '$EnvironmentId' from fsi_caienvironment: $($_.Exception.Message)"
+    }
+
+    $Cache[$EnvironmentId] = $resolved
+    return $resolved
+}
+
 function Resolve-WiqConfiguredTier {
     <#
     .SYNOPSIS
@@ -240,9 +324,10 @@ function Resolve-WiqConfiguredTier {
 
     .DESCRIPTION
         Applies the Tier-A classification switch. Native Work IQ MCP tool
-        identifiers win first (native-mcp keys on the createdIn value); a direct
-        Work IQ API operation maps to native-api-direct; knowledge / connector /
-        generative-AI configuration maps to adjacent; otherwise NotConfigured.
+        identifiers win first (NativeMcpCopilotStudio keys on the createdIn value);
+        a direct Work IQ API operation maps to NativeApiDirect; knowledge /
+        connector / generative-AI configuration maps to Adjacent; otherwise
+        NotConfigured.
 
     .PARAMETER HasNativeMcpTool
         True when a Work IQ MCP tool identifier was found in botcomponent /
@@ -303,10 +388,6 @@ function Get-WorkIqConfigState {
     .PARAMETER DataverseUrl
         Governance Dataverse URL hosting fsi_copilotagent.
 
-    .PARAMETER AgentEnvironmentUrlColumn
-        Logical name of the fsi_copilotagent column holding each agent's source
-        environment Dataverse URL. Default fsi_environmenturl (ASSUMPTION).
-
     .PARAMETER WorkIqMcpToolNames
         Work IQ MCP tool identifiers to match. Default 'use-work-iq' (preview).
 
@@ -331,9 +412,6 @@ function Get-WorkIqConfigState {
         [Parameter(Mandatory)]
         [ValidatePattern('^https://')]
         [string]$DataverseUrl,
-
-        [Parameter()]
-        [string]$AgentEnvironmentUrlColumn = 'fsi_environmenturl',
 
         [Parameter()]
         [string[]]$WorkIqMcpToolNames = @('use-work-iq'),
@@ -369,12 +447,10 @@ function Get-WorkIqConfigState {
     # copilot-agent-inventory; we read it, never write it.
     # ASSUMPTION: exact column logical names resolve from the inventory schema.
     $agentSelect = @(
-        'fsi_copilotagentid',
+        'fsi_agentid',
         'fsi_agentname',
-        'fsi_environmentguid',
-        'fsi_environmentname',
-        'fsi_createdin',
-        $AgentEnvironmentUrlColumn
+        'fsi_environmentid',
+        'fsi_createdin'
     ) -join ','
     $agentQuery = "fsi_copilotagents?`$select=$agentSelect"
     if ($Top -gt 0) {
@@ -383,10 +459,43 @@ function Get-WorkIqConfigState {
 
     $agents = Invoke-WiqDataverseQuery -BaseUrl $DataverseUrl -Query $agentQuery -AccessToken $token
 
+    # Cache fsi_caienvironment lookups so each source environment is resolved once.
+    $envCache = @{}
+
     foreach ($agent in $agents) {
-        $agentEnvUrl = [string]$agent.$AgentEnvironmentUrlColumn
+        $environmentId = [string]$agent.fsi_environmentid
+
+        # Resolve the agent's source-environment Dataverse URL from the sibling
+        # fsi_caienvironment table. The agent master does NOT carry an env URL.
+        $resolvedEnv = Resolve-WiqEnvironment -GovernanceUrl $DataverseUrl `
+            -EnvironmentId $environmentId -AccessToken $token -Cache $envCache
+        $agentEnvUrl = $resolvedEnv.EnvironmentUrl
+
+        # No resolvable source-environment URL: do NOT fall back to the governance
+        # $DataverseUrl (that would scan the wrong environment). Skip the component
+        # scan and mark the agent Exception-unknown -- the honest "cannot determine"
+        # state. WIQ depends on copilot-agent-inventory publishing
+        # fsi_caienvironment.fsi_environmenturl (see docs/prerequisites.md).
         if ([string]::IsNullOrWhiteSpace($agentEnvUrl)) {
-            $agentEnvUrl = $DataverseUrl
+            Write-Warning ("No fsi_caienvironment.fsi_environmenturl resolved for " +
+                "environment '$environmentId' (agent $($agent.fsi_agentid)); " +
+                'skipping component scan and marking Exception-unknown.')
+            [pscustomobject]@{
+                AgentId             = [string]$agent.fsi_agentid
+                AgentName           = [string]$agent.fsi_agentname
+                EnvironmentGuid     = $environmentId
+                EnvironmentName     = $resolvedEnv.EnvironmentName
+                CreatedIn           = [string]$agent.fsi_createdin
+                ConfiguredTier      = $null
+                ConfigComponentType = $null
+                ConfigEvidence      = ("Source-environment Dataverse URL " +
+                    "(fsi_caienvironment.fsi_environmenturl) unavailable for " +
+                    "environment '$environmentId'; component scan skipped.")
+                TelemetrySource     = $null
+                ObservedStatus      = 'ExceptionUnknown'
+                ScanTime            = (Get-Date).ToUniversalTime().ToString('o')
+            }
+            continue
         }
 
         # Sample botcomponent for the verified Work IQ-bearing component types.
@@ -403,7 +512,7 @@ function Get-WorkIqConfigState {
             $aiPluginOps = @(Invoke-WiqDataverseQuery -BaseUrl $agentEnvUrl -Query 'aipluginoperations?$select=aipluginoperationid,name,schemaname,_aipluginid_value' -AccessToken $token)
         }
         catch {
-            Write-Warning "Failed to sample components for agent $($agent.fsi_copilotagentid): $($_.Exception.Message)"
+            Write-Warning "Failed to sample components for agent $($agent.fsi_agentid): $($_.Exception.Message)"
         }
 
         # --- Extension point -------------------------------------------------
@@ -425,7 +534,7 @@ function Get-WorkIqConfigState {
             }
         }
 
-        # native-api-direct and adjacent are extension points; default false /
+        # NativeApiDirect and Adjacent are extension points; default false /
         # presence-of-knowledge heuristic for the skeleton.
         $hasNativeApiDirect = $false
         $hasAdjacentConfig = [bool]($botComponents | Where-Object { $_.componenttype -eq 16 })
@@ -440,10 +549,10 @@ function Get-WorkIqConfigState {
         $evidence = ($namePool | Select-Object -First 5) -join '; '
 
         [pscustomobject]@{
-            AgentId             = [string]$agent.fsi_copilotagentid
+            AgentId             = [string]$agent.fsi_agentid
             AgentName           = [string]$agent.fsi_agentname
-            EnvironmentGuid     = [string]$agent.fsi_environmentguid
-            EnvironmentName     = [string]$agent.fsi_environmentname
+            EnvironmentGuid     = $environmentId
+            EnvironmentName     = $resolvedEnv.EnvironmentName
             CreatedIn           = [string]$agent.fsi_createdin
             ConfiguredTier      = $configuredTier
             ConfigComponentType = $sampledType

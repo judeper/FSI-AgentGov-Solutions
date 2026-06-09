@@ -32,12 +32,12 @@ an `fsi_wiqkpi` rollup.
 
 Tier-A assigns each agent a `configuredTier`:
 
-| `configuredTier` | Meaning |
+| `configuredTier` (canonical `fsi_configuredtier` value) | Meaning |
 |------------------|---------|
-| `native-mcp-copilot-studio` | Native Work IQ MCP tool identifiers (preview: `use-work-iq`) in `botcomponent` / `aipluginoperation`; keyed on the Azure Resource Graph `createdIn` value from `copilot-agent-inventory`. |
-| `native-api-direct` | Work IQ invoked directly through its API. |
-| `adjacent` | No native Work IQ tool, but knowledge components (`componenttype = 16`) referencing SharePoint / Microsoft Graph / Microsoft 365 connectors, `botcomponent` table-search, or generative-AI configuration. |
-| `none` | None of the above. |
+| `NativeMcpCopilotStudio` | Native Work IQ MCP tool identifiers (preview: `use-work-iq`) in `botcomponent` / `aipluginoperation`; keyed on the Azure Resource Graph `createdIn` value from `copilot-agent-inventory`. |
+| `NativeApiDirect` | Work IQ invoked directly through its API. |
+| `Adjacent` | No native Work IQ tool, but knowledge components (`componenttype = 16`) referencing SharePoint / Microsoft Graph / Microsoft 365 connectors, `botcomponent` table-search, or generative-AI configuration. |
+| `NotConfigured` | None of the above. |
 
 > **Build-time guard:** `bot.generativeaiconfiguration` is **not** a Dataverse
 > column. Work IQ configuration is sampled from `botcomponent` component types

@@ -22,19 +22,20 @@ is **not** a configuration.
 
 `Get-WorkIqConfigState.ps1` reads the agent master `fsi_copilotagent` (owned by
 `copilot-agent-inventory` — not duplicated here) and samples per-environment
-Dataverse metadata to assign a `configuredTier`:
+Dataverse metadata to assign a `configuredTier` — the canonical
+`fsi_configuredtier` option-set values, which downstream solutions key on:
 
-- **`native-mcp-copilot-studio`** — Work IQ MCP tool identifiers (preview:
+- **`NativeMcpCopilotStudio`** — Work IQ MCP tool identifiers (preview:
   `use-work-iq`) present in `botcomponent` / `aipluginoperation`. The native-MCP
   pathway **keys on the Azure Resource Graph `createdIn` value** supplied by
   `copilot-agent-inventory`.
-- **`native-api-direct`** — Work IQ invoked directly through its API rather than
+- **`NativeApiDirect`** — Work IQ invoked directly through its API rather than
   via Copilot Studio authoring.
-- **`adjacent`** — no native Work IQ tool, but knowledge components
+- **`Adjacent`** — no native Work IQ tool, but knowledge components
   (`componenttype = 16`) referencing SharePoint / Microsoft Graph / Microsoft 365
   connectors, `botcomponent` table-search (`dvtablesearch`), or generative-AI
   configuration are present.
-- **`none`** — none of the above.
+- **`NotConfigured`** — none of the above.
 
 > **Build-time guard (verified):** `bot.generativeaiconfiguration` is **not** a
 > real Dataverse column. Work IQ configuration is sampled from `botcomponent`
@@ -73,14 +74,14 @@ The nightly classify flow joins Tier-A and Tier-B per agent:
 
 | Tier-A `configuredTier` | Tier-B signal in lookback | `observedStatus` | Rationale |
 |-------------------------|---------------------------|------------------|-----------|
-| `none` | any | **Not configured** | No Work IQ configuration present. |
-| `native-mcp` / `native-api` / `adjacent` | no signal | **Configured-not-observed** | Configured but not seen invoking in the lookback window (see false-negative risk). |
+| `NotConfigured` | any | **Not configured** | No Work IQ configuration present. |
+| `NativeMcpCopilotStudio` / `NativeApiDirect` / `Adjacent` | no signal | **Configured-not-observed** | Configured but not seen invoking in the lookback window (see false-negative risk). |
 | any configured tier | **direct** Work IQ tool invocation (Defender `ExecuteToolByGateway` for the Work IQ tool, App Insights Work IQ event, or Purview `AIPluginOperation` for Work IQ) | **Observed-invoking** | Runtime invocation confirmed. |
-| `native-mcp` / `native-api` | telemetry present, but **only adjacent** connector activity (SharePoint / Graph), no direct Work IQ tool signal | **Exception-unknown** | Activity is present but cannot be attributed to Work IQ; classify Exception-unknown, **never** Observed-invoking. |
+| `NativeMcpCopilotStudio` / `NativeApiDirect` | telemetry present, but **only adjacent** connector activity (SharePoint / Graph), no direct Work IQ tool signal | **Exception-unknown** | Activity is present but cannot be attributed to Work IQ; classify Exception-unknown, **never** Observed-invoking. |
 
 Notes:
 
-- An `adjacent`-configured agent reaches **Observed-invoking** only on a direct
+- An `Adjacent`-configured agent reaches **Observed-invoking** only on a direct
   Work IQ tool signal; otherwise it stays **Configured-not-observed**.
 - **Exception-unknown** is reserved for the dangerous case: a natively-configured
   agent with runtime activity that cannot be confirmed as a Work IQ invocation.

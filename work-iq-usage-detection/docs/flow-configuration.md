@@ -66,7 +66,7 @@ is acceptable only as a development fallback.
 5. **Join and classify.** Join Tier-A and Tier-B on the agent identifier
    (`fsi_agentid`), scoped by environment, and resolve `fsi_observedstatus` using
    the four-state truth table in [`architecture.md`](architecture.md):
-   - `none` → **Not configured**.
+   - `NotConfigured` → **Not configured**.
    - configured + no signal → **Configured-not-observed**.
    - configured + direct Work IQ tool signal → **Observed-invoking**.
    - native-configured + only adjacent connector activity → **Exception-unknown**

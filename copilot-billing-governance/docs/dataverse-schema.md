@@ -6,15 +6,15 @@ All column logical names are the SchemaName lowercased (Dataverse never inserts 
 
 ## Tables
 
-| SchemaName | Logical Name | Description | Primary Name Attribute |
-|---|---|---|---|
-| fsi_CbgBillingPolicy | fsi_cbgbillingpolicy | Pay-as-you-go (PAYG) Copilot billing policy backed by an Azure subscription. Tenant ceiling is 50 PAYG policies; PAYG provides budget alerts, not a hard-stop. | fsi_name |
-| fsi_CbgCreditPolicy | fsi_cbgcreditpolicy | Prepaid Copilot credit policy (standalone hard-stop, no Azure subscription). Tenant ceiling is 10 credit policies; credit policies are Chat-only today. | fsi_name |
-| fsi_CbgEntitlement | fsi_cbgentitlement | Policy-level entitlement rule keyed on agent pathway, used by the switch-on-pathway entitlement engine. | fsi_name |
-| fsi_CbgEntitlementMaterialized | fsi_cbgentitlementmaterialized | Per-(agent, user) entitlement decision cache with a time-to-live, materialized to avoid recomputing the full decision tree on every read. | fsi_name |
-| fsi_CbgCoverageGap | fsi_cbgcoveragegap | Per-agent coverage-gap aggregate produced by the pre-enforcement analysis (monitor-only first). One row per agent, with a capped sample of blocked UPNs. | fsi_name |
-| fsi_CbgAgentCap | fsi_cbgagentcap | Per-agent monthly credit cap and month-to-date consumption. Enforcement mode degrades to detect-and-alert where a hard-stop write API is unavailable. | fsi_name |
-| fsi_CbgApprovedGroupPolicy | fsi_cbgapprovedgrouppolicy | Admission-gated registry of Entra security groups approved as maker, audience, or billing groups. Adopts the hardened ASARD shape: groups that are not security-enabled, or that are mail-enabled, are rejected at admission time. | fsi_name |
+| SchemaName | Logical Name | Entity Set Name | Description | Primary Name Attribute |
+|---|---|---|---|---|
+| fsi_CbgBillingPolicy | fsi_cbgbillingpolicy | fsi_cbgbillingpolicies | Pay-as-you-go (PAYG) Copilot billing policy backed by an Azure subscription. Tenant ceiling is 50 PAYG policies; PAYG provides budget alerts, not a hard-stop. | fsi_name |
+| fsi_CbgCreditPolicy | fsi_cbgcreditpolicy | fsi_cbgcreditpolicies | Prepaid Copilot credit policy (standalone hard-stop, no Azure subscription). Tenant ceiling is 10 credit policies; credit policies are Chat-only today. | fsi_name |
+| fsi_CbgEntitlement | fsi_cbgentitlement | fsi_cbgentitlements | Policy-level entitlement rule keyed on agent pathway, used by the switch-on-pathway entitlement engine. | fsi_name |
+| fsi_CbgEntitlementMaterialized | fsi_cbgentitlementmaterialized | fsi_cbgentitlementmaterializeds | Per-(agent, user) entitlement decision cache with a time-to-live, materialized to avoid recomputing the full decision tree on every read. | fsi_name |
+| fsi_CbgCoverageGap | fsi_cbgcoveragegap | fsi_cbgcoveragegaps | Per-agent coverage-gap aggregate produced by the pre-enforcement analysis (monitor-only first). One row per agent, with a capped sample of blocked UPNs. | fsi_name |
+| fsi_CbgAgentCap | fsi_cbgagentcap | fsi_cbgagentcaps | Per-agent monthly credit cap and month-to-date consumption. Enforcement mode degrades to detect-and-alert where a hard-stop write API is unavailable. | fsi_name |
+| fsi_CbgApprovedGroupPolicy | fsi_cbgapprovedgrouppolicy | fsi_cbgapprovedgrouppolicies | Admission-gated registry of Entra security groups approved as maker, audience, or billing groups. Adopts the hardened ASARD shape: groups that are not security-enabled, or that are mail-enabled, are rejected at admission time. | fsi_name |
 
 ## Columns
 
@@ -134,6 +134,19 @@ All column logical names are the SchemaName lowercased (Dataverse never inserts 
 | fsi_ApprovedBy | fsi_approvedby | String | No | UPN of the person who approved this group. |  |
 | fsi_ApprovedAt | fsi_approvedat | DateTime | No | When this group was approved. |  |
 | fsi_PolicyNotes | fsi_policynotes | Memo | No | Additional notes or context for this registration. |  |
+
+## Alternate Keys
+
+Alternate keys give the flows in `flow-configuration.md` an idempotent upsert (PATCH on a natural key). Key attributes are logical (lowercased) column names.
+
+| Table (Logical) | Alternate Key | Key Attributes |
+|---|---|---|
+| fsi_cbgbillingpolicy | fsi_CbgBillingPolicyKey | `fsi_billinginstanceid` |
+| fsi_cbgcreditpolicy | fsi_CbgCreditPolicyKey | `fsi_creditpolicyid` |
+| fsi_cbgentitlementmaterialized | fsi_CbgEntMatAgentUserKey | `fsi_agentid`, `fsi_userupn` |
+| fsi_cbgcoveragegap | fsi_CbgCoverageGapAgentKey | `fsi_agentid` |
+| fsi_cbgagentcap | fsi_CbgAgentCapAgentKey | `fsi_agentid` |
+| fsi_cbgapprovedgrouppolicy | fsi_CbgApprovedGroupKey | `fsi_groupid`, `fsi_grouplayer` |
 
 ## Option Sets
 

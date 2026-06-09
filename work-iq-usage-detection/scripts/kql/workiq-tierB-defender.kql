@@ -46,9 +46,12 @@
 
 // Parameterized time range (KQL convention).
 let LookbackDefender = 30d;
-// Replace with the Work IQ MCP tool identifier. Preview default: use-work-iq.
-// The verified base query used the literal placeholder "tool name".
-let WorkIqToolToken = "tool name";
+// Work IQ MCP tool identifier to match in RawEventData. Preview default
+// 'use-work-iq', kept consistent with the App Insights sibling
+// (workiq-tierB-appinsights.kql). The verified base query used the literal
+// placeholder "tool name"; confirm this token against live CloudAppEvents
+// payloads before relying on it (the RawEventData field layout is tenant-specific).
+let WorkIqToolToken = "use-work-iq";
 CloudAppEvents
 | where Timestamp > ago(LookbackDefender)
 | where ActionType in ("ExecuteToolByGateway")

@@ -12,10 +12,23 @@ Deploy and populate `copilot-agent-inventory` first. Work IQ Usage Detection
 reads `fsi_copilotagent` (including the Azure Resource Graph `createdIn` value
 used to key the native-MCP pathway) and **does not** create or duplicate it.
 
-> ASSUMPTION: the exact column logical names on `fsi_copilotagent` resolve from
-> the `copilot-agent-inventory` published schema. `Get-WorkIqConfigState.ps1`
-> exposes the agent environment-URL column as a parameter so it can be aligned
-> once that schema is final.
+The agent master carries `fsi_environmentid` (the source-environment GUID) but
+not that environment's Dataverse URL. `Get-WorkIqConfigState.ps1` resolves the
+per-environment URL from the sibling **`fsi_caienvironment`** table (entity set
+`fsi_caienvironments`) by reading **`fsi_caienvironment.fsi_environmenturl`** for
+the matching `fsi_environmentid`, then scopes the per-agent `botcomponent` sample
+to that source environment. Work IQ Usage Detection therefore depends on
+`copilot-agent-inventory` publishing `fsi_caienvironment.fsi_environmenturl`
+(being added to the inventory schema in parallel). When that URL is absent for an
+environment, the scanner skips that environment's component scan and marks the
+affected agents `Exception-unknown` rather than scanning the governance
+environment by mistake.
+
+> ASSUMPTION: the exact column logical names on `fsi_copilotagent` and
+> `fsi_caienvironment` resolve from the `copilot-agent-inventory` published
+> schema. The `fsi_caienvironment.fsi_environmenturl` column is being added to
+> the inventory in parallel; confirm it is published before relying on Tier-A
+> environment scoping.
 
 ## Roles
 

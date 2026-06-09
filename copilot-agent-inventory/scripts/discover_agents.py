@@ -82,6 +82,12 @@ MAX_BACKOFF_SECONDS = 60
 CREATED_IN_AGENT_BUILDER = "Microsoft 365 Copilot Agent Builder"
 CREATED_IN_COPILOT_STUDIO = "Copilot Studio"
 
+# Discovery-source labels (also the fsi_cai_discoverysource option-set labels).
+# Both layers key fsi_agentid on the SAME bot-GUID id space; the source label
+# selects which raw field holds that GUID (see _canonical_agent_id, H-3).
+DISCOVERY_SOURCE_ARG = "Azure Resource Graph"
+DISCOVERY_SOURCE_DATAVERSE = "Per-Environment Dataverse Scan"
+
 # botcomponent_componenttype -> (feature label, component version).
 # Verified against the 2025-10-31 platform docs (max code = 19). Includes the
 # V1 codes 2-7 that the original brief omitted. Re-pull live at build time.
@@ -94,7 +100,7 @@ COMPONENTTYPE_MAP: dict[int, tuple[str, str]] = {
     5: ("Trigger", "V1"),
     6: ("Language Understanding", "V1"),
     7: ("Language Generation", "V1"),
-    8: ("Dialog", "V1"),               # Dialog schema
+    8: ("Dialog Schema", "V1"),        # code 8 = Dialog schema (distinct from code 4 = Dialog)
     9: ("Topic", "V2"),
     10: ("Bot Translations", "V2"),
     11: ("Bot Entity", "V2"),
@@ -108,15 +114,19 @@ COMPONENTTYPE_MAP: dict[int, tuple[str, str]] = {
     19: ("Test Case", "Not Applicable"),
 }
 
-# The six botcomponent many-to-many relationships -> feature label.
-# Intersect key botcomponentid; these surface the capability-composition layer.
-MM_RELATIONSHIPS: dict[str, str] = {
-    "botcomponent_aipluginoperation": "Tool / Plugin",
-    "botcomponent_connectionreference": "Connector",
-    "botcomponent_workflow": "Power Automate Flow",
-    "botcomponent_environmentvariabledefinition": "Environment Variable",
-    "botcomponent_dvtablesearch": "Dataverse Search Grounding",
-    "botcomponent_msdyn_aimodel": "AI Builder Model",
+# The six botcomponent many-to-many relationships -> (feature label, target PK).
+# A M:M $expand returns the TARGET entities (aipluginoperation, connectionreference,
+# workflow, environmentvariabledefinition, dvtablesearch, msdyn_aimodel), which have
+# NO botcomponentid column — each target must $select its OWN primary key. These
+# surface the capability-composition layer.
+MM_RELATIONSHIPS: dict[str, tuple[str, str]] = {
+    "botcomponent_aipluginoperation": ("Tool / Plugin", "aipluginoperationid"),
+    "botcomponent_connectionreference": ("Connector", "connectionreferenceid"),
+    "botcomponent_workflow": ("Power Automate Flow", "workflowid"),
+    "botcomponent_environmentvariabledefinition": (
+        "Environment Variable", "environmentvariabledefinitionid"),
+    "botcomponent_dvtablesearch": ("Dataverse Search Grounding", "dvtablesearchid"),
+    "botcomponent_msdyn_aimodel": ("AI Builder Model", "msdyn_aimodelid"),
 }
 
 # Widened $select on the bot table (the legacy registry scan omitted authMode,
@@ -216,6 +226,16 @@ def _get_token(ctx: ScanContext, scope: str) -> str:
     return credential.get_token(scope).token
 
 
+class ThrottlingExhaustedError(RuntimeError):
+    """Raised when 429 backoff is exhausted on a persistent throttle.
+
+    Distinct outcome (L-3): a throttled scan must NOT be mistaken for
+    end-of-data. Paging loops should treat this as an INCOMPLETE scan, not a
+    clean stop. `_scan_one_environment` catches it per-environment (fail-open);
+    the ARG layer catches it and falls back to the Layer 2 per-environment scan.
+    """
+
+
 def _request_with_backoff(
     session: requests.Session, method: str, url: str, **kwargs: Any
 ) -> requests.Response:
@@ -223,12 +243,13 @@ def _request_with_backoff(
 
     The session adapter already retries; this adds an outer guard that honors
     Retry-After for the long throttling windows Dataverse can return at scale.
+    Raises ThrottlingExhaustedError (L-3) when every attempt is throttled, so a
+    persistent 429 surfaces as an INCOMPLETE scan rather than being returned as
+    a normal response that paging loops mistake for end-of-data.
     """
     delay = 1.0
-    last_response: Optional[requests.Response] = None
     for attempt in range(6):
         response = session.request(method, url, timeout=120, **kwargs)
-        last_response = response
         if response.status_code != 429:
             return response
         retry_after = response.headers.get("Retry-After")
@@ -237,7 +258,11 @@ def _request_with_backoff(
                        url, wait, attempt + 1)
         time.sleep(wait)
         delay = min(delay * 2, MAX_BACKOFF_SECONDS)
-    return last_response  # type: ignore[return-value]
+    # Every attempt was throttled: surface a distinct outcome so callers do not
+    # treat a persistent 429 as a successful end-of-data response (L-3).
+    raise ThrottlingExhaustedError(
+        f"429 throttling persisted after {attempt + 1} attempts on {url}"
+    )
 
 
 # =============================================================================
@@ -373,8 +398,10 @@ def scan_environment_bots(
     """Read `bot` rows for one environment with change tracking.
 
     Sends `Prefer: odata.track-changes` so Dataverse returns an
-    `@odata.deltaLink`; passing a stored delta link reads only the changes since
-    the last scan (incremental at scale). Returns (bots, new_delta_link).
+    `@odata.deltaLink`. Passing a stored delta link would read only the changes
+    since the last scan, but persistence of the link is not yet implemented
+    (delta-ready; persistence TODO) — callers capture the returned link rather
+    than discarding it. Returns (bots, new_delta_link).
     """
     if ctx.dry_run:
         logger.info("[DRY RUN] would GET %s bots?$select=%s (Prefer: "
@@ -416,7 +443,10 @@ def scan_bot_features(
     `_botid_value`) and $expands all six many-to-many relationships. Each
     componenttype row and each M:M target becomes one fsi_caiagentfeature row.
     """
-    expand = ",".join(f"{rel}($select=botcomponentid)" for rel in MM_RELATIONSHIPS)
+    expand = ",".join(
+        f"{rel}($select={target_pk})"
+        for rel, (_label, target_pk) in MM_RELATIONSHIPS.items()
+    )
     query = (
         "botcomponents?"
         f"$filter=_parentbotid_value eq {bot_id}"
@@ -474,11 +504,11 @@ def _components_to_features(
         component.get("name"), component.get("componenttype"),
         relationship="botcomponent",
     ))
-    for rel, rel_label in MM_RELATIONSHIPS.items():
+    for rel, (rel_label, target_pk) in MM_RELATIONSHIPS.items():
         for target in component.get(rel, []) or []:
             features.append(_feature_record(
                 ctx, bot_id, rel_label, "Not Applicable",
-                target.get("botcomponentid", source_id),
+                target.get(target_pk, source_id),
                 None, None, relationship=rel,
             ))
     return features
@@ -531,12 +561,40 @@ def classify_scan_completeness(agent: dict) -> tuple[str, str]:
     return ("Complete", "")
 
 
+def _canonical_agent_id(arg_item: dict, source: str) -> str:
+    """Derive the ONE canonical agent id = the Copilot Studio bot GUID.
+
+    Both discovery layers MUST key fsi_agentid on the SAME id space or
+    reconcile_sources() intersects disjoint sets and drift detection dies
+    (H-3). That shared space is the bot GUID:
+
+      * ARG layer: the ARG resource `name` IS the CDS bot GUID (confirmed by the
+        fsi_AgentId description in create_cai_dataverse_schema.py: "ARG 'name' /
+        Dataverse botid"). Fall back only to an explicit bot-id field, never to
+        a display name.
+      * Dataverse layer: the GUID is `botid`; `name` is the friendly DISPLAY
+        name and must NEVER be used as the id. Keying on `name` here split the
+        id spaces (per-env scans keyed on display names while ARG keyed on
+        GUIDs), so the two sets could never intersect.
+    """
+    if source == DISCOVERY_SOURCE_DATAVERSE:
+        # Dataverse `bot` row: botid is the GUID; name is the display name.
+        return str(arg_item.get("botid") or "")
+    # ARG resource: `name` is the CDS bot GUID (never a display name here).
+    return str(
+        arg_item.get("name")
+        or arg_item.get("botId")
+        or arg_item.get("botid")
+        or ""
+    )
+
+
 def map_agent_record(ctx: ScanContext, arg_item: dict, source: str) -> dict:
     """Map a raw ARG / bot resource to an fsi_copilotagent row (logical names)."""
     props = arg_item.get("properties", {}) if isinstance(arg_item, dict) else {}
     completeness, reason = classify_scan_completeness(arg_item)
     return {
-        "fsi_agentid": arg_item.get("name") or arg_item.get("botid", ""),
+        "fsi_agentid": _canonical_agent_id(arg_item, source),
         "fsi_agentname": props.get("displayName") or arg_item.get("name", ""),
         "fsi_environmentid": arg_item.get("environmentId")
         or props.get("environmentId", ""),
@@ -597,11 +655,15 @@ def _scan_one_environment(
     """Scan a single environment: bots + per-bot features. Fail-open per env."""
     env_url = environment.get("url") or environment.get("instanceUrl") or ""
     env_id = environment.get("name") or environment.get("id") or ""
-    result = {"environmentId": env_id, "agents": [], "features": []}
+    result = {"environmentId": env_id, "agents": [], "features": [],
+              "deltaLink": None}
     try:
-        bots, _delta = scan_environment_bots(ctx, session, env_url)
+        bots, delta_link = scan_environment_bots(ctx, session, env_url)
+        # Thread the delta link into the result instead of discarding it; a
+        # future persistence layer can store it for incremental reads (L-4).
+        result["deltaLink"] = delta_link
         for bot in bots:
-            agent = map_agent_record(ctx, bot, "Per-Environment Dataverse Scan")
+            agent = map_agent_record(ctx, bot, DISCOVERY_SOURCE_DATAVERSE)
             agent["fsi_environmentid"] = agent.get("fsi_environmentid") or env_id
             result["agents"].append(agent)
             bot_id = bot.get("botid", "")
@@ -623,6 +685,16 @@ def reconcile_sources(arg_agents: list[dict], scanned_agents: list[dict]) -> dic
     """
     arg_ids = {a.get("fsi_agentid") for a in arg_agents if a.get("fsi_agentid")}
     scan_ids = {a.get("fsi_agentid") for a in scanned_agents if a.get("fsi_agentid")}
+    # Smoke check (H-3): both layers derive fsi_agentid from the SAME bot-GUID
+    # id space (ARG resource name == Dataverse botid). If both sources returned
+    # agents yet share zero ids, the id spaces have split again — surface it
+    # loudly rather than reporting a silent 100% false drift.
+    if arg_ids and scan_ids and not (arg_ids & scan_ids):
+        logger.warning(
+            "Reconciliation id-space check FAILED: ARG (%d ids) and Dataverse "
+            "(%d ids) intersect to zero — verify fsi_agentid is the bot GUID in "
+            "both layers (H-3).", len(arg_ids), len(scan_ids)
+        )
     return {
         "in_arg_only": sorted(arg_ids - scan_ids),
         "in_dataverse_only": sorted(scan_ids - arg_ids),
@@ -638,10 +710,18 @@ def scan_all(ctx: ScanContext) -> dict:
 
     arg_agents: list[dict] = []
     if ctx.use_arg and probe_arg_resource_type(ctx, session):
-        arg_agents = [
-            map_agent_record(ctx, item, "Azure Resource Graph")
-            for item in query_arg_inventory(ctx, session)
-        ]
+        try:
+            arg_agents = [
+                map_agent_record(ctx, item, DISCOVERY_SOURCE_ARG)
+                for item in query_arg_inventory(ctx, session)
+            ]
+        except ThrottlingExhaustedError as exc:
+            # ARG throttled to exhaustion: discard the partial (and therefore
+            # misleading) ARG results and rely on the Layer 2 per-environment
+            # scan instead of aborting the run (L-3).
+            logger.warning("ARG layer throttled to exhaustion; discarding partial "
+                           "ARG results and falling back to Layer 2: %s", exc)
+            arg_agents = []
     elif ctx.use_arg:
         logger.info("ARG path unavailable — using Layer 2 per-environment scan "
                     "as the load-bearing default.")

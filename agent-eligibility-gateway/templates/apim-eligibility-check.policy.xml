@@ -50,8 +50,14 @@
   <!-- 1. Correlation ID (reuse an inbound one if the client supplied it). -->
   <set-variable name="correlationId" value='@(context.Request.Headers.GetValueOrDefault("X-AEG-Correlation-Id", Guid.NewGuid().ToString()))' />
 
-  <!-- Agent identifier: prefer an explicit header, else a per-API named value. -->
-  <set-variable name="agentId" value='@(context.Request.Headers.GetValueOrDefault("X-Agent-Id", "{{aeg-agent-id}}"))' />
+  <!-- Agent identifier: bound to exactly ONE agent per API operation via the
+       {{aeg-agent-id}} named value. The client cannot influence it. A
+       client-supplied X-Agent-Id header was previously trusted here, which let a
+       caller pivot the entitlement lookup to a different agent (cross-agent
+       entitlement bypass, finding C-4); that header is no longer read. Bind one
+       operation per agent and set aeg-agent-id at operation scope (see
+       docs/apim-gateway-setup.md). -->
+  <set-variable name="agentId" value="{{aeg-agent-id}}" />
 
   <!-- 2. Caller identity + audience membership from the validated token. -->
   <set-variable name="callerOid" value='@{
@@ -83,7 +89,10 @@
   <send-request mode="new" response-variable-name="govResp" timeout="10" ignore-error="true">
     <set-url>@{
         var resource = "{{aeg-dataverse-resource}}";
-        var agentId = (string)context.Variables["agentId"];
+        // M-3: OData-escape the agent id (double any single quote) before it is
+        // concatenated into the $filter, so a value containing a quote cannot
+        // alter the query.
+        var agentId = ((string)context.Variables["agentId"]).Replace("'", "''");
         return resource + "/api/data/v9.2/fsi_caicompliancestates?$select=fsi_risklevel&amp;$filter=fsi_agentid eq '" + agentId + "'";
     }</set-url>
     <set-method>GET</set-method>
@@ -114,9 +123,12 @@
   <send-request mode="new" response-variable-name="entResp" timeout="10" ignore-error="true">
     <set-url>@{
         var resource = "{{aeg-dataverse-resource}}";
-        var agentId = (string)context.Variables["agentId"];
-        var upn = (string)context.Variables["callerUpn"];
-        return resource + "/api/data/v9.2/fsi_cbgentitlementmaterializeds?$select=fsi_decision,fsi_pathway,fsi_decisionreason&amp;$filter=fsi_agentid eq '" + agentId + "' and fsi_userupn eq '" + upn + "'";
+        // M-3: OData-escape both the agent id and the caller UPN (double any
+        // single quote) before concatenating into the $filter.
+        // H-4: also select fsi_ttlexpiresat so the cache TTL can be honored below.
+        var agentId = ((string)context.Variables["agentId"]).Replace("'", "''");
+        var upn = ((string)context.Variables["callerUpn"]).Replace("'", "''");
+        return resource + "/api/data/v9.2/fsi_cbgentitlementmaterializeds?$select=fsi_decision,fsi_pathway,fsi_decisionreason,fsi_ttlexpiresat&amp;$filter=fsi_agentid eq '" + agentId + "' and fsi_userupn eq '" + upn + "'";
     }</set-url>
     <set-method>GET</set-method>
     <set-header name="Accept" exists-action="override"><value>application/json</value></set-header>
@@ -132,7 +144,21 @@
           if (resp == null || resp.StatusCode != 200) { return new JObject(); }
           var rows = resp.Body.As&lt;JObject&gt;(true)["value"] as JArray;
           if (rows == null || rows.Count == 0) { return new JObject(); }
-          return (JObject)rows[0];
+          var row = (JObject)rows[0];
+          // H-4: honor the cache TTL. An expired materialized decision is treated
+          // as no row at all, so the contract falls through to unmapped =&gt; allow +
+          // anomaly rather than acting on a stale decision. hasEntRow, pathway,
+          // materializedAllow and anomaly below all derive from this row, so they
+          // follow suit. fsi_ttlexpiresat is the raw UTC (ISO-8601) value; a value
+          // that cannot be parsed is left in force (TTL simply not enforced).
+          var ttl = (string)row["fsi_ttlexpiresat"];
+          if (!string.IsNullOrEmpty(ttl)) {
+              DateTimeOffset expiresAt;
+              if (DateTimeOffset.TryParse(ttl, out expiresAt) &amp;&amp; expiresAt.UtcDateTime &lt; DateTime.UtcNow) {
+                  return new JObject();
+              }
+          }
+          return row;
       } catch (Exception) { return new JObject(); }
   }' />
 
@@ -142,7 +168,12 @@
       return string.IsNullOrEmpty(v) ? "unmapped" : v;
   }' />
   <set-variable name="hasEntRow" value='@(((JObject)context.Variables["entRow"]).HasValues)' />
-  <set-variable name="materializedAllow" value='@(((string)((JObject)context.Variables["entRow"])["fsi_decision@OData.Community.Display.V1.FormattedValue"]) == "Allow")' />
+  <!-- C-1: a decision is an ALLOW when its formatted fsi_cbg_decision label is in
+       the CBG ALLOW set { Allow, Allow - Eligibility N/A, Fail-open - Anomaly }
+       (mirrors the CBG engine's Test-DecisionIsAllow). Only "Block" and
+       "Fail-closed - Zero-rating Unresolved" deny. The previous strict == "Allow"
+       check denied the agent majority that resolves to "Allow - Eligibility N/A". -->
+  <set-variable name="materializedAllow" value='@(new [] { "Allow", "Allow - Eligibility N/A", "Fail-open - Anomaly" }.Contains((string)((JObject)context.Variables["entRow"])["fsi_decision@OData.Community.Display.V1.FormattedValue"]))' />
   <set-variable name="materializedReason" value='@{
       var r = (string)((JObject)context.Variables["entRow"])["fsi_decisionreason@OData.Community.Display.V1.FormattedValue"];
       return string.IsNullOrEmpty(r) ? "NotEntitled" : r;
@@ -163,7 +194,16 @@
       if (allow == false) { return reason; }
       return "None";
   }' />
-  <set-variable name="anomaly" value='@(new [] { "none", "mcp-cs", "mcp-agentbuilder", "api-direct", "metered" }.Contains((string)context.Variables["pathway"]) == false)' />
+  <!-- C-1b: flag an anomaly when the pathway is outside the known set (or no row
+       was materialized, which surfaces as the "unmapped" pathway) OR when the CBG
+       decision is "Fail-open - Anomaly", so a fail-open decision is surfaced for
+       investigation even on an otherwise-known pathway. -->
+  <set-variable name="anomaly" value='@{
+      var pathway = (string)context.Variables["pathway"];
+      var knownPathway = new [] { "none", "mcp-cs", "mcp-agentbuilder", "api-direct", "metered" }.Contains(pathway);
+      var decisionLabel = (string)((JObject)context.Variables["entRow"])["fsi_decision@OData.Community.Display.V1.FormattedValue"];
+      return knownPathway == false || decisionLabel == "Fail-open - Anomaly";
+  }' />
   <set-variable name="decision" value='@(((string)context.Variables["denyReason"]) == "None" ? "Allow" : "Deny")' />
 
   <!-- 5. Stamp policy metadata for the backend and downstream correlation. -->

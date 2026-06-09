@@ -101,6 +101,21 @@ The gateway is a **reader** of governance state, never a writer of it:
 
 The optional [`fsi_aegdecisionlog`](dataverse-schema.md) table is the gateway's only **output** to Dataverse, and it is written asynchronously by the telemetry sink, not on the request path. The column logical names for `fsi_copilotagent` and `fsi_cbgentitlementmaterialized` are assumptions to confirm against the sibling solutions' schema scripts before production use.
 
+## Deny-reason vocabulary mapping (CBG → AEG)
+
+The billing engine and the gateway use different deny-reason vocabularies. The materialized decision the gateway reads carries a CBG block reason (`fsi_decisionreason`, option set `fsi_cbg_blockreason`), but the gateway's own audit column is `fsi_denyreason` (option set `fsi_aeg_denyreason`), which is coarser. The telemetry sink applies the mapping below when it lands a record in `fsi_aegdecisionlog`; the verbatim CBG reason is retained in `fsi_rawcontext`, so the precise CBG reason remains available for audit.
+
+| CBG `fsi_cbg_blockreason` | Resulting CBG `fsi_cbg_decision` | AEG `fsi_aeg_denyreason` |
+|---|---|---|
+| No eligible cohort (100000000) | Block | NotInEligibleCohort (100000004) |
+| Missing license (100000001) | Block | NotInEligibleCohort (100000004) |
+| Zero-rating unresolved - fail-closed (100000002) | Fail-closed - Zero-rating Unresolved | NotInEligibleCohort (100000004) |
+| Not in credit scope (100000003) | Block | NotInEligibleCohort (100000004) |
+| Policy cap exceeded (100000004) | Block | NotInEligibleCohort (100000004) |
+| Unmapped pathway (100000005) | Fail-open - Anomaly | None (100000000) — allow + anomaly, not a deny |
+
+The gateway's own gates set AEG-native deny reasons directly, with no CBG input: the audience gate sets `OutOfPolicyAudience` and the compliance gate sets `AgentNonCompliant`. Token failures are handled earlier in `aeg-validate-jwt` and surface as 401s (`JwtValidationFailed` / `MissingRequiredClaim`), not as gateway 403s. The compliance read fails closed, so a missing compliance row or a transient governance-store outage currently resolves to `AgentNonCompliant`; the `GovernanceStoreUnavailable` value in the AEG option set is reserved for a sink that chooses to distinguish a store outage from a genuine non-compliance. Because the AEG vocabulary collapses every billing-side denial into `NotInEligibleCohort`, the CBG → AEG mapping is one-directional and lossy by design — consult `fsi_rawcontext` for the precise CBG reason. Confirm the AEG option-set values against [dataverse-schema.md](dataverse-schema.md) before relying on them.
+
 ## Reference gateway vs. customer deployment
 
 Architecturally, the reference gateway and a customer deployment are the same APIM policy composition pointed at different backends:

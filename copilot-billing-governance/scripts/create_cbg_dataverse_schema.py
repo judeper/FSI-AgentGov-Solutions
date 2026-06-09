@@ -169,10 +169,17 @@ def _primary_name(display: str, desc: str) -> dict:
 
 
 def _table(schema_name: str, display: str, collection: str, desc: str,
-           primary_display: str, primary_desc: str) -> dict:
-    """Build a table (EntityMetadata) definition with its primary-name attribute."""
+           primary_display: str, primary_desc: str, entity_set: str) -> dict:
+    """Build a table (EntityMetadata) definition with its primary-name attribute.
+
+    ``entity_set`` sets ``EntitySetName`` explicitly rather than relying on Dataverse's
+    implicit pluralization, so the OData collection path is deterministic for every
+    consumer (e.g. fsi_cbgentitlementmaterialized -> fsi_cbgentitlementmaterializeds and
+    fsi_cbgbillingpolicy -> fsi_cbgbillingpolicies).
+    """
     return {
         "SchemaName": schema_name,
+        "EntitySetName": entity_set,
         "DisplayName": _loc(display),
         "DisplayCollectionName": _loc(collection),
         "Description": _loc(desc),
@@ -273,18 +280,21 @@ TABLES = {
         "Pay-as-you-go (PAYG) Copilot billing policy backed by an Azure subscription. "
         "Tenant ceiling is 50 PAYG policies; PAYG provides budget alerts, not a hard-stop.",
         "Policy Name", "Display name of the PAYG billing policy",
+        "fsi_cbgbillingpolicies",
     ),
     "fsi_CbgCreditPolicy": _table(
         "fsi_CbgCreditPolicy", "Credit Policy", "Credit Policies",
         "Prepaid Copilot credit policy (standalone hard-stop, no Azure subscription). "
         "Tenant ceiling is 10 credit policies; credit policies are Chat-only today.",
         "Policy Name", "Display name of the prepaid credit policy",
+        "fsi_cbgcreditpolicies",
     ),
     "fsi_CbgEntitlement": _table(
         "fsi_CbgEntitlement", "Entitlement", "Entitlements",
         "Policy-level entitlement rule keyed on agent pathway, used by the "
         "switch-on-pathway entitlement engine.",
         "Entitlement Name", "Display name of the entitlement rule",
+        "fsi_cbgentitlements",
     ),
     "fsi_CbgEntitlementMaterialized": _table(
         "fsi_CbgEntitlementMaterialized", "Materialized Entitlement",
@@ -292,18 +302,21 @@ TABLES = {
         "Per-(agent, user) entitlement decision cache with a time-to-live, materialized "
         "to avoid recomputing the full decision tree on every read.",
         "Cache Key", "Composite agent/user cache key (agentid:userupn)",
+        "fsi_cbgentitlementmaterializeds",
     ),
     "fsi_CbgCoverageGap": _table(
         "fsi_CbgCoverageGap", "Coverage Gap", "Coverage Gaps",
         "Per-agent coverage-gap aggregate produced by the pre-enforcement analysis "
         "(monitor-only first). One row per agent, with a capped sample of blocked UPNs.",
         "Agent Display", "Display name of the analyzed agent",
+        "fsi_cbgcoveragegaps",
     ),
     "fsi_CbgAgentCap": _table(
         "fsi_CbgAgentCap", "Agent Cap", "Agent Caps",
         "Per-agent monthly credit cap and month-to-date consumption. Enforcement mode "
         "degrades to detect-and-alert where a hard-stop write API is unavailable.",
         "Cap Name", "Display name of the per-agent cap record",
+        "fsi_cbgagentcaps",
     ),
     "fsi_CbgApprovedGroupPolicy": _table(
         "fsi_CbgApprovedGroupPolicy", "Approved Group Policy",
@@ -312,6 +325,7 @@ TABLES = {
         "or billing groups. Adopts the hardened ASARD shape: groups that are not "
         "security-enabled, or that are mail-enabled, are rejected at admission time.",
         "Group Display Name", "Display name of the approved Entra security group",
+        "fsi_cbgapprovedgrouppolicies",
     ),
 }
 
@@ -439,6 +453,70 @@ RELATIONSHIPS = [
 
 
 # ---------------------------------------------------------------------------
+# Alternate keys (idempotent upsert keys; keyed by table logical name)
+# ---------------------------------------------------------------------------
+# Mirrors copilot-agent-inventory's alt-key pattern so the upserts documented in
+# flow-configuration.md (PATCH on a natural key) are idempotent. KeyAttributes use
+# LOGICAL (lowercased) column names. Billing/credit policies key on their own policy
+# identifier; the materialized cache keys on (agent, user); coverage-gap and agent-cap
+# key on the agent; the approved-group registry keys on (group, layer).
+ALT_KEYS = {
+    "fsi_cbgbillingpolicy": [
+        {
+            "schema_name": "fsi_CbgBillingPolicyKey",
+            "display": "Billing Policy Key",
+            "key_attributes": ["fsi_billinginstanceid"],
+        },
+    ],
+    "fsi_cbgcreditpolicy": [
+        {
+            "schema_name": "fsi_CbgCreditPolicyKey",
+            "display": "Credit Policy Key",
+            "key_attributes": ["fsi_creditpolicyid"],
+        },
+    ],
+    "fsi_cbgentitlementmaterialized": [
+        {
+            "schema_name": "fsi_CbgEntMatAgentUserKey",
+            "display": "Agent + User Key",
+            "key_attributes": ["fsi_agentid", "fsi_userupn"],
+        },
+    ],
+    "fsi_cbgcoveragegap": [
+        {
+            "schema_name": "fsi_CbgCoverageGapAgentKey",
+            "display": "Agent Key",
+            "key_attributes": ["fsi_agentid"],
+        },
+    ],
+    "fsi_cbgagentcap": [
+        {
+            "schema_name": "fsi_CbgAgentCapAgentKey",
+            "display": "Agent Key",
+            "key_attributes": ["fsi_agentid"],
+        },
+    ],
+    "fsi_cbgapprovedgrouppolicy": [
+        {
+            "schema_name": "fsi_CbgApprovedGroupKey",
+            "display": "Group + Layer Key",
+            "key_attributes": ["fsi_groupid", "fsi_grouplayer"],
+        },
+    ],
+}
+
+
+def _entity_key(key_def: dict) -> dict:
+    """Build an EntityKeyMetadata definition for an alternate key (idempotent upsert)."""
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.EntityKeyMetadata",
+        "SchemaName": key_def["schema_name"],
+        "DisplayName": _loc(key_def["display"]),
+        "KeyAttributes": key_def["key_attributes"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Documentation helpers
 # ---------------------------------------------------------------------------
 def _label(obj: dict) -> str:
@@ -509,13 +587,14 @@ def generate_schema_docs() -> str:
     # Tables
     lines.append("## Tables")
     lines.append("")
-    lines.append("| SchemaName | Logical Name | Description | Primary Name Attribute |")
-    lines.append("|---|---|---|---|")
+    lines.append("| SchemaName | Logical Name | Entity Set Name | Description | Primary Name Attribute |")
+    lines.append("|---|---|---|---|---|")
     for schema_name, tbl in TABLES.items():
         logical = schema_name.lower()
         desc = _label(tbl.get("Description", {}))
         pna = tbl.get("PrimaryNameAttribute", "")
-        lines.append(f"| {schema_name} | {logical} | {desc} | {pna} |")
+        esn = tbl.get("EntitySetName", "")
+        lines.append(f"| {schema_name} | {logical} | {esn} | {desc} | {pna} |")
     lines.append("")
 
     # Columns
@@ -565,6 +644,23 @@ def generate_schema_docs() -> str:
 
             lines.append(f"| {sn} | {ln} | {ctype} | {required} | {desc} | {os_cell} |")
         lines.append("")
+
+    # Alternate keys
+    lines.append("## Alternate Keys")
+    lines.append("")
+    lines.append(
+        "Alternate keys give the flows in `flow-configuration.md` an idempotent "
+        "upsert (PATCH on a natural key). Key attributes are logical (lowercased) "
+        "column names."
+    )
+    lines.append("")
+    lines.append("| Table (Logical) | Alternate Key | Key Attributes |")
+    lines.append("|---|---|---|")
+    for table_logical_name, keys in ALT_KEYS.items():
+        for key_def in keys:
+            attrs = ", ".join(f"`{a}`" for a in key_def["key_attributes"])
+            lines.append(f"| {table_logical_name} | {key_def['schema_name']} | {attrs} |")
+    lines.append("")
 
     # Option sets
     lines.append("## Option Sets")
@@ -666,17 +762,37 @@ def create_relationships(client: DataverseClient, dry_run: bool) -> dict:
     return {"created": created, "skipped": skipped}
 
 
+def create_alternate_keys(client: DataverseClient, dry_run: bool) -> dict:
+    """Create alternate keys for idempotent upsert (async system jobs; idempotent)."""
+    logger.info("=== Creating Alternate Keys ===")
+    created = 0
+    skipped = 0
+    for table_logical_name, keys in ALT_KEYS.items():
+        for key_def in keys:
+            key_schema = key_def["schema_name"]
+            if client.get_entity_key(table_logical_name, key_schema.lower()):
+                logger.info("  %s.%s: Already exists", table_logical_name, key_schema)
+                skipped += 1
+            else:
+                logger.info("  %s.%s: Creating", table_logical_name, key_schema)
+                client.create_entity_key(table_logical_name, _entity_key(key_def))
+                created += 1
+    return {"created": created, "skipped": skipped}
+
+
 def create_schema(client: DataverseClient, dry_run: bool) -> dict:
     """Create the complete schema (orchestrator)."""
     option_set_results = create_optionsets(client, dry_run)
     table_results = create_tables(client, dry_run)
     create_columns(client, dry_run)
+    alt_key_results = create_alternate_keys(client, dry_run)
     relationship_results = create_relationships(client, dry_run)
     logger.info("=== Schema Creation Complete ===")
     return {
         "errors": 0,
         "option_sets": option_set_results,
         "tables": table_results,
+        "alternate_keys": alt_key_results,
         "relationships": relationship_results,
     }
 

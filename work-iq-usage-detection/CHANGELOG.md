@@ -26,8 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   duplicate the agent master.
 - `scripts/Get-WorkIqConfigState.ps1` — Tier-A configuration detector skeleton.
   Samples `botcomponent` component types 18 / 15 / 16 and `aipluginoperation` to
-  classify `configuredTier` (`native-mcp-copilot-studio` / `native-api-direct` /
-  `adjacent` / `none`); native-MCP keys on the Azure Resource Graph `createdIn`
+  classify `configuredTier` (`NativeMcpCopilotStudio` / `NativeApiDirect` /
+  `Adjacent` / `NotConfigured`); native-MCP keys on the Azure Resource Graph `createdIn`
   value. Includes the build-time guard that `bot.generativeaiconfiguration` is
   not a Dataverse column.
 - `scripts/kql/workiq-tierB-defender.kql` — Tier-B telemetry query over Defender
