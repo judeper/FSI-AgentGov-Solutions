@@ -1,0 +1,84 @@
+// workiq-tierB-appinsights.kql
+// =============================================================================
+// Tier-B (telemetry) Work IQ invocation signal from Copilot Studio Application
+// Insights customEvents.
+//
+// Purpose:
+//   Detect runtime Work IQ invocations recorded in the agent's Application
+//   Insights resource. This is the TELEMETRY tier and must be joined with the
+//   Tier-A configuration output before asserting observedstatus. It also feeds
+//   KPI 3 (invoked within 7 days by business users).
+//
+// Test-traffic exclusion (verified):
+//   Maker test-canvas traffic is excluded by keeping only published/production
+//   runtime, where the designMode custom dimension is "False". Rows where
+//   designMode != "False" are authoring/test events and are dropped.
+//
+// Parameters:
+//   LookbackAppInsights - time window (default 7d; the business-user KPI window).
+//   WorkIqToolToken     - the Work IQ MCP tool identifier to match.
+//
+// Output Schema:
+//   Timestamp        (datetime) - event time
+//   AgentId          (string)   - invoking agent identifier (join key to Tier-A)
+//   UserId           (string)   - invoking account
+//   IsBusinessUser   (bool)     - non-maker, non-test heuristic (see Notes)
+//   TelemetrySource  (string)   - constant "AppInsightsCustomEvents"
+//
+// Supports:
+//   Control 3.2 (Primary)    - usage analytics / business impact reporting
+//   Control 2.9 (Supporting) - agent performance / runtime monitoring
+//
+// Notes:
+//   - Both workspace-based AppEvents and legacy customEvents are normalized.
+//   - The Work IQ event name / dimension layout is a build-time assumption;
+//     validate the WorkIqToolToken match path against your tenant payloads.
+//   - IsBusinessUser is a heuristic: production (designMode=="False") traffic by
+//     accounts that are not the agent maker and not flagged test. Refining the
+//     maker/test exclusion against the agent owner list is an extension point.
+//   - For direct Log Analytics execution, replace the let values with literals.
+// =============================================================================
+
+// Parameterized time range (KQL convention). 7d backs the business-user KPI.
+let LookbackAppInsights = 7d;
+// Replace with the Work IQ MCP tool identifier. Preview default: use-work-iq.
+let WorkIqToolToken = "use-work-iq";
+// Normalize workspace-based AppEvents and legacy customEvents into one shape.
+let WiqEvents = materialize(
+    union isfuzzy=true
+        (AppEvents
+        | project timestamp = TimeGenerated,
+                  name = tostring(Name),
+                  customDimensions = todynamic(Properties)),
+        (customEvents
+        | project timestamp = todatetime(column_ifexists("timestamp", datetime(null))),
+                  name = tostring(column_ifexists("name", "")),
+                  customDimensions = todynamic(column_ifexists("customDimensions", dynamic({}))))
+);
+WiqEvents
+| where timestamp > ago(LookbackAppInsights)
+| extend cd = todynamic(customDimensions)
+// Keep only published/production runtime; exclude maker test-canvas traffic.
+| where tostring(cd.designMode) == "False"
+// Match the Work IQ tool invocation (by event name or tool dimension).
+| where name has WorkIqToolToken
+    or tostring(cd.ToolName) has WorkIqToolToken
+    or tostring(cd.toolName) has WorkIqToolToken
+| extend AgentId = tostring(coalesce(cd.recipientId, cd.BotId, cd.botId))
+| extend UserId = tostring(coalesce(cd.userId, cd.UserId, cd.fromId))
+// Business-user heuristic: production traffic not flagged as a test interaction.
+| extend IsBusinessUser = tostring(cd.isTest) != "True"
+| project
+    Timestamp = timestamp,
+    AgentId,
+    UserId,
+    IsBusinessUser,
+    TelemetrySource = "AppInsightsCustomEvents"
+| order by Timestamp desc
+
+// -----------------------------------------------------------------------------
+// Purview Tier-B companion (reference only): CopilotInteraction and
+// AIPluginOperation* audit records are additional invocation sources collected
+// via the Purview / Microsoft Graph audit APIs (not Application Insights). They
+// are documented in docs/flow-configuration.md and joined in the nightly flow.
+// -----------------------------------------------------------------------------

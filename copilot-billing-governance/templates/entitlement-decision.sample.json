@@ -1,0 +1,70 @@
+{
+  "$comment": "Sample fsi_cbgentitlementmaterialized rows written by the switch-on-pathway entitlement engine (see docs/entitlement-contract.md). Illustrative only — keys are Dataverse LOGICAL column names (see docs/dataverse-schema.md). Option-set columns show the integer value Dataverse stores; the readable label is in fsi_notes. fsi_pathway: 100000000=none, 100000001=mcp-cs, 100000002=mcp-agentbuilder, 100000003=api-direct, 100000004=metered, 100000005=unmapped. fsi_decision: 100000000=Allow, 100000001=Block, 100000002=Allow - Eligibility N/A, 100000003=Fail-open - Anomaly, 100000004=Fail-closed - Zero-rating Unresolved. fsi_decisionreason: 100000000=No eligible cohort, 100000001=Missing license, 100000002=Zero-rating unresolved - fail-closed, 100000003=Not in credit scope, 100000004=Policy cap exceeded, 100000005=Unmapped pathway. fsi_relatedcoveragegapid is a lookup; bind on PATCH with \"fsi_RelatedCoverageGapId@odata.bind\": \"/fsi_cbgcoveragegaps(<guid>)\". UPNs are example identities, not real.",
+  "value": [
+    {
+      "fsi_name": "contoso-kb-assistant:user1@contoso.com",
+      "fsi_agentid": "contoso-kb-assistant",
+      "fsi_userupn": "user1@contoso.com",
+      "fsi_pathway": 100000000,
+      "fsi_decision": 100000002,
+      "fsi_decisionreason": null,
+      "fsi_spendscope": 100000000,
+      "fsi_sourcepolicyid": null,
+      "fsi_evaluatedat": "2026-06-09T02:15:01.0000000Z",
+      "fsi_ttlexpiresat": "2026-06-10T02:15:01.0000000Z",
+      "fsi_notes": "pathway=none -> ALLOW (eligibility N/A); explicit non-deny arm. Non-metered agent, no billing decision required."
+    },
+    {
+      "fsi_name": "contoso-research-copilot:analyst-eligible@contoso.com",
+      "fsi_agentid": "contoso-research-copilot",
+      "fsi_userupn": "analyst-eligible@contoso.com",
+      "fsi_pathway": 100000004,
+      "fsi_decision": 100000000,
+      "fsi_decisionreason": null,
+      "fsi_spendscope": 100000000,
+      "fsi_sourcepolicyid": "credit-policy-research-001",
+      "fsi_evaluatedat": "2026-06-09T02:15:02.0000000Z",
+      "fsi_ttlexpiresat": "2026-06-10T02:15:02.0000000Z",
+      "fsi_notes": "pathway=metered; user is in an eligible credit cohort -> ALLOW."
+    },
+    {
+      "fsi_name": "contoso-research-copilot:analyst1@contoso.com",
+      "fsi_agentid": "contoso-research-copilot",
+      "fsi_userupn": "analyst1@contoso.com",
+      "fsi_pathway": 100000004,
+      "fsi_decision": 100000001,
+      "fsi_decisionreason": 100000000,
+      "fsi_spendscope": 100000000,
+      "fsi_sourcepolicyid": "credit-policy-research-001",
+      "fsi_evaluatedat": "2026-06-09T02:15:03.0000000Z",
+      "fsi_ttlexpiresat": "2026-06-10T02:15:03.0000000Z",
+      "fsi_notes": "pathway=metered; bounded ELSE -> BLOCK (No eligible cohort). User is in no eligible billing cohort for a metered agent."
+    },
+    {
+      "fsi_name": "contoso-advisor-studio-bot:advisor10@contoso.com",
+      "fsi_agentid": "contoso-advisor-studio-bot",
+      "fsi_userupn": "advisor10@contoso.com",
+      "fsi_pathway": 100000001,
+      "fsi_decision": 100000004,
+      "fsi_decisionreason": 100000002,
+      "fsi_spendscope": 100000002,
+      "fsi_sourcepolicyid": "credit-policy-advisor-002",
+      "fsi_evaluatedat": "2026-06-09T02:15:04.0000000Z",
+      "fsi_ttlexpiresat": "2026-06-10T02:15:04.0000000Z",
+      "fsi_notes": "pathway=mcp-cs; user holds a Copilot license but the zero-rating conflict is unresolved (fsi_zeroratingresolved=false) and the user is not in credit scope -> FAIL-CLOSED. Re-evaluate after the June 2026 Licensing Guide."
+    },
+    {
+      "fsi_name": "contoso-pilot-agent:pilot-user@contoso.com",
+      "fsi_agentid": "contoso-pilot-agent",
+      "fsi_userupn": "pilot-user@contoso.com",
+      "fsi_pathway": 100000005,
+      "fsi_decision": 100000003,
+      "fsi_decisionreason": 100000005,
+      "fsi_spendscope": 100000000,
+      "fsi_sourcepolicyid": null,
+      "fsi_evaluatedat": "2026-06-09T02:15:05.0000000Z",
+      "fsi_ttlexpiresat": "2026-06-09T03:15:05.0000000Z",
+      "fsi_notes": "pathway=unmapped -> FAIL-OPEN with anomaly; classifier could not map the pathway. Short TTL so the decision is recomputed soon after the classifier is corrected."
+    }
+  ]
+}

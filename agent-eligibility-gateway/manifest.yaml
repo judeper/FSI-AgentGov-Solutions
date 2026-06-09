@@ -1,0 +1,29 @@
+id: agent-eligibility-gateway
+name: Agent Eligibility Gateway
+description: "Optional runtime allow/deny gateway (Azure API Management) for owned custom-web and Direct Line agent channels — validates Entra ID tokens, required claims, and the corrected billing entitlement contract before a request reaches the agent endpoint."
+version: 0.1.0-preview
+status: preview
+domain: access-identity
+tier: '3'
+controls:
+- '1.1'
+- '1.18'
+- '3.8'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-eligibility-gateway/
+dependencies:
+- copilot-agent-inventory
+- copilot-billing-governance
+prerequisites:
+  azure-admin: "Azure contributor on the resource group that hosts the API Management instance, to deploy the gateway, named values, and policy fragments."
+  security-admin: "Microsoft Entra ID Security Administrator (or Application Administrator) to register the gateway app, configure the audience/Viewers security groups, and grant the gateway managed identity read access to the governance store."
+verification: "Send one authenticated request through the gateway and confirm a decision row is written to fsi_aegdecisionlog (or the configured telemetry sink); send a request from a user in no eligible cohort on a metered pathway and confirm a 403 governed-deny response."
+upstreamDependency:
+  status: ga
+  note: "Azure API Management is generally available; this gateway applies only to owned custom-web/Direct Line channels — first-party Teams/M365/SharePoint surfaces cannot host middleware and rely on native controls plus telemetry drift."
+
+# CANONICAL DECISION (flagged assumption, 2026-06-09): scoped to the enterprise
+# (regulated/Managed) zone — runtime allow/deny on owned channels is an
+# enterprise-zone control. Confirm during issue #37-style zone ratification.
+zones:
+- enterprise
+dataClassification: confidential

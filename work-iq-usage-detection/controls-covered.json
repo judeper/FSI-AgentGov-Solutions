@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "work-iq-usage-detection",
+  "solutionName": "Work IQ Usage Detection",
+  "solutionVersion": "0.1.0-preview",
+  "status": "preview",
+  "controls": [
+    {
+      "id": "2.24",
+      "coverage": "full"
+    },
+    {
+      "id": "3.2",
+      "coverage": "full"
+    },
+    {
+      "id": "2.9",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}

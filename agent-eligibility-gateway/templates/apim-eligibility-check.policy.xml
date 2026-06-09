@@ -1,0 +1,222 @@
+<!--
+  Agent Eligibility Gateway — APIM policy fragment: eligibility-check
+  ============================================================================
+  Azure API Management policy fragment (Azure infrastructure, NOT a Power
+  Platform flow artifact). Author this in API Management as a reusable policy
+  fragment named "aeg-eligibility-check" and reference it from an API/operation
+  <inbound> section AFTER aeg-validate-jwt:
+
+      <inbound>
+        <include-fragment fragment-id="aeg-validate-jwt" />
+        <include-fragment fragment-id="aeg-eligibility-check" />
+        <base />
+      </inbound>
+
+  What it does (owned custom-web / Direct Line channels only):
+    1. Stamps a correlation ID and resolves the caller's object ID and groups
+       from the validated "jwt" variable.
+    2. Authorization gate (controls 1.1 / 1.18): the caller must be a member of
+       the agent's audience / Viewers security group, else 403.
+    3. Reads the agent's compliance posture and metered pathway from the
+       governance store (fsi_copilotagent) using the gateway MANAGED IDENTITY.
+    4. Applies the corrected switch-on-pathway entitlement contract:
+         - pathway "none"        -> ALLOW (billing eligibility N/A)
+         - agent non-compliant   -> DENY 403
+         - pathway "metered" and caller in NO eligible cohort -> DENY 403
+         - unmapped/unknown pathway -> ALLOW, stamped as an anomaly
+           (a detection defect must not deny a user)
+         - everything else (mcp-cs / mcp-agentbuilder / api-direct) -> ALLOW
+    5. Emits one structured per-decision telemetry record to the configured
+       sink. The sink (Event Hub -> Function / Stream Analytics) is responsible
+       for landing the row in fsi_aegdecisionlog, keeping the request path fast.
+    6. Returns a governed 403 JSON response on deny.
+
+  Named values referenced:
+    aeg-audience-group-id   Object ID of the audience / Viewers security group
+    aeg-dataverse-resource  Governance store resource URL (e.g. https://org.crm.dynamics.com)
+    aeg-decision-logger     API Management logger id for the decision telemetry sink
+    aeg-policy-version      Policy version string stamped on every decision
+    aeg-channel             Owned channel label for this API (custom-web | direct-line)
+
+  CROSS-SOLUTION COLUMNS (reconciled 2026-06-09 against the sibling schema scripts):
+  compliance posture = fsi_caicompliancestate.fsi_risklevel (keyed on fsi_agentid),
+  and the precomputed entitlement decision = fsi_cbgentitlementmaterialized
+  (.fsi_decision / .fsi_pathway / .fsi_decisionreason, keyed on fsi_agentid + fsi_userupn).
+  Re-verify these logical names against the live tenant metadata before production use.
+
+  Reference: https://learn.microsoft.com/azure/api-management/api-management-policy-expressions
+-->
+<fragment>
+  <!-- 1. Correlation ID (reuse an inbound one if the client supplied it). -->
+  <set-variable name="correlationId" value='@(context.Request.Headers.GetValueOrDefault("X-AEG-Correlation-Id", Guid.NewGuid().ToString()))' />
+
+  <!-- Agent identifier: prefer an explicit header, else a per-API named value. -->
+  <set-variable name="agentId" value='@(context.Request.Headers.GetValueOrDefault("X-Agent-Id", "{{aeg-agent-id}}"))' />
+
+  <!-- 2. Caller identity + audience membership from the validated token. -->
+  <set-variable name="callerOid" value='@{
+      var jwt = (Jwt)context.Variables["jwt"];
+      return jwt.Claims.ContainsKey("oid") ? jwt.Claims["oid"].FirstOrDefault() : "";
+  }' />
+  <set-variable name="callerUpn" value='@{
+      var jwt = (Jwt)context.Variables["jwt"];
+      if (jwt.Claims.ContainsKey("upn")) { return jwt.Claims["upn"].FirstOrDefault(); }
+      if (jwt.Claims.ContainsKey("preferred_username")) { return jwt.Claims["preferred_username"].FirstOrDefault(); }
+      return "";
+  }' />
+  <set-variable name="isAudienceMember" value='@{
+      var jwt = (Jwt)context.Variables["jwt"];
+      if (jwt.Claims.ContainsKey("groups")) {
+          return jwt.Claims["groups"].Contains("{{aeg-audience-group-id}}");
+      }
+      // Groups overage (caller in 200+ groups) omits the claim. The security
+      // gate fails CLOSED here; enable a managed-identity Graph checkMemberGroups
+      // fallback for large-group tenants (see docs/apim-gateway-setup.md).
+      return false;
+  }' />
+
+  <!-- 3. Governance-store lookups (gateway MANAGED IDENTITY). Two reads:
+       (a) agent compliance posture from copilot-agent-inventory, and
+       (b) the precomputed per-(agent,user) entitlement decision from
+       copilot-billing-governance. ignore-error keeps a transient store outage
+       from hard-failing; parsing below fails closed on compliance. -->
+  <send-request mode="new" response-variable-name="govResp" timeout="10" ignore-error="true">
+    <set-url>@{
+        var resource = "{{aeg-dataverse-resource}}";
+        var agentId = (string)context.Variables["agentId"];
+        return resource + "/api/data/v9.2/fsi_caicompliancestates?$select=fsi_risklevel&amp;$filter=fsi_agentid eq '" + agentId + "'";
+    }</set-url>
+    <set-method>GET</set-method>
+    <set-header name="Accept" exists-action="override"><value>application/json</value></set-header>
+    <set-header name="OData-MaxVersion" exists-action="override"><value>4.0</value></set-header>
+    <set-header name="OData-Version" exists-action="override"><value>4.0</value></set-header>
+    <set-header name="Prefer" exists-action="override"><value>odata.include-annotations="OData.Community.Display.V1.FormattedValue"</value></set-header>
+    <authentication-managed-identity resource="{{aeg-dataverse-resource}}" />
+  </send-request>
+
+  <!-- Compliance: fail closed if the row is missing or risk is High/Critical.
+       fsi_risklevel is a choice; read its formatted label via the annotation. -->
+  <set-variable name="agentCompliant" value='@{
+      try {
+          var resp = (IResponse)context.Variables["govResp"];
+          if (resp == null || resp.StatusCode != 200) { return false; }
+          var rows = resp.Body.As&lt;JObject&gt;(true)["value"] as JArray;
+          if (rows == null || rows.Count == 0) { return false; }
+          var risk = (string)rows[0]["fsi_risklevel@OData.Community.Display.V1.FormattedValue"];
+          return !(risk == "High" || risk == "Critical");
+      } catch (Exception) { return false; }
+  }' />
+
+  <!-- 4. Precomputed entitlement decision for THIS (agent, caller) from the
+       materialized cache. The billing engine already applied the switch-on-pathway
+       contract (pathway classification, license/credit-scope, caps). A missing row
+       means the pair was not materialized => unmapped => allow + anomaly. -->
+  <send-request mode="new" response-variable-name="entResp" timeout="10" ignore-error="true">
+    <set-url>@{
+        var resource = "{{aeg-dataverse-resource}}";
+        var agentId = (string)context.Variables["agentId"];
+        var upn = (string)context.Variables["callerUpn"];
+        return resource + "/api/data/v9.2/fsi_cbgentitlementmaterializeds?$select=fsi_decision,fsi_pathway,fsi_decisionreason&amp;$filter=fsi_agentid eq '" + agentId + "' and fsi_userupn eq '" + upn + "'";
+    }</set-url>
+    <set-method>GET</set-method>
+    <set-header name="Accept" exists-action="override"><value>application/json</value></set-header>
+    <set-header name="OData-MaxVersion" exists-action="override"><value>4.0</value></set-header>
+    <set-header name="OData-Version" exists-action="override"><value>4.0</value></set-header>
+    <set-header name="Prefer" exists-action="override"><value>odata.include-annotations="OData.Community.Display.V1.FormattedValue"</value></set-header>
+    <authentication-managed-identity resource="{{aeg-dataverse-resource}}" />
+  </send-request>
+
+  <set-variable name="entRow" value='@{
+      try {
+          var resp = (IResponse)context.Variables["entResp"];
+          if (resp == null || resp.StatusCode != 200) { return new JObject(); }
+          var rows = resp.Body.As&lt;JObject&gt;(true)["value"] as JArray;
+          if (rows == null || rows.Count == 0) { return new JObject(); }
+          return (JObject)rows[0];
+      } catch (Exception) { return new JObject(); }
+  }' />
+
+  <!-- Pathway label (or "unmapped" when no materialized row exists). -->
+  <set-variable name="pathway" value='@{
+      var v = (string)((JObject)context.Variables["entRow"])["fsi_pathway@OData.Community.Display.V1.FormattedValue"];
+      return string.IsNullOrEmpty(v) ? "unmapped" : v;
+  }' />
+  <set-variable name="hasEntRow" value='@(((JObject)context.Variables["entRow"]).HasValues)' />
+  <set-variable name="materializedAllow" value='@(((string)((JObject)context.Variables["entRow"])["fsi_decision@OData.Community.Display.V1.FormattedValue"]) == "Allow")' />
+  <set-variable name="materializedReason" value='@{
+      var r = (string)((JObject)context.Variables["entRow"])["fsi_decisionreason@OData.Community.Display.V1.FormattedValue"];
+      return string.IsNullOrEmpty(r) ? "NotEntitled" : r;
+  }' />
+
+  <!-- 4b. Resolve the deny reason once (switch-on-pathway; no side effects).
+       Order: audience gate -> compliance gate -> entitlement decision.
+       No materialized row => unmapped => allow, stamped as an anomaly below. -->
+  <set-variable name="denyReason" value='@{
+      var audienceOk = (bool)context.Variables["isAudienceMember"];
+      var compliant = (bool)context.Variables["agentCompliant"];
+      var hasRow = (bool)context.Variables["hasEntRow"];
+      var allow = (bool)context.Variables["materializedAllow"];
+      var reason = (string)context.Variables["materializedReason"];
+      if (audienceOk == false) { return "OutOfPolicyAudience"; }
+      if (compliant == false) { return "AgentNonCompliant"; }
+      if (hasRow == false) { return "None"; }
+      if (allow == false) { return reason; }
+      return "None";
+  }' />
+  <set-variable name="anomaly" value='@(new [] { "none", "mcp-cs", "mcp-agentbuilder", "api-direct", "metered" }.Contains((string)context.Variables["pathway"]) == false)' />
+  <set-variable name="decision" value='@(((string)context.Variables["denyReason"]) == "None" ? "Allow" : "Deny")' />
+
+  <!-- 5. Stamp policy metadata for the backend and downstream correlation. -->
+  <set-header name="X-AEG-Correlation-Id" exists-action="override">
+    <value>@((string)context.Variables["correlationId"])</value>
+  </set-header>
+  <set-header name="X-AEG-Decision" exists-action="override">
+    <value>@((string)context.Variables["decision"])</value>
+  </set-header>
+  <set-header name="X-AEG-Policy-Version" exists-action="override">
+    <value>{{aeg-policy-version}}</value>
+  </set-header>
+
+  <!-- 6. One structured decision record per request. The telemetry sink lands
+       it in fsi_aegdecisionlog asynchronously (see templates/decision-log.sample.json). -->
+  <log-to-eventhub logger-id="{{aeg-decision-logger}}">@{
+      return new JObject(
+          new JProperty("schemaVersion", "1.0"),
+          new JProperty("correlationId", (string)context.Variables["correlationId"]),
+          new JProperty("decisionTime", DateTime.UtcNow.ToString("o")),
+          new JProperty("agentId", (string)context.Variables["agentId"]),
+          new JProperty("userObjectId", (string)context.Variables["callerOid"]),
+          new JProperty("channel", "{{aeg-channel}}"),
+          new JProperty("pathway", (string)context.Variables["pathway"]),
+          new JProperty("decision", (string)context.Variables["decision"]),
+          new JProperty("denyReason", (string)context.Variables["denyReason"]),
+          new JProperty("anomaly", (bool)context.Variables["anomaly"]),
+          new JProperty("httpStatus", ((string)context.Variables["decision"]) == "Deny" ? 403 : 200),
+          new JProperty("policyVersion", "{{aeg-policy-version}}")
+      ).ToString(Newtonsoft.Json.Formatting.None);
+  }</log-to-eventhub>
+
+  <!-- 7. Governed deny (403). Authentication failures already returned 401 in
+       aeg-validate-jwt; this is the authenticated-but-not-eligible response. -->
+  <choose>
+    <when condition='@(((string)context.Variables["decision"]) == "Deny")'>
+      <return-response>
+        <set-status code="403" reason="Forbidden" />
+        <set-header name="Content-Type" exists-action="override">
+          <value>application/json</value>
+        </set-header>
+        <set-header name="X-AEG-Correlation-Id" exists-action="override">
+          <value>@((string)context.Variables["correlationId"])</value>
+        </set-header>
+        <set-body>@{
+            return new JObject(
+                new JProperty("error", "access_denied"),
+                new JProperty("message", "Your request was not authorized by the agent eligibility gateway. If you believe this is in error, contact your administrator and provide the correlation ID below."),
+                new JProperty("denyReason", (string)context.Variables["denyReason"]),
+                new JProperty("correlationId", (string)context.Variables["correlationId"])
+            ).ToString();
+        }</set-body>
+      </return-response>
+    </when>
+  </choose>
+</fragment>

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "agent-eligibility-gateway",
+  "solutionName": "Agent Eligibility Gateway",
+  "solutionVersion": "0.1.0-preview",
+  "status": "preview",
+  "controls": [
+    {
+      "id": "1.1",
+      "coverage": "full"
+    },
+    {
+      "id": "1.18",
+      "coverage": "full"
+    },
+    {
+      "id": "3.8",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 3
+}
