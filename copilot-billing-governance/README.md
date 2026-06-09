@@ -97,10 +97,11 @@ parts:
 
 The engine **switches on the consumption pathway** rather than denying by default.
 There is an explicit `none → ALLOW (eligibility N/A)` arm for the agent majority, a
-bounded `ELSE → block` **only inside the metered pathway**, a **fail-closed**
-zero-rating arm for `mcp-cs`, and a `unmapped → fail-open-with-anomaly` default so a
-classifier defect does not deny users. Full decision tree, pseudocode, and the
-zero-rating analysis are in
+bounded `ELSE → block` **only inside the metered pathway**, a **zero-rating-resolved**
+`mcp-cs` arm (license sufficient on a zero-rated M365 surface, per the June 2026
+Licensing Guide footnotes 6 & 7; reverts to fail-closed when set false), and a
+`unmapped → fail-open-with-anomaly` default so a classifier defect does not deny users.
+Full decision tree, pseudocode, and the zero-rating analysis are in
 [`docs/entitlement-contract.md`](docs/entitlement-contract.md).
 
 ## Components
@@ -163,11 +164,15 @@ sources.
 - **Switch-on-pathway replaces deny-by-default.** The corrected contract uses an
   explicit `none → ALLOW` arm and a bounded metered-only `ELSE → block`. Assumption:
   the agent majority is `none`-pathway (consumes no metered features).
-- **Zero-rating is CONFLICTED → fail-closed interim.** Whether Copilot-Studio–built
-  generative and tenant-grounded responses are zero-rated for Microsoft 365
-  Copilot–licensed users is in conflict across current sources. The interim posture
-  is fail-closed (`fsi_zeroratingresolved` defaults `false`), to be resolved against
-  the **June 2026 Microsoft Copilot Licensing Guide PDF** (highest-priority re-pull).
+- **Zero-rating is RESOLVED per the June 2026 Licensing Guide (footnotes 6 & 7).** A
+  Microsoft 365 Copilot–licensed user on a Microsoft 365 surface under their own
+  identity is included in the Microsoft 365 Copilot User SL at no additional charge, so
+  `fsi_zeroratingresolved` now defaults `true` and a Copilot-licensed `mcp-cs` user on a
+  zero-rated surface resolves to **Allow** — the license is sufficient, no credit scope
+  required. Non-Microsoft-365 surfaces, unlicensed users, and the
+  generative-answer-with-tenant-grounding / beyond-fair-use refinements remain
+  credit-metered — confirm per tenant. Set `-ZeroRatingResolved:$false` to revert to the
+  conservative fail-closed posture.
 - **Write APIs are unproven.** Credit-policy CRUD, per-agent caps, and hard-stop may
   have no public write API. Where absent, enforcement degrades to **detect-and-alert**
   (`fsi_cbg_enforcementmode`); CBG ships read/analysis-first.

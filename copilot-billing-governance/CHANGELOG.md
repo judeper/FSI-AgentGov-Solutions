@@ -53,6 +53,21 @@ FSI Copilot governance build.
   upstream dependency on Copilot Credits consumption billing; dependencies on
   `copilot-agent-inventory` and `work-iq-usage-detection`.
 
+### Changed
+
+- **Zero-rating resolved (default) per the June 2026 Microsoft Copilot Studio Licensing
+  Guide (footnotes 6 & 7).** `fsi_zeroratingresolved` now defaults `true`, and
+  `Invoke-EntitlementEvaluation.ps1 -ZeroRatingResolved` is a `[bool]` defaulting `$true`
+  (previously a fail-closed `[switch]`). A Copilot-licensed `mcp-cs` user on a Microsoft
+  365 surface under their own identity (`surfaceZeroRated = true`) now resolves to
+  **Allow** — included in the Microsoft 365 Copilot User SL, no credit scope required.
+  Unlicensed users, non-Microsoft-365 surfaces, and the
+  generative-answer-with-tenant-grounding / beyond-fair-use refinements remain
+  credit-metered (confirm per tenant). Pass `-ZeroRatingResolved:$false` to revert to the
+  conservative fail-closed posture. Updated `entitlement-decision.sample.json` and
+  `coverage-gap.sample.json` so the licensed M365-surface `mcp-cs` case shows Allow and
+  the blocked / needs-credit-scope illustration moves to a non-Microsoft-365 surface.
+
 ### Notes
 
 - **Proposed framework control 2.27 (Consumption-Entitlement Governance)** is
@@ -60,9 +75,10 @@ FSI Copilot governance build.
   rule-out of extending existing controls 2.26 (Entra Agent ID) and 1.18
   (App-Level Authorization). It is intentionally **not** listed in `manifest.yaml`,
   which carries only existing framework control IDs.
-- **Zero-rating is carried as CONFLICTED → fail-closed interim**, pending the
-  June 2026 Microsoft Copilot Licensing Guide PDF. `fsi_zeroratingresolved` defaults
-  to `false`.
+- **Zero-rating is RESOLVED (default)** per the June 2026 Microsoft Copilot Studio
+  Licensing Guide (footnotes 6 & 7); `fsi_zeroratingresolved` defaults to `true`. The
+  generative-answer-with-tenant-grounding and beyond-fair-use refinements remain a
+  per-tenant credit-cost caveat.
 - **Write APIs are unproven** — credit-policy CRUD, per-agent caps, and hard-stop may
   have no public write API; enforcement degrades to detect-and-alert until confirmed.
 - **Upstream dependencies** `copilot-agent-inventory` and `work-iq-usage-detection`

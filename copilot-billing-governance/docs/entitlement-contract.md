@@ -40,7 +40,7 @@ their specific obligations.
 |---|---|---|
 | `createdIn` | Azure Resource Graph (`PowerPlatformResources` table) | Pathway classification (which environment/tooling built the agent) |
 | `configuredTier` | Work IQ usage detection (`work-iq-usage-detection` solution) | Pathway classification + whether the agent uses metered features |
-| Tenant-grounding signal | Agent configuration (botcomponent) | Zero-rating modifier (grounded answers bill even for licensed users) |
+| Tenant-grounding signal | Agent configuration (botcomponent) | Zero-rating refinement (generative-answer-with-tenant-grounding can incur credit cost — a per-tenant cost refinement, not the base entitlement) |
 | User Copilot license | Microsoft Graph license read | Per-pathway eligibility |
 | Group membership | Entra security groups in the admission-gated registry (`fsi_cbgapprovedgrouppolicy`) | Eligible-cohort / credit-scope checks |
 | Credit / PAYG policy state | `fsi_cbgcreditpolicy`, `fsi_cbgbillingpolicy` | Surface (Chat vs SharePoint) and policy availability |
@@ -59,7 +59,7 @@ option set. **`configuredTier` is the authoritative signal and is evaluated firs
 `createdIn` is consulted **only as a last-resort fallback** when `configuredTier` is
 empty or unrecognized. This ordering is load-bearing: it keeps a Copilot-Studio
 `createdIn` from overriding an authoritative non-metered tier and forcing the agent
-majority into the fail-closed `mcp-cs` arm.
+majority into the stricter (license-gated) `mcp-cs` arm.
 
 The sibling `work-iq-usage-detection` classifier emits one of the following
 `configuredTier` values (compared lowercased): `NotConfigured`,
@@ -118,7 +118,7 @@ EvaluateEntitlement(agent, user):
         if user ∈ apiAudienceGroup: return ALLOW
         else:                       return BLOCK  reason = "No eligible cohort"
 
-    case mcp-cs:                          # ── zero-rating CONFLICT: fail-closed ──
+    case mcp-cs:                          # ── zero-rating RESOLVED (default) per Guide ──
         if not user.hasCopilotLicense:    return BLOCK   reason = "Missing license"
         if ZeroRatingResolved AND zeroRated(agent.surface):
                                           return ALLOW
@@ -142,32 +142,47 @@ Block reasons map to `fsi_cbg_blockreason`.
 
 ---
 
-## 5. Zero-rating modifier — CONFLICTED, fail-closed interim
+## 5. Zero-rating modifier — RESOLVED per the June 2026 Licensing Guide
 
-> **⚠️ Unresolved-pending-PDF.** Whether Copilot-Studio–built generative and
-> tenant-grounded responses are **zero-rated** for Microsoft 365 Copilot–licensed
-> users is **in conflict** across current sources. The interim encoding is
-> **fail-closed**: it is not treated as settled.
+> **✅ Resolved (default).** The **June 2026 Microsoft Copilot Studio Licensing
+> Guide** resolves the zero-rating question for the base case. **Footnote 7:** agents
+> built on Copilot Studio for Teams, SharePoint and Microsoft 365 Copilot are *included
+> with the Microsoft 365 Copilot user license at no additional charge*. **Footnote 6:**
+> employee-facing (Business-to-Employee) usage is *included in the Microsoft 365 Copilot
+> User SL* when the user is licensed with Microsoft 365 Copilot **and** the agent
+> operates using the authenticated Microsoft 365 Copilot User SL user's identity,
+> subject to fair-usage limits.
 
-Build-time finding: **CS-built generative / grounded responses bill even for
-M365-licensed users.** Therefore the `mcp-cs` arm requires a license **AND**
-(the surface is confirmed zero-rated **OR** the user is in credit scope):
+The `mcp-cs` arm requires a license **AND** (the surface is zero-rated **OR** the user
+is in credit scope):
 
 ```
 mcp-cs eligible  ⇔  hasCopilotLicense AND ( (ZeroRatingResolved AND zeroRated(surface))
                                             OR user ∈ creditScopeGroup )
 ```
 
-- `ZeroRatingResolved` is carried on each `fsi_cbgentitlement` row and **defaults to
-  `false`**, which keeps the rule fail-closed.
-- The conflict is to be resolved against the **June 2026 Microsoft Copilot Licensing
-  Guide PDF** (highest-priority re-pull). When that source confirms zero-rating, set
-  `ZeroRatingResolved = true` for the affected surfaces and re-run materialization.
-- Until then, `mcp-cs` users who are licensed but not in credit scope resolve to
-  **`Fail-closed - Zero-rating Unresolved`**, not a silent allow.
+- `ZeroRatingResolved` is carried on each `fsi_cbgentitlement` row and now **defaults to
+  `true`** per footnotes 6 & 7: a Copilot-licensed user on a Microsoft 365 surface under
+  their own identity (`surfaceZeroRated = true`) is **Allowed** — the license is
+  sufficient, no credit scope required.
+- Credit scope remains required for **unlicensed users, non-Microsoft-365 surfaces**
+  (`surfaceZeroRated = false`), and the documented refinement below.
+- **Residual refinement (confirm per tenant — do not over-claim).** The linked "Billing
+  rates and management" page separately states that generative-answer responses can
+  incur credit charges unless the agent is Agent-Builder-without-tenant-grounding, and
+  footnote 6's inclusion is bounded by fair-usage limits. Reconcile as: base agent usage
+  on M365 surfaces under a licensed user's identity is **included** (footnote 7), while
+  specific generative-answer-with-tenant-grounding operations and beyond-fair-use are a
+  **credit-metering refinement** to confirm per tenant. This affects credit **cost**,
+  not the base allow/deny for the footnote-7 case.
+- Set `ZeroRatingResolved = false` (script: `-ZeroRatingResolved:$false`) to revert to
+  the conservative fail-closed posture; licensed `mcp-cs` users not in credit scope then
+  resolve to **`Fail-closed - Zero-rating Unresolved`** rather than a silent allow.
 
-This is a deliberately conservative interim posture to avoid under-counting spend;
-it is expected to relax once the licensing source is confirmed.
+This default helps avoid over-counting spend for the included footnote-7 case while
+keeping the metered refinements credit-scoped; organizations should confirm the
+generative-grounding and fair-usage specifics against Microsoft licensing documentation
+for their tenant.
 
 ---
 
@@ -288,8 +303,11 @@ for ratification with the framework owner.
 - **Deny-by-default replaced.** The brief's global `ELSE → block` is replaced by
   switch-on-pathway with an explicit `none → ALLOW` arm and a bounded metered-only
   `ELSE`. Assumption: the agent majority is `none`-pathway.
-- **Zero-rating CONFLICT → fail-closed interim.** Carried as unresolved pending the
-  June 2026 Licensing Guide PDF. Not settled.
+- **Zero-rating RESOLVED per the June 2026 Licensing Guide (footnotes 6 & 7).** A
+  Copilot-licensed user on a Microsoft 365 surface under their own identity is included
+  in the Microsoft 365 Copilot User SL; `fsi_zeroratingresolved` defaults `true`.
+  Non-M365 surfaces, unlicensed users, and the generative-answer-with-tenant-grounding /
+  beyond-fair-use refinements remain credit-metered — confirm per tenant.
 - **`createdIn` / `configuredTier` are upstream.** Sourced from
   `copilot-agent-inventory` (ARG `PowerPlatformResources`) and
   `work-iq-usage-detection`. Work IQ GA / consumption-billing switch is **June 16

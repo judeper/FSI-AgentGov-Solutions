@@ -367,7 +367,7 @@ COLUMNS = {
         _picklist("PolicyType", "Policy Type", "Billing or credit policy backing this entitlement.", "fsi_cbg_policytype"),
         _boolean("RequiresLicense", "Requires License", "Whether the user must hold a Microsoft 365 Copilot license under this rule."),
         _boolean("RequiresBillingScope", "Requires Billing Scope", "Whether the user must also be in billing scope (mcp-cs generative/grounded answers bill even for licensed users)."),
-        _boolean("ZeroRatingResolved", "Zero Rating Resolved", "Whether the zero-rating conflict is resolved for this rule. Default false keeps the rule fail-closed pending the June 2026 Licensing Guide.", default=False),
+        _boolean("ZeroRatingResolved", "Zero Rating Resolved", "Whether the zero-rating conflict is resolved for this rule. Default true: the June 2026 Microsoft Copilot Studio Licensing Guide (footnotes 6 & 7) confirms a Copilot-licensed user on a Microsoft 365 surface under their own identity is included in the Microsoft 365 Copilot User SL at no additional charge. Set false to revert to the fail-closed posture. The generative-answer-with-tenant-grounding and beyond-fair-use refinements remain a per-tenant credit-cost caveat, not a change to this base entitlement.", default=True),
         _string("EligibleGroupId", "Eligible Group ID", "Entra security group object ID whose members are eligible under this rule."),
         _picklist("SpendScope", "Spend Scope", "Surface this entitlement governs.", "fsi_cbg_spendscope"),
         _picklist("ZoneClassification", "Zone Classification", "Governance zone this entitlement applies to.", "fsi_cbg_zoneclassification"),

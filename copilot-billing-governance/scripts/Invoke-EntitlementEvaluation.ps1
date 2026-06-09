@@ -15,9 +15,11 @@
       - mcp-agentbuilder  -> license required.
       - api-direct        -> API audience cohort required.
       - mcp-cs            -> license AND (zero-rating resolved AND surface zero-rated,
-                             OR user in credit scope); otherwise FAIL-CLOSED. The
-                             zero-rating conflict is unresolved pending the June 2026
-                             Licensing Guide, so the default is fail-closed.
+                             OR user in credit scope); otherwise FAIL-CLOSED. The June
+                             2026 Licensing Guide (footnotes 6 & 7) resolves the base
+                             case, so the default is resolved: a Copilot-licensed user
+                             on a zero-rated M365 surface under their identity is
+                             Allowed.
       - metered           -> eligible cohort required (the only bounded ELSE -> block).
       - unmapped          -> FAIL-OPEN with anomaly; a detection defect must not deny
                              a user.
@@ -44,8 +46,13 @@
     When omitted, the result object is written to the pipeline only.
 
 .PARAMETER ZeroRatingResolved
-    When set, treats the zero-rating conflict as resolved (only flip this once the
-    June 2026 Licensing Guide confirms zero-rating). Default is unset (fail-closed).
+    Treats the zero-rating conflict as resolved. Defaults to $true per the June 2026
+    Microsoft Copilot Studio Licensing Guide (footnotes 6 & 7): a Copilot-licensed user
+    on a Microsoft 365 surface under their own identity is included in the Microsoft 365
+    Copilot User SL at no additional charge, so the mcp-cs arm allows when the surface is
+    zero-rated. Pass -ZeroRatingResolved:$false to revert to the conservative fail-closed
+    posture. The generative-answer-with-tenant-grounding and beyond-fair-use refinements
+    affect credit cost, not this base entitlement, and are confirmed per tenant.
 
 .PARAMETER CacheTtlMinutes
     Time-to-live, in minutes, stamped onto each materialized decision
@@ -65,12 +72,14 @@
 
 .EXAMPLE
     PS> .\Invoke-EntitlementEvaluation.ps1 -InputPath .\agents.fixture.json -OutputPath .\result.json
-    Evaluates entitlement for the fixture agents (fail-closed zero-rating) and writes
-    decisions plus per-agent coverage gaps to result.json.
+    Evaluates entitlement for the fixture agents (zero-rating resolved by default per the
+    June 2026 Licensing Guide) and writes decisions plus per-agent coverage gaps to
+    result.json.
 
 .EXAMPLE
-    PS> .\Invoke-EntitlementEvaluation.ps1 -InputPath .\agents.fixture.json -ZeroRatingResolved
-    Evaluates with zero-rating treated as resolved (post June 2026 Licensing Guide).
+    PS> .\Invoke-EntitlementEvaluation.ps1 -InputPath .\agents.fixture.json -ZeroRatingResolved:$false
+    Reverts to the conservative fail-closed posture; licensed mcp-cs users not in credit
+    scope resolve to Fail-closed - Zero-rating Unresolved.
 
 .NOTES
     Dataverse logical names are lowercase with no inter-word underscores. Option-set
@@ -88,7 +97,7 @@ param(
     [string]$OutputPath,
 
     [Parameter()]
-    [switch]$ZeroRatingResolved,
+    [bool]$ZeroRatingResolved = $true,
 
     [Parameter()]
     [ValidateRange(1, 525600)]
@@ -212,7 +221,7 @@ function Resolve-EntitlementDecision {
     param(
         [Parameter(Mandatory)][string]$PathwayName,
         [Parameter(Mandatory)][psobject]$User,
-        [Parameter()][bool]$ZeroRatingIsResolved = $false
+        [Parameter()][bool]$ZeroRatingIsResolved = $true
     )
 
     switch ($PathwayName) {
@@ -233,17 +242,22 @@ function Resolve-EntitlementDecision {
             return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.NoEligibleCohort; Note = 'pathway=api-direct; user not in API audience cohort -> BLOCK (No eligible cohort).' }
         }
         'mcp-cs' {
-            # Zero-rating CONFLICT -> fail-closed interim.
+            # June 2026 Licensing Guide footnotes 6 & 7 resolve the base case: a Copilot-
+            # licensed user on a zero-rated M365 surface under their own identity is
+            # included in the M365 Copilot User SL at no additional charge. Credit scope
+            # still covers non-M365 surfaces / unlicensed paths. Generative-answer-with-
+            # tenant-grounding + beyond-fair-use are a credit-cost refinement (confirm per
+            # tenant), not a change to this allow/deny.
             if (-not $User.hasCopilotLicense) {
                 return @{ Decision = $script:Decision.Block; Reason = $script:BlockReason.MissingLicense; Note = 'pathway=mcp-cs; no Copilot license -> BLOCK (Missing license).' }
             }
             if ($ZeroRatingIsResolved -and $User.surfaceZeroRated) {
-                return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=mcp-cs; zero-rating resolved and surface zero-rated -> ALLOW.' }
+                return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=mcp-cs; licensed and on a zero-rated M365 surface under the user identity -> ALLOW (included in the M365 Copilot User SL per the June 2026 Licensing Guide, footnotes 6 & 7).' }
             }
             if ($User.inCreditScopeGroup) {
                 return @{ Decision = $script:Decision.Allow; Reason = $null; Note = 'pathway=mcp-cs; user in credit scope -> ALLOW.' }
             }
-            return @{ Decision = $script:Decision.FailClosedZeroRating; Reason = $script:BlockReason.ZeroRatingUnresolved; Note = 'pathway=mcp-cs; licensed but zero-rating unresolved and not in credit scope -> FAIL-CLOSED. Re-evaluate after the June 2026 Licensing Guide.' }
+            return @{ Decision = $script:Decision.FailClosedZeroRating; Reason = $script:BlockReason.ZeroRatingUnresolved; Note = 'pathway=mcp-cs; licensed but surface not zero-rated (or zero-rating reverted) and not in credit scope -> FAIL-CLOSED. A zero-rated M365 surface under the user identity is included per the June 2026 Licensing Guide (footnotes 6 & 7); non-M365 surfaces require credit scope.' }
         }
         'metered' {
             # The only unbounded-population ELSE, bounded to a metered pathway.
@@ -376,7 +390,7 @@ foreach ($agent in $agents) {
     }
 
     foreach ($user in $intendedUsers) {
-        $resolved = Resolve-EntitlementDecision -PathwayName $pathwayName -User $user -ZeroRatingIsResolved:$ZeroRatingResolved.IsPresent
+        $resolved = Resolve-EntitlementDecision -PathwayName $pathwayName -User $user -ZeroRatingIsResolved $ZeroRatingResolved
 
         $record = [pscustomobject]@{
             fsi_name           = "$($agent.agentId):$($user.upn)"
@@ -401,7 +415,7 @@ foreach ($agent in $agents) {
 
 $result = [pscustomobject]@{
     EvaluatedAt        = $now.ToString('o')
-    ZeroRatingResolved = $ZeroRatingResolved.IsPresent
+    ZeroRatingResolved = $ZeroRatingResolved
     CacheTtlMinutes    = $CacheTtlMinutes
     DecisionCount      = $allDecisions.Count
     AgentCount         = $agents.Count
