@@ -841,8 +841,10 @@ def generate_docs(output_path: str) -> None:
     lines = [
         "# Copilot Agent Inventory - Dataverse Schema",
         "",
-        "Auto-generated schema documentation. Do not edit manually — regenerate"
-        " with `python scripts/create_cai_dataverse_schema.py --output-docs`.",
+        (
+            "Auto-generated schema documentation. Do not edit manually — regenerate"
+            " with `python scripts/create_cai_dataverse_schema.py --output-docs`."
+        ),
         "",
         "## Overview",
         "",
@@ -853,11 +855,13 @@ def generate_docs(output_path: str) -> None:
         "`fsi_Name` on each table). All entities use the `fsi_` publisher "
         "prefix.",
         "",
-        "> **Logical-name convention.** Dataverse logical names are the "
-        "SchemaName lowercased with NO underscores between words "
-        "(`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> "
-        "`fsi_agentid`). Always use logical names in OData `$select` / "
-        "`$filter` / `$orderby`.",
+        (
+            "> **Logical-name convention.** Dataverse logical names are the "
+            "SchemaName lowercased with NO underscores between words "
+            "(`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> "
+            "`fsi_agentid`). Always use logical names in OData `$select` / "
+            "`$filter` / `$orderby`."
+        ),
         "",
         "---",
         "",
@@ -898,7 +902,7 @@ def generate_docs(output_path: str) -> None:
             "",
             f"**Ownership:** {table_def['ownership']}  ",
             f"**Entity set:** `{table_def.get('entity_set_name', logical + 's')}`  ",
-            f"**Primary name column:** `fsi_name`  ",
+            "**Primary name column:** `fsi_name`  ",
             f"**Description:** {table_def['description']}",
             "",
             "| Column (SchemaName) | Logical name | Type | Required | Description |",

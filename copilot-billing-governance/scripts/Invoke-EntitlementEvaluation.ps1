@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Evaluates Copilot consumption entitlement using the switch-on-pathway contract and
     produces per-agent coverage-gap aggregates (monitor-only).

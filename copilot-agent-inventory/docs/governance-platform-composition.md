@@ -1,8 +1,8 @@
 # Governance Platform Composition — Copilot Agent Governance
 
-> **Cloud scope.** This content targets **US commercial-cloud Microsoft 365 /
-> Power Platform**. Government and sovereign clouds are out of scope; verify
-> applicability independently with Microsoft.
+> **Cloud scope.** This content targets **US commercial Microsoft 365 /
+> Power Platform** only. Other Microsoft cloud environments are out of scope;
+> verify applicability independently with Microsoft.
 
 This is a **composition (wiring) guide**, not a flow export. It maps the five
 pillars of the Copilot agent governance platform to the four net-new solutions
