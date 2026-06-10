@@ -23,6 +23,7 @@ is safe.
 
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 
@@ -158,3 +159,21 @@ def test_reconcile_sources_returns_sorted_lists() -> None:
     arg_agents = [{"fsi_agentid": "z"}, {"fsi_agentid": "a"}, {"fsi_agentid": "m"}]
     result = da.reconcile_sources(arg_agents, [])
     assert result["in_arg_only"] == ["a", "m", "z"]
+
+
+def test_reconcile_sources_disjoint_id_spaces_warns(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Both layers return agents yet share zero ids: the id-space smoke check (H-3)
+    # must warn loudly rather than silently reporting a 100% false drift. in_both
+    # stays empty because the populations genuinely do not intersect.
+    arg_agents = [{"fsi_agentid": "11111111-0000-0000-0000-000000000001"}]
+    scanned_agents = [{"fsi_agentid": "22222222-0000-0000-0000-000000000002"}]
+
+    with caplog.at_level(logging.WARNING, logger=da.logger.name):
+        result = da.reconcile_sources(arg_agents, scanned_agents)
+
+    assert result["in_both"] == []
+    assert any(
+        "id-space check FAILED" in record.getMessage() for record in caplog.records
+    ), "expected the H-3 id-space-split warning to be emitted"

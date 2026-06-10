@@ -69,3 +69,35 @@ Describe 'Test-EligibilityPrecondition' {
         (Test-EligibilityPrecondition -AuthModeValue 4 -AuthTriggerValue 1).Reason | Should -Not -BeNullOrEmpty
     }
 }
+
+Describe 'Test-AgentEligibilityPrecondition.ps1 end-to-end (exit-code contract)' {
+    BeforeAll {
+        $script:E2EScript = (Resolve-Path (Join-Path $PSScriptRoot '..' 'scripts' 'Test-AgentEligibilityPrecondition.ps1')).Path
+        # The script body calls exit, so it must run in a CHILD process or it would
+        # terminate the Pester runner. Reuse the current PowerShell executable.
+        $script:PwshExe = (Get-Process -Id $PID).Path
+    }
+
+    It 'exits 0 and reports Pass for an Entra ID mode with require-users-to-sign-in' {
+        $out = & $script:PwshExe -NoProfile -NonInteractive -File $script:E2EScript -AuthenticationMode Integrated -RequireUsersToSignIn
+        $exitCode = $LASTEXITCODE
+
+        # The child renders the result object with ANSI color codes; strip them so
+        # the Precondition line matches as plain text.
+        $plain = ($out -join "`n") -replace '\x1b\[[0-9;]*m', ''
+        $exitCode | Should -Be 0
+        $plain | Should -Match 'Precondition\s*:\s*Pass'
+    }
+
+    It 'exits 1 and reports Fail for Generic OAuth2 (authenticated but not Microsoft Entra ID)' {
+        # A non-zero native exit code must stay non-terminating so it does not abort
+        # the runner under PS 7.4 PSNativeCommandUseErrorActionPreference.
+        $PSNativeCommandUseErrorActionPreference = $false
+        $out = & $script:PwshExe -NoProfile -NonInteractive -File $script:E2EScript -AuthenticationMode GenericOAuth2 -RequireUsersToSignIn 2>$null
+        $exitCode = $LASTEXITCODE
+
+        $plain = ($out -join "`n") -replace '\x1b\[[0-9;]*m', ''
+        $exitCode | Should -Be 1
+        $plain | Should -Match 'Precondition\s*:\s*Fail'
+    }
+}

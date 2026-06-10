@@ -47,11 +47,16 @@ BeforeAll {
     $script:DecisionFailOpenAnomaly      = 100000003
     $script:DecisionFailClosedZeroRating = 100000004
 
-    $script:PathwayNone      = 100000000
-    $script:PathwayMcpCs     = 100000001
-    $script:PathwayApiDirect = 100000003
-    $script:PathwayMetered   = 100000004
-    $script:PathwayUnmapped  = 100000005
+    $script:PathwayNone            = 100000000
+    $script:PathwayMcpCs           = 100000001
+    $script:PathwayMcpAgentBuilder = 100000002
+    $script:PathwayApiDirect       = 100000003
+    $script:PathwayMetered         = 100000004
+    $script:PathwayUnmapped        = 100000005
+
+    # fsi_cbgblockreason option-set integer surfaced by the coverage-gap aggregate
+    # (fsi_blockreasonsummary); mirrors the engine's $script:BlockReason map.
+    $script:BlockReasonNoEligibleCohort = 100000000
 
     # Returns a fresh intended-user hashtable with every flag present (the engine
     # runs under Set-StrictMode -Version Latest, so each referenced property must
@@ -71,7 +76,7 @@ BeforeAll {
     # reads directly (createdIn / configuredTier are accessed without a guard).
     function Get-CbgAgent {
         param(
-            [Parameter(Mandatory)][string]$ConfiguredTier,
+            [Parameter(Mandatory)][AllowEmptyString()][string]$ConfiguredTier,
             [Parameter(Mandatory)][AllowEmptyString()][string]$CreatedIn,
             [Parameter(Mandatory)][hashtable]$User
         )
@@ -81,6 +86,27 @@ BeforeAll {
             createdIn      = $CreatedIn
             configuredTier = $ConfiguredTier
             intendedUsers  = @($User)
+        }
+    }
+
+    # Like Get-CbgAgent but carries an arbitrary intended-user set, so the per-agent
+    # coverage-gap aggregate (fsi_cbgcoveragegap) can be exercised with a mixed
+    # Allow/Block population. ConfiguredTier/CreatedIn accept empty strings so the
+    # createdIn fallback classifier can be driven directly.
+    function Get-CbgAgentWithUsers {
+        param(
+            [Parameter(Mandatory)][AllowEmptyString()][string]$ConfiguredTier,
+            [Parameter(Mandatory)][AllowEmptyString()][string]$CreatedIn,
+            [Parameter(Mandatory)][object[]]$Users,
+            [Parameter()][string]$AgentId = 'agent-cov-0001',
+            [Parameter()][string]$AgentName = 'Coverage Fixture Agent'
+        )
+        return @{
+            agentId        = $AgentId
+            agentName      = $AgentName
+            createdIn      = $CreatedIn
+            configuredTier = $ConfiguredTier
+            intendedUsers  = @($Users)
         }
     }
 
@@ -114,6 +140,12 @@ BeforeAll {
     function Get-CbgFirstDecision {
         param([Parameter(Mandatory)][psobject]$Result)
         return @($Result.Decisions)[0]
+    }
+
+    # A single-agent fixture emits exactly one coverage-gap aggregate; return it.
+    function Get-CbgFirstGap {
+        param([Parameter(Mandatory)][psobject]$Result)
+        return @($Result.CoverageGaps)[0]
     }
 }
 
@@ -196,6 +228,69 @@ Describe 'Pathway mcp-cs (Copilot Studio native MCP)' {
         $decision.fsi_pathway | Should -Be $script:PathwayMcpCs
         $decision.fsi_decision | Should -Be $script:DecisionBlock
     }
+
+    It 'allows a licensed user not on a zero-rated surface when in credit scope' {
+        # License held and the surface is NOT zero-rated, but the user is in the
+        # credit-scope group -> the credit-scope fallback grants ALLOW. This covers
+        # the third mcp-cs allow gate (inCreditScopeGroup), distinct from the
+        # zero-rated-surface gate exercised above.
+        $user = Get-CbgBaselineUser
+        $user.hasCopilotLicense = $true
+        $user.surfaceZeroRated = $false
+        $user.inCreditScopeGroup = $true
+        $agent = Get-CbgAgent -ConfiguredTier 'NativeMcpCopilotStudio' -CreatedIn 'Copilot Studio' -User $user
+
+        $decision = Get-CbgFirstDecision -Result (Invoke-CbgEngine -Agents @($agent))
+
+        $decision.fsi_pathway | Should -Be $script:PathwayMcpCs
+        $decision.fsi_decision | Should -Be $script:DecisionAllow
+    }
+
+    It 'fails closed by default when licensed, surface not zero-rated, and no credit scope' {
+        # ZeroRatingResolved is left at the engine default (true), yet the surface is
+        # NOT zero-rated and the user is not in credit scope. "Resolved" must not be
+        # mistaken for "always allow": the base case still requires an actual
+        # zero-rated surface (or credit scope), so this -> FAIL-CLOSED.
+        $user = Get-CbgBaselineUser
+        $user.hasCopilotLicense = $true
+        $user.surfaceZeroRated = $false
+        $user.inCreditScopeGroup = $false
+        $agent = Get-CbgAgent -ConfiguredTier 'NativeMcpCopilotStudio' -CreatedIn 'Copilot Studio' -User $user
+
+        $result = Invoke-CbgEngine -Agents @($agent)
+        $decision = Get-CbgFirstDecision -Result $result
+
+        $result.ZeroRatingResolved | Should -BeTrue
+        $decision.fsi_pathway | Should -Be $script:PathwayMcpCs
+        $decision.fsi_decision | Should -Be $script:DecisionFailClosedZeroRating
+    }
+}
+
+Describe 'Pathway mcp-agentbuilder (Agent Builder via createdIn fallback)' {
+    # configuredTier is empty, so the engine falls back to the createdIn regex
+    # (agent.?builder) to classify the agentbuilder pathway. License is the only
+    # gate on this arm: licensed -> Allow, unlicensed -> Block (Missing license).
+    It 'allows a licensed user (createdIn fallback classifies the agentbuilder pathway)' {
+        $user = Get-CbgBaselineUser
+        $user.hasCopilotLicense = $true
+        $agent = Get-CbgAgent -ConfiguredTier '' -CreatedIn 'Microsoft 365 Copilot Agent Builder' -User $user
+
+        $decision = Get-CbgFirstDecision -Result (Invoke-CbgEngine -Agents @($agent))
+
+        $decision.fsi_pathway | Should -Be $script:PathwayMcpAgentBuilder
+        $decision.fsi_decision | Should -Be $script:DecisionAllow
+    }
+
+    It 'blocks an unlicensed user with the missing-license outcome' {
+        $user = Get-CbgBaselineUser
+        $user.hasCopilotLicense = $false
+        $agent = Get-CbgAgent -ConfiguredTier '' -CreatedIn 'Microsoft 365 Copilot Agent Builder' -User $user
+
+        $decision = Get-CbgFirstDecision -Result (Invoke-CbgEngine -Agents @($agent))
+
+        $decision.fsi_pathway | Should -Be $script:PathwayMcpAgentBuilder
+        $decision.fsi_decision | Should -Be $script:DecisionBlock
+    }
 }
 
 Describe 'Pathway api-direct (declarative / API)' {
@@ -257,5 +352,68 @@ Describe 'Pathway unmapped (classifier anomaly)' {
 
         $decision.fsi_pathway | Should -Be $script:PathwayUnmapped
         $decision.fsi_decision | Should -Be $script:DecisionFailOpenAnomaly
+    }
+}
+
+Describe 'CoverageGaps per-agent aggregate (fsi_cbgcoveragegap)' {
+    It 'counts eligible vs blocked users and summarizes the dominant block reason' {
+        # api-direct: one user in the API audience cohort (Allow) and two outside it
+        # (Block - No eligible cohort). The aggregate must report 1 eligible, 2
+        # blocked, a JSON sample array of the two blocked UPNs, and the dominant
+        # block-reason summary.
+        $allowed = Get-CbgBaselineUser
+        $allowed.upn = 'allowed@contoso.com'
+        $allowed.inApiAudienceGroup = $true
+        $blocked1 = Get-CbgBaselineUser
+        $blocked1.upn = 'blocked1@contoso.com'
+        $blocked1.inApiAudienceGroup = $false
+        $blocked2 = Get-CbgBaselineUser
+        $blocked2.upn = 'blocked2@contoso.com'
+        $blocked2.inApiAudienceGroup = $false
+        $agent = Get-CbgAgentWithUsers -ConfiguredTier 'NativeApiDirect' -CreatedIn 'API' -Users @($allowed, $blocked1, $blocked2)
+
+        $gap = Get-CbgFirstGap -Result (Invoke-CbgEngine -Agents @($agent))
+
+        $gap.fsi_pathway | Should -Be $script:PathwayApiDirect
+        $gap.fsi_eligibleusers | Should -Be 1
+        $gap.fsi_blockeduserscount | Should -Be 2
+
+        $sample = $gap.fsi_blockedsampleupns | ConvertFrom-Json
+        @($sample).Count | Should -Be 2
+        $sample | Should -Contain 'blocked1@contoso.com'
+        $sample | Should -Contain 'blocked2@contoso.com'
+
+        $gap.fsi_blockreasonsummary | Should -Be $script:BlockReasonNoEligibleCohort
+    }
+
+    It 'serializes a single blocked UPN as a JSON array, not a bare string (M-2 -AsArray guard)' {
+        # A lone blocked user must still round-trip to a one-element JSON array.
+        # Dropping -AsArray in the engine would emit the bare string "upn" instead of
+        # ["upn"], so the exact-string assertion below catches that regression.
+        $blocked = Get-CbgBaselineUser
+        $blocked.upn = 'solo-blocked@contoso.com'
+        $blocked.inApiAudienceGroup = $false
+        $agent = Get-CbgAgentWithUsers -ConfiguredTier 'NativeApiDirect' -CreatedIn 'API' -Users @($blocked)
+
+        $gap = Get-CbgFirstGap -Result (Invoke-CbgEngine -Agents @($agent))
+
+        $gap.fsi_blockeduserscount | Should -Be 1
+        $gap.fsi_blockedsampleupns | Should -Be '["solo-blocked@contoso.com"]'
+        ($gap.fsi_blockedsampleupns | ConvertFrom-Json) | Should -Be 'solo-blocked@contoso.com'
+    }
+
+    It 'emits an empty JSON array literal when no users are blocked (M-2 zero-cardinality guard)' {
+        # All users allowed -> fsi_blockedsampleupns must be the literal '[]' string,
+        # never an empty or null value.
+        $allowed = Get-CbgBaselineUser
+        $allowed.upn = 'all-allowed@contoso.com'
+        $allowed.inApiAudienceGroup = $true
+        $agent = Get-CbgAgentWithUsers -ConfiguredTier 'NativeApiDirect' -CreatedIn 'API' -Users @($allowed)
+
+        $gap = Get-CbgFirstGap -Result (Invoke-CbgEngine -Agents @($agent))
+
+        $gap.fsi_eligibleusers | Should -Be 1
+        $gap.fsi_blockeduserscount | Should -Be 0
+        $gap.fsi_blockedsampleupns | Should -Be '[]'
     }
 }
