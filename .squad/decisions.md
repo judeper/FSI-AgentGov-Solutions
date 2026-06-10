@@ -70,6 +70,37 @@
 
 **Issue #123 stays OPEN:** Live-tenant sign-off still outstanding: real 201 from agentIdentity POST, reviewer-evidence 400→PATCH fallback, open-type extension acceptance, New-ComplianceTag creation + idempotent detect, portal screenshots.
 
+## 2026-06-09: PR #322 Copilot Governance Test Coverage Review
+
+### PR #322 coverage additions, and a deviation on N1 (pytest basename collision) — Saul
+
+**Branch:** `feat/copilot-governance-tests` | **PR:** #322
+
+**Summary:** Added owl-mode-requested coverage (N2, N3, N4, S2, S3) to existing test suites — all green. Tests only; no production script modified; no production bug found. One task (N1) required deliberate deviation, documented below.
+
+**Deviation: N1 fixed via unique basenames, not `tests/__init__.py`**
+
+**Instruction:** drop an empty `tests/__init__.py` into four solution test dirs to resolve shared basename `test_dataverse_logical_names.py` collision (stated as "zero CI behaviour change").
+
+**Why the instruction was not followed literally — verified broken two ways:**
+1. **Does not fix plain multi-dir pytest:** Adding `tests/__init__.py` only converts top-level collision into `tests` *package* collision. Solution directories contain hyphens (cannot be Python packages), so prepend mode never produces unique module name. `pytest copilot-agent-inventory/tests copilot-billing-governance/tests -q` STILL errors with `import file mismatch`.
+2. **Double-counts under importlib (CI's mode):** With four `__init__.py` present, `pytest <4 dirs> --import-mode=importlib` collected **483** tests instead of correct **377** (+106 phantom duplicates). CI's repo-wide step runs `--import-mode=importlib` (`.github/workflows/ci-python.yml` lines 75-76), shipping the `__init__.py` would corrupt CI suite — opposite of "zero CI behaviour change".
+
+**Fix Applied (Option C):** Renamed four test files to unique slug-prefixed basenames (using each solution's existing schema-script slug):
+- copilot-billing-governance: `test_dataverse_logical_names.py` → `test_cbg_dataverse_logical_names.py`
+- copilot-agent-inventory: `test_dataverse_logical_names.py` → `test_cai_dataverse_logical_names.py`
+- work-iq-usage-detection: `test_dataverse_logical_names.py` → `test_wiq_dataverse_logical_names.py`
+- agent-eligibility-gateway: `test_dataverse_logical_names.py` → `test_aeg_dataverse_logical_names.py`
+
+(This is pytest's own error HINT recommendation: "use a unique basename".)
+
+**Outcome:**
+- Plain `pytest <4 dirs>` = 377 passed (no error)
+- Importlib `<4 dirs>` = 377 (both modes now agree)
+- **Zero CI / config change:** renamed files still match `*test_*.py` / `**/tests/**/*.py` globs; no `pyproject.toml` edit needed
+
+**Team-relevant takeaway:** For this repo, cross-multiple-solution test runs use `--import-mode=importlib` (already CI standard). Duplicate test basenames should be given unique names; `tests/__init__.py` does not solve cross-solution prepend collisions and double-counts under importlib.
+
 ## Active Decisions
 
 No decisions recorded yet.
