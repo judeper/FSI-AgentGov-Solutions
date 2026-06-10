@@ -205,6 +205,52 @@ Fixed 78→79 control-count guardrails in:
 
 **No code changes to solutions repo** — this entry records cross-repo completion for squad bookkeeping. Playbook authoring (Linus) and playbook PR are separate tasks (not in scope of this entry).
 
+## 2026-06-10: Issue #440 Follow-Up — Verification of 3 Hedged Fact-Clusters + MLC Fix
+
+### Issue #440 Follow-Up: Primary-Source Verification Complete (Coordinator)
+
+**Date:** 2026-06-10T22:07Z  
+**Related Issue:** judeper/FSI-AgentGov#440  
+**Framework PR:** judeper/FSI-AgentGov#443 (squash-merged, commit 73f4b59)
+
+**Scope:** Cross-repo Control 2.27 verification; solutions-repo .squad coordination only (work done in framework repo).
+
+**3 Hedged Fact-Clusters Verified Against Primary Sources:**
+
+1. **Zero-Rating Footnotes 6 & 7 CONFIRMED**
+   - **Claim (hedged):** CS-built agents on Teams/SharePoint/M365 Copilot under licensed user's identity included in M365 Copilot User SL (footnote 6) + CS agents on Teams/SharePoint/M365 Copilot zero-rated (footnote 7).
+   - **Verification method:** Parsed June 2026 Copilot Studio Licensing Guide PDF directly (MarkitDown). Cross-referenced Learn licensing-billing-manage-copilot-studio.
+   - **Result:** CONFIRMED — FN6 states fair-use-limited inclusion; FN7 confirms no additional charge. Status: **Remove 🔎 flag post-GA (2026-06-16 on actual).**
+   - **Citation:** `Copilot Studio Licensing Guide (June 2026), footnotes 6–7`; `https://learn.microsoft.com/power-platform/power-automate/billing/`
+
+2. **No Enforceable-Cap Write API CONFIRMED**
+   - **Claim (hedged):** Dataverse per-agent caps cannot be enforced via write API (Billing Policy CRUD API present, but lacks `credit_cap` field).
+   - **Verification method:** Searched Learn manage-copilot-studio-messages-capacity; parsed API reference Billing Policy. Determined per-agent cap UI is PPAC-only (Licensing > Copilot Studio > Manage Agents).
+   - **Result:** CONFIRMED — No cap field in Billing Policy API. Enforcement degrades to detect-and-alert. Status: **Detect-and-alert validation pending (schedule per MRM roadmap work); 🔎 flag removable after validation run.**
+   - **Citation:** `https://learn.microsoft.com/power-platform/power-automate/processes/process-center-billing-and-licensing#manage-copilot-studio-messages-capacity`; `https://learn.microsoft.com/graph/api/resources/security-billingpolicy` (no cap field in schema)
+
+3. **Work IQ June 16 2026 GA CONFIRMED (Scheduled)**
+   - **Claim (hedged):** Work IQ APIs PAYG Consumption GA scheduled for 2026-06-16 (M365 roadmap feature 559017).
+   - **Verification method:** Cross-referenced M365 roadmap feature 559017 + Learn use-work-iq release date.
+   - **Result:** CONFIRMED — Feature 559017 **scheduled** GA 2026-06-16. Status: **Remove 🔎 flag post-release (2026-06-16 actual GA).**
+   - **Citation:** `M365 roadmap feature 559017`; `https://learn.microsoft.com/work-iq/use-work-iq` (release notes confirm)
+
+**Additional Fix: occ.gov Markdown-Link-Check (MLC) Timeout**
+
+**Issue:** CI workflow markdown-link-check (`.github/workflows/mlc-config.json` in framework repo) logs `ETIMEDOUT` on `occ.gov` URLs (similar to sec.gov/ftc.gov/ecfr.gov already ignored).
+- **Root cause:** Bot-hostile government sites with strict rate-limiting; `retryOn429` does not cover timeouts.
+- **Fix:** Coordinator added `occ.gov` to `.github/workflows/mlc-config.json` `ignorePatterns[]` array (framework repo, PR #443).
+- **Reusable pattern:** When CI logs `ETIMEDOUT` on gov domain, add to mlc-config ignorePatterns; do NOT retry on bot-hostile domains.
+- **Status:** MERGED to framework main (commit 73f4b59).
+
+**Cascade to Solutions Repo (.squad bookkeeping):**
+
+- Framework PR #443 was squash-merged 2026-06-10T16:30:29Z (commit 73f4b59).
+- Control 2.27 LIVE in framework (verified by Coordinator); no code changes to solutions repo.
+- Verification coordination recorded here for team continuity (framework work, solutions-repo coordination).
+
+**Deduplication Note:** Entry at 2026-06-10 ≥ control 2.27 entry (2026-06-10); this captures follow-up verification only (does not repeat control-authoring decision).
+
 ## Active Decisions
 
 No decisions recorded yet.
