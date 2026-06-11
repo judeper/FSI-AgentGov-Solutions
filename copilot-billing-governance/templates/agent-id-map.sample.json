@@ -1,0 +1,7 @@
+{
+  "$comment": "Sample SEAM 1 agent-id reconciliation map, supplied to Get-FnfPeopleSweepReport.ps1 via -IdMapPath (the --id-map input). Maps a PROVISIONAL manifest id (the CAI capability-row fsi_agentid stem emitted when a manifest carries no resolvable bot id and fsi_agentrefprovisional=true) to the real Dataverse fsi_copilotagent bot GUID. With this map the FNF lens rewrites the provisional stem to the real id and joins it like a reconciled agent; WITHOUT it the provisional row is surfaced as coverageStatus=Partial with coverage gap manifest-id-unreconciled - never silently joined to a real agent and never dropped. Illustrative only; example ids, not real.",
+  "mappings": [
+    { "provisionalId": "declarativeAgent", "agentId": "11110000-0000-0000-0000-000000000004" },
+    { "provisionalId": "contoso-people-helper-manifest", "agentId": "22220000-0000-0000-0000-000000000010" }
+  ]
+}

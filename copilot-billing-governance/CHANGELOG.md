@@ -56,6 +56,45 @@ FSI Copilot governance build.
   "All Users" PAYG case, transitive group licensing, the unlicensed + no-PAYG block,
   undocumented-SKU-by-construction, fail-open-on-error, per-capability coverage, and an
   end-to-end engine integration (licensed → Allow, unlicensed → Block).
+- **Find-No-Filter (FNF) People-Sweep lens** (`scripts/Get-FnfPeopleSweepReport.ps1`):
+  an orchestrator that joins the upstream Copilot Agent Inventory (CAI) People-capability
+  detection and audience-expansion artifacts with the CBG entitlement resolver and engine
+  to produce a per-agent FNF report. Implements three contract seams from the GATE-1
+  review: (1) **agent-id keying** that joins on `fsi_agentid` only when
+  `fsi_agentrefprovisional = false` (or after an accepted `-IdMapPath` reconciliation),
+  surfacing an unreconciled provisional row as `coverageStatus = Partial` (gap
+  `manifest-id-unreconciled`) rather than silently joining it to a real agent or dropping
+  it; (2) a **field-shape transform** from CAI's `agents[].intendedUsers[].upn` objects to
+  the resolver's `intendedUpns[]` string array, with a `createdIn` join from
+  `fsi_copilotagent` (`fsi_createdin`) and a Work-IQ-less degradation that passes an empty
+  `configuredTier` so the engine uses its `createdIn` pathway fallback; and (3) a
+  **whole-tenant** arm that, for an org-wide People-capable agent
+  (`fsi_sharedwitheveryone` / `intendedUsers = []`), emits
+  `audienceMode = WholeTenant, coverageStatus = Partial` with `blockedUserCount = null`
+  instead of a misleading "0 blocked." Adds a per-agent **`coverageStatus`
+  (Complete / Partial / Failed)** roll-up with an explicit `coverageGaps[]` vocabulary so
+  no gap (provisional id, attestation-pending manifest, partial / failed audience
+  resolution, whole-tenant, unresolved entitlement, Work-IQ-less default pathway) hides
+  behind a zero count; failed, unresolved, whole-tenant, and unreconciled-provisional
+  cases report `blockedUserCount = null` (never a silent `0`). Per-user scoring is
+  delegated to `Get-CopilotEntitlement.ps1` and `Invoke-EntitlementEvaluation.ps1` (not
+  reimplemented); the blocked set is engine decisions with `fsi_decision = Block`. Emits
+  report JSON (not Dataverse rows); managed-identity-first. Supports compliance with
+  oversight of Copilot agent reach by surfacing People-capable agents shared with users
+  who lack a Copilot entitlement; organizations should verify results against their own
+  tenant licensing and policy state.
+- **FNF lens test suite** (`tests/FnfPeopleSweepReport.Tests.ps1`): 29 Pester tests with a
+  mocked Graph seam (intercepting through the resolver + engine chain) covering each
+  contract seam — the provisional-id gate with and without an `-IdMapPath`, the
+  `intendedUsers -> intendedUpns` transform regression (asserting a non-empty UPN list
+  actually scores so the transform bug cannot regress), the whole-tenant
+  `blockedUserCount = null` arm, the Complete / Partial / Failed roll-up, plus a happy path
+  (a People-capable agent with a blocked user) and a never-silent-zero invariant.
+- **FNF samples** (`templates/fnf-people-sweep-report.sample.json`,
+  `templates/agent-id-map.sample.json`) and **fixtures** (`tests/fixtures/fnf/`): a
+  representative FNF report covering the Complete / Partial / Failed and whole-tenant
+  cases, an `-IdMapPath` reconciliation sample, and the CAI capability / audience /
+  agent-master / billing-policy artifact fixtures the test suite runs against.
 - **Documentation**: `docs/architecture.md` (two policy objects, three group layers,
   entitlement engine, coverage-gap, build dependency graph),
   `docs/prerequisites.md` (managed-identity-first auth, least-privilege roles, Graph

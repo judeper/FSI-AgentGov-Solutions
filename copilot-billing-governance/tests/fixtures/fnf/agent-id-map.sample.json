@@ -1,0 +1,6 @@
+{
+  "_comment": "Sample SEAM 1 agent-id reconciliation map. Maps a PROVISIONAL manifest id (the CAI feature-row fsi_agentid stem emitted when a manifest carries no resolvable bot id) to the real Dataverse bot GUID. The FNF lens rewrites the provisional stem to the real id and joins it like a non-provisional agent. Without this map the provisional row is surfaced as coverageStatus=Partial (gap manifest-id-unreconciled), never silently joined and never dropped.",
+  "mappings": [
+    { "provisionalId": "declarativeAgent", "agentId": "11110000-0000-0000-0000-000000000004" }
+  ]
+}
