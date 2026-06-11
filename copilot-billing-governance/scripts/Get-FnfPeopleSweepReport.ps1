@@ -263,7 +263,11 @@ function Get-FnfProperty {
 
 # --------------------------------------------------------------------------------------
 # Id-map normalization (SEAM 1 support). Accepts the three documented shapes and returns a
-# case-insensitive hashtable keyed by provisional id -> real bot GUID.
+# case-insensitive hashtable keyed by reconciliation id -> real bot GUID. The key is the
+# UNIQUE per-feature id the lens reconciles on (CAI fsi_sourceobjectid /
+# fsi_caiagentfeatureid) or, for legacy maps, the bare provisional stem (fsi_agentid).
+# A CONFLICTING duplicate key (same key -> two different GUIDs) is rejected rather than
+# silently last-write-wins, which could bind a provisional id to the wrong agent.
 # --------------------------------------------------------------------------------------
 function ConvertTo-FnfIdMap {
     [CmdletBinding()]
@@ -273,6 +277,21 @@ function ConvertTo-FnfIdMap {
     $map = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([System.StringComparer]::OrdinalIgnoreCase)
     if ($null -eq $InputObject) { return $map }
 
+    # Set one key, rejecting a CONFLICTING duplicate (same key -> different GUID) instead of the
+    # silent last-write-wins that could reconcile a provisional id to the wrong bot. An identical
+    # duplicate is harmless and ignored. Dot-sourced (.) so it reads and mutates $map in scope.
+    $setEntry = {
+        param($EntryKey, $EntryValue)
+        if (-not [string]::IsNullOrWhiteSpace($EntryKey) -and -not [string]::IsNullOrWhiteSpace($EntryValue)) {
+            $k = ([string]$EntryKey).Trim()
+            $v = ([string]$EntryValue).Trim()
+            if ($map.ContainsKey($k) -and $map[$k] -ne $v) {
+                throw "FNF id-map has a conflicting duplicate key '$k' (maps to both '$($map[$k])' and '$v'). Each provisional manifest id / source-object id must map to exactly one Dataverse bot GUID; resolve the ambiguous reconciliation entry before re-running the People-Sweep."
+            }
+            $map[$k] = $v
+        }
+    }
+
     # Unwrap a { "mappings": [...] } envelope.
     $mappings = Get-FnfProperty -InputObject $InputObject -Name 'mappings'
 
@@ -281,27 +300,25 @@ function ConvertTo-FnfIdMap {
         foreach ($entry in $entries) {
             if ($null -eq $entry) { continue }
             $from = Get-FnfProperty -InputObject $entry -Name 'provisionalId'
+            if ([string]::IsNullOrWhiteSpace($from)) { $from = Get-FnfProperty -InputObject $entry -Name 'sourceObjectId' }
             if ([string]::IsNullOrWhiteSpace($from)) { $from = Get-FnfProperty -InputObject $entry -Name 'from' }
             $to = Get-FnfProperty -InputObject $entry -Name 'agentId'
             if ([string]::IsNullOrWhiteSpace($to)) { $to = Get-FnfProperty -InputObject $entry -Name 'to' }
-            if (-not [string]::IsNullOrWhiteSpace($from) -and -not [string]::IsNullOrWhiteSpace($to)) {
-                $map[([string]$from).Trim()] = ([string]$to).Trim()
-            }
+            . $setEntry $from $to
         }
         return $map
     }
 
-    # Otherwise treat it as a flat object: { "<provisional>": "<guid>", ... }.
+    # Otherwise treat it as a flat object: { "<provisional-or-unique-id>": "<guid>", ... }.
     if ($InputObject -is [System.Collections.IDictionary]) {
         foreach ($key in $InputObject.Keys) {
-            $val = $InputObject[$key]
-            if (-not [string]::IsNullOrWhiteSpace($val)) { $map[[string]$key] = ([string]$val).Trim() }
+            . $setEntry $key $InputObject[$key]
         }
         return $map
     }
     foreach ($prop in $InputObject.PSObject.Properties) {
         if ($prop.Name -eq '$comment' -or $prop.Name -eq '_comment') { continue }
-        if (-not [string]::IsNullOrWhiteSpace($prop.Value)) { $map[$prop.Name] = ([string]$prop.Value).Trim() }
+        . $setEntry $prop.Name $prop.Value
     }
     return $map
 }
@@ -325,8 +342,14 @@ function Get-FnfPeopleCapabilitySource {
 # --------------------------------------------------------------------------------------
 # SEAM 1 - People-capability filter + agent-id keying.
 # Selects the People-capable agents, honouring the provisional gate and optional id-map
-# reconciliation. Provisional rows that cannot be reconciled are returned separately so the
-# report can surface them as Partial coverage (never silently joined, never dropped).
+# reconciliation. Reconciliation is PER ROW on a UNIQUE per-feature key (CAI's salted
+# fsi_sourceobjectid, else fsi_caiagentfeatureid) in preference to the bare provisional stem
+# fsi_agentid - the stem is commonly the literal "declarativeAgent", identical across distinct
+# Toolkit packages, so keying on it alone merges unrelated agents. When a SINGLE id-map key /
+# stem would reconcile MULTIPLE DISTINCT feature rows to the same bot GUID, the rows are NOT
+# collapsed ("first wins, rest disappear"): each is surfaced as a stem-collision so it can be
+# reported Partial. Provisional rows with no id-map entry at all, and stem-collision rows, are
+# returned separately so the report can surface them (never silently joined, never dropped).
 # --------------------------------------------------------------------------------------
 function Resolve-FnfPeopleAgentSet {
     [CmdletBinding()]
@@ -336,8 +359,15 @@ function Resolve-FnfPeopleAgentSet {
         [Parameter()][AllowNull()][hashtable]$IdMap
     )
 
-    if ($null -eq $IdMap) {
-        $IdMap = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    # Normalize the id-map into a case-insensitive lookup. ConvertTo-FnfIdMap returns an
+    # OrdinalIgnoreCase dictionary, but a [hashtable] parameter coercion drops that comparer, so
+    # rebuild it here to keep stem / unique-id matching case-insensitive.
+    $idMapCI = New-Object 'System.Collections.Generic.Dictionary[string,string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    if ($null -ne $IdMap) {
+        foreach ($pair in $IdMap.GetEnumerator()) {
+            $pk = [string]$pair.Key
+            if (-not [string]::IsNullOrWhiteSpace($pk)) { $idMapCI[$pk] = [string]$pair.Value }
+        }
     }
 
     # Display-name lookup from the artifact agents[] (keyed by the same id-space as features).
@@ -349,10 +379,10 @@ function Resolve-FnfPeopleAgentSet {
         }
     }
 
-    $resolved = New-Object System.Collections.Generic.List[object]
+    # Pass 1: classify every effective People feature row into a candidate carrying its effective
+    # bot id and HOW it was reconciled (via the unique key, the bare stem, or not provisional).
+    $candidates = New-Object System.Collections.Generic.List[object]
     $provisionalUnreconciled = New-Object System.Collections.Generic.List[object]
-    $sourceMap = @{}
-    $seenResolved = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
 
     foreach ($feature in @(Get-FnfProperty -InputObject $CapabilityArtifact -Name 'features')) {
         $featureType = "$(Get-FnfProperty -InputObject $feature -Name 'fsi_featuretype')"
@@ -367,47 +397,130 @@ function Resolve-FnfPeopleAgentSet {
 
         $provisional = [bool](Get-FnfProperty -InputObject $feature -Name 'fsi_agentrefprovisional' -Default $false)
         $source = Get-FnfPeopleCapabilitySource -Feature $feature
-        $agentName = $nameByAgentId[$agentId]
+        $agentName = if ($nameByAgentId.ContainsKey($agentId)) { $nameByAgentId[$agentId] } else { $null }
+        $featureName = "$(Get-FnfProperty -InputObject $feature -Name 'fsi_name')"
         $environmentId = Get-FnfProperty -InputObject $feature -Name 'fsi_environmentid'
         $runId = Get-FnfProperty -InputObject $feature -Name 'fsi_runid'
 
+        # CAI's UNIQUE per-feature key disambiguates rows that share a provisional stem. Prefer
+        # the salted fsi_sourceobjectid (capability:People:<sha1(locator)[:12]>), then
+        # fsi_caiagentfeatureid; the lens never relied on either before.
+        $sourceObjectId = "$(Get-FnfProperty -InputObject $feature -Name 'fsi_sourceobjectid')"
+        $caiFeatureId = "$(Get-FnfProperty -InputObject $feature -Name 'fsi_caiagentfeatureid')"
+        $uniqueKey = $null
+        if (-not [string]::IsNullOrWhiteSpace($sourceObjectId)) { $uniqueKey = $sourceObjectId.Trim() }
+        elseif (-not [string]::IsNullOrWhiteSpace($caiFeatureId)) { $uniqueKey = $caiFeatureId.Trim() }
+
         $reconciled = $false
+        $reconVia = 'direct'
+        $reconKey = $null
         $effectiveId = $agentId
+
         if ($provisional) {
-            if ($IdMap.ContainsKey($agentId)) {
-                # Reconciliation pass: rewrite the provisional stem to the real bot GUID and
-                # clear the provisional flag so the row joins like a real agent.
-                $effectiveId = $IdMap[$agentId]
+            if ($null -ne $uniqueKey -and $idMapCI.ContainsKey($uniqueKey)) {
+                # Per-row reconciliation on the unique key: distinct rows bind to distinct GUIDs.
+                $effectiveId = $idMapCI[$uniqueKey]
                 $reconciled = $true
+                $reconVia = 'unique'
+                $reconKey = $uniqueKey
+            }
+            elseif ($idMapCI.ContainsKey($agentId)) {
+                # Legacy stem reconciliation (collision-prone): flagged below if it binds >1 row.
+                $effectiveId = $idMapCI[$agentId]
+                $reconciled = $true
+                $reconVia = 'stem'
+                $reconKey = $agentId
             }
             else {
-                # Unreconciled provisional row: surface as Partial coverage, never join, never drop.
+                # No id-map entry at all: surface as Partial coverage, never join, never drop.
                 $provisionalUnreconciled.Add([pscustomobject]@{
-                        agentId       = $agentId
-                        agentName     = $agentName
-                        source        = $source
-                        environmentId = $environmentId
-                        runId         = $runId
+                        agentId        = $agentId
+                        agentName      = $agentName
+                        source         = $source
+                        environmentId  = $environmentId
+                        runId          = $runId
+                        sourceObjectId = $uniqueKey
                     })
                 continue
             }
         }
 
-        if (-not $seenResolved.Add($effectiveId)) { continue }   # de-dup multiple feature rows per agent
-        $sourceMap[$effectiveId] = $source
+        # featureIdentity distinguishes distinct feature rows for collision detection. Without a
+        # unique key two rows are indistinguishable, so treat each as distinct (a fresh token) -
+        # the safe choice is to never silently merge rows we cannot tell apart.
+        $featureIdentity = if ($null -ne $uniqueKey) { $uniqueKey } else { "row:$([guid]::NewGuid().ToString('n'))" }
+
+        $candidates.Add([pscustomobject]@{
+                agentId         = $agentId
+                effectiveId     = $effectiveId
+                provisional     = $provisional
+                reconciled      = $reconciled
+                reconVia        = $reconVia
+                reconKey        = $reconKey
+                featureIdentity = $featureIdentity
+                source          = $source
+                agentName       = $agentName
+                featureName     = $featureName
+                environmentId   = $environmentId
+                runId           = $runId
+                sourceObjectId  = $uniqueKey
+            })
+    }
+
+    # Pass 2: collision detection. Group the reconciled candidates by the id-map key actually
+    # used; a single key (in practice a shared stem) that bound MORE THAN ONE distinct feature
+    # row is an unsafe merge.
+    $byReconKey = @{}
+    foreach ($c in $candidates) {
+        if (-not $c.reconciled -or [string]::IsNullOrWhiteSpace($c.reconKey)) { continue }
+        if (-not $byReconKey.ContainsKey($c.reconKey)) {
+            $byReconKey[$c.reconKey] = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+        }
+        [void]$byReconKey[$c.reconKey].Add([string]$c.featureIdentity)
+    }
+    $collidedReconKeys = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($k in $byReconKey.Keys) {
+        if ($byReconKey[$k].Count -gt 1) { [void]$collidedReconKeys.Add($k) }
+    }
+
+    # Pass 3: build the resolved set (with the legitimate same-agent de-dup) and the collision
+    # surface. Collision rows are never collapsed and never scored - they are reported Partial.
+    $resolved = New-Object System.Collections.Generic.List[object]
+    $collisions = New-Object System.Collections.Generic.List[object]
+    $sourceMap = @{}
+    $seenResolved = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+
+    foreach ($c in $candidates) {
+        if (-not [string]::IsNullOrWhiteSpace($c.reconKey) -and $collidedReconKeys.Contains($c.reconKey)) {
+            $collisions.Add([pscustomobject]@{
+                    agentId        = $c.agentId
+                    agentName      = if (-not [string]::IsNullOrWhiteSpace($c.featureName)) { $c.featureName } else { $c.agentName }
+                    source         = $c.source
+                    environmentId  = $c.environmentId
+                    runId          = $c.runId
+                    sourceObjectId = $c.sourceObjectId
+                    effectiveId    = $c.effectiveId
+                    reconKey       = $c.reconKey
+                })
+            continue
+        }
+
+        if (-not $seenResolved.Add($c.effectiveId)) { continue }   # de-dup multiple feature rows per agent
+        $sourceMap[$c.effectiveId] = $c.source
         $resolved.Add([pscustomobject]@{
-                agentId       = $effectiveId
-                agentName     = $agentName
-                source        = $source
-                reconciled    = $reconciled
-                environmentId = $environmentId
-                runId         = $runId
+                agentId       = $c.effectiveId
+                agentName     = $c.agentName
+                source        = $c.source
+                reconciled    = $c.reconciled
+                environmentId = $c.environmentId
+                runId         = $c.runId
             })
     }
 
     return [pscustomobject]@{
         Resolved                = $resolved.ToArray()
         ProvisionalUnreconciled = $provisionalUnreconciled.ToArray()
+        Collisions              = $collisions.ToArray()
         SourceMap               = $sourceMap
     }
 }
@@ -608,12 +721,16 @@ function Get-FnfAgentCoverageStatus {
         [Parameter()][int]$FailOpenCount = 0,
         [Parameter()][bool]$Provisional = $false,
         [Parameter()][bool]$AttestationPending = $false,
-        [Parameter()][bool]$CreatedInMissing = $false
+        [Parameter()][bool]$CreatedInMissing = $false,
+        [Parameter()][bool]$IdMapStemCollision = $false,
+        [Parameter()][bool]$EngineDecisionsMissing = $false
     )
 
     $gaps = New-Object System.Collections.Generic.List[string]
 
     if ($Provisional) { [void]$gaps.Add('manifest-id-unreconciled') }
+    if ($IdMapStemCollision) { [void]$gaps.Add('idmap-stem-collision') }
+    if ($EngineDecisionsMissing) { [void]$gaps.Add('engine-decisions-missing') }
     if ($AttestationPending) { [void]$gaps.Add('manifest-opaque-attestation-pending') }
     if ($WholeTenant) { [void]$gaps.Add('audience-wholetenant-not-enumerated') }
     if ($AudienceMissing) { [void]$gaps.Add('audience-not-resolved') }
@@ -631,8 +748,9 @@ function Get-FnfAgentCoverageStatus {
     }
 
     $status = 'Complete'
-    if ($AudienceMissing -or ($AudienceStatus -in $script:AudienceFailedStatuses)) {
-        # No usable audience -> blocked count is not computable -> most severe status.
+    if ($AudienceMissing -or ($AudienceStatus -in $script:AudienceFailedStatuses) -or $EngineDecisionsMissing) {
+        # No usable audience, or the engine never wrote a complete decision set -> blocked count
+        # is not computable -> most severe status.
         $status = 'Failed'
     }
     elseif ($gaps.Count -gt 0) {
@@ -685,6 +803,19 @@ function Invoke-FnfEntitlementScoring {
 
     $decisions = @()
     $engineInput = Get-FnfProperty -InputObject $resolverResult -Name 'engineInput'
+
+    # Expected decision count = the number of (agent,user) pairs actually SUBMITTED to the engine.
+    # The resolver excludes users it could not resolve from engineInput, so this is derived from
+    # the submitted pairs - not the raw skeleton intendedUpns - to avoid falsely nulling good
+    # agents when a transient per-user resolution error legitimately trims the audience. The
+    # engine emits exactly one decision per submitted pair.
+    $expectedDecisionCount = 0
+    foreach ($ea in @(Get-FnfProperty -InputObject $engineInput -Name 'agents')) {
+        $intended = Get-FnfProperty -InputObject $ea -Name 'intendedUsers'
+        if ($null -ne $intended) { $expectedDecisionCount += @($intended).Count }
+    }
+
+    $engineDecisionsMissing = $false
     if ($null -ne $engineInput) {
         if (-not (Test-Path -LiteralPath $WorkingDir)) {
             New-Item -ItemType Directory -Path $WorkingDir -Force | Out-Null
@@ -702,11 +833,22 @@ function Invoke-FnfEntitlementScoring {
             $engineResult = Get-Content -LiteralPath $decisionFile -Raw | ConvertFrom-Json
             $decisions = @(Get-FnfProperty -InputObject $engineResult -Name 'Decisions')
         }
+
+        # Guard the silent-zero: if the engine was expected to score pairs but the decision file is
+        # absent (ACL / race / swallowed child-process error - $ErrorActionPreference='Stop' does
+        # not cross the child pwsh boundary) or short, do NOT let empty/partial $decisions report
+        # every scored agent as "0 blocked, Complete". The caller marks affected agents Failed.
+        if ($expectedDecisionCount -gt 0 -and $decisions.Count -lt $expectedDecisionCount) {
+            $engineDecisionsMissing = $true
+        }
     }
 
     return [pscustomobject]@{
-        Decisions      = $decisions
-        ResolverResult = $resolverResult
+        Decisions              = $decisions
+        ResolverResult         = $resolverResult
+        EngineDecisionsMissing = $engineDecisionsMissing
+        ExpectedDecisionCount  = $expectedDecisionCount
+        ActualDecisionCount    = $decisions.Count
     }
 }
 
@@ -725,9 +867,13 @@ function New-FnfPeopleSweepReport {
         [Parameter()][AllowEmptyCollection()][object[]]$MissingAudienceAgents = @(),
         [Parameter()][AllowEmptyCollection()][object[]]$FailedAudienceAgents = @(),
         [Parameter()][AllowEmptyCollection()][object[]]$ProvisionalUnreconciled = @(),
+        [Parameter()][AllowEmptyCollection()][object[]]$IdMapCollisions = @(),
         [Parameter()][AllowNull()][hashtable]$PeopleAgentSourceMap,
         [Parameter()][AllowEmptyCollection()][object[]]$EngineDecisions = @(),
         [Parameter()][AllowNull()][psobject]$ResolverResult,
+        [Parameter()][bool]$EngineDecisionsMissing = $false,
+        [Parameter()][int]$ExpectedDecisionCount = 0,
+        [Parameter()][int]$ActualDecisionCount = 0,
         [Parameter()][int]$SampleCapValue = 20,
         [Parameter()][string]$Capability = 'CopilotChat'
     )
@@ -799,9 +945,17 @@ function New-FnfPeopleSweepReport {
             -PaygAllUsersCovered $paygAllUsers `
             -FailOpenCount $failOpenCount `
             -CreatedInMissing ([bool](Get-FnfProperty -InputObject $meta -Name 'createdInMissing' -Default $false)) `
-            -AttestationPending ($source -eq 'attested')
+            -AttestationPending ($source -eq 'attested') `
+            -EngineDecisionsMissing $EngineDecisionsMissing
 
         $sampleUpns = @($blockedUpns | Select-Object -First $SampleCapValue)
+
+        # Silent-zero guard: when the engine never wrote a complete decision set, the empty/partial
+        # $decisions for this agent are NOT a real "0 blocked". Report a non-computable blocked
+        # count (null) instead of a false zero; coverageStatus is already Failed above.
+        $rowBlockedCount = if ($EngineDecisionsMissing) { $null } else { $blocked.Count }
+        $rowBlockedUsers = if ($EngineDecisionsMissing) { @() } else { $sampleUpns }
+        $rowBlockedSampled = if ($EngineDecisionsMissing) { $false } else { ($blocked.Count -gt $sampleUpns.Count) }
 
         $rows.Add([pscustomobject]@{
                 agentId             = $agentId
@@ -811,9 +965,9 @@ function New-FnfPeopleSweepReport {
                 audienceMode        = 'GroupScoped'
                 coverageStatus      = $coverage.coverageStatus
                 coverageGaps        = $coverage.coverageGaps
-                blockedUserCount    = $blocked.Count
-                blockedUsers        = $sampleUpns
-                blockedUsersSampled = ($blocked.Count -gt $sampleUpns.Count)
+                blockedUserCount    = $rowBlockedCount
+                blockedUsers        = $rowBlockedUsers
+                blockedUsersSampled = $rowBlockedSampled
                 totalAudience       = [int](Get-FnfProperty -InputObject $meta -Name 'audienceSize' -Default 0)
                 evaluationTimestamp = $now
                 evidence            = [pscustomobject]@{
@@ -822,6 +976,7 @@ function New-FnfPeopleSweepReport {
                     audienceTruncated                 = [bool](Get-FnfProperty -InputObject $meta -Name 'truncated' -Default $false)
                     audienceResolutionErrorCount      = [int](Get-FnfProperty -InputObject $meta -Name 'resolutionErrorCount' -Default 0)
                     decisionCount                     = $agentDecisions.Count
+                    engineDecisionsMissing            = $EngineDecisionsMissing
                     failOpenAnomalyCount              = $failOpenCount
                     failClosedZeroRatingCount         = $failClosedCount
                     unresolvedAudienceUserCount       = $agentUnresolved
@@ -934,6 +1089,34 @@ function New-FnfPeopleSweepReport {
             })
     }
 
+    # --- Id-map stem-collision People agents (SEAM 1; a shared stem reconciled >1 distinct row to
+    # the same bot GUID). Never collapsed to a single survivor - each colliding row is surfaced
+    # Partial so the mis-attribution is visible rather than silently dropped. ---
+    foreach ($cl in @($IdMapCollisions)) {
+        $coverage = Get-FnfAgentCoverageStatus -Provisional $true -IdMapStemCollision $true
+        $rows.Add([pscustomobject]@{
+                agentId             = Get-FnfProperty -InputObject $cl -Name 'agentId'
+                agentName           = Get-FnfProperty -InputObject $cl -Name 'agentName'
+                peopleCapable       = $true
+                peopleCapableSource = "$(Get-FnfProperty -InputObject $cl -Name 'source' -Default 'manifest')"
+                audienceMode        = 'None'
+                coverageStatus      = $coverage.coverageStatus
+                coverageGaps        = $coverage.coverageGaps
+                blockedUserCount    = $null            # ambiguous reconciliation - blocked is not computable
+                blockedUsers        = @()
+                blockedUsersSampled = $false
+                totalAudience       = $null
+                evaluationTimestamp = $now
+                evidence            = [pscustomobject]@{
+                    agentRefProvisional = $true
+                    idMapStemCollision  = $true
+                    sourceObjectId      = Get-FnfProperty -InputObject $cl -Name 'sourceObjectId'
+                    collidingReconKey   = Get-FnfProperty -InputObject $cl -Name 'reconKey'
+                    note = 'Id-map key (provisional stem) reconciled more than one distinct People feature row to the same Dataverse bot GUID; rows are ambiguous and were not collapsed. Supply a per-row unique id (fsi_sourceobjectid / fsi_caiagentfeatureid) in the id-map to disambiguate.'
+                }
+            })
+    }
+
     $rowArray = $rows.ToArray()
     $partialCount = @($rowArray | Where-Object { $_.coverageStatus -eq 'Partial' }).Count
     $failedCount = @($rowArray | Where-Object { $_.coverageStatus -eq 'Failed' }).Count
@@ -954,6 +1137,10 @@ function New-FnfPeopleSweepReport {
             failedAudienceCount      = @($FailedAudienceAgents).Count
             missingAudienceCount     = @($MissingAudienceAgents).Count
             provisionalUnreconciled  = @($ProvisionalUnreconciled).Count
+            idMapStemCollisionCount  = @($IdMapCollisions).Count
+            engineDecisionsMissing   = $EngineDecisionsMissing
+            expectedDecisionCount    = $ExpectedDecisionCount
+            actualDecisionCount      = $ActualDecisionCount
             coverageCompleteCount    = $completeCount
             coveragePartialCount     = $partialCount
             coverageFailedCount      = $failedCount
@@ -1003,6 +1190,9 @@ function Invoke-FnfPeopleSweep {
     # Scoring through the existing resolver + engine (only when there are users to score).
     $decisions = @()
     $resolverResult = $null
+    $engineDecisionsMissing = $false
+    $expectedDecisionCount = 0
+    $actualDecisionCount = 0
     if (@($skel.Skeleton.agents).Count -gt 0) {
         $scoring = Invoke-FnfEntitlementScoring -Skeleton $skel.Skeleton -AllUpns @($skel.AllUpns) `
             -GraphToken $GraphToken -Capability $Capability -Policy @($Policy) `
@@ -1011,13 +1201,19 @@ function Invoke-FnfPeopleSweep {
             -ZeroRatingResolvedValue $ZeroRatingResolvedValue -EngineScript $EngineScript -WorkingDir $WorkingDir
         $decisions = @($scoring.Decisions)
         $resolverResult = $scoring.ResolverResult
+        $engineDecisionsMissing = [bool]$scoring.EngineDecisionsMissing
+        $expectedDecisionCount = [int]$scoring.ExpectedDecisionCount
+        $actualDecisionCount = [int]$scoring.ActualDecisionCount
     }
 
     # SEAM 5: report assembly with the coverage roll-up.
     return New-FnfPeopleSweepReport -ScoredMeta $skel.ScoredMeta -WholeTenantAgents $skel.WholeTenantAgents `
         -FailedAudienceAgents $skel.FailedAudienceAgents `
         -MissingAudienceAgents $skel.MissingAudienceAgents -ProvisionalUnreconciled $peopleSet.ProvisionalUnreconciled `
+        -IdMapCollisions $peopleSet.Collisions `
         -PeopleAgentSourceMap $peopleSet.SourceMap -EngineDecisions $decisions -ResolverResult $resolverResult `
+        -EngineDecisionsMissing $engineDecisionsMissing -ExpectedDecisionCount $expectedDecisionCount `
+        -ActualDecisionCount $actualDecisionCount `
         -SampleCapValue $SampleCapValue -Capability $Capability
 }
 

@@ -438,3 +438,277 @@ Describe 'Invoke-FnfPeopleSweep - happy path + never-silent-zero invariant' {
         $report.summary.totalBlockedUserCount | Should -BeGreaterThan 0
     }
 }
+
+Describe 'Invoke-FnfPeopleSweep - SEAM 1 id-map stem collision (HIGH regression)' {
+
+    BeforeAll {
+        # Two distinct provisional People feature rows that SHARE the literal stem
+        # fsi_agentid="declarativeAgent" (the common Toolkit value) but carry DISTINCT salted
+        # fsi_sourceobjectid values - exactly the CAI shape the lens previously ignored.
+        $script:CollideGuidA = '22220000-0000-0000-0000-0000000000aa'
+        $script:CollideGuidB = '22220000-0000-0000-0000-0000000000bb'
+
+        $script:CollisionCapabilityJson = @'
+{
+  "schemaVersion": "0.2.0-preview",
+  "summary": { "runId": "fnf-collision-cap", "scanStatus": "Complete" },
+  "agents": [
+    { "agentId": "declarativeAgent", "agentName": "Alpha People Bot", "agentIdProvisional": true, "locator": "AlphaPeopleBot.zip!declarativeAgent.json" },
+    { "agentId": "declarativeAgent", "agentName": "Beta People Bot", "agentIdProvisional": true, "locator": "BetaPeopleBot.zip!declarativeAgent.json" }
+  ],
+  "features": [
+    {
+      "fsi_name": "People (Org Chart & Profile): Alpha People Bot",
+      "fsi_agentid": "declarativeAgent",
+      "fsi_sourceobjectid": "capability:People:alpha0000001",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": true,
+      "fsi_isenabled": true,
+      "fsi_runid": "fnf-collision-cap"
+    },
+    {
+      "fsi_name": "People (Org Chart & Profile): Beta People Bot",
+      "fsi_agentid": "declarativeAgent",
+      "fsi_sourceobjectid": "capability:People:beta00000002",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": true,
+      "fsi_isenabled": true,
+      "fsi_runid": "fnf-collision-cap"
+    }
+  ]
+}
+'@
+
+        # Audience: GUID_A and GUID_B carry DIFFERENT audiences so a mis-attribution would be
+        # visible (A -> unlicensed@ blocked of 2; B -> pilot@ blocked of 1).
+        $script:CollisionAudienceJson = @'
+{
+  "schemaVersion": "0.2.0-preview",
+  "summary": { "runId": "fnf-collision-aud" },
+  "agents": [
+    {
+      "agentId": "22220000-0000-0000-0000-0000000000aa",
+      "agentName": "Alpha People Bot",
+      "environmentId": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "wholeTenant": false, "wholeTenantCap": 0, "audienceSize": 2, "truncated": false,
+      "resolutionStatus": "Complete", "resolutionErrors": [], "sourceGroups": [],
+      "intendedUsers": [ { "upn": "licensed@contoso.com" }, { "upn": "unlicensed@contoso.com" } ]
+    },
+    {
+      "agentId": "22220000-0000-0000-0000-0000000000bb",
+      "agentName": "Beta People Bot",
+      "environmentId": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "wholeTenant": false, "wholeTenantCap": 0, "audienceSize": 1, "truncated": false,
+      "resolutionStatus": "Complete", "resolutionErrors": [], "sourceGroups": [],
+      "intendedUsers": [ { "upn": "pilot@contoso.com" } ]
+    }
+  ],
+  "authShareUpdates": []
+}
+'@
+
+        $script:CollisionMasterJson = @'
+{
+  "value": [
+    { "fsi_agentid": "22220000-0000-0000-0000-0000000000aa", "fsi_agentname": "Alpha People Bot", "fsi_createdin": "Microsoft 365 Copilot Agent Builder" },
+    { "fsi_agentid": "22220000-0000-0000-0000-0000000000bb", "fsi_agentname": "Beta People Bot", "fsi_createdin": "Microsoft 365 Copilot Agent Builder" }
+  ]
+}
+'@
+
+        # Unique-key id-map: keyed by the salted fsi_sourceobjectid -> distinct bot GUIDs.
+        $script:UniqueKeyIdMapJson = @'
+{
+  "mappings": [
+    { "sourceObjectId": "capability:People:alpha0000001", "agentId": "22220000-0000-0000-0000-0000000000aa" },
+    { "sourceObjectId": "capability:People:beta00000002", "agentId": "22220000-0000-0000-0000-0000000000bb" }
+  ]
+}
+'@
+
+        # Legacy stem-only id-map: the single bare stem maps to ONE GUID (the collision trigger).
+        $script:StemIdMapJson = @'
+{
+  "mappings": [
+    { "provisionalId": "declarativeAgent", "agentId": "22220000-0000-0000-0000-0000000000aa" }
+  ]
+}
+'@
+    }
+
+    BeforeEach {
+        Initialize-FnfDefaultLicenses
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+    }
+
+    It 'reconciles two stem-sharing rows to DISTINCT bot GUIDs via the unique key, with NO mis-attributed audience' {
+        $report = Invoke-FnfPeopleSweep `
+            -CapabilityArtifact ($script:CollisionCapabilityJson | ConvertFrom-Json) `
+            -AudienceArtifact ($script:CollisionAudienceJson | ConvertFrom-Json) `
+            -AgentMaster ($script:CollisionMasterJson | ConvertFrom-Json) `
+            -IdMap ($script:UniqueKeyIdMapJson | ConvertFrom-Json) `
+            -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir
+
+        # Clean-fail-first headline: BOTH rows must be scored as their own agent. The pre-fix lens
+        # keyed only on the stem (absent from a unique-key map) -> 0 scored.
+        $report.summary.scoredAgentCount | Should -Be 2
+        $report.summary.peopleCapableAgentCount | Should -Be 2
+        $report.summary.provisionalUnreconciled | Should -Be 0
+        $report.summary.idMapStemCollisionCount | Should -Be 0
+
+        $rowA = Get-FnfRow -Report $report -AgentId $script:CollideGuidA
+        $rowA | Should -Not -BeNullOrEmpty -Because 'the alpha row must reconcile to its own GUID'
+        $rowA.coverageStatus | Should -Be 'Complete'
+        $rowA.totalAudience | Should -Be 2
+        $rowA.blockedUserCount | Should -Be 1
+        $rowA.blockedUsers | Should -Contain 'unlicensed@contoso.com'
+        $rowA.blockedUsers | Should -Not -Contain 'pilot@contoso.com'
+
+        $rowB = Get-FnfRow -Report $report -AgentId $script:CollideGuidB
+        $rowB | Should -Not -BeNullOrEmpty -Because 'the beta row must reconcile to its own GUID (never dropped by de-dup)'
+        $rowB.coverageStatus | Should -Be 'Complete'
+        $rowB.totalAudience | Should -Be 1
+        $rowB.blockedUserCount | Should -Be 1
+        $rowB.blockedUsers | Should -Contain 'pilot@contoso.com'
+        $rowB.blockedUsers | Should -Not -Contain 'unlicensed@contoso.com'
+    }
+
+    It 'surfaces BOTH rows as a stem collision (Partial) when the id-map only distinguishes the bare stem - never first-wins-rest-disappear' {
+        $report = Invoke-FnfPeopleSweep `
+            -CapabilityArtifact ($script:CollisionCapabilityJson | ConvertFrom-Json) `
+            -AudienceArtifact ($script:CollisionAudienceJson | ConvertFrom-Json) `
+            -AgentMaster ($script:CollisionMasterJson | ConvertFrom-Json) `
+            -IdMap ($script:StemIdMapJson | ConvertFrom-Json) `
+            -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir
+
+        # Clean-fail-first headline: both rows must be accounted for, never collapsed to 1. The
+        # pre-fix lens deduped on the shared effective GUID and dropped the second row -> count 1.
+        $report.summary.peopleCapableAgentCount | Should -Be 2
+        $report.summary.idMapStemCollisionCount | Should -Be 2
+        # Neither colliding row is silently scored against a (wrong) audience.
+        $report.summary.scoredAgentCount | Should -Be 0
+        (Get-FnfRow -Report $report -AgentId $script:CollideGuidA) | Should -BeNullOrEmpty -Because 'a collided stem must NOT be silently scored as the survivor'
+
+        $collisionRows = @($report.agents | Where-Object { $_.agentId -eq $script:ProvisionalStem })
+        $collisionRows.Count | Should -Be 2
+        foreach ($row in $collisionRows) {
+            $row.peopleCapable | Should -BeTrue
+            $row.coverageStatus | Should -Be 'Partial'
+            $row.coverageGaps | Should -Contain 'idmap-stem-collision'
+            $row.coverageGaps | Should -Contain 'manifest-id-unreconciled'
+            $row.blockedUserCount | Should -BeNullOrEmpty
+        }
+        # The two distinct feature rows remain individually identifiable by their source-object id.
+        @($collisionRows | ForEach-Object { $_.evidence.sourceObjectId } | Sort-Object -Unique).Count | Should -Be 2
+    }
+}
+
+Describe 'ConvertTo-FnfIdMap - duplicate key rejection (HIGH regression)' {
+
+    It 'rejects a CONFLICTING duplicate key (same provisional id -> two different bot GUIDs) instead of last-write-wins' {
+        $conflicting = @'
+{
+  "mappings": [
+    { "provisionalId": "declarativeAgent", "agentId": "22220000-0000-0000-0000-0000000000aa" },
+    { "provisionalId": "declarativeAgent", "agentId": "22220000-0000-0000-0000-0000000000bb" }
+  ]
+}
+'@ | ConvertFrom-Json
+        { ConvertTo-FnfIdMap -InputObject $conflicting } | Should -Throw '*conflicting duplicate key*'
+    }
+
+    It 'accepts an IDENTICAL duplicate key (same target) without throwing' {
+        $identical = @'
+{
+  "mappings": [
+    { "provisionalId": "declarativeAgent", "agentId": "22220000-0000-0000-0000-0000000000aa" },
+    { "provisionalId": "declarativeAgent", "agentId": "22220000-0000-0000-0000-0000000000aa" }
+  ]
+}
+'@ | ConvertFrom-Json
+        { ConvertTo-FnfIdMap -InputObject $identical } | Should -Not -Throw
+        $map = ConvertTo-FnfIdMap -InputObject $identical
+        $map['declarativeAgent'] | Should -Be '22220000-0000-0000-0000-0000000000aa'
+    }
+}
+
+Describe 'Invoke-FnfPeopleSweep - engine-output-missing silent-zero guard (MEDIUM regression)' {
+
+    BeforeAll {
+        # A stub engine that exits WITHOUT writing the decision file (ACL / race / swallowed
+        # child-process error - $ErrorActionPreference='Stop' does not cross the child boundary).
+        $script:NoFileEngine = Join-Path $TestDrive 'stub-engine-nofile.ps1'
+        @'
+param([string]$InputPath, [string]$OutputPath, [bool]$ZeroRatingResolved)
+# Intentionally write no decision file to simulate a silent engine failure.
+return
+'@ | Set-Content -LiteralPath $script:NoFileEngine -Encoding UTF8
+
+        # A stub engine that writes a SHORT decision file (fewer decisions than submitted pairs).
+        $script:ShortEngine = Join-Path $TestDrive 'stub-engine-short.ps1'
+        @'
+param([string]$InputPath, [string]$OutputPath, [bool]$ZeroRatingResolved)
+$decision = [pscustomobject]@{ fsi_agentid = "short-decision-agent"; fsi_userupn = "someone@contoso.com"; fsi_decision = 100000001 }
+[pscustomobject]@{ Decisions = @($decision) } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
+'@ | Set-Content -LiteralPath $script:ShortEngine -Encoding UTF8
+    }
+
+    BeforeEach {
+        Initialize-FnfDefaultLicenses
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+    }
+
+    It 'marks every scored agent Failed (engine-decisions-missing, blockedUserCount=null) when the engine writes NO decision file - never a silent 0' {
+        $report = Invoke-FnfPeopleSweep `
+            -CapabilityArtifact (Get-FnfFixture -Name 'cai-people-capability.sample.json') `
+            -AudienceArtifact (Get-FnfFixture -Name 'cai-audience.sample.json') `
+            -AgentMaster (Get-FnfFixture -Name 'agent-master.sample.json') `
+            -IdMap (Get-FnfFixture -Name 'agent-id-map.sample.json') `
+            -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:NoFileEngine -WorkingDir $script:WorkDir
+
+        $scoredRows = @($report.agents | Where-Object { $_.audienceMode -eq 'GroupScoped' })
+        $scoredRows.Count | Should -Be 3 -Because 'the three group-scoped agents were submitted for scoring'
+        foreach ($row in $scoredRows) {
+            $row.coverageStatus | Should -Be 'Failed' -Because "agent $($row.agentId) must not read as Complete/0 when the engine produced no decisions"
+            $row.coverageGaps | Should -Contain 'engine-decisions-missing'
+            $row.blockedUserCount | Should -BeNullOrEmpty
+            $row.blockedUserCount | Should -Not -Be 0
+            $row.evidence.engineDecisionsMissing | Should -BeTrue
+        }
+
+        $report.summary.engineDecisionsMissing | Should -BeTrue
+        $report.summary.actualDecisionCount | Should -Be 0
+        $report.summary.expectedDecisionCount | Should -BeGreaterThan 0
+    }
+
+    It 'marks every scored agent Failed when the engine writes a SHORT decision file (fewer decisions than submitted pairs)' {
+        $report = Invoke-FnfPeopleSweep `
+            -CapabilityArtifact (Get-FnfFixture -Name 'cai-people-capability.sample.json') `
+            -AudienceArtifact (Get-FnfFixture -Name 'cai-audience.sample.json') `
+            -AgentMaster (Get-FnfFixture -Name 'agent-master.sample.json') `
+            -IdMap (Get-FnfFixture -Name 'agent-id-map.sample.json') `
+            -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:ShortEngine -WorkingDir $script:WorkDir
+
+        $scoredRows = @($report.agents | Where-Object { $_.audienceMode -eq 'GroupScoped' })
+        $scoredRows.Count | Should -Be 3
+        foreach ($row in $scoredRows) {
+            $row.coverageStatus | Should -Be 'Failed'
+            $row.coverageGaps | Should -Contain 'engine-decisions-missing'
+            $row.blockedUserCount | Should -BeNullOrEmpty
+        }
+
+        $report.summary.engineDecisionsMissing | Should -BeTrue
+        $report.summary.actualDecisionCount | Should -Be 1
+        $report.summary.expectedDecisionCount | Should -BeGreaterThan $report.summary.actualDecisionCount
+    }
+}

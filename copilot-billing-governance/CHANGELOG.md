@@ -6,6 +6,39 @@ file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **FNF People-Sweep lens: id-map stem collisions no longer silently drop or mis-attribute
+  provisional rows.** `Resolve-FnfPeopleAgentSet` now reconciles each People feature row on a
+  UNIQUE per-feature key (CAI's salted `fsi_sourceobjectid`, else `fsi_caiagentfeatureid`) in
+  preference to the bare provisional stem `fsi_agentid` (commonly the literal
+  `"declarativeAgent"`, which is identical across distinct Toolkit packages). When a single
+  id-map key / stem would reconcile more than one distinct feature row to the same Dataverse bot
+  GUID, the rows are no longer collapsed to a single survivor -- previously the second row was
+  dropped by the de-dup and the first could be scored against the wrong audience. Each colliding
+  row is now surfaced as `coverageStatus = Partial` with `coverageGaps += idmap-stem-collision`
+  (alongside `manifest-id-unreconciled`), and `summary.idMapStemCollisionCount` reports the count.
+  `ConvertTo-FnfIdMap` now rejects a conflicting duplicate key (the same id mapped to two
+  different bot GUIDs) instead of last-write-wins. This is required for accurate per-agent
+  audience attribution and supports compliance with oversight of Copilot agent reach.
+- **FNF People-Sweep lens: a missing or short engine decision file no longer reads as a silent
+  "0 blocked".** After the entitlement engine runs, `Invoke-FnfEntitlementScoring` now compares
+  the number of decisions written against the number of (agent, user) pairs submitted to the
+  engine. If the decision file is absent (for example an ACL or race condition, or a swallowed
+  child-process error, since `$ErrorActionPreference = 'Stop'` does not cross the child `pwsh`
+  process boundary) or contains fewer decisions than expected, every scored agent now reports
+  `coverageStatus = Failed` with `coverageGaps += engine-decisions-missing` and
+  `blockedUserCount = null` instead of `0` / `Complete`. `summary.engineDecisionsMissing`,
+  `summary.expectedDecisionCount`, and `summary.actualDecisionCount` record the condition. This
+  is recommended to avoid under-reporting blocked users when the engine output is incomplete.
+- **FNF lens regression tests** (`tests/FnfPeopleSweepReport.Tests.ps1`): added six regression
+  tests for the two fixes above -- unique-key reconciliation of stem-sharing rows to distinct
+  GUIDs with no mis-attributed audience, stem-collision surfacing (both rows accounted for, never
+  first-wins-rest-disappear), conflicting-duplicate-key rejection in `ConvertTo-FnfIdMap`, and the
+  engine-decisions-missing guard for both a missing and a short decision file.
+
 ## [0.1.0-preview] - 2026-06-09
 
 Initial preview scaffold of the Copilot consumption-billing governance pillar for the
@@ -83,12 +116,15 @@ FSI Copilot governance build.
   oversight of Copilot agent reach by surfacing People-capable agents shared with users
   who lack a Copilot entitlement; organizations should verify results against their own
   tenant licensing and policy state.
-- **FNF lens test suite** (`tests/FnfPeopleSweepReport.Tests.ps1`): 29 Pester tests with a
+- **FNF lens test suite** (`tests/FnfPeopleSweepReport.Tests.ps1`): 35 Pester tests with a
   mocked Graph seam (intercepting through the resolver + engine chain) covering each
   contract seam — the provisional-id gate with and without an `-IdMapPath`, the
   `intendedUsers -> intendedUpns` transform regression (asserting a non-empty UPN list
   actually scores so the transform bug cannot regress), the whole-tenant
-  `blockedUserCount = null` arm, the Complete / Partial / Failed roll-up, plus a happy path
+  `blockedUserCount = null` arm, the Complete / Partial / Failed roll-up, an id-map
+  stem-collision regression (unique-key reconciliation, collision surfacing, and
+  conflicting-duplicate-key rejection), an engine-decisions-missing regression (a missing or
+  short engine decision file marks scored agents Failed, never a silent `0`), plus a happy path
   (a People-capable agent with a blocked user) and a never-silent-zero invariant.
 - **FNF samples** (`templates/fnf-people-sweep-report.sample.json`,
   `templates/agent-id-map.sample.json`) and **fixtures** (`tests/fixtures/fnf/`): a
