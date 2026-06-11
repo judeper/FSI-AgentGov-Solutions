@@ -38,6 +38,24 @@ FSI Copilot governance build.
   switch-on-pathway contract and the per-agent coverage-gap aggregate (monitor-only),
   with per-feature Copilot credit-rate constants and a configurable cache TTL and
   blocked-UPN sample cap.
+- **Per-user entitlement resolver** (`scripts/Get-CopilotEntitlement.ps1`): produces the
+  engine's per-user inputs from real tenant data — `hasCopilotLicense` by the **paid
+  Microsoft 365 Copilot service-plan allowlist** (8 GUIDs, `provisioningStatus = Success`,
+  via `licenseDetails` so transitive group-based licenses count) with
+  `Bing_Chat_Enterprise` and other confusable plans explicitly **denied**; a
+  `/subscribedSkus` tenant SKU dictionary that resolves undocumented Copilot-bearing SKUs
+  ("E7", "Copilot Premium") by construction; and PAYG / credit coverage (including an
+  "All Users" scope and group transitive membership) mapped to `inCreditScopeGroup`, per
+  gated capability. Emits a Find-No-Filter "blocked" lens
+  (`isBlocked ⇔ no paid plan AND no applicable PAYG coverage`) plus an engine-ready
+  document, and fails **open** on a read error (records the user unresolved, never
+  "blocked"). The billing-policy REST schema is unproven, so `-BillingPolicyInputPath` /
+  `-BillingPolicy` is preferred over the best-effort live read.
+- **Resolver test suite** (`tests/CopilotEntitlement.Tests.ps1`): 20 Pester tests with a
+  mocked Graph / billing-policy seam covering the `Bing_Chat_Enterprise` DENY trap, the
+  "All Users" PAYG case, transitive group licensing, the unlicensed + no-PAYG block,
+  undocumented-SKU-by-construction, fail-open-on-error, per-capability coverage, and an
+  end-to-end engine integration (licensed → Allow, unlicensed → Block).
 - **Documentation**: `docs/architecture.md` (two policy objects, three group layers,
   entitlement engine, coverage-gap, build dependency graph),
   `docs/prerequisites.md` (managed-identity-first auth, least-privilege roles, Graph
@@ -67,6 +85,13 @@ FSI Copilot governance build.
   conservative fail-closed posture. Updated `entitlement-decision.sample.json` and
   `coverage-gap.sample.json` so the licensed M365-surface `mcp-cs` case shows Allow and
   the blocked / needs-credit-scope illustration moves to a non-Microsoft-365 surface.
+- **Billing-policy inventory surfaces user scope + connected surfaces.**
+  `Get-BillingPolicyInventory.ps1` now reports each PAYG policy's `Scope`
+  (AllUsers / Group / Unknown), `ScopeGroupIds`, and `ConnectedServices`
+  (Chat / SharePoint); the schema (`create_cbg_dataverse_schema.py`) gains a
+  `fsi_cbg_userscope` option set plus `UserScope` and `AssignedGroupId` columns on
+  `fsi_cbgbillingpolicy`, so an operator can see which policies cover all users for which
+  capability and the resolver can surface PAYG scope.
 
 ### Notes
 

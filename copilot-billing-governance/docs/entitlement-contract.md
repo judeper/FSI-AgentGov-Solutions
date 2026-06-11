@@ -50,6 +50,56 @@ their specific obligations.
 > those land, the engine operates on sample/fixture inputs (see the script's
 > `-InputPath` parameter).
 
+### 2.1 Per-user input resolver (`Get-CopilotEntitlement.ps1`)
+
+The engine consumes six per-user fields under each agent's `intendedUsers[]`: `upn`,
+`hasCopilotLicense`, `inApiAudienceGroup`, `inCreditScopeGroup`, `inEligibleCohort`,
+and `surfaceZeroRated`. During development these come from fixtures; in production they
+are produced from **real tenant data** by
+[`scripts/Get-CopilotEntitlement.ps1`](../scripts/Get-CopilotEntitlement.ps1). The
+resolver takes a set of UPNs (or an agents skeleton whose agents carry `intendedUpns`)
+and returns / persists the engine-ready document plus a **Find-No-Filter (FNF)
+"blocked from a gated capability" lens**.
+
+- **`hasCopilotLicense` — by literal service-plan GUID, never by name.** The resolver
+  reads `GET /users/{id}/licenseDetails` (which **includes transitive, group-assigned**
+  licenses) and sets `hasCopilotLicense = true` only when the user holds at least one
+  `servicePlans[]` entry whose `servicePlanId` is in the **paid Microsoft 365 Copilot
+  allowlist** (eight GUIDs) **and** whose `provisioningStatus` is `Success`. Detection is
+  by the literal GUID allowlist — never a `COPILOT` substring or `servicePlanName` regex.
+- **DENY trap.** Confusable plans are explicitly excluded and can never grant
+  entitlement: `Bing_Chat_Enterprise` (the free Copilot Chat plan bundled in E5 — the
+  key false-positive trap), Microsoft Sales Copilot, and Viva Sales. An E5 user whose
+  only Copilot-looking plan is `Bing_Chat_Enterprise` is therefore **not** licensed.
+- **Undocumented SKUs (by construction).** "Microsoft 365 E7" and "Copilot Premium" have
+  no published SKU GUIDs, so the resolver does **not** hard-code SKU names. It builds a
+  tenant SKU dictionary from `GET /subscribedSkus` and resolves entitlement from the
+  service-plan allowlist, so any local SKU carrying an allowlisted Copilot plan is
+  "licensed by construction" regardless of its display name.
+- **PAYG / credit coverage → `inCreditScopeGroup`.** There is **no Graph endpoint** for
+  billing-policy membership. The resolver reads pay-as-you-go / credit policy scope and
+  maps **coverage for the gated capability** to the engine's `inCreditScopeGroup` input:
+  a policy scoped to **All Users** covers every tenant user for its surface and collapses
+  the blocked set to zero for that capability (surfaced as a loud warning so "0 blocked"
+  is not misread as "all entitled"); a **group-scoped** policy covers the group's
+  transitive members (`GET /groups/{id}/transitiveMembers`); coverage is evaluated **per
+  capability** (PAYG today covers Chat / SharePoint, not every feature), so a
+  SharePoint-only policy does not cover a Chat gate.
+- **FNF "blocked" lens.** Independently of the engine decision, the resolver computes
+  `isBlocked ⇔ (no paid Copilot service plan) AND (not covered by an applicable PAYG /
+  credit policy for the gated capability)` — always joining license **and** PAYG.
+- **Accuracy-first (fail-open on read error).** Misclassifying a licensed user as
+  "blocked" is a serious, customer-facing error, so a user whose Graph read fails is
+  recorded as **unresolved** (never "blocked") and **excluded** from the engine input for
+  manual review, rather than asserted blocked on incomplete data.
+
+> **Assumption (unproven schema).** The Power Platform billing-policy REST shape
+> (`…/providers/Microsoft.BusinessAppPlatform/billingPolicies`) is not yet proven, so the
+> resolver prefers an explicit `-BillingPolicyInputPath` / `-BillingPolicy` (for example,
+> the normalized output of [`Get-BillingPolicyInventory.ps1`](../scripts/Get-BillingPolicyInventory.ps1))
+> and treats the live read as best-effort. The PAYG → `inCreditScopeGroup` mapping is a
+> deliberate design choice; confirm coverage against the Microsoft 365 admin center.
+
 ---
 
 ## 3. Pathway classification

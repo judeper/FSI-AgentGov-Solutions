@@ -47,11 +47,28 @@ Requirements for deploying Copilot Billing Governance (CBG).
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `User.Read.All` | Application | Read user Copilot license assignment (entitlement input) |
-| `Group.Read.All` | Application | Read Entra group `securityEnabled` / `mailEnabled` / `groupTypes` at admission time |
+| `User.Read.All` | Application | Read user Copilot license assignment via `licenseDetails`, including transitive group-based licenses (entitlement input) |
+| `Group.Read.All` | Application | Read Entra group `securityEnabled` / `mailEnabled` / `groupTypes` at admission time, and group **transitive members** for PAYG group-scope and cohort resolution |
+| `Organization.Read.All` | Application | Read `subscribedSkus` to build the tenant SKU dictionary (resolves undocumented Copilot-bearing SKUs — e.g. "E7", "Copilot Premium" — by construction) |
 
 > Grant admin consent to the managed identity or app registration used by the
 > scripts. Request the least privilege your environment allows.
+
+### Power Platform billing-policy REST (PAYG / credit coverage)
+
+The per-user resolver ([`Get-CopilotEntitlement.ps1`](../scripts/Get-CopilotEntitlement.ps1))
+maps **PAYG / credit coverage** to the engine's `inCreditScopeGroup` input. There is **no
+Microsoft Graph endpoint** for billing-policy membership, so coverage is read from the
+Power Platform billing-policy admin REST
+(`https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/billingPolicies`)
+using a token for the `https://api.bap.microsoft.com/` audience, acquired via the same
+managed-identity-first model. The calling principal needs **Power Platform Admin** (or an
+equivalent billing-policy reader) rights.
+
+> **Unproven schema.** This REST shape is not yet proven. Prefer supplying the resolver an
+> explicit `-BillingPolicyInputPath` / `-BillingPolicy` — for example the normalized output
+> of [`Get-BillingPolicyInventory.ps1`](../scripts/Get-BillingPolicyInventory.ps1) — and
+> treat the live read as best-effort.
 
 ---
 
@@ -101,9 +118,11 @@ and fall back only when one is not available.
 - [ ] Dataverse environment ready; CBG schema deployed
       (`python scripts/create_cbg_dataverse_schema.py`)
 - [ ] Managed identity configured for the production script host
-- [ ] Graph admin consent granted (`User.Read.All`, `Group.Read.All`)
+- [ ] Graph admin consent granted (`User.Read.All`, `Group.Read.All`, `Organization.Read.All`)
 - [ ] Maker / audience / billing groups registered (security-enabled, not
       mail-enabled) in `fsi_cbgapprovedgrouppolicy`
+- [ ] Per-user entitlement inputs resolved (`Get-CopilotEntitlement.ps1`); billing-policy
+      coverage supplied via `-BillingPolicyInputPath` while the REST schema is unproven
 - [ ] Coverage-gap analysis run in monitor-only mode; rows present in
       `fsi_cbgcoveragegap`
 

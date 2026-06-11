@@ -119,7 +119,8 @@ copilot-billing-governance/
 │   └── flow-configuration.md      # 15-min policy sync + nightly coverage-gap
 ├── scripts/
 │   ├── create_cbg_dataverse_schema.py     # schema + --output-docs
-│   ├── Get-BillingPolicyInventory.ps1     # PAYG + credit policy read
+│   ├── Get-BillingPolicyInventory.ps1     # PAYG + credit policy read (scope + connected surfaces)
+│   ├── Get-CopilotEntitlement.ps1         # per-user entitlement resolver (real Graph + PAYG inputs → engine)
 │   └── Invoke-EntitlementEvaluation.ps1   # switch-on-pathway engine + coverage-gap
 └── templates/
     ├── coverage-gap.sample.json
@@ -148,9 +149,17 @@ registry), Power Platform Admin (Dataverse and flows).
    [`docs/flow-configuration.md`](docs/flow-configuration.md) to build the 15-minute
    policy-sync flow and the nightly coverage-gap flow (no exported flow JSON is
    shipped).
-5. **Run coverage-gap analysis monitor-only.**
+5. **Resolve per-user entitlement inputs (real tenant data).**
+   [`scripts/Get-CopilotEntitlement.ps1`](scripts/Get-CopilotEntitlement.ps1) reads each
+   user's Copilot license (by the paid service-plan allowlist, including transitive group
+   assignments) and PAYG / credit coverage, and emits the engine-ready per-user booleans
+   plus a Find-No-Filter "blocked" lens. Supply the audience UPNs (from
+   `copilot-agent-inventory`); for the policy dimension, prefer `-BillingPolicyInputPath`
+   (the normalized `Get-BillingPolicyInventory.ps1` output) while the billing-policy REST
+   schema remains unproven.
+6. **Run coverage-gap analysis monitor-only.**
    [`scripts/Invoke-EntitlementEvaluation.ps1`](scripts/Invoke-EntitlementEvaluation.ps1)
-   evaluates entitlement and writes per-agent gaps; confirm rows in
+   evaluates the resolved entitlement inputs and writes per-agent gaps; confirm rows in
    `fsi_cbgcoveragegap` before enabling any enforcement.
 
 Authentication is **managed-identity-first**; client secrets are a legacy
@@ -184,6 +193,16 @@ sources.
   `feat/copilot-agent-governance` wave; until they are catalog-registered, the engine
   runs on fixture inputs via `-InputPath`. Work IQ GA / consumption-billing switch is
   **June 16 2026**.
+- **Per-user inputs from real tenant data.** `Get-CopilotEntitlement.ps1` produces the
+  engine's per-user booleans from Microsoft Graph (license by the paid service-plan
+  allowlist — including transitive group assignments — with `Bing_Chat_Enterprise` and
+  other confusable plans explicitly denied) and PAYG / credit coverage (mapped to
+  `inCreditScopeGroup`, with an "All Users" policy collapsing the blocked set to zero per
+  capability). A user whose Graph read fails is recorded **unresolved** and excluded —
+  never reported as "blocked" — because misclassifying a licensed user is a serious,
+  customer-facing error. The billing-policy REST schema is **unproven**; prefer
+  `-BillingPolicyInputPath` (the `Get-BillingPolicyInventory.ps1` output) over the
+  best-effort live read.
 - **2.27 is a proposal**, not an implemented control in this manifest.
 
 ## Changelog

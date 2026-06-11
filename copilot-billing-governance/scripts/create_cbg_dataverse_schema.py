@@ -241,6 +241,13 @@ OPTIONSETS = {
         "Surface a charge applies to. Chat is credit-eligible; SharePoint stays PAYG.",
         ["Chat - Credit-eligible", "SharePoint - PAYG-only", "Mixed"],
     ),
+    "fsi_cbg_userscope": _optionset(
+        "fsi_cbg_userscope", "User Scope",
+        "Whether a PAYG billing policy applies to all tenant users or only the members "
+        "of a specific Entra security group. An all-users scope makes every user "
+        "covered for the policy's surface and collapses the blocked set to zero.",
+        ["All users", "Specific security group"],
+    ),
     "fsi_cbg_blockreason": _optionset(
         "fsi_cbg_blockreason", "Block Reason",
         "Dominant reason a user is blocked from a metered agent (coverage-gap summary).",
@@ -341,6 +348,8 @@ COLUMNS = {
         _string("EnvironmentName", "Environment Name", "Power Platform environment connected to this billing policy.", max_length=200),
         _boolean("IsConnected", "Is Connected", "Whether the two-step add-then-connect flow has completed (environment connected)."),
         _picklist("SpendScope", "Spend Scope", "Surface this PAYG policy covers (SharePoint grounding stays PAYG).", "fsi_cbg_spendscope"),
+        _picklist("UserScope", "User Scope", "Whether this PAYG policy applies to all tenant users or to a specific Entra security group. An all-users scope covers every user for the policy's surface.", "fsi_cbg_userscope"),
+        _string("AssignedGroupId", "Assigned Group ID", "Entra security group object ID whose members this PAYG policy covers when UserScope is a specific security group."),
         _decimal("BudgetAlertThreshold", "Budget Alert Threshold", "Budget-alert threshold in tenant currency. Informational alert only; PAYG has no hard-stop.", precision=2, max_val=100000000),
         _boolean("BudgetAlertConfigured", "Budget Alert Configured", "Whether a budget alert has been configured for this policy."),
         _integer("PolicyCountSnapshot", "Policy Count Snapshot", "Observed number of PAYG billing policies in the tenant at last sync (ceiling is 50).", min_val=0, max_val=50),
