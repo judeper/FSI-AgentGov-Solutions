@@ -624,17 +624,23 @@ function ConvertFrom-CbgBillingPolicy {
         }
     }
 
-    # Connection state.
-    $connected = $true
-    $explicitConnected = $false
+    # Connection state. Default to NOT connected and require an explicit positive
+    # signal to entitle: a billing policy not connected to a service entitles no one
+    # (GATE0b 4). An undetermined connection state (no connected/isConnected/status
+    # signal at all) is surfaced upstream as "connection unknown" for manual review -
+    # never silently assumed connected, because a false grant under-reports the users
+    # who actually lack coverage.
+    $connected = $false
+    $connectionKnown = $false
     foreach ($sk in @('connected', 'isConnected')) {
         $sv = Get-CbgProperty -InputObject $Policy -Name $sk
-        if ($null -ne $sv) { $connected = [bool]$sv; $explicitConnected = $true; break }
+        if ($null -ne $sv) { $connected = [bool]$sv; $connectionKnown = $true; break }
     }
-    if (-not $explicitConnected) {
+    if (-not $connectionKnown) {
         $statusVal = Get-CbgProperty -InputObject $Policy -Name 'status'
         if ($null -ne $statusVal -and $statusVal -is [string]) {
             $connected = ($statusVal -match '(?i)enabled|connected|active')
+            $connectionKnown = $true
         }
     }
 
@@ -645,15 +651,20 @@ function ConvertFrom-CbgBillingPolicy {
         Capabilities      = $caps.ToArray()
         CapabilitiesKnown = $capsKnown
         Connected         = $connected
+        ConnectionKnown   = $connectionKnown
     }
 }
 
 function Test-CbgPolicyCoversCapability {
     <#
     .SYNOPSIS
-        True when a normalised policy is connected AND applies to the gated capability.
-        A policy whose capability list is unknown is treated as covering (flagged
-        upstream as uncertain).
+        True only when a normalised policy is connected AND its recognized capability
+        surface includes the gated capability. Fail-CLOSED on policy-shape uncertainty:
+        a policy whose connection state is undetermined or whose capability surface is
+        unrecognized is treated as NOT covering (and routed upstream to manual review),
+        because a billing policy not connected to a service entitles no one (GATE0b 4).
+        Treating such a policy as covering would silently flip unlicensed in-scope users
+        to not-blocked and under-report the people who actually lack access.
     #>
     [CmdletBinding()]
     param(
@@ -661,7 +672,7 @@ function Test-CbgPolicyCoversCapability {
         [Parameter(Mandatory)][ValidateSet('CopilotChat', 'SharePointAgents', 'Both')][string]$Capability
     )
     if (-not $Policy.Connected) { return $false }
-    if (-not $Policy.CapabilitiesKnown) { return $true }   # connected but services unknown
+    if (-not $Policy.CapabilitiesKnown) { return $false }  # unparseable surface -> fail closed (no coverage)
     $wantChat = ($Capability -in @('CopilotChat', 'Both'))
     $wantSpo = ($Capability -in @('SharePointAgents', 'Both'))
     if ($wantChat -and ($Policy.Capabilities -contains 'Chat')) { return $true }
@@ -700,17 +711,45 @@ function Resolve-CbgPaygCoverage {
     $allUsersCovered = $false
     $coveredUpns = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
     $applied = New-Object System.Collections.Generic.List[object]
+    $needsReview = New-Object System.Collections.Generic.List[object]
     $uncertain = $false
 
     foreach ($raw in @($Policies)) {
         $p = ConvertFrom-CbgBillingPolicy -Policy $raw
         if ($null -eq $p) { continue }
-        if (-not (Test-CbgPolicyCoversCapability -Policy $p -Capability $Capability)) {
-            $applied.Add([pscustomobject]@{ name = $p.Name; scopeType = $p.ScopeType; applies = $false; reason = 'not connected or capability not covered' })
+
+        # --- Fail-CLOSED on policy-shape uncertainty. A billing policy not connected to
+        #     a service entitles no one (GATE0b 4); likewise an unparseable capability
+        #     surface or scope cannot be asserted to cover anyone. These cases do NOT
+        #     grant coverage - they are routed to needsManualReview (distinct from
+        #     appliedPolicies) so affected unlicensed users stay reported as blocked
+        #     pending verification, rather than being silently flipped to not-blocked. ---
+
+        # Connection state undetermined: cannot confirm the policy is connected.
+        if (-not $p.ConnectionKnown) {
+            $uncertain = $true
+            $needsReview.Add([pscustomobject]@{ name = $p.Name; scopeType = $p.ScopeType; applies = $false; capabilitiesKnown = $p.CapabilitiesKnown; connectionUnknown = $true; reason = 'connection state unknown; treated as not connected (no coverage) pending manual review' })
             continue
         }
-        if (-not $p.CapabilitiesKnown) { $uncertain = $true }
+        # Explicitly not connected: a known state (not uncertain) that entitles no one.
+        if (-not $p.Connected) {
+            $applied.Add([pscustomobject]@{ name = $p.Name; scopeType = $p.ScopeType; applies = $false; reason = 'policy not connected' })
+            continue
+        }
+        # Connected but the capability surface is unrecognized: cannot confirm it covers
+        # the gated capability, so fail closed and surface for review.
+        if (-not $p.CapabilitiesKnown) {
+            $uncertain = $true
+            $needsReview.Add([pscustomobject]@{ name = $p.Name; scopeType = $p.ScopeType; applies = $false; capabilitiesKnown = $false; connectionUnknown = $false; reason = 'capability surface unrecognized; cannot confirm coverage of the gated capability pending manual review' })
+            continue
+        }
+        # Connected with a recognized surface that does not include the gated capability.
+        if (-not (Test-CbgPolicyCoversCapability -Policy $p -Capability $Capability)) {
+            $applied.Add([pscustomobject]@{ name = $p.Name; scopeType = $p.ScopeType; applies = $false; reason = 'capability not covered' })
+            continue
+        }
 
+        # --- Covers the gated capability: apply coverage by scope. ---
         if ($p.ScopeType -eq 'AllUsers') {
             $allUsersCovered = $true
             $applied.Add([pscustomobject]@{ name = $p.Name; scopeType = 'AllUsers'; applies = $true; capabilitiesKnown = $p.CapabilitiesKnown })
@@ -734,15 +773,17 @@ function Resolve-CbgPaygCoverage {
             $applied.Add([pscustomobject]@{ name = $p.Name; scopeType = 'Group'; applies = $true; groupIds = $p.GroupIds; resolvedMemberCount = $memberUpns.Count; capabilitiesKnown = $p.CapabilitiesKnown })
             continue
         }
-        # Unknown scope - cannot safely assert coverage; surface for review.
+        # Scope type could not be determined: cannot safely assert who is covered.
+        # Fail closed and surface for review (do NOT grant coverage).
         $uncertain = $true
-        $applied.Add([pscustomobject]@{ name = $p.Name; scopeType = 'Unknown'; applies = $true; reason = 'scope type could not be determined; treated as non-covering' })
+        $needsReview.Add([pscustomobject]@{ name = $p.Name; scopeType = 'Unknown'; applies = $false; capabilitiesKnown = $p.CapabilitiesKnown; connectionUnknown = $false; reason = 'scope type could not be determined; cannot assert coverage pending manual review' })
     }
 
     return [pscustomobject]@{
         AllUsersCovered   = $allUsersCovered
         CoveredUpns       = $coveredUpns
         AppliedPolicies   = $applied.ToArray()
+        NeedsManualReview = $needsReview.ToArray()
         CoverageUncertain = $uncertain
     }
 }
@@ -936,6 +977,9 @@ function Invoke-CbgEntitlementResolution {
     # --- Result document + FNF summary. ---
     $blockedCount = @($users | Where-Object { $_.isBlocked }).Count
     $appliedCoveringPolicies = @($paygCoverage.AppliedPolicies | Where-Object { $_.applies })
+    # Policies treated as NOT covering because their connection state, capability
+    # surface, or scope was uncertain (fail-closed). Distinct from appliedPolicies.
+    $needsManualReview = @($paygCoverage.NeedsManualReview)
 
     $result = [pscustomobject]@{
         generatedAt        = (Get-Date).ToUniversalTime().ToString('o')
@@ -950,6 +994,7 @@ function Invoke-CbgEntitlementResolution {
             paygCoveredCount             = @($users | Where-Object { $_.paygCovered }).Count
             paygAllUsersCovered          = $paygCoverage.AllUsersCovered
             paygCoverageUncertain        = $paygCoverage.CoverageUncertain
+            needsManualReviewCount       = $needsManualReview.Count
             creditScopeFromOverrideGroup = ($null -ne $creditScopeOverrideSet)
         }
         paygCoverage       = [pscustomobject]@{
@@ -957,6 +1002,7 @@ function Invoke-CbgEntitlementResolution {
             coverageUncertain = $paygCoverage.CoverageUncertain
             coveredUpnCount   = $paygCoverage.CoveredUpns.Count
             appliedPolicies   = $appliedCoveringPolicies
+            needsManualReview = $needsManualReview
         }
         copilotBearingSkus = $copilotBearingSkus
         users              = $users.ToArray()
@@ -970,7 +1016,7 @@ function Invoke-CbgEntitlementResolution {
         Write-Warning "A PAYG/credit policy is scoped to ALL USERS for '$Capability'; every tenant user is covered and the blocked set is zero by construction. Verify this is intended."
     }
     if ($paygCoverage.CoverageUncertain) {
-        Write-Warning "At least one applicable billing policy had an unknown capability/scope shape; PAYG coverage may be over- or under-counted. Verify against the Microsoft 365 admin center."
+        Write-Warning "$($needsManualReview.Count) billing policy(ies) had an undetermined connection state, an unrecognized capability surface, or an unresolved scope. Per the fail-closed-on-uncertainty posture they were treated as NOT covering and routed to 'needsManualReview'; affected unlicensed users remain reported as blocked pending manual verification against the Microsoft 365 admin center."
     }
     if ($unresolved.Count -gt 0) {
         Write-Warning "$($unresolved.Count) user(s) could not be resolved and were excluded from the engine input (see 'unresolved'). They are NOT reported as blocked."

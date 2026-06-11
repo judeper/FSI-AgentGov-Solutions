@@ -85,13 +85,28 @@ and returns / persists the engine-ready document plus a **Find-No-Filter (FNF)
   transitive members (`GET /groups/{id}/transitiveMembers`); coverage is evaluated **per
   capability** (PAYG today covers Chat / SharePoint, not every feature), so a
   SharePoint-only policy does not cover a Chat gate.
+- **Fail-CLOSED on policy-shape uncertainty.** A false "covered" silently flips unlicensed
+  in-scope users to not-blocked and under-reports the people who actually lack access, so
+  the resolver grants PAYG coverage only from a policy it can fully parse. A policy is
+  treated as **NOT covering** — routed to a `needsManualReview[]` list (distinct from
+  `appliedPolicies`) with `coverageUncertain` set — when its **connection state is
+  undetermined** (no `connected` / `isConnected` / `status` signal; `connected` defaults
+  to *false* and a positive signal is required, because a billing policy not connected to
+  a service entitles no one), its **capability surface is unrecognized** (none of the
+  known capabilities / services / connectedServices / serviceTypes / spendScope /
+  surfaceScope fields, so coverage of the gated capability cannot be confirmed), or its
+  **scope cannot be resolved**. Affected unlicensed users stay reported as blocked pending
+  manual verification against the Microsoft 365 admin center rather than being granted on
+  an unparseable policy.
 - **FNF "blocked" lens.** Independently of the engine decision, the resolver computes
   `isBlocked ⇔ (no paid Copilot service plan) AND (not covered by an applicable PAYG /
   credit policy for the gated capability)` — always joining license **and** PAYG.
-- **Accuracy-first (fail-open on read error).** Misclassifying a licensed user as
-  "blocked" is a serious, customer-facing error, so a user whose Graph read fails is
-  recorded as **unresolved** (never "blocked") and **excluded** from the engine input for
-  manual review, rather than asserted blocked on incomplete data.
+- **Accuracy-first (fail-open only on transient read error).** Misclassifying a licensed
+  user as "blocked" is a serious, customer-facing error, so a user whose Graph license
+  read fails (a transient per-user I/O error) is recorded as **unresolved** (never
+  "blocked") and **excluded** from the engine input for manual review, rather than
+  asserted blocked on incomplete data. Fail-*open* is reserved for these transient
+  per-user read errors; policy-shape uncertainty fails **closed** (previous bullet).
 
 > **Assumption (unproven schema).** The Power Platform billing-policy REST shape
 > (`…/providers/Microsoft.BusinessAppPlatform/billingPolicies`) is not yet proven, so the

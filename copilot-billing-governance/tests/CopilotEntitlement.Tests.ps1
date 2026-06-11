@@ -251,6 +251,61 @@ Describe 'Get-CopilotEntitlement - PAYG / credit coverage join' {
         $r.paygCoverage.allUsersCovered | Should -BeFalse
         (Get-CbgResolvedUser -Result $r -Upn 'u@contoso.com').isBlocked | Should -BeTrue
     }
+
+    # --- Regression: GATE-1 MED-A. A connected All-Users policy whose capability surface
+    #     uses an UNRECOGNIZED field name (so CapabilitiesKnown is false) must NOT be
+    #     treated as covering every capability. Before the fail-closed fix this collapsed
+    #     the blocked set to zero (false ALLOW); now the policy is routed to manual review
+    #     and affected unlicensed users stay blocked. (FAILS before the fix.)
+    It 'does NOT cover when an applicable policy has no recognized capability field (MED-A: fail-closed, manual review)' {
+        $script:MockLdByUser = @{}     # both users unlicensed
+        $script:MockSkus = @()
+        $script:MockErrorUsers = @()
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+
+        # Live BAP-shaped All-Users policy, connected, but the capability list is exposed
+        # under an unrecognized field ('entitlements'), so the surface cannot be parsed.
+        $unknownCapPolicy = [pscustomobject]@{ name = 'Unknown surface'; scope = 'AllUsers'; entitlements = @('CopilotChat'); connected = $true }
+        $r = Invoke-CbgEntitlementResolution -Upn @('a@contoso.com', 'b@contoso.com') -Policy @($unknownCapPolicy) -GraphToken 'tok' -Capability 'CopilotChat'
+
+        # An unparseable capability surface must NOT collapse the blocked set.
+        $r.paygCoverage.allUsersCovered | Should -BeFalse
+        $r.summary.blockedCount | Should -Be 2
+        (Get-CbgResolvedUser -Result $r -Upn 'a@contoso.com').isBlocked | Should -BeTrue
+        (Get-CbgResolvedUser -Result $r -Upn 'b@contoso.com').isBlocked | Should -BeTrue
+        # Surfaced for manual review (distinct from appliedPolicies) with coverage uncertain.
+        $r.paygCoverage.coverageUncertain | Should -BeTrue
+        $r.summary.needsManualReviewCount | Should -Be 1
+        $review = @($r.paygCoverage.needsManualReview | Where-Object { $_.name -eq 'Unknown surface' })
+        $review.Count | Should -Be 1
+        @($r.paygCoverage.appliedPolicies | Where-Object { $_.name -eq 'Unknown surface' }).Count | Should -Be 0
+    }
+
+    # --- Regression: GATE-1 MED-B. A policy carrying NO connection signal at all
+    #     (no connected / isConnected / status) must NOT be assumed connected. Before the
+    #     fail-closed fix the connection default was $true, so an otherwise-applicable
+    #     policy silently covered users (false ALLOW); now it is treated as not connected
+    #     and surfaced with connectionUnknown. (FAILS before the fix.)
+    It 'does NOT assume a policy with no connection signal is connected (MED-B: connectionUnknown, fail-closed)' {
+        $script:MockLdByUser = @{}     # unlicensed
+        $script:MockSkus = @()
+        $script:MockErrorUsers = @()
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+
+        # Recognized capability + All-Users scope, but NO connection signal whatsoever.
+        $noConnSignal = [pscustomobject]@{ name = 'No connection signal'; scope = 'AllUsers'; capabilities = @('Chat') }
+        $r = Invoke-CbgEntitlementResolution -Upn @('a@contoso.com') -Policy @($noConnSignal) -GraphToken 'tok' -Capability 'CopilotChat'
+
+        # Undetermined connection is not a grant.
+        $r.paygCoverage.allUsersCovered | Should -BeFalse
+        (Get-CbgResolvedUser -Result $r -Upn 'a@contoso.com').isBlocked | Should -BeTrue
+        $r.summary.blockedCount | Should -Be 1
+        # Rolled into coverage uncertainty and surfaced for manual review with the flag.
+        $r.paygCoverage.coverageUncertain | Should -BeTrue
+        $rev = @($r.paygCoverage.needsManualReview | Where-Object { $_.name -eq 'No connection signal' })[0]
+        $rev | Should -Not -BeNullOrEmpty
+        $rev.connectionUnknown | Should -BeTrue
+    }
 }
 
 Describe 'Get-CopilotEntitlement - tenant SKU dictionary (undocumented SKUs)' {

@@ -198,11 +198,15 @@ sources.
   allowlist — including transitive group assignments — with `Bing_Chat_Enterprise` and
   other confusable plans explicitly denied) and PAYG / credit coverage (mapped to
   `inCreditScopeGroup`, with an "All Users" policy collapsing the blocked set to zero per
-  capability). A user whose Graph read fails is recorded **unresolved** and excluded —
+  capability). PAYG coverage is granted only from a policy the resolver can fully parse:
+  a policy whose connection state, capability surface, or scope cannot be determined is
+  treated as **not covering** (fail-closed) and routed to a `needsManualReview` list with
+  a `coverageUncertain` flag, so unlicensed in-scope users are not silently under-reported
+  as entitled. A user whose Graph read fails is recorded **unresolved** and excluded —
   never reported as "blocked" — because misclassifying a licensed user is a serious,
-  customer-facing error. The billing-policy REST schema is **unproven**; prefer
-  `-BillingPolicyInputPath` (the `Get-BillingPolicyInventory.ps1` output) over the
-  best-effort live read.
+  customer-facing error; fail-open is reserved for that transient per-user read case. The
+  billing-policy REST schema is **unproven**; prefer `-BillingPolicyInputPath` (the
+  `Get-BillingPolicyInventory.ps1` output) over the best-effort live read.
 - **2.27 is a proposal**, not an implemented control in this manifest.
 
 ## Changelog
