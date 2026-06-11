@@ -7,11 +7,11 @@ coe_function: govern
 ---
 # Copilot Agent Inventory
 
-> **Version:** v0.1.0-preview
+> **Version:** v0.2.0-preview
 > **Status:** Preview
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — ARG Power Platform Inventory GA Mar 31 2026; several agent-specific fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview.
-> **Last Verified:** 2026-06-09
+> **Last Verified:** 2026-06-12
 
 Tenant-wide discovery and a canonical Dataverse **system-of-record** for every
 Copilot Studio and Microsoft 365 Copilot Agent Builder agent. Copilot Agent
@@ -81,9 +81,14 @@ copilot-agent-inventory/
 ├── scripts/
 │   ├── create_cai_dataverse_schema.py   # 8-entity schema, idempotent, --output-docs
 │   ├── discover_agents.py               # three-layer discovery scanner
+│   ├── detect_people_capability.py      # declarative-agent People capability (manifest)
+│   ├── expand_audience_upns.py          # sharing audience -> member UPNs (Graph transitive)
 │   └── requirements.txt
 └── templates/
-    └── agent-record.sample.json         # sample fsi_copilotagent + feature rows
+    ├── agent-record.sample.json         # sample fsi_copilotagent + feature rows
+    ├── people-detection.sample.json     # sample People-capability detection artifact
+    ├── audience-input.sample.json       # sample sharing posture (expand input)
+    └── audience-upn-list.sample.json    # sample CBG-shaped intendedUsers artifact
 ```
 
 ## Quick Start
@@ -110,7 +115,74 @@ python scripts/discover_agents.py \
 python scripts/discover_agents.py \
     --environment-url https://governance.crm.dynamics.com \
     --tenant-id <your-tenant-id> --auth-mode managed-identity
+
+# 5. Detect the declarative-agent "People" capability from manifests
+#    (source-repo tree or local app-package directory/zip; --dry-run plans only)
+python scripts/detect_people_capability.py \
+    --source source-repo --path ../my-agent-repo \
+    --id-map ./agent-id-map.json --output people.json
+
+# 6. Expand each agent's sharing audience to member UPNs (CBG input)
+#    --dry-run resolves nothing over the network
+python scripts/expand_audience_upns.py \
+    --input authshare.json --auth-mode managed-identity \
+    --output intended-users.json
 ```
+
+## People capability & audience expansion (FNF)
+
+Two FNF-governance extensions augment the core inventory. Both emit transient
+JSON artifacts (the system-of-record stays in Dataverse) and supply input to the
+downstream Copilot Billing Governance (CBG) solution.
+
+**People capability detection (`detect_people_capability.py`).** The "Reference
+org chart and profile info" toggle is the declarative-agent manifest entry
+`capabilities[].name == "People"` (a case-sensitive literal, stable across
+manifest schema v1.5–v1.7; the optional v1.7 `include_related_content` is
+captured but does not gate detection). This signal lives in `declarativeAgent.json`
+inside the agent app package — **not** in the Dataverse `bot`/`botcomponent`
+definition and not in any public API for deployed agents — so it is parsed from
+manifests via a **manifest-source-agnostic** parser behind an acquisition-adapter
+seam:
+
+- `--source local-package` — a local app-package directory or `.zip` (reads
+  `manifest.json` → `copilotAgents.declarativeAgents[]` → `declarativeAgent.json`).
+- `--source source-repo` — a source/CI repository tree (Toolkit-built LOB agents).
+- A clearly-marked `FutureExportAdapter` seam is reserved for a scalable
+  tenant-export path (a sibling spike is resolving whether one exists); it raises
+  `NotImplementedError` rather than silently returning nothing.
+
+Each hit is recorded as a `fsi_caiagentfeature` row of feature type
+**People (Org Chart & Profile)** with provenance (`fsi_detectionsource`) and a
+**Declared (Manifest)** confidence marker (`fsi_detectionconfidence`). "Declared"
+means authored/available in the manifest; a v1.7 `user_overrides` block can remove
+a capability at runtime, so declared does not equate to effective. Declarative
+manifests carry no Dataverse bot GUID, so without an `--id-map` entry the agent id
+is flagged **provisional** and a warning is logged for the orchestrator to
+reconcile before joining CAI/CBG.
+
+**Audience → UPN expansion (`expand_audience_upns.py`).** CBG consumes a per-agent
+`intendedUsers[]` UPN list, but `fsi_caiauthshare` records the sharing audience as
+security-group references. This script expands those groups to member UPNs via
+Microsoft Graph **transitive** membership (`GET /groups/{id}/transitiveMembers`,
+permission `GroupMember.Read.All`), which flattens **nested groups** automatically,
+and de-duplicates across overlapping viewer/editor groups. Defensive handling:
+
+- **"Everyone in the organization"** sharing is flagged `wholeTenant`; the tenant
+  is **never enumerated** (a configurable `--whole-tenant-cap` is recorded for the
+  consumer, default `0`).
+- **`--max-members-per-group`** bounds very large groups and sets a `truncated`
+  flag so a partial list is never mistaken for a complete one.
+- **HTTP 429 throttling** uses Retry-After-aware backoff; a group that cannot be
+  read records a per-group error and the agent status becomes `Partial`/`Failed`
+  rather than silently dropping members.
+- Only `intendedUsers[].upn` is produced (per-user license/cohort flags are
+  separate downstream gaps). The Dataverse write-back carries **counts and flags
+  only — no UPNs/PII** — on the `fsi_caiauthshare` audience columns.
+
+Both scripts are **managed-identity-first**, accept `--dry-run`, and support
+compliance with the audience-scoping and data-minimization expectations the FNF
+deliverable depends on.
 
 ## Configuration Placeholders
 

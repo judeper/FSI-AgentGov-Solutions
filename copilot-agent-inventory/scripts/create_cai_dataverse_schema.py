@@ -133,6 +133,12 @@ CAI_OPTIONSETS = {
             ("Environment Variable", 100000018),
             ("Dataverse Search Grounding", 100000019),
             ("AI Builder Model", 100000020),
+            # Declarative-agent manifest capability (declarativeAgent.json
+            # capabilities[].name == "People"). The "Reference org chart and
+            # profile info" Agent Builder toggle maps to this capability; it is
+            # NOT a botcomponent and NOT exposed by any deployed-agent API, so it
+            # is detected from the manifest by detect_people_capability.py.
+            ("People (Org Chart & Profile)", 100000022),
             ("Other / Unrecognized", 100000099),
         ],
     },
@@ -196,6 +202,35 @@ CAI_OPTIONSETS = {
             ("Complete", 100000000),
             ("Incomplete Scan", 100000001),
             ("Failed", 100000002),
+        ],
+    },
+    # Provenance of a feature row: which acquisition source produced it. Most
+    # rows come from the Dataverse botcomponent scan; manifest-derived rows
+    # (e.g., the People capability) record which manifest-acquisition adapter
+    # supplied the declarativeAgent.json. The export-adapter value is a reserved
+    # seam for a future scalable manifest export (see detect_people_capability.py).
+    "fsi_cai_detectionsource": {
+        "name": "fsi_cai_detectionsource",
+        "options": [
+            ("Dataverse Botcomponent Scan", 100000000),
+            ("Declarative Manifest (Local App Package)", 100000001),
+            ("Declarative Manifest (Source/CI Repo)", 100000002),
+            ("Declarative Manifest (Export Adapter - Future)", 100000003),
+            ("Unknown", 100000099),
+        ],
+    },
+    # Confidence marker for a detected feature. "Declared (Manifest)" means the
+    # capability is authored/available in the declarative-agent manifest; per the
+    # v1.7 user_overrides caveat the consuming user may remove it at runtime, so
+    # declared is NOT the same as effective. Botcomponent rows are read from the
+    # agent's persisted definition and are marked "Configured (Dataverse)".
+    "fsi_cai_detectionconfidence": {
+        "name": "fsi_cai_detectionconfidence",
+        "options": [
+            ("Declared (Manifest)", 100000000),
+            ("Configured (Dataverse)", 100000001),
+            ("Inferred", 100000002),
+            ("Unknown", 100000099),
         ],
     },
 }
@@ -448,6 +483,18 @@ AGENTFEATURE_COLUMNS = [
                  description="Whether the feature is enabled on the agent"),
     _string_col("fsi_RelationshipName", "Relationship Name", 200, required=False,
                 description="botcomponent navigation property the feature was matched through"),
+    _picklist_col("fsi_DetectionSource", "Detection Source",
+                  "fsi_cai_detectionsource", required=False,
+                  description="Acquisition source that produced this row (Dataverse "
+                              "botcomponent scan or a declarative-manifest adapter)"),
+    _picklist_col("fsi_DetectionConfidence", "Detection Confidence",
+                  "fsi_cai_detectionconfidence", required=False,
+                  description="Declared (manifest) vs Configured (Dataverse); declared "
+                              "capabilities may be removed by the user at runtime (v1.7 user_overrides)"),
+    _memo_col("fsi_DetectionDetail", "Detection Detail", 4000,
+              description="JSON provenance for manifest-derived rows: source locator, "
+                          "manifest schema version, and capability sub-settings such as "
+                          "the v1.7 People include_related_content flag"),
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this feature row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
@@ -480,6 +527,21 @@ AUTHSHARE_COLUMNS = [
                  description="Count of editor principals"),
     _string_col("fsi_LimitSharingMode", "Limit Sharing Mode", 100, required=False,
                 description="Managed-environment bot-limitSharingMode value"),
+    _boolean_col("fsi_AudienceWholeTenant", "Audience Whole Tenant", default=False,
+                 description="'Everyone in the organization' sharing detected; members "
+                             "are deliberately NOT enumerated (whole-tenant flag)"),
+    _integer_col("fsi_AudienceUpnCount", "Audience UPN Count", required=False,
+                 description="Distinct member UPNs resolved by Microsoft Graph transitive "
+                             "group expansion (0 when whole-tenant and not enumerated)"),
+    _boolean_col("fsi_AudienceTruncated", "Audience Truncated", default=False,
+                 description="At least one group exceeded the per-group member cap; the "
+                             "resolved UPN list is partial"),
+    _string_col("fsi_AudienceResolutionStatus", "Audience Resolution Status", 100,
+                required=False,
+                description="Complete / Partial / WholeTenantNotEnumerated / Failed / "
+                            "NotResolved — outcome of the UPN expansion"),
+    _datetime_col("fsi_AudienceResolvedAt", "Audience Resolved At", required=False,
+                  description="When the audience-to-UPN expansion last ran for this agent"),
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this posture was last scanned"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,

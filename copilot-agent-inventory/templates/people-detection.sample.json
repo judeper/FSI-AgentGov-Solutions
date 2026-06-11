@@ -1,0 +1,66 @@
+{
+  "_comment": "Sample artifact emitted by detect_people_capability.py. It records the declarative-agent 'People' capability (capabilities[].name == 'People', the 'Reference org chart and profile info' toggle) detected from declarativeAgent.json manifests. Field names under 'features' are Dataverse LOGICAL names for fsi_caiagentfeature rows; picklist fields (fsi_featuretype, fsi_detectionsource, fsi_detectionconfidence) carry the option-set LABEL and the writer resolves the label to its integer value at upsert time. This is illustrative sample data, NOT an exported Power Platform artifact. The People signal is DECLARED (authored/available in the manifest); a v1.7 user_overrides block can remove it at runtime, so 'declared' does not guarantee 'effective'.",
+  "schemaVersion": "0.2.0-preview",
+  "summary": {
+    "runId": "cai-people-1781290000",
+    "detectionSource": "Declarative Manifest (Source/CI Repo)",
+    "manifestsScanned": 3,
+    "peopleDetected": 2,
+    "provisionalAgentIds": 1
+  },
+  "agents": [
+    {
+      "agentId": "f3a8c1d2-4b5e-4f6a-9c7d-1e2f3a4b5c6d",
+      "agentName": "Wealth Advisory Assistant",
+      "agentIdProvisional": false,
+      "locator": "packages/wealth-advisory/declarativeAgent.json",
+      "manifestVersion": "v1.5",
+      "includeRelatedContent": null
+    },
+    {
+      "agentId": "people-org-concierge",
+      "agentName": "Org Concierge",
+      "agentIdProvisional": true,
+      "locator": "packages/org-concierge.zip!declarativeAgent.json",
+      "manifestVersion": "v1.7",
+      "includeRelatedContent": true
+    }
+  ],
+  "features": [
+    {
+      "fsi_name": "People (Org Chart & Profile): Wealth Advisory Assistant",
+      "fsi_agentid": "f3a8c1d2-4b5e-4f6a-9c7d-1e2f3a4b5c6d",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_componenttype": null,
+      "fsi_componentversion": "Not Applicable",
+      "fsi_sourceobjectid": "capability:People",
+      "fsi_sourceobjectname": "People",
+      "fsi_relationshipname": "declarativeAgent.capabilities",
+      "fsi_detectionsource": "Declarative Manifest (Source/CI Repo)",
+      "fsi_detectionconfidence": "Declared (Manifest)",
+      "fsi_detectiondetail": "{\"source\": \"Declarative Manifest (Source/CI Repo)\", \"locator\": \"packages/wealth-advisory/declarativeAgent.json\", \"capabilityName\": \"People\", \"manifestVersion\": \"v1.5\", \"schema\": \"https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.5/schema.json\", \"includeRelatedContent\": null, \"agentRefProvisional\": false, \"detectedAt\": \"2026-06-12T14:00:00Z\"}",
+      "fsi_isenabled": true,
+      "fsi_lastscannedat": "2026-06-12T14:00:00Z",
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "_comment": "Provisional agent id: the manifest had no Dataverse bot GUID and no --id-map entry resolved it, so fsi_agentid carries the declarative-agent id as a placeholder and agentRefProvisional is true. The orchestrator must reconcile this to the bot GUID before joining CAI/CBG. include_related_content (v1.7) is captured but does NOT gate detection.",
+      "fsi_name": "People (Org Chart & Profile): Org Concierge",
+      "fsi_agentid": "people-org-concierge",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_componenttype": null,
+      "fsi_componentversion": "Not Applicable",
+      "fsi_sourceobjectid": "capability:People",
+      "fsi_sourceobjectname": "People",
+      "fsi_relationshipname": "declarativeAgent.capabilities",
+      "fsi_detectionsource": "Declarative Manifest (Source/CI Repo)",
+      "fsi_detectionconfidence": "Declared (Manifest)",
+      "fsi_detectiondetail": "{\"source\": \"Declarative Manifest (Source/CI Repo)\", \"locator\": \"packages/org-concierge.zip!declarativeAgent.json\", \"capabilityName\": \"People\", \"manifestVersion\": \"v1.7\", \"schema\": \"https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.7/schema.json\", \"includeRelatedContent\": true, \"agentRefProvisional\": true, \"detectedAt\": \"2026-06-12T14:00:00Z\"}",
+      "fsi_isenabled": true,
+      "fsi_lastscannedat": "2026-06-12T14:00:00Z",
+      "fsi_runid": "cai-people-1781290000"
+    }
+  ]
+}

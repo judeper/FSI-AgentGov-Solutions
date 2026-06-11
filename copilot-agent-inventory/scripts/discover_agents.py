@@ -524,7 +524,13 @@ def _feature_record(
     component_type: Any,
     relationship: str,
 ) -> dict:
-    """Build one fsi_caiagentfeature row (logical column names)."""
+    """Build one fsi_caiagentfeature row (logical column names).
+
+    Botcomponent-derived rows are stamped with the Dataverse provenance and a
+    "Configured (Dataverse)" confidence marker. Manifest-derived rows (e.g., the
+    People capability detected by detect_people_capability.py) carry their own
+    "Declared (Manifest)" marker — declared is NOT the same as effective.
+    """
     return {
         "fsi_agentid": bot_id,
         "fsi_featuretype": feature_type,
@@ -533,6 +539,8 @@ def _feature_record(
         "fsi_sourceobjectid": source_object_id,
         "fsi_sourceobjectname": source_object_name,
         "fsi_relationshipname": relationship,
+        "fsi_detectionsource": "Dataverse Botcomponent Scan",
+        "fsi_detectionconfidence": "Configured (Dataverse)",
         "fsi_isenabled": True,
         "fsi_runid": ctx.run_id,
     }

@@ -228,4 +228,4 @@ Rename action: `Write_Run_Record`.
 
 ---
 
-*Copilot Agent Inventory — Flow Setup Guide v0.1.0-preview*
+*Copilot Agent Inventory — Flow Setup Guide v0.2.0-preview*
