@@ -320,8 +320,9 @@ Defender XDR `CloudAppEvents`, Application Insights, and Microsoft Graph `aiInte
 #### License detection is service-plan–based; display names are not contracts
 
 The CBG resolver checks paid entitlement against **service-plan GUIDs** read from
-`GET /v1.0/users/{id}/licenseDetails`. The six service plans that constitute a paid
-M365 Copilot entitlement (GATE0b, Microsoft licensing-service-plan reference):
+`GET /v1.0/users/{id}/licenseDetails`. The **eight** service plans that constitute a paid
+M365 Copilot entitlement — the six `M365_COPILOT_*` plans plus two sibling plans bundled in
+the same paid SKU (GATE0b 8-GUID allowlist; Microsoft licensing-service-plan reference):
 
 | `servicePlanName` | `servicePlanId` |
 |---|---|
@@ -331,6 +332,8 @@ M365 Copilot entitlement (GATE0b, Microsoft licensing-service-plan reference):
 | `M365_COPILOT_SHAREPOINT` | `0aedf20c-091d-420b-aadf-30c042609612` |
 | `M365_COPILOT_INTELLIGENT_SEARCH` | `931e4a88-a67f-48b5-814f-16a5f1e6028d` |
 | `M365_COPILOT_CONNECTORS` | `89f1c4c8-0878-40f7-804d-869c9128ab5d` |
+| `GRAPH_CONNECTORS_COPILOT` | `82d30987-df9b-4486-b146-198b21d164c7` |
+| `COPILOT_STUDIO_IN_COPILOT_FOR_M365` | `fe6c28b3-d468-44ea-bbd0-a10a5167435c` |
 
 `Bing_Chat_Enterprise` (`0d0c0d31-fae7-41f2-b909-eaf4d7f26dba`) — present in M365 E3
 and E5 SKUs — is **explicitly excluded**: its friendly name in Microsoft's reference is
