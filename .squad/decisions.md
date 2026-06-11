@@ -251,6 +251,37 @@ Fixed 78→79 control-count guardrails in:
 
 **Deduplication Note:** Entry at 2026-06-10 ≥ control 2.27 entry (2026-06-10); this captures follow-up verification only (does not repeat control-authoring decision).
 
+## 2026-06-10: Issue #440 — Ceilings & Rates Un-Hedge (PR #444 Merged)
+
+### Issue #440 — Control 2.27 Ceilings & Rates Un-Hedged — linus-4 (Docs, opus-4.8)
+
+**Date:** 2026-06-10T22:26Z  
+**Related Issues:** judeper/FSI-AgentGov#440 (verification follow-up)  
+**Framework PR:** judeper/FSI-AgentGov#444 (squash-merged 2026-06-10, commit e475593)  
+
+**Scope:** Remove 🔎 hedging markers from 29 ceiling/rate facts in Control 2.27 control doc + 4 playbooks. Apply confirmed-with-citation status to entitlement engine's published ceilings and credit-rate schema (as of June 2026).
+
+**Decision:** Owner approved un-hedging. All 29 🔎 markers upgraded to confirmed-with-citation:
+
+1. **Ceilings — PAYG Billing Policies & Copilot Credit Policies**
+   - Up to **50 PAYG billing policies** per tenant (Microsoft Learn: pay-as-you-go setup)
+   - Up to **10 Copilot credit policies** per tenant (Microsoft Learn: Copilot capacity packs)
+   - **Citation:** `https://learn.microsoft.com/power-platform/power-automate/billing/`
+
+2. **Credit Rates — Per-Action Consumption**
+   - Classic: 1 credit / Generative: 2 credits / Agent action: 5 credits / Tenant-graph: 10 credits / Agent flow: 13-per-100 / Premium: 100 credits
+   - **Rate:** $0.01 per credit
+   - **Prepaid pack:** 25,000 credits/mo, $200/tenant/mo, non-rolling
+   - **Citations:** `https://learn.microsoft.com/power-platform/power-automate/billing/requirements-messages-management`; `https://learn.microsoft.com/power-platform/power-automate/billing/pay-as-you-go-meters`; `https://learn.microsoft.com/power-platform/power-automate/billing/capacity-packs`
+
+3. **Pricing Qualifier Retained**
+   - One responsible qualifier kept: *"as of June 2026, reconcile against current Microsoft docs"* (not a hedge; responsible versioning for evolving platform).
+   - 22 genuinely-volatile hedges retained (portal/PPAC blade/menu names, per-tenant service-plan names, Work IQ June 16 2026 switch).
+
+**Status:** PR #444 merged to framework main (commit e475593). Verification arc for issue #440 **CLOSED**. Control 2.27 is CONFIRMED-WITH-CITATION across entitlement ceilings & rates.
+
+**Deduplication Note:** Completes the follow-up verification work recorded at 2026-06-10 16:30 (commit 73f4b59). This entry records the final owner approval & un-hedge action.
+
 ## Active Decisions
 
 No decisions recorded yet.
