@@ -51,6 +51,24 @@ sharing-audience-to-UPN expansion.
 - **Unit tests**: `tests/test_detect_people_capability.py` and
   `tests/test_expand_audience_upns.py`.
 
+### Fixed
+
+- **GATE-1 hardening (accuracy is customer-facing).** Org-wide-shared agents no
+  longer resolve to a confidently-empty audience: whole-tenant reach is now a
+  per-agent signal (`fsi_caiauthshare.fsi_sharedwitheveryone`, derived from the
+  bot `accesscontrolpolicy` during discovery) instead of being mis-inferred from
+  the environment-wide `bot-limitSharingMode`; a posture row with no whole-tenant
+  signal and no refs is marked `Partial` (never a silent empty). Provisional
+  manifest detections are now queryable (`fsi_caiagentfeature.fsi_agentrefprovisional`)
+  and no longer collapse on the `(fsi_agentid, fsi_sourceobjectid)` alternate key
+  — provisional rows salt `fsi_sourceobjectid` with a stable per-manifest hash.
+  The Microsoft Graph token now refreshes near expiry (no 401 on long runs),
+  `Retry-After` parsing handles the RFC 7231 HTTP-date format, malformed/unzippable
+  manifests increment a `manifestsFailed` counter that surfaces a `Partial` scan,
+  and the Dataverse write-back `$filter` escapes single quotes. Adds two schema
+  columns (`fsi_sharedwitheveryone`, `fsi_agentrefprovisional`) and a regression
+  test per finding; `docs/dataverse-schema.md` regenerated.
+
 ### Notes
 
 - **Declared ≠ effective** — the People signal is detected as authored/available

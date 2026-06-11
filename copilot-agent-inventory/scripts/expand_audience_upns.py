@@ -57,6 +57,12 @@ GRAPH_SCOPE = "https://graph.microsoft.com/.default"
 GRAPH_PAGE_SIZE = 999
 MAX_BACKOFF_SECONDS = 60
 
+# Refresh the Graph access token when it is within this window of expiry. A long
+# audience-expansion run can exceed the ~60-minute token lifetime, so the token
+# is re-acquired per request once it nears expiry rather than cached for the
+# whole resolver lifetime (which previously caused 401s on late agents).
+TOKEN_REFRESH_SKEW_SECONDS = 300
+
 DEFAULT_MAX_MEMBERS_PER_GROUP = 1000
 DEFAULT_WHOLE_TENANT_CAP = 0  # 0 = never enumerate the tenant for whole-tenant shares
 
@@ -76,6 +82,54 @@ STATUS_PARTIAL = "Partial"
 STATUS_WHOLE_TENANT = "WholeTenantNotEnumerated"
 STATUS_FAILED = "Failed"
 STATUS_NOT_RESOLVED = "NotResolved"
+
+
+# =============================================================================
+# Pure HTTP / OData helpers
+# =============================================================================
+
+
+def _parse_retry_after(value: Optional[str], fallback: float) -> float:
+    """Parse an HTTP ``Retry-After`` header into a delay in seconds.
+
+    ``Retry-After`` is either a non-negative number of seconds or an RFC 7231
+    HTTP-date (e.g. ``Wed, 21 Oct 2026 07:28:00 GMT``). A naive ``float(value)``
+    crashes on the date form; this helper tries int/float first, then falls back
+    to date parsing, and finally to ``fallback`` for missing/garbage values so a
+    throttled request never raises while computing its backoff.
+    """
+    if value is None:
+        return fallback
+    text = value.strip()
+    if not text:
+        return fallback
+    try:
+        seconds = float(text)
+        return seconds if seconds >= 0 else fallback
+    except ValueError:
+        pass
+    try:
+        from email.utils import parsedate_to_datetime
+
+        retry_at = parsedate_to_datetime(text)
+    except (TypeError, ValueError, IndexError):
+        return fallback
+    if retry_at is None:
+        return fallback
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=timezone.utc)
+    delta = (retry_at - datetime.now(timezone.utc)).total_seconds()
+    return delta if delta > 0 else fallback
+
+
+def _odata_escape(value: Any) -> str:
+    """Escape a string literal for an OData ``$filter`` (single quote -> doubled).
+
+    OData string literals are single-quoted; an unescaped quote in the value
+    breaks the query (and is an injection vector). Per the OData spec a literal
+    single quote is escaped by doubling it.
+    """
+    return str(value).replace("'", "''")
 
 
 # =============================================================================
@@ -217,10 +271,16 @@ def _derive_status(
     upn_count: int,
     truncated: bool,
     errors: list[dict],
+    tenant_signal_known: bool = True,
 ) -> str:
     if whole_tenant:
         return STATUS_WHOLE_TENANT
     if not had_refs:
+        if not tenant_signal_known:
+            # No sharing refs AND no per-agent whole-tenant signal: the posture is
+            # incomplete, so an empty audience cannot be asserted for a possibly
+            # tenant-reachable agent. Never emit a confident empty here.
+            return STATUS_PARTIAL
         # No groups or principals shared -> a cleanly empty audience.
         return STATUS_COMPLETE
     if errors and upn_count == 0:
@@ -228,6 +288,24 @@ def _derive_status(
     if errors or truncated:
         return STATUS_PARTIAL
     return STATUS_COMPLETE
+
+
+def _has_tenant_signal(agent: dict, had_refs: bool) -> bool:
+    """Return True when the posture carries a usable whole-tenant determination.
+
+    An explicit per-agent ``sharedWithEveryone`` / ``wholeTenant`` boolean, or any
+    viewer/editor refs to resolve, constitute a usable signal. A posture with none
+    of these (e.g. a Dataverse row whose ``fsi_sharedwitheveryone`` column is unset,
+    flagged via ``wholeTenantSignalKnown=False``) cannot be asserted as a confident
+    empty audience.
+    """
+    if isinstance(agent.get("sharedWithEveryone"), bool):
+        return True
+    if isinstance(agent.get("wholeTenant"), bool):
+        return True
+    if had_refs:
+        return True
+    return bool(agent.get("wholeTenantSignalKnown", True))
 
 
 def expand_agent_audience(
@@ -285,7 +363,17 @@ def expand_agent_audience(
                 errors.append({"ref": ref.display, "error": "unrecognized sharing reference"})
 
     upn_list = sorted(upns)
-    status = _derive_status(whole_tenant, had_refs, len(upn_list), any_truncated, errors)
+    tenant_signal_known = _has_tenant_signal(agent, had_refs)
+    if not whole_tenant and not had_refs and not tenant_signal_known:
+        logger.warning(
+            "Agent %s sharing posture has no whole-tenant signal "
+            "(fsi_sharedwitheveryone unset) and no viewer/editor refs; the audience "
+            "cannot be confirmed empty and is marked Partial. Populate "
+            "fsi_sharedwitheveryone during discovery to resolve.",
+            agent_id or "<unknown>",
+        )
+    status = _derive_status(whole_tenant, had_refs, len(upn_list), any_truncated,
+                            errors, tenant_signal_known)
 
     return {
         "agentId": agent_id,
@@ -372,7 +460,11 @@ class GraphMemberResolver:
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.auth_mode = auth_mode
-        self._token: Optional[str] = None
+        # Hold the credential (not just a bearer string) for the resolver lifetime
+        # so the token can be refreshed per request; _access_token caches the most
+        # recent azure-identity AccessToken (token + expires_on epoch seconds).
+        self._credential_obj: Any = None
+        self._access_token: Any = None
         session = requests.Session()
         retry = Retry(total=5, backoff_factor=2,
                       status_forcelist=[429, 500, 502, 503, 504],
@@ -381,20 +473,37 @@ class GraphMemberResolver:
         self._session = session
 
     def _credential(self) -> Any:
-        import azure.identity as azid  # type: ignore
-        if self.auth_mode == "managed-identity":
-            return (azid.ManagedIdentityCredential(client_id=self.client_id)
-                    if self.client_id else azid.ManagedIdentityCredential())
-        if self.auth_mode == "workload-identity":
-            return azid.WorkloadIdentityCredential(tenant_id=self.tenant_id, client_id=self.client_id)
-        if self.auth_mode == "interactive":
-            return azid.InteractiveBrowserCredential(tenant_id=self.tenant_id, client_id=self.client_id)
-        return azid.DefaultAzureCredential()
+        if self._credential_obj is None:
+            import azure.identity as azid  # type: ignore
+            if self.auth_mode == "managed-identity":
+                self._credential_obj = (
+                    azid.ManagedIdentityCredential(client_id=self.client_id)
+                    if self.client_id else azid.ManagedIdentityCredential()
+                )
+            elif self.auth_mode == "workload-identity":
+                self._credential_obj = azid.WorkloadIdentityCredential(
+                    tenant_id=self.tenant_id, client_id=self.client_id)
+            elif self.auth_mode == "interactive":
+                self._credential_obj = azid.InteractiveBrowserCredential(
+                    tenant_id=self.tenant_id, client_id=self.client_id)
+            else:
+                self._credential_obj = azid.DefaultAzureCredential()
+        return self._credential_obj
+
+    def _bearer_token(self) -> str:
+        """Return a valid Graph bearer token, refreshing it as it nears expiry.
+
+        A long run can outlive the ~60-minute token lifetime; re-acquiring within
+        TOKEN_REFRESH_SKEW_SECONDS of expiry avoids the 401s that a lifetime-cached
+        token caused on late agents.
+        """
+        token = self._access_token
+        if token is None or (token.expires_on - time.time()) < TOKEN_REFRESH_SKEW_SECONDS:
+            self._access_token = self._credential().get_token(GRAPH_SCOPE)
+        return self._access_token.token
 
     def _headers(self) -> dict:
-        if self._token is None:
-            self._token = self._credential().get_token(GRAPH_SCOPE).token
-        return {"Authorization": f"Bearer {self._token}", "Accept": "application/json"}
+        return {"Authorization": f"Bearer {self._bearer_token()}", "Accept": "application/json"}
 
     def _get_with_backoff(self, url: str) -> Any:
         """GET with explicit 429-aware backoff that honors Retry-After.
@@ -413,7 +522,8 @@ class GraphMemberResolver:
             resp = self._session.get(url, headers=self._headers(), timeout=120)
             if resp.status_code != 429:
                 return resp
-            wait = float(resp.headers.get("Retry-After") or min(delay, MAX_BACKOFF_SECONDS))
+            wait = _parse_retry_after(resp.headers.get("Retry-After"),
+                                      min(delay, MAX_BACKOFF_SECONDS))
             logger.warning("429 throttled on %s; backing off %.1fs (attempt %d)",
                            url, wait, attempt + 1)
             time.sleep(wait)
@@ -489,7 +599,9 @@ def load_agents_from_dataverse(environment_url: str, tenant_id: str,
     """Read fsi_caiauthshare rows from Dataverse and map to the input shape.
 
     Uses the shared DataverseClient. fsi_viewergroups / fsi_editorprincipals are
-    stored as JSON memo columns; they are parsed back into lists here.
+    stored as JSON memo columns; they are parsed back into lists here. Whole-tenant
+    reach is read from the per-agent fsi_sharedwitheveryone boolean (NOT inferred
+    from the environment-wide fsi_limitsharingmode policy).
     """
     import sys
     shared_dir = Path(__file__).resolve().parent.parent.parent / "scripts" / "shared"
@@ -504,7 +616,7 @@ def load_agents_from_dataverse(environment_url: str, tenant_id: str,
     rows = client.query(
         "fsi_caiauthshares",
         select=["fsi_agentid", "fsi_environmentid", "fsi_viewergroups",
-                "fsi_editorprincipals", "fsi_limitsharingmode"],
+                "fsi_editorprincipals", "fsi_sharedwitheveryone"],
     ) or []
 
     def _parse(value: Any) -> list:
@@ -518,14 +630,23 @@ def load_agents_from_dataverse(environment_url: str, tenant_id: str,
 
     agents: list[dict] = []
     for row in rows:
-        agents.append({
+        agent: dict = {
             "fsi_agentid": row.get("fsi_agentid"),
             "fsi_environmentid": row.get("fsi_environmentid"),
             "viewerGroups": _parse(row.get("fsi_viewergroups")),
             "editorPrincipals": _parse(row.get("fsi_editorprincipals")),
-            "sharedWithEveryone": str(row.get("fsi_limitsharingmode") or "").lower() in
-            ("everyone", "noscope", "none"),
-        })
+        }
+        # Whole-tenant reach is a PER-AGENT signal read from fsi_sharedwitheveryone
+        # (populated during discovery from the bot accesscontrolpolicy). It is NOT
+        # inferred from the environment-wide fsi_limitsharingmode policy. When the
+        # column is unset, leave the signal unknown so a refless row is marked
+        # Partial rather than emitted as a confident empty audience.
+        shared_everyone = row.get("fsi_sharedwitheveryone")
+        if isinstance(shared_everyone, bool):
+            agent["sharedWithEveryone"] = shared_everyone
+        else:
+            agent["wholeTenantSignalKnown"] = False
+        agents.append(agent)
     return agents
 
 
@@ -640,7 +761,7 @@ def _write_back_authshare(updates: list[dict], args: argparse.Namespace) -> None
         existing = client.query(
             "fsi_caiauthshares",
             select=["fsi_caiauthshareid"],
-            filter_expr=f"fsi_agentid eq '{update['fsi_agentid']}'",
+            filter_expr=f"fsi_agentid eq '{_odata_escape(update['fsi_agentid'])}'",
             top=1,
         ) or []
         payload = {k: v for k, v in update.items() if k != "fsi_agentid"}

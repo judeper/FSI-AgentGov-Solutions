@@ -4,7 +4,7 @@ Auto-generated schema documentation. Do not edit manually — regenerate with `p
 
 ## Overview
 
-The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-specific option sets**, and **1 shared option set(s)**, with **104 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
+The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-specific option sets**, and **1 shared option set(s)**, with **106 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
 
 > **Logical-name convention.** Dataverse logical names are the SchemaName lowercased with NO underscores between words (`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> `fsi_agentid`). Always use logical names in OData `$select` / `$filter` / `$orderby`.
 
@@ -121,6 +121,7 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-
 | `fsi_DetectionSource` | `fsi_detectionsource` | Picklist (`fsi_cai_detectionsource`) | No | Acquisition source that produced this row (Dataverse botcomponent scan or a declarative-manifest adapter) |
 | `fsi_DetectionConfidence` | `fsi_detectionconfidence` | Picklist (`fsi_cai_detectionconfidence`) | No | Declared (manifest) vs Configured (Dataverse); declared capabilities may be removed by the user at runtime (v1.7 user_overrides) |
 | `fsi_DetectionDetail` | `fsi_detectiondetail` | Memo(4000) | No | JSON provenance for manifest-derived rows: source locator, manifest schema version, and capability sub-settings such as the v1.7 People include_related_content flag |
+| `fsi_AgentRefProvisional` | `fsi_agentrefprovisional` | Boolean (default: false) | No | The fsi_agentid is a PROVISIONAL manifest/app id not yet bound to a Dataverse bot GUID (no --id-map match during manifest detection). Downstream joins (Copilot Billing Governance) must reconcile provisional rows before use; queryable so provisional rows can be filtered |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this feature row was last refreshed |
 | `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
 
@@ -147,6 +148,7 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-
 | `fsi_SharedWithViewerCount` | `fsi_sharedwithviewercount` | Integer | No | Count of viewer principals/groups |
 | `fsi_SharedWithEditorCount` | `fsi_sharedwitheditorcount` | Integer | No | Count of editor principals |
 | `fsi_LimitSharingMode` | `fsi_limitsharingmode` | String(100) | No | Managed-environment bot-limitSharingMode value |
+| `fsi_SharedWithEveryone` | `fsi_sharedwitheveryone` | Boolean (default: false) | No | Per-agent org-wide reach: the agent is shared with 'Everyone in the organization' (derived from the bot accesscontrolpolicy Any / Any-multi-tenant signal during discovery). This is a PER-AGENT posture signal and is NOT the environment-wide bot-limitSharingMode policy; it drives whole-tenant audience handling in expand_audience_upns.py |
 | `fsi_AudienceWholeTenant` | `fsi_audiencewholetenant` | Boolean (default: false) | No | 'Everyone in the organization' sharing detected; members are deliberately NOT enumerated (whole-tenant flag) |
 | `fsi_AudienceUpnCount` | `fsi_audienceupncount` | Integer | No | Distinct member UPNs resolved by Microsoft Graph transitive group expansion (0 when whole-tenant and not enumerated) |
 | `fsi_AudienceTruncated` | `fsi_audiencetruncated` | Boolean (default: false) | No | At least one group exceeded the per-group member cap; the resolved UPN list is partial |

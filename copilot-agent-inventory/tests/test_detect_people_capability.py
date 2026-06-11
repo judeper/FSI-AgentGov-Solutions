@@ -226,3 +226,114 @@ def test_detect_over_adapter_ignores_agents_without_people(tmp_path: Path) -> No
     run = dp.detect_over_adapter(dp.LocalAppPackageAdapter(tmp_path), "run-z")
     assert run.manifests_scanned == 2
     assert run.people_detected == 1
+
+
+# ===========================================================================
+# Regression tests for GATE-1 findings (H2, M3)
+# ===========================================================================
+
+# --- H2: provisional rows must not collapse on the alt-key ------------------
+
+def test_people_source_object_id_is_deterministic_and_salted_only_when_provisional() -> None:
+    # Non-provisional rows keep the clean constant so re-detection upserts the one
+    # People row for a resolved agent.
+    assert dp._people_source_object_id("anything", False) == dp.PEOPLE_SOURCE_OBJECT_ID
+    # Provisional rows are salted by locator, deterministically (idempotent rescans)
+    # and distinctly (different manifests do not collapse).
+    a1 = dp._people_source_object_id("repo/x/declarativeAgent.json", True)
+    a2 = dp._people_source_object_id("repo/x/declarativeAgent.json", True)
+    b = dp._people_source_object_id("repo/y/declarativeAgent.json", True)
+    assert a1 == a2
+    assert a1 != b
+    assert a1.startswith(dp.PEOPLE_SOURCE_OBJECT_ID + ":")
+
+
+def test_provisional_manifests_with_identical_stem_avoid_altkey_collapse(
+    tmp_path: Path,
+) -> None:
+    # Two Toolkit packages each carry appPackage/declarativeAgent.json (the SAME
+    # file stem) with no --id-map, so both resolve to the identical provisional
+    # agent id "declarativeAgent". With a constant fsi_sourceobjectid the
+    # (fsi_agentid, fsi_sourceobjectid) alt-key would collapse and one upsert would
+    # silently overwrite the other.
+    for sub in ("agent-a", "agent-b"):
+        pkg = tmp_path / sub / "appPackage"
+        pkg.mkdir(parents=True)
+        _write_json(pkg / "declarativeAgent.json",
+                    {"capabilities": [{"name": "People"}]})
+
+    run = dp.detect_over_adapter(dp.SourceRepoAdapter(tmp_path), "run-collapse")
+
+    assert run.people_detected == 2
+    features = run.features
+    # The provisional ids genuinely collide on the stem (the collapse RISK)...
+    assert {f["fsi_agentid"] for f in features} == {"declarativeAgent"}
+    # ...but the salted source-object id keeps the two alt-keys distinct.
+    altkeys = {(f["fsi_agentid"], f["fsi_sourceobjectid"]) for f in features}
+    assert len(altkeys) == 2
+    assert len({f["fsi_sourceobjectid"] for f in features}) == 2
+    # fsi_agentrefprovisional is a queryable top-level column (CBG-join filter).
+    assert all(f["fsi_agentrefprovisional"] is True for f in features)
+
+
+def test_non_provisional_row_keeps_clean_source_object_id_and_flag(
+    tmp_path: Path,
+) -> None:
+    da = tmp_path / "declarativeAgent.json"
+    _write_json(da, {"id": "da-77", "capabilities": [{"name": "People"}]})
+    id_map = {"da-77": "99999999-9999-9999-9999-999999999999"}
+    run = dp.detect_over_adapter(dp.LocalAppPackageAdapter(tmp_path, id_map), "run-clean")
+    feature = run.features[0]
+    assert feature["fsi_sourceobjectid"] == dp.PEOPLE_SOURCE_OBJECT_ID
+    assert feature["fsi_agentrefprovisional"] is False
+
+
+# --- M3: malformed/unzippable manifests must surface as a Partial scan -------
+
+def test_corrupt_zip_is_counted_as_failed_manifest(tmp_path: Path) -> None:
+    (tmp_path / "broken.zip").write_bytes(b"not a real zip file")
+    _write_json(tmp_path / "declarativeAgent.json",
+                {"capabilities": [{"name": "People"}]})
+
+    run = dp.detect_over_adapter(dp.LocalAppPackageAdapter(tmp_path), "run-m3")
+
+    assert run.people_detected == 1
+    assert run.manifests_failed == 1
+    summary = run.summary(dp.SOURCE_LOCAL_PACKAGE)
+    assert summary["manifestsFailed"] == 1
+    assert summary["scanStatus"] == "Partial"
+
+
+def test_unparseable_manifest_json_is_counted_as_failed(tmp_path: Path) -> None:
+    (tmp_path / "declarativeAgent.json").write_text(
+        "{ this is not valid json", encoding="utf-8")
+
+    run = dp.detect_over_adapter(dp.LocalAppPackageAdapter(tmp_path), "run-m3b")
+
+    # A corrupt fleet must NOT read as "0 detections, all green".
+    assert run.manifests_scanned == 0
+    assert run.people_detected == 0
+    assert run.manifests_failed == 1
+    assert run.summary(dp.SOURCE_LOCAL_PACKAGE)["scanStatus"] == "Partial"
+
+
+def test_clean_scan_status_is_complete(tmp_path: Path) -> None:
+    _write_json(tmp_path / "declarativeAgent.json",
+                {"capabilities": [{"name": "People"}]})
+    run = dp.detect_over_adapter(dp.LocalAppPackageAdapter(tmp_path), "run-ok")
+    assert run.manifests_failed == 0
+    assert run.summary(dp.SOURCE_LOCAL_PACKAGE)["scanStatus"] == "Complete"
+
+
+def test_zip_without_declarative_agent_is_not_a_failure(tmp_path: Path) -> None:
+    # A package that genuinely contains no declarativeAgent.json is a valid
+    # "no capability" outcome, NOT a read failure (M3 scope is malformed/unzippable).
+    zip_path = tmp_path / "no-da.zip"
+    with zipfile.ZipFile(zip_path, "w") as archive:
+        archive.writestr("manifest.json", json.dumps({"name": {"short": "X"}}))
+        archive.writestr("color.png", b"not-json")
+
+    run = dp.detect_over_adapter(dp.LocalAppPackageAdapter(zip_path), "run-noda")
+
+    assert run.manifests_failed == 0
+    assert run.summary(dp.SOURCE_LOCAL_PACKAGE)["scanStatus"] == "Complete"

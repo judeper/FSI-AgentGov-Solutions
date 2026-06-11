@@ -495,6 +495,12 @@ AGENTFEATURE_COLUMNS = [
               description="JSON provenance for manifest-derived rows: source locator, "
                           "manifest schema version, and capability sub-settings such as "
                           "the v1.7 People include_related_content flag"),
+    _boolean_col("fsi_AgentRefProvisional", "Agent Ref Provisional", default=False,
+                 description="The fsi_agentid is a PROVISIONAL manifest/app id not yet "
+                             "bound to a Dataverse bot GUID (no --id-map match during "
+                             "manifest detection). Downstream joins (Copilot Billing "
+                             "Governance) must reconcile provisional rows before use; "
+                             "queryable so provisional rows can be filtered"),
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this feature row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
@@ -527,6 +533,13 @@ AUTHSHARE_COLUMNS = [
                  description="Count of editor principals"),
     _string_col("fsi_LimitSharingMode", "Limit Sharing Mode", 100, required=False,
                 description="Managed-environment bot-limitSharingMode value"),
+    _boolean_col("fsi_SharedWithEveryone", "Shared With Everyone", default=False,
+                 description="Per-agent org-wide reach: the agent is shared with "
+                             "'Everyone in the organization' (derived from the bot "
+                             "accesscontrolpolicy Any / Any-multi-tenant signal during "
+                             "discovery). This is a PER-AGENT posture signal and is NOT "
+                             "the environment-wide bot-limitSharingMode policy; it drives "
+                             "whole-tenant audience handling in expand_audience_upns.py"),
     _boolean_col("fsi_AudienceWholeTenant", "Audience Whole Tenant", default=False,
                  description="'Everyone in the organization' sharing detected; members "
                              "are deliberately NOT enumerated (whole-tenant flag)"),

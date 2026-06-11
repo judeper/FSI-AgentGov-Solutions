@@ -48,6 +48,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import zipfile
@@ -85,6 +86,27 @@ PEOPLE_RELATIONSHIP = "declarativeAgent.capabilities"
 # A stable per-agent source-object id so re-detection upserts one People row
 # (the fsi_caiagentfeature alternate key is fsi_agentid + fsi_sourceobjectid).
 PEOPLE_SOURCE_OBJECT_ID = "capability:People"
+
+
+def _people_source_object_id(locator: str, agent_id_provisional: bool) -> str:
+    """Return the fsi_sourceobjectid for a People row, salting provisional rows.
+
+    The fsi_caiagentfeature alternate key is (fsi_agentid, fsi_sourceobjectid).
+    For a resolved (non-provisional) agent the constant ``capability:People`` is
+    correct: re-detection upserts the single People row for that agent.
+
+    For a PROVISIONAL agent the id falls back to the manifest stem, which is the
+    SAME literal (``declarativeAgent``) for every Toolkit
+    ``appPackage/declarativeAgent.json``. With a constant source-object id two
+    distinct provisional manifests would collapse onto one alternate key and one
+    upsert would silently overwrite the other. Salting the source-object id with a
+    stable hash of the manifest locator keeps distinct provisional manifests on
+    distinct alternate keys while remaining deterministic (idempotent re-scans).
+    """
+    if not agent_id_provisional:
+        return PEOPLE_SOURCE_OBJECT_ID
+    digest = hashlib.sha1(str(locator).encode("utf-8")).hexdigest()[:12]
+    return f"{PEOPLE_SOURCE_OBJECT_ID}:{digest}"
 
 # Conventional manifest filenames inside an app package / repo (case-insensitive).
 APP_MANIFEST_NAMES = {"manifest.json"}
@@ -208,12 +230,13 @@ def build_people_feature_record(
         "fsi_featuretype": PEOPLE_FEATURE_TYPE,
         "fsi_componenttype": None,
         "fsi_componentversion": "Not Applicable",
-        "fsi_sourceobjectid": PEOPLE_SOURCE_OBJECT_ID,
+        "fsi_sourceobjectid": _people_source_object_id(locator, agent_id_provisional),
         "fsi_sourceobjectname": PEOPLE_CAPABILITY_NAME,
         "fsi_relationshipname": PEOPLE_RELATIONSHIP,
         "fsi_detectionsource": source_label,
         "fsi_detectionconfidence": CONFIDENCE_DECLARED,
         "fsi_detectiondetail": json.dumps(detail),
+        "fsi_agentrefprovisional": agent_id_provisional,
         "fsi_isenabled": True,
         "fsi_lastscannedat": _utc_now_iso(),
         "fsi_runid": run_id,
@@ -292,13 +315,19 @@ def _read_json_bytes(data: bytes, locator: str) -> Optional[dict]:
 
 
 def load_manifests_from_zip(
-    zip_path: Path, id_map: Optional[dict[str, str]] = None
+    zip_path: Path, id_map: Optional[dict[str, str]] = None,
+    failures: Optional[list] = None,
 ) -> Iterator[ManifestRecord]:
     """Yield ManifestRecords from a Microsoft 365 app-package ``.zip``.
 
     Reads the app ``manifest.json`` to find the ``copilotAgents`` declarative
     agent file refs; falls back to any ``declarativeAgent*.json`` in the package
     when the app manifest is absent or does not reference one.
+
+    A manifest that cannot be opened (``BadZipFile`` / ``OSError``) or whose
+    declarative-agent JSON cannot be parsed (the ``None`` branch) is appended to
+    ``failures`` (when provided) so a corrupt fleet is surfaced as Partial rather
+    than read as "0 detections, all green".
     """
     try:
         with zipfile.ZipFile(zip_path) as archive:
@@ -332,6 +361,8 @@ def load_manifests_from_zip(
                 locator = f"{zip_path}::{da_name}"
                 manifest = _read_json_bytes(archive.read(da_name), locator)
                 if manifest is None:
+                    if failures is not None:
+                        failures.append(locator)
                     continue
                 agent_id, agent_name, provisional = _resolve_agent_identity(
                     manifest, app_manifest, locator, id_map
@@ -343,18 +374,30 @@ def load_manifests_from_zip(
                 )
     except (zipfile.BadZipFile, OSError) as exc:
         logger.warning("Could not open app package %s (fail-open): %s", zip_path, exc)
+        if failures is not None:
+            failures.append(str(zip_path))
 
 
 def load_manifest_from_json_file(
-    json_path: Path, id_map: Optional[dict[str, str]] = None
+    json_path: Path, id_map: Optional[dict[str, str]] = None,
+    failures: Optional[list] = None,
 ) -> Iterator[ManifestRecord]:
-    """Yield a single ManifestRecord from a loose ``declarativeAgent.json`` file."""
+    """Yield a single ManifestRecord from a loose ``declarativeAgent.json`` file.
+
+    An unreadable file (``OSError``) or unparseable JSON (the ``None`` branch) is
+    appended to ``failures`` (when provided) so a corrupt manifest is surfaced as
+    Partial rather than silently skipped.
+    """
     try:
         manifest = _read_json_bytes(json_path.read_bytes(), str(json_path))
     except OSError as exc:
         logger.warning("Could not read manifest %s (fail-open): %s", json_path, exc)
+        if failures is not None:
+            failures.append(str(json_path))
         return
     if manifest is None:
+        if failures is not None:
+            failures.append(str(json_path))
         return
     # An adjacent app manifest (same directory) helps resolve identity if present.
     app_manifest: Optional[dict] = None
@@ -381,28 +424,30 @@ def _is_declarative_agent_json(path: Path) -> bool:
 
 
 def load_manifests_from_dir(
-    root: Path, id_map: Optional[dict[str, str]] = None
+    root: Path, id_map: Optional[dict[str, str]] = None,
+    failures: Optional[list] = None,
 ) -> Iterator[ManifestRecord]:
     """Recursively yield ManifestRecords from app-package zips and loose manifests."""
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
         if path.suffix.lower() == ".zip":
-            yield from load_manifests_from_zip(path, id_map)
+            yield from load_manifests_from_zip(path, id_map, failures)
         elif _is_declarative_agent_json(path):
-            yield from load_manifest_from_json_file(path, id_map)
+            yield from load_manifest_from_json_file(path, id_map, failures)
 
 
 def load_manifests_from_path(
-    path: Path, id_map: Optional[dict[str, str]] = None
+    path: Path, id_map: Optional[dict[str, str]] = None,
+    failures: Optional[list] = None,
 ) -> Iterator[ManifestRecord]:
     """Dispatch on a path that may be a directory, an app-package zip, or a JSON file."""
     if path.is_dir():
-        yield from load_manifests_from_dir(path, id_map)
+        yield from load_manifests_from_dir(path, id_map, failures)
     elif path.suffix.lower() == ".zip":
-        yield from load_manifests_from_zip(path, id_map)
+        yield from load_manifests_from_zip(path, id_map, failures)
     elif path.suffix.lower() == ".json":
-        yield from load_manifest_from_json_file(path, id_map)
+        yield from load_manifest_from_json_file(path, id_map, failures)
     else:
         logger.warning("Unsupported manifest source path: %s", path)
 
@@ -442,9 +487,13 @@ class LocalAppPackageAdapter(ManifestAcquisitionAdapter):
     def __init__(self, root: Path, id_map: Optional[dict[str, str]] = None) -> None:
         self.root = root
         self.id_map = id_map
+        #: Locators of manifests that could not be opened/parsed during the most
+        #: recent iter_records() pass (drives the run's manifests_failed counter).
+        self.failures: list[str] = []
 
     def iter_records(self) -> Iterator[ManifestRecord]:
-        yield from load_manifests_from_path(self.root, self.id_map)
+        self.failures = []
+        yield from load_manifests_from_path(self.root, self.id_map, self.failures)
 
 
 class SourceRepoAdapter(ManifestAcquisitionAdapter):
@@ -460,9 +509,13 @@ class SourceRepoAdapter(ManifestAcquisitionAdapter):
     def __init__(self, root: Path, id_map: Optional[dict[str, str]] = None) -> None:
         self.root = root
         self.id_map = id_map
+        #: Locators of manifests that could not be opened/parsed during the most
+        #: recent iter_records() pass (drives the run's manifests_failed counter).
+        self.failures: list[str] = []
 
     def iter_records(self) -> Iterator[ManifestRecord]:
-        yield from load_manifests_from_dir(self.root, self.id_map)
+        self.failures = []
+        yield from load_manifests_from_dir(self.root, self.id_map, self.failures)
 
 
 class FutureExportAdapter(ManifestAcquisitionAdapter):
@@ -507,14 +560,21 @@ class DetectionRun:
     manifests_scanned: int = 0
     people_detected: int = 0
     provisional_ids: int = 0
+    manifests_failed: int = 0
 
     def summary(self, source_label: str) -> dict:
+        # A non-zero manifests_failed means the fleet was only partially read, so
+        # the scan must NOT be reported as a clean/complete pass: a corrupt or
+        # unzippable manifest is invisible to detection and would otherwise read
+        # as "0 detections, all green".
         return {
             "runId": self.run_id,
             "detectionSource": source_label,
             "manifestsScanned": self.manifests_scanned,
             "peopleDetected": self.people_detected,
             "provisionalAgentIds": self.provisional_ids,
+            "manifestsFailed": self.manifests_failed,
+            "scanStatus": "Partial" if self.manifests_failed else "Complete",
         }
 
 
@@ -557,6 +617,17 @@ def detect_over_adapter(
             "manifestVersion": detection.manifest_version,
             "includeRelatedContent": detection.include_related_content,
         })
+    # Manifests that failed to open/parse are tracked on the adapter (the
+    # iter_records() seam stays argument-free); fold the count into the run so the
+    # summary/artifact can surface a Partial scan.
+    failures = getattr(adapter, "failures", [])
+    run.manifests_failed = len(failures)
+    if failures:
+        logger.warning(
+            "%d manifest(s) could not be read during this scan and were skipped; "
+            "the scan is Partial, not a clean pass: %s",
+            len(failures), ", ".join(str(f) for f in failures[:10]),
+        )
     return run
 
 
@@ -637,6 +708,9 @@ def main() -> None:
     if run.provisional_ids:
         logger.warning("%d detected agent(s) have PROVISIONAL ids - reconcile via --id-map.",
                        run.provisional_ids)
+    if run.manifests_failed:
+        logger.warning("%d manifest(s) could not be read; scan is PARTIAL, not a clean pass.",
+                       run.manifests_failed)
 
     if args.output:
         Path(args.output).write_text(json.dumps(artifact, indent=2), encoding="utf-8")

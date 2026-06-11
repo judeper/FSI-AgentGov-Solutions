@@ -23,8 +23,11 @@ feed Copilot Billing Governance:
 from __future__ import annotations
 
 import json
+import logging
 import sys
+import time
 from pathlib import Path
+from types import SimpleNamespace
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
@@ -357,3 +360,206 @@ def test_dry_run_whole_tenant_still_flagged():
                                     resolver, CFG)
     assert out["wholeTenant"] is True
     assert out["resolutionStatus"] == eau.STATUS_WHOLE_TENANT
+
+
+# ===========================================================================
+# Regression tests for GATE-1 findings (H1, M1, M2, M4)
+# ===========================================================================
+
+
+def _install_fake_dataverse(monkeypatch, rows):
+    """Inject a fake ``dataverse_client`` module so the Dataverse-backed paths
+    (load_agents_from_dataverse / _write_back_authshare) can be exercised with no
+    network or credential. Returns a ``captured`` dict recording init kwargs,
+    queries (entity_set/select/filter_expr/top) and update_record calls.
+    """
+    import types
+
+    captured: dict = {"queries": [], "updates": [], "init_kwargs": None}
+
+    class _FakeClient:
+        def __init__(self, **kwargs):
+            captured["init_kwargs"] = kwargs
+
+        def query(self, entity_set, select=None, filter_expr=None,
+                  orderby=None, top=None):
+            captured["queries"].append({
+                "entity_set": entity_set, "select": select,
+                "filter_expr": filter_expr, "top": top,
+            })
+            return [dict(r) for r in rows]
+
+        def update_record(self, entity_set, record_id, payload):
+            captured["updates"].append({
+                "entity_set": entity_set, "id": record_id, "payload": payload,
+            })
+
+    module = types.ModuleType("dataverse_client")
+    module.DataverseClient = _FakeClient  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "dataverse_client", module)
+    return captured
+
+
+# --- H1: org-wide-shared agent must NOT become a confident empty audience ----
+
+def test_dataverse_org_wide_agent_is_not_confident_empty(monkeypatch):
+    # An agent shared org-wide (fsi_sharedwitheveryone=True) with no group refs.
+    # The pre-fix loader inferred sharing from fsi_limitsharingmode (fake values)
+    # and produced sharedWithEveryone=False -> an empty audience asserted Complete
+    # for a tenant-reachable agent (the exact silent-success the design forbids).
+    rows = [{
+        "fsi_agentid": "org-wide-bot",
+        "fsi_environmentid": "env-1",
+        "fsi_sharedwitheveryone": True,
+    }]
+    captured = _install_fake_dataverse(monkeypatch, rows)
+
+    agents = eau.load_agents_from_dataverse("https://x.crm.dynamics.com", "t", "default")
+
+    # The loader reads the per-agent column and never the env-wide policy.
+    select = captured["queries"][0]["select"]
+    assert "fsi_sharedwitheveryone" in select
+    assert "fsi_limitsharingmode" not in select
+    assert agents[0].get("sharedWithEveryone") is True
+
+    out = eau.expand_agent_audience(agents[0], FakeResolver(), CFG)
+    assert out["wholeTenant"] is True
+    assert out["resolutionStatus"] == eau.STATUS_WHOLE_TENANT
+    assert out["resolutionStatus"] != eau.STATUS_COMPLETE
+
+
+def test_dataverse_unknown_signal_refless_is_partial_not_confident_empty(
+    monkeypatch, caplog
+):
+    # A posture row with NO whole-tenant signal and NO viewer/editor refs must be
+    # marked Partial (signal unknown), never a confident empty Complete audience.
+    rows = [{"fsi_agentid": "unknown-bot", "fsi_environmentid": "env-1"}]
+    _install_fake_dataverse(monkeypatch, rows)
+
+    agents = eau.load_agents_from_dataverse("https://x.crm.dynamics.com", "t", "default")
+    assert agents[0].get("wholeTenantSignalKnown") is False
+    assert "sharedWithEveryone" not in agents[0]
+
+    with caplog.at_level(logging.WARNING, logger=eau.logger.name):
+        out = eau.expand_agent_audience(agents[0], FakeResolver(), CFG)
+
+    assert out["resolutionStatus"] == eau.STATUS_PARTIAL
+    assert out["resolutionStatus"] != eau.STATUS_COMPLETE
+    assert any("no whole-tenant signal" in r.getMessage() for r in caplog.records)
+
+
+def test_dataverse_explicit_not_shared_with_everyone_stays_clean_empty(monkeypatch):
+    # A genuine restricted agent (fsi_sharedwitheveryone=False, no refs) is a KNOWN
+    # signal: a clean empty audience (Complete) is correct here.
+    rows = [{"fsi_agentid": "restricted-bot", "fsi_sharedwitheveryone": False}]
+    _install_fake_dataverse(monkeypatch, rows)
+
+    agents = eau.load_agents_from_dataverse("https://x.crm.dynamics.com", "t", "default")
+    assert agents[0].get("sharedWithEveryone") is False
+
+    out = eau.expand_agent_audience(agents[0], FakeResolver(), CFG)
+    assert out["wholeTenant"] is False
+    assert out["resolutionStatus"] == eau.STATUS_COMPLETE
+
+
+# --- M1: Graph token must refresh as it nears expiry (no 401 on long runs) ---
+
+class _FakeAccessToken:
+    def __init__(self, token, expires_on):
+        self.token = token
+        self.expires_on = expires_on
+
+
+class _FakeCredential:
+    def __init__(self, expires_on_seq):
+        self._seq = list(expires_on_seq)
+        self.calls = 0
+
+    def get_token(self, *scopes, **kwargs):
+        self.calls += 1
+        exp = self._seq.pop(0) if self._seq else (time.time() + 3600)
+        return _FakeAccessToken(f"token-{self.calls}", exp)
+
+
+def _resolver_without_init():
+    # Bypass __init__ (which imports requests) so the token-refresh logic is tested
+    # hermetically with an injected fake credential.
+    resolver = eau.GraphMemberResolver.__new__(eau.GraphMemberResolver)
+    resolver.auth_mode = "managed-identity"
+    resolver._access_token = None
+    return resolver
+
+
+def test_graph_resolver_refreshes_token_before_expiry():
+    resolver = _resolver_without_init()
+    now = time.time()
+    # First token expires within the refresh skew (300s); second is long-lived.
+    cred = _FakeCredential([now + 30, now + 3600])
+    resolver._credential_obj = cred
+
+    assert resolver._bearer_token() == "token-1"
+    assert cred.calls == 1
+    # Near-expiry token must be refreshed on the next request (the 401 fix).
+    assert resolver._bearer_token() == "token-2"
+    assert cred.calls == 2
+    # Long-lived token is reused (no needless refetch).
+    assert resolver._bearer_token() == "token-2"
+    assert cred.calls == 2
+
+
+def test_graph_resolver_headers_use_refreshed_token():
+    resolver = _resolver_without_init()
+    cred = _FakeCredential([time.time() + 3600])
+    resolver._credential_obj = cred
+    headers = resolver._headers()
+    assert headers["Authorization"] == "Bearer token-1"
+
+
+# --- M2: Retry-After parsing must survive the RFC 7231 HTTP-date format ------
+
+def test_parse_retry_after_numeric_seconds():
+    assert eau._parse_retry_after("5", 1.0) == 5.0
+    assert eau._parse_retry_after("0", 1.0) == 0.0
+
+
+def test_parse_retry_after_http_date_returns_delta():
+    from datetime import datetime, timedelta, timezone
+    from email.utils import format_datetime
+
+    future = datetime.now(timezone.utc) + timedelta(seconds=120)
+    delta = eau._parse_retry_after(format_datetime(future), 1.0)
+    # ~120s minus a little execution time; never the fallback.
+    assert 90.0 <= delta <= 121.0
+
+
+def test_parse_retry_after_garbage_and_missing_fall_back():
+    assert eau._parse_retry_after("not-a-date", 7.0) == 7.0
+    assert eau._parse_retry_after(None, 9.0) == 9.0
+    assert eau._parse_retry_after("", 3.0) == 3.0
+    # A negative number is nonsensical -> fall back rather than sleep(-n).
+    assert eau._parse_retry_after("-5", 2.0) == 2.0
+
+
+# --- M4: OData write-back filter must escape single quotes --------------------
+
+def test_odata_escape_doubles_single_quotes():
+    assert eau._odata_escape("o'brien") == "o''brien"
+    assert eau._odata_escape("plain") == "plain"
+    assert eau._odata_escape("a'b'c") == "a''b''c"
+
+
+def test_write_back_escapes_agent_id_in_filter(monkeypatch):
+    captured = _install_fake_dataverse(monkeypatch, [{"fsi_caiauthshareid": "row-1"}])
+    args = SimpleNamespace(
+        environment_url="https://x.crm.dynamics.com",
+        tenant_id="t", auth_mode="default",
+    )
+    updates = [{"fsi_agentid": "o'brien-bot", "fsi_audienceupncount": 3}]
+
+    eau._write_back_authshare(updates, args)
+
+    # The single quote in the agent id is doubled per the OData spec, so the
+    # $filter is well-formed (and not an injection vector).
+    assert captured["queries"][0]["filter_expr"] == "fsi_agentid eq 'o''brien-bot'"
+    # fsi_agentid is stripped from the update payload (it is the lookup key).
+    assert captured["updates"][0]["payload"] == {"fsi_audienceupncount": 3}
