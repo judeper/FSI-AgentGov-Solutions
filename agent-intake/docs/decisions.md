@@ -60,7 +60,7 @@ This ADR consolidates the locked product-owner decisions that shape agent-intake
 
 **Decision:** If the maker's working country (from Entra ID profile) differs from the declared data residency country of any data source the agent will use, the request defaults to **denied** with reason "cross-border data routing requires Privacy review". A Privacy reviewer can override.
 
-**Why:** Cross-border data flows are a primary GDPR / Schrems II / sovereign-cloud risk surface. A conservative default protects customers who have not yet built a Privacy review function; those that have can override per request.
+**Why:** Cross-border data flows are a primary GDPR / Schrems II / data-residency risk surface. A conservative default protects customers who have not yet built a Privacy review function; those that have can override per request.
 
 **Override:** `cross_border.default_action` (`deny` | `flag_for_review` | `allow`); `cross_border.privacy_override_role`.
 
