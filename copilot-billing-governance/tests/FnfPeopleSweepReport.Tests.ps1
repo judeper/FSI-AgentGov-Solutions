@@ -752,3 +752,286 @@ $decision = [pscustomobject]@{ fsi_agentid = "short-decision-agent"; fsi_userupn
         $report.summary.expectedDecisionCount | Should -BeGreaterThan $report.summary.actualDecisionCount
     }
 }
+
+Describe 'Invoke-FnfPeopleSweep - GATE3 owl accuracy fixes (C1 / H3 / H4 / H5 / M8 / M9)' {
+
+    BeforeAll {
+        # Build a CAI People-capability artifact from a compact spec. Each spec hashtable carries
+        # agentId / agentName / provisional / sourceObjectId; every row is an enabled People
+        # capability so the lens selects it.
+        function ConvertTo-FnfGate3Capability {
+            param([Parameter(Mandatory)][object[]]$Features)
+            $agents = @()
+            $featRows = @()
+            foreach ($f in $Features) {
+                $agents += [pscustomobject]@{ agentId = $f.agentId; agentName = $f.agentName }
+                $featRows += [pscustomobject]@{
+                    fsi_name                = "People (Org Chart & Profile): $($f.agentName)"
+                    fsi_agentid             = $f.agentId
+                    fsi_sourceobjectid      = $f.sourceObjectId
+                    fsi_environmentid       = 'Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60'
+                    fsi_featuretype         = 'People (Org Chart & Profile)'
+                    fsi_detectionsource     = 'local-package'
+                    fsi_detectionconfidence = 'Declared (manifest capability)'
+                    fsi_agentrefprovisional = [bool]$f.provisional
+                    fsi_isenabled           = $true
+                    fsi_runid               = 'gate3-cap'
+                }
+            }
+            return [pscustomobject]@{
+                schemaVersion = '0.2.0-preview'
+                summary       = [pscustomobject]@{ runId = 'gate3-cap'; scanStatus = 'Complete' }
+                agents        = $agents
+                features      = $featRows
+            }
+        }
+
+        # Build a CAI audience artifact. Each spec carries agentId / agentName / users[] and
+        # optionally resolutionStatus (default Complete) - every agent here is group-scoped.
+        function ConvertTo-FnfGate3Audience {
+            param([Parameter(Mandatory)][object[]]$Agents)
+            $rows = @()
+            foreach ($a in $Agents) {
+                $status = if ($a.ContainsKey('resolutionStatus')) { $a.resolutionStatus } else { 'Complete' }
+                $iu = @(@($a.users) | ForEach-Object { [pscustomobject]@{ upn = $_ } })
+                $rows += [pscustomobject]@{
+                    agentId          = $a.agentId
+                    agentName        = $a.agentName
+                    environmentId    = 'Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60'
+                    wholeTenant      = $false
+                    wholeTenantCap   = 0
+                    audienceSize     = @($a.users).Count
+                    truncated        = $false
+                    resolutionStatus = $status
+                    resolutionErrors = @()
+                    sourceGroups     = @()
+                    intendedUsers    = $iu
+                }
+            }
+            return [pscustomobject]@{
+                schemaVersion    = '0.2.0-preview'
+                summary          = [pscustomobject]@{ runId = 'gate3-aud' }
+                agents           = $rows
+                authShareUpdates = @()
+            }
+        }
+
+        # Build a CAI agent master (OData { value: [...] }) from agentId / agentName / createdIn.
+        function ConvertTo-FnfGate3Master {
+            param([Parameter(Mandatory)][object[]]$Rows)
+            $value = @()
+            foreach ($r in $Rows) {
+                $value += [pscustomobject]@{ fsi_agentid = $r.agentId; fsi_agentname = $r.agentName; fsi_createdin = $r.createdIn }
+            }
+            return [pscustomobject]@{ value = $value }
+        }
+
+        # Stable GUIDs for the GATE3 fixtures.
+        $script:G3_H3A = '33330000-0000-0000-0000-00000000000a'
+        $script:G3_H3B = '33330000-0000-0000-0000-00000000000b'
+        $script:G3_H3C = '33330000-0000-0000-0000-00000000000c'
+        $script:G3_H4 = '44440000-0000-0000-0000-000000000001'
+        $script:G3_H5 = '55550000-0000-0000-0000-000000000001'
+        $script:G3_M9 = '66660000-0000-0000-0000-000000000001'
+        $script:G3_M9_Shadow = '99990000-0000-0000-0000-999999999999'
+    }
+
+    BeforeEach {
+        $script:MockGroupMembers = @{}
+        Initialize-FnfDefaultLicenses
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+    }
+
+    # --- H3: distinct blocked users vs agent-user pairs. ---
+    It 'H3: counts a user shared on two People agents once in distinctBlockedUserCount but twice in totalBlockedUserCount' {
+        $capability = ConvertTo-FnfGate3Capability -Features @(
+            @{ agentId = $script:G3_H3A; agentName = 'Shared People Bot A'; provisional = $false; sourceObjectId = 'capability:People:h3a' }
+            @{ agentId = $script:G3_H3B; agentName = 'Shared People Bot B'; provisional = $false; sourceObjectId = 'capability:People:h3b' }
+        )
+        $audience = ConvertTo-FnfGate3Audience -Agents @(
+            @{ agentId = $script:G3_H3A; agentName = 'Shared People Bot A'; users = @('shared@contoso.com') }
+            @{ agentId = $script:G3_H3B; agentName = 'Shared People Bot B'; users = @('shared@contoso.com') }
+        )
+        $master = ConvertTo-FnfGate3Master -Rows @(
+            @{ agentId = $script:G3_H3A; agentName = 'Shared People Bot A'; createdIn = 'Microsoft 365 Copilot Agent Builder' }
+            @{ agentId = $script:G3_H3B; agentName = 'Shared People Bot B'; createdIn = 'Microsoft 365 Copilot Agent Builder' }
+        )
+
+        $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+            -AgentMaster $master -IdMap $null -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir
+
+        # shared@ is unlicensed -> blocked on BOTH agents: two agent-user pairs, one distinct user.
+        (Get-FnfRow -Report $report -AgentId $script:G3_H3A).blockedUserCount | Should -Be 1
+        (Get-FnfRow -Report $report -AgentId $script:G3_H3B).blockedUserCount | Should -Be 1
+        $report.summary.totalBlockedUserCount | Should -Be 2 -Because 'the Sigma of per-agent counts double-counts the shared user'
+        $report.summary.distinctBlockedUserCount | Should -Be 1 -Because 'the case-insensitive union of blocked UPNs is a single user'
+        $report.summary.distinctBlockedUserCountIsLowerBound | Should -BeFalse -Because 'no contributing row was sampled'
+    }
+
+    It 'H3: marks distinctBlockedUserCountIsLowerBound true when a contributing row was sampled' {
+        $capability = ConvertTo-FnfGate3Capability -Features @(
+            @{ agentId = $script:G3_H3C; agentName = 'Many Blocked People Bot'; provisional = $false; sourceObjectId = 'capability:People:h3c' }
+        )
+        $audience = ConvertTo-FnfGate3Audience -Agents @(
+            @{ agentId = $script:G3_H3C; agentName = 'Many Blocked People Bot'; users = @('nolicense1@contoso.com', 'nolicense2@contoso.com') }
+        )
+        $master = ConvertTo-FnfGate3Master -Rows @(
+            @{ agentId = $script:G3_H3C; agentName = 'Many Blocked People Bot'; createdIn = 'Microsoft 365 Copilot Agent Builder' }
+        )
+
+        # SampleCapValue 1 truncates the 2-user blocked set -> the row is sampled.
+        $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+            -AgentMaster $master -IdMap $null -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir -SampleCapValue 1
+
+        $row = Get-FnfRow -Report $report -AgentId $script:G3_H3C
+        $row.blockedUserCount | Should -Be 2
+        @($row.blockedUsers).Count | Should -Be 1 -Because 'the sample cap truncated the blocked-user list'
+        $row.blockedUsersSampled | Should -BeTrue
+        $report.summary.distinctBlockedUserCountIsLowerBound | Should -BeTrue -Because 'the distinct union under-counts when a row was sampled'
+        $report.summary.distinctBlockedUserCount | Should -Be 1 -Because 'only the sampled UPN is observable in the union (a documented lower bound)'
+    }
+
+    # --- C1: coverage scope / scan completeness. ---
+    It 'C1: scanCompleteness is Partial (and agentsInTenant null) when no agent master supplies the denominator' {
+        $capability = Get-FnfFixture -Name 'cai-people-capability.sample.json'
+        $audience = Get-FnfFixture -Name 'cai-audience.sample.json'
+
+        $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+            -AgentMaster $null -IdMap $null -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir `
+            -WarningVariable warnings -WarningAction SilentlyContinue
+
+        $report.summary.coverageScope.agentsInTenant | Should -BeNullOrEmpty
+        $report.summary.coverageScope.methodBreakdown.undetermined | Should -BeNullOrEmpty
+        $report.summary.coverageScope.scanCompleteness | Should -Be 'Partial'
+        $report.summary.coverageScope.agentsAttempted | Should -Be $report.summary.peopleCapableAgentCount
+        # The partial-coverage warning must be emitted so report.json is never read tenant-complete.
+        @($warnings) -join "`n" | Should -Match 'Coverage is Partial'
+    }
+
+    It 'C1: scanCompleteness is Complete only when the agent-master denominator is known and undetermined is zero' {
+        $report = Invoke-FnfSweepFixture -WithIdMap
+
+        $report.summary.coverageScope.agentsInTenant | Should -Be 6
+        $report.summary.coverageScope.agentsAttempted | Should -Be 6
+        $report.summary.coverageScope.methodBreakdown.manifest | Should -Be 6
+        $report.summary.coverageScope.methodBreakdown.attested | Should -Be 0
+        $report.summary.coverageScope.methodBreakdown.undetermined | Should -Be 0
+        $report.summary.coverageScope.scanCompleteness | Should -Be 'Complete'
+    }
+
+    # --- H4 (F5): a People capability is license-required regardless of pathway. ---
+    It 'H4: an unlicensed user on a People api-direct agent is still blocked even when the engine would ALLOW (cohort)' {
+        $capability = ConvertTo-FnfGate3Capability -Features @(
+            @{ agentId = $script:G3_H4; agentName = 'Api People Bot'; provisional = $false; sourceObjectId = 'capability:People:h4' }
+        )
+        $audience = ConvertTo-FnfGate3Audience -Agents @(
+            @{ agentId = $script:G3_H4; agentName = 'Api People Bot'; users = @('unlicensed@contoso.com') }
+        )
+        # createdIn 'Custom Engine API' classifies as api-direct (gates on cohort, NOT a license).
+        $master = ConvertTo-FnfGate3Master -Rows @(
+            @{ agentId = $script:G3_H4; agentName = 'Api People Bot'; createdIn = 'Custom Engine API' }
+        )
+        # Put the unlicensed user IN the api-direct audience cohort so the ENGINE would Allow them.
+        $script:MockGroupMembers = @{ 'h4-api-cohort' = @([pscustomobject]@{ userPrincipalName = 'unlicensed@contoso.com' }) }
+
+        $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+            -AgentMaster $master -IdMap $null -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -ApiAudienceGroupId 'h4-api-cohort' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir
+
+        $row = Get-FnfRow -Report $report -AgentId $script:G3_H4
+        $row | Should -Not -BeNullOrEmpty
+        $row.evidence.effectivePathway | Should -Be 'api-direct'
+        # F5: the license-based determination is preferred over the engine's pathway answer.
+        $row.evidence.engineBlockedCount | Should -Be 0 -Because 'the engine ALLOWS the cohort member under api-direct'
+        $row.evidence.licenseBlockedCount | Should -Be 1
+        $row.blockedUserCount | Should -Be 1 -Because 'an unlicensed user on a People-capable agent is blocked regardless of pathway'
+        $row.blockedUsers | Should -Contain 'unlicensed@contoso.com'
+        $row.coverageGaps | Should -Contain 'pathway-unexpected-for-people-capable-agent'
+        $row.coverageStatus | Should -Be 'Partial'
+    }
+
+    # --- H5: a fail-open on a People agent is NOT computable, never a silent 0. ---
+    It 'H5: a fail-open (unmapped pathway) People agent reports blockedUserCount=null and coverageStatus=Failed' {
+        $capability = ConvertTo-FnfGate3Capability -Features @(
+            @{ agentId = $script:G3_H5; agentName = 'Unmapped People Bot'; provisional = $false; sourceObjectId = 'capability:People:h5' }
+        )
+        $audience = ConvertTo-FnfGate3Audience -Agents @(
+            @{ agentId = $script:G3_H5; agentName = 'Unmapped People Bot'; users = @('unlicensed@contoso.com') }
+        )
+        # Empty createdIn -> pathway classifier cannot map -> engine fails open (anomaly).
+        $master = ConvertTo-FnfGate3Master -Rows @(
+            @{ agentId = $script:G3_H5; agentName = 'Unmapped People Bot'; createdIn = '' }
+        )
+
+        $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+            -AgentMaster $master -IdMap $null -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir
+
+        $row = Get-FnfRow -Report $report -AgentId $script:G3_H5
+        $row | Should -Not -BeNullOrEmpty
+        $row.evidence.effectivePathway | Should -Be 'unmapped'
+        $row.evidence.failOpenAnomalyCount | Should -BeGreaterThan 0
+        $row.blockedUserCount | Should -BeNullOrEmpty -Because 'a fail-open on a People agent is not computable, never a misleading 0'
+        $row.blockedUserCount | Should -Not -Be 0
+        @($row.blockedUsers).Count | Should -Be 0
+        $row.coverageStatus | Should -Be 'Failed'
+        $row.coverageGaps | Should -Contain 'fail-open-on-people-agent-blocked-not-computable'
+    }
+
+    # --- M8: PAYG coverage uncertainty must be a first-class coverage gap, not buried in evidence. ---
+    It 'M8: surfaces payg-coverage-uncertain in coverageGaps (and at least Partial) on a billing-read failure' {
+        $capability = Get-FnfFixture -Name 'cai-people-capability.sample.json'
+        $audience = Get-FnfFixture -Name 'cai-audience.sample.json'
+        $master = Get-FnfFixture -Name 'agent-master.sample.json'
+
+        $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+            -AgentMaster $master -IdMap (Get-FnfFixture -Name 'agent-id-map.sample.json') -Policy @() `
+            -GraphToken 'tok' -Capability 'CopilotChat' `
+            -BillingReadError 'Response status code 400 (InvalidApiVersion)' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir
+
+        $row = Get-FnfRow -Report $report -AgentId $script:AgentGrouped
+        $row | Should -Not -BeNullOrEmpty
+        $row.coverageGaps | Should -Contain 'payg-coverage-uncertain' -Because 'PAYG uncertainty must be visible in coverageGaps[], not only evidence{}'
+        $row.coverageStatus | Should -Not -Be 'Complete' -Because 'PAYG uncertainty forces at least Partial coverage'
+        $row.evidence.paygCoverageUncertain | Should -BeTrue
+        # F5: PAYG cannot rescue a People agent's users, so the license-based blocked set is intact.
+        $row.blockedUserCount | Should -Be 1
+        $row.blockedUsers | Should -Contain 'unlicensed@contoso.com'
+    }
+
+    # --- M9: an id-map key that shadows a real (non-provisional) agent id is a misconfiguration. ---
+    It 'M9: flags idmapShadowOnRealAgent when a non-provisional agent id also appears as an id-map key' {
+        $capability = ConvertTo-FnfGate3Capability -Features @(
+            @{ agentId = $script:G3_M9; agentName = 'Real People Bot'; provisional = $false; sourceObjectId = 'capability:People:m9' }
+        )
+        $audience = ConvertTo-FnfGate3Audience -Agents @(
+            @{ agentId = $script:G3_M9; agentName = 'Real People Bot'; users = @('unlicensed@contoso.com') }
+        )
+        $master = ConvertTo-FnfGate3Master -Rows @(
+            @{ agentId = $script:G3_M9; agentName = 'Real People Bot'; createdIn = 'Microsoft 365 Copilot Agent Builder' }
+        )
+        # The id-map keys the REAL agent id (a misconfiguration: the map only reconciles
+        # provisional stems). The entry must NOT be applied to the real agent.
+        $idMap = [pscustomobject]@{
+            mappings = @([pscustomobject]@{ provisionalId = $script:G3_M9; agentId = $script:G3_M9_Shadow })
+        }
+
+        $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+            -AgentMaster $master -IdMap $idMap -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+            -EngineScript $script:EngineScript -WorkingDir $script:WorkDir `
+            -WarningVariable warnings -WarningAction SilentlyContinue
+
+        # The real agent must be scored under its own GUID, never re-bound to the shadow target.
+        (Get-FnfRow -Report $report -AgentId $script:G3_M9_Shadow) | Should -BeNullOrEmpty
+        $row = Get-FnfRow -Report $report -AgentId $script:G3_M9
+        $row | Should -Not -BeNullOrEmpty
+        $row.evidence.idmapShadowOnRealAgent | Should -BeTrue
+        $row.blockedUserCount | Should -Be 1
+        @($warnings) -join "`n" | Should -Match 'id-map shadow'
+    }
+}

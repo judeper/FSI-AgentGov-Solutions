@@ -50,12 +50,21 @@
       SEAM 5 - Coverage roll-up. A single per-agent coverageStatus (Complete / Partial /
         Failed) folds in every coverage gap (provisional id, attestation-pending capability,
         audience partial / truncated / errors / failed, whole-tenant, unresolved
-        entitlement reads, PAYG needs-manual-review, all-users PAYG, pathway-unmapped
-        fail-open) so nothing hides behind a "0 blocked" headline.
+        entitlement reads, PAYG needs-manual-review, all-users PAYG, PAYG coverage uncertain,
+        pathway-unmapped fail-open, pathway-unexpected-for-People, fail-open-on-People-agent)
+        so nothing hides behind a "0 blocked" headline. The report.summary also carries a
+        coverageScope { agentsInTenant, agentsAttempted, methodBreakdown, scanCompleteness }
+        so report.json can NEVER be read as a tenant-complete sweep without the denominator.
 
-    The authoritative FNF blocked set is the engine's materialized decisions with
-    fsi_decision = Block (100000001). The resolver's users[].isBlocked (license + PAYG only,
-    skips pathway classification) is NOT used as the blocked set.
+    F5 (RATIFIED by primary Microsoft Learn - extensibility prerequisites): the declarative-
+    agent People capability is licensed-only; pay-as-you-go / Copilot credits do NOT grant it.
+    The authoritative FNF blocked set for a People-capable agent is therefore its RESOLVED
+    audience users who lack a paid Copilot license, computed in this lens (NOT the shared
+    engine), and PREFERRED over the engine's pathway answer (api-direct / metered / none would
+    otherwise allow an unlicensed user). For the license-gated pathways (mcp-cs /
+    mcp-agentbuilder) the engine already blocks exactly this set. A fail-open / unmapped pathway
+    on a People agent makes the blocked count NOT computable (null + Failed), never a 0.
+    Ref: https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/prerequisites
 
     Authentication is managed-identity-first end-to-end: pass -GraphAccessToken (and, for a
     live billing-policy read, -BillingApiAccessToken) from a managed identity or workload
@@ -237,6 +246,26 @@ $script:DecisionBlock = 100000001
 $script:DecisionFailOpenAnomaly = 100000003
 $script:DecisionFailClosedZeroRating = 100000004
 
+# Engine pathway option-set integers (mirror Invoke-EntitlementEvaluation.ps1 $script:Pathway),
+# reversed so the lens can read the pathway the engine stamped onto each decision (fsi_pathway).
+$script:FnfPathwayNameById = @{
+    100000000 = 'none'
+    100000001 = 'mcp-cs'
+    100000002 = 'mcp-agentbuilder'
+    100000003 = 'api-direct'
+    100000004 = 'metered'
+    100000005 = 'unmapped'
+}
+
+# F5 (RATIFIED by primary Microsoft Learn): the declarative-agent People (Org Chart & Profile)
+# capability is licensed-only - pay-as-you-go / Copilot credits do NOT grant it. So for a
+# People-capable agent an unlicensed user is BLOCKED regardless of the engine's consumption
+# pathway. Only these pathways gate access on a Copilot license directly; for any other effective
+# pathway the lens prefers the license-based blocked determination over the pathway answer and
+# surfaces the discrepancy (gap pathway-unexpected-for-people-capable-agent).
+# Ref: https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/prerequisites
+$script:FnfPeopleLicenseGatedPathways = @('mcp-cs', 'mcp-agentbuilder')
+
 # Audience resolution statuses that mean the audience could not be resolved at all (no usable
 # audience -> blocked count is not computable -> coverageStatus = Failed, the most severe).
 $script:AudienceFailedStatuses = @('Failed', 'NotResolved')
@@ -383,6 +412,10 @@ function Resolve-FnfPeopleAgentSet {
     # bot id and HOW it was reconciled (via the unique key, the bare stem, or not provisional).
     $candidates = New-Object System.Collections.Generic.List[object]
     $provisionalUnreconciled = New-Object System.Collections.Generic.List[object]
+    # M9: NON-provisional agent ids that ALSO appear as an id-map key. The id-map only reconciles
+    # provisional stems, so a real agent id colliding with a key is a misconfiguration (the entry
+    # is ignored for the real agent). Surface it (warn once + per-row evidence flag).
+    $shadowedAgentIds = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
 
     foreach ($feature in @(Get-FnfProperty -InputObject $CapabilityArtifact -Name 'features')) {
         $featureType = "$(Get-FnfProperty -InputObject $feature -Name 'fsi_featuretype')"
@@ -415,6 +448,12 @@ function Resolve-FnfPeopleAgentSet {
         $reconVia = 'direct'
         $reconKey = $null
         $effectiveId = $agentId
+
+        if (-not $provisional -and $idMapCI.ContainsKey($agentId) -and $shadowedAgentIds.Add($agentId)) {
+            # M9: a real (non-provisional) agent id that also keys the id-map. The id-map entry is
+            # NOT applied to a non-provisional agent; warn once so the misconfiguration is visible.
+            Write-Warning "FNF id-map shadow: non-provisional agent '$agentId' also appears as an id-map key. The id-map only reconciles provisional manifest ids, so this entry is ignored for the real agent; verify the id-map does not unintentionally shadow a real Dataverse bot GUID."
+        }
 
         if ($provisional) {
             if ($null -ne $uniqueKey -and $idMapCI.ContainsKey($uniqueKey)) {
@@ -522,6 +561,7 @@ function Resolve-FnfPeopleAgentSet {
         ProvisionalUnreconciled = $provisionalUnreconciled.ToArray()
         Collisions              = $collisions.ToArray()
         SourceMap               = $sourceMap
+        IdMapShadowedAgentIds   = @($shadowedAgentIds)
     }
 }
 
@@ -723,7 +763,15 @@ function Get-FnfAgentCoverageStatus {
         [Parameter()][bool]$AttestationPending = $false,
         [Parameter()][bool]$CreatedInMissing = $false,
         [Parameter()][bool]$IdMapStemCollision = $false,
-        [Parameter()][bool]$EngineDecisionsMissing = $false
+        [Parameter()][bool]$EngineDecisionsMissing = $false,
+        # M8: a live billing-policy read was uncertain (fail-closed) for this row's scored UPN set.
+        [Parameter()][bool]$PaygCoverageUncertain = $false,
+        # H4 (F5): the engine routed a People-capable agent to a pathway that does NOT gate on a
+        # Copilot license (api-direct / metered / none); the license-based blocked set is preferred.
+        [Parameter()][bool]$PathwayUnexpectedForPeople = $false,
+        # H5: the engine failed open (unmapped pathway) on a People-capable agent; the blocked
+        # count is NOT computable (null), never a misleading 0.
+        [Parameter()][bool]$FailOpenOnPeopleAgent = $false
     )
 
     $gaps = New-Object System.Collections.Generic.List[string]
@@ -741,6 +789,9 @@ function Get-FnfAgentCoverageStatus {
     if ($UnresolvedUserCount -gt 0) { [void]$gaps.Add('entitlement-unresolved-users') }
     if ($NeedsManualReviewCount -gt 0) { [void]$gaps.Add('payg-policy-needs-manual-review') }
     if ($PaygAllUsersCovered) { [void]$gaps.Add('payg-all-users-coverage') }
+    if ($PaygCoverageUncertain) { [void]$gaps.Add('payg-coverage-uncertain') }
+    if ($PathwayUnexpectedForPeople) { [void]$gaps.Add('pathway-unexpected-for-people-capable-agent') }
+    if ($FailOpenOnPeopleAgent) { [void]$gaps.Add('fail-open-on-people-agent-blocked-not-computable') }
     if ($FailOpenCount -gt 0) { [void]$gaps.Add('pathway-unmapped-fail-open') }
     if ($CreatedInMissing -and $FailOpenCount -eq 0) {
         # createdIn absent: pathway classification fell back; surface even if no fail-open yet.
@@ -748,9 +799,9 @@ function Get-FnfAgentCoverageStatus {
     }
 
     $status = 'Complete'
-    if ($AudienceMissing -or ($AudienceStatus -in $script:AudienceFailedStatuses) -or $EngineDecisionsMissing) {
-        # No usable audience, or the engine never wrote a complete decision set -> blocked count
-        # is not computable -> most severe status.
+    if ($AudienceMissing -or ($AudienceStatus -in $script:AudienceFailedStatuses) -or $EngineDecisionsMissing -or $FailOpenOnPeopleAgent) {
+        # No usable audience, the engine never wrote a complete decision set, or the engine failed
+        # open on a People agent -> blocked count is not computable -> most severe status.
         $status = 'Failed'
     }
     elseif ($gaps.Count -gt 0) {
@@ -878,7 +929,12 @@ function New-FnfPeopleSweepReport {
         [Parameter()][int]$ExpectedDecisionCount = 0,
         [Parameter()][int]$ActualDecisionCount = 0,
         [Parameter()][int]$SampleCapValue = 20,
-        [Parameter()][string]$Capability = 'CopilotChat'
+        [Parameter()][string]$Capability = 'CopilotChat',
+        # C1: distinct agent count from the AgentMaster input (the sweep denominator). $null when
+        # no agent master was supplied -> the sweep cannot be claimed tenant-complete.
+        [Parameter()][AllowNull()][object]$AgentsInTenant = $null,
+        # M9: non-provisional agent ids that also key the id-map (shadow misconfiguration).
+        [Parameter()][AllowEmptyCollection()][object[]]$IdMapShadowedAgentIds = @()
     )
 
     if ($null -eq $ScoredMeta) { $ScoredMeta = @{} }
@@ -913,6 +969,29 @@ function New-FnfPeopleSweepReport {
         $decisionsByAgent[$aid].Add($d)
     }
 
+    # H4 (F5): per-agent RESOLVED-user license signal. The resolver's engineInput.agents[] carries
+    # intendedUsers[] with hasCopilotLicense for every user it scored (unresolved users are excluded
+    # and surfaced separately as a gap). This is the cleanest already-available per-user license
+    # source; for a People-capable agent an unlicensed user is BLOCKED regardless of the engine's
+    # pathway routing, so this drives the authoritative blocked set for scored People agents.
+    $licenseUsersByAgent = @{}
+    if ($null -ne $ResolverResult) {
+        $engineInput = Get-FnfProperty -InputObject $ResolverResult -Name 'engineInput'
+        if ($null -ne $engineInput) {
+            foreach ($ea in @(Get-FnfProperty -InputObject $engineInput -Name 'agents')) {
+                $eaId = "$(Get-FnfProperty -InputObject $ea -Name 'agentId')"
+                if ([string]::IsNullOrWhiteSpace($eaId)) { continue }
+                $licenseUsersByAgent[$eaId] = @(Get-FnfProperty -InputObject $ea -Name 'intendedUsers')
+            }
+        }
+    }
+
+    # M9: shadowed (non-provisional) agent ids that also key the id-map.
+    $shadowSet = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($sid in @($IdMapShadowedAgentIds)) {
+        if (-not [string]::IsNullOrWhiteSpace($sid)) { [void]$shadowSet.Add([string]$sid) }
+    }
+
     $rows = New-Object System.Collections.Generic.List[object]
     $now = (Get-Date).ToUniversalTime().ToString('o')
 
@@ -925,11 +1004,39 @@ function New-FnfPeopleSweepReport {
         $agentDecisions = @()
         if ($decisionsByAgent.ContainsKey($agentId)) { $agentDecisions = $decisionsByAgent[$agentId].ToArray() }
 
-        # Authoritative FNF blocked set: engine decisions with fsi_decision = Block (100000001).
+        # Engine (pathway-based) blocked set + anomaly tallies, retained for evidence/transparency.
         $blocked = @($agentDecisions | Where-Object { [int](Get-FnfProperty -InputObject $_ -Name 'fsi_decision' -Default 0) -eq $script:DecisionBlock })
-        $blockedUpns = @($blocked | ForEach-Object { Get-FnfProperty -InputObject $_ -Name 'fsi_userupn' })
         $failOpenCount = @($agentDecisions | Where-Object { [int](Get-FnfProperty -InputObject $_ -Name 'fsi_decision' -Default 0) -eq $script:DecisionFailOpenAnomaly }).Count
         $failClosedCount = @($agentDecisions | Where-Object { [int](Get-FnfProperty -InputObject $_ -Name 'fsi_decision' -Default 0) -eq $script:DecisionFailClosedZeroRating }).Count
+
+        # Effective pathway the engine stamped on this agent's decisions (all decisions for an agent
+        # share one pathway). Used to enforce F5 and detect an unexpected pathway for a People agent.
+        $effectivePathwayName = $null
+        if ($agentDecisions.Count -gt 0) {
+            $pwVal = [int](Get-FnfProperty -InputObject $agentDecisions[0] -Name 'fsi_pathway' -Default 0)
+            if ($script:FnfPathwayNameById.ContainsKey($pwVal)) { $effectivePathwayName = $script:FnfPathwayNameById[$pwVal] }
+        }
+
+        # H4 (F5): the authoritative blocked set for a People-capable agent is its RESOLVED audience
+        # users who lack a paid Copilot license - PAYG/credits cannot rescue the People capability.
+        # This is preferred over the engine's pathway answer (api-direct / metered / none would
+        # otherwise ALLOW an unlicensed user); for the license-gated pathways (mcp-cs /
+        # mcp-agentbuilder) the engine already blocks exactly this set.
+        $licenseUsers = @()
+        if ($licenseUsersByAgent.ContainsKey($agentId)) { $licenseUsers = @($licenseUsersByAgent[$agentId]) }
+        $licenseBlockedUpns = @($licenseUsers |
+                Where-Object { -not [bool](Get-FnfProperty -InputObject $_ -Name 'hasCopilotLicense' -Default $false) } |
+                ForEach-Object { Get-FnfProperty -InputObject $_ -Name 'upn' } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+        # H5: a fail-open / unmapped pathway on a People agent means the routing is not trustworthy
+        # -> blocked is NOT computable (null), never a misleading 0.
+        $failOpenOnPeople = ($failOpenCount -gt 0) -or ($effectivePathwayName -eq 'unmapped')
+        # H4: a mapped-but-non-license-gated pathway on a People agent is unexpected; the
+        # license-based blocked determination is used and the discrepancy is surfaced.
+        $pathwayUnexpected = ($null -ne $effectivePathwayName) -and
+            ($effectivePathwayName -notin $script:FnfPeopleLicenseGatedPathways) -and
+            ($effectivePathwayName -ne 'unmapped')
 
         # Per-agent unresolved-user count: audience UPNs that the resolver could not verify.
         $agentUnresolved = 0
@@ -946,19 +1053,29 @@ function New-FnfPeopleSweepReport {
             -UnresolvedUserCount $agentUnresolved `
             -NeedsManualReviewCount $needsManualReview `
             -PaygAllUsersCovered $paygAllUsers `
+            -PaygCoverageUncertain $paygUncertain `
             -FailOpenCount $failOpenCount `
             -CreatedInMissing ([bool](Get-FnfProperty -InputObject $meta -Name 'createdInMissing' -Default $false)) `
             -AttestationPending ($source -eq 'attested') `
+            -PathwayUnexpectedForPeople $pathwayUnexpected `
+            -FailOpenOnPeopleAgent $failOpenOnPeople `
             -EngineDecisionsMissing $EngineDecisionsMissing
 
-        $sampleUpns = @($blockedUpns | Select-Object -First $SampleCapValue)
+        $licenseSampleUpns = @($licenseBlockedUpns | Select-Object -First $SampleCapValue)
 
-        # Silent-zero guard: when the engine never wrote a complete decision set, the empty/partial
-        # $decisions for this agent are NOT a real "0 blocked". Report a non-computable blocked
-        # count (null) instead of a false zero; coverageStatus is already Failed above.
-        $rowBlockedCount = if ($EngineDecisionsMissing) { $null } else { $blocked.Count }
-        $rowBlockedUsers = if ($EngineDecisionsMissing) { @() } else { $sampleUpns }
-        $rowBlockedSampled = if ($EngineDecisionsMissing) { $false } else { ($blocked.Count -gt $sampleUpns.Count) }
+        # Blocked-determination precedence: an incomplete engine run or a fail-open on a People
+        # agent makes the count non-computable (null, NEVER a false 0); otherwise the F5
+        # license-based blocked set is authoritative.
+        if ($EngineDecisionsMissing -or $failOpenOnPeople) {
+            $rowBlockedCount = $null
+            $rowBlockedUsers = @()
+            $rowBlockedSampled = $false
+        }
+        else {
+            $rowBlockedCount = $licenseBlockedUpns.Count
+            $rowBlockedUsers = $licenseSampleUpns
+            $rowBlockedSampled = ($licenseBlockedUpns.Count -gt $licenseSampleUpns.Count)
+        }
 
         $rows.Add([pscustomobject]@{
                 agentId             = $agentId
@@ -975,6 +1092,7 @@ function New-FnfPeopleSweepReport {
                 evaluationTimestamp = $now
                 evidence            = [pscustomobject]@{
                     createdIn                         = Get-FnfProperty -InputObject $meta -Name 'createdIn'
+                    effectivePathway                  = $effectivePathwayName
                     audienceResolutionStatus          = Get-FnfProperty -InputObject $meta -Name 'resolutionStatus'
                     audienceTruncated                 = [bool](Get-FnfProperty -InputObject $meta -Name 'truncated' -Default $false)
                     audienceResolutionErrorCount      = [int](Get-FnfProperty -InputObject $meta -Name 'resolutionErrorCount' -Default 0)
@@ -982,6 +1100,10 @@ function New-FnfPeopleSweepReport {
                     engineDecisionsMissing            = $EngineDecisionsMissing
                     failOpenAnomalyCount              = $failOpenCount
                     failClosedZeroRatingCount         = $failClosedCount
+                    # F5 transparency: the engine's pathway-based blocked tally alongside the
+                    # license-based tally that actually drives blockedUserCount when computable.
+                    engineBlockedCount                = $blocked.Count
+                    licenseBlockedCount               = $licenseBlockedUpns.Count
                     unresolvedAudienceUserCount       = $agentUnresolved
                     cbgResolverUnresolvedCount        = $resolverUnresolvedCount
                     cbgResolverNeedsManualReviewCount = $needsManualReview
@@ -1121,12 +1243,57 @@ function New-FnfPeopleSweepReport {
     }
 
     $rowArray = $rows.ToArray()
+
+    # M9: tag any row whose (non-provisional) agent id is shadowed by an id-map key with an
+    # evidence flag so the misconfiguration is visible per-row (the warning fired at detection).
+    foreach ($row in $rowArray) {
+        if ($shadowSet.Contains([string]$row.agentId)) {
+            $row.evidence | Add-Member -NotePropertyName 'idmapShadowOnRealAgent' -NotePropertyValue $true -Force
+        }
+    }
+
     $partialCount = @($rowArray | Where-Object { $_.coverageStatus -eq 'Partial' }).Count
     $failedCount = @($rowArray | Where-Object { $_.coverageStatus -eq 'Failed' }).Count
     $completeCount = @($rowArray | Where-Object { $_.coverageStatus -eq 'Complete' }).Count
     $totalBlocked = (@($rowArray | Where-Object { $null -ne $_.blockedUserCount } | ForEach-Object { [int]$_.blockedUserCount }) | Measure-Object -Sum).Sum
     if ($null -eq $totalBlocked) { $totalBlocked = 0 }
     $agentsWithBlocked = @($rowArray | Where-Object { $null -ne $_.blockedUserCount -and [int]$_.blockedUserCount -gt 0 }).Count
+
+    # H3: DISTINCT blocked users - the case-insensitive (OrdinalIgnoreCase) union of every row's
+    # blockedUsers[] across rows whose blockedUserCount is computable (non-null). This is NOT the
+    # same as totalBlockedUserCount (the Sigma of per-agent counts = agent-user pairs): a user
+    # shared on K People agents counts K times in the Sigma but ONCE here. If any contributing row
+    # was sampled (blockedUsers truncated to the sample cap), the distinct union under-counts, so
+    # the value is a lower bound.
+    $distinctBlockedSet = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    $distinctIsLowerBound = $false
+    foreach ($row in $rowArray) {
+        if ($null -eq $row.blockedUserCount) { continue }
+        foreach ($u in @($row.blockedUsers)) {
+            if (-not [string]::IsNullOrWhiteSpace($u)) { [void]$distinctBlockedSet.Add([string]$u) }
+        }
+        if ($row.blockedUsersSampled) { $distinctIsLowerBound = $true }
+    }
+
+    # C1: coverage scope. agentsInTenant is the distinct agent count from the AgentMaster input -
+    # the sweep's denominator. Without it (null) the sweep CANNOT be claimed tenant-complete, so
+    # scanCompleteness stays Partial. methodBreakdown.undetermined is the remainder of tenant
+    # agents whose People capability the sweep could not confirm (manifest-readable + attested).
+    $manifestCount = @($rowArray | Where-Object { $_.peopleCapableSource -eq 'manifest' }).Count
+    $attestedCount = @($rowArray | Where-Object { $_.peopleCapableSource -eq 'attested' }).Count
+    $confirmedCount = $manifestCount + $attestedCount
+    $agentsInTenantVal = if ($null -ne $AgentsInTenant) { [int]$AgentsInTenant } else { $null }
+    $undeterminedVal = $null
+    if ($null -ne $agentsInTenantVal -and $agentsInTenantVal -ge $confirmedCount) {
+        $undeterminedVal = $agentsInTenantVal - $confirmedCount
+    }
+    $scanCompleteness = if (($null -ne $agentsInTenantVal) -and ($undeterminedVal -eq 0)) { 'Complete' } else { 'Partial' }
+
+    # C1: never let report.json read as tenant-complete when it is not - warn to stderr once.
+    if ($scanCompleteness -ne 'Complete') {
+        $denom = if ($null -ne $agentsInTenantVal) { "$agentsInTenantVal" } else { 'unknown (no agent master supplied)' }
+        Write-Warning "Coverage is Partial: capability could not be confirmed for all tenant agents (manifest-readable + attested = $confirmedCount of $denom; remainder undetermined). Do NOT quote blocked counts as a tenant-complete result - see runbook section 5."
+    }
 
     return [pscustomobject]@{
         schemaVersion   = $script:FnfSchemaVersion
@@ -1147,8 +1314,22 @@ function New-FnfPeopleSweepReport {
             coverageCompleteCount    = $completeCount
             coveragePartialCount     = $partialCount
             coverageFailedCount      = $failedCount
+            # Sigma per-agent blocked counts (agent-user pairs; a user shared on K People agents
+            # counts K times). For unique users see distinctBlockedUserCount.
             totalBlockedUserCount    = [int]$totalBlocked
+            distinctBlockedUserCount             = $distinctBlockedSet.Count
+            distinctBlockedUserCountIsLowerBound = $distinctIsLowerBound
             agentsWithBlockedUsers   = $agentsWithBlocked
+            coverageScope            = [pscustomobject]@{
+                agentsInTenant  = $agentsInTenantVal
+                agentsAttempted = $rowArray.Count
+                methodBreakdown = [pscustomobject]@{
+                    manifest     = $manifestCount
+                    attested     = $attestedCount
+                    undetermined = $undeterminedVal
+                }
+                scanCompleteness = $scanCompleteness
+            }
         }
         agents          = $rowArray
     }
@@ -1183,6 +1364,10 @@ function Invoke-FnfPeopleSweep {
     # Normalize the optional agent master + id-map into lookups.
     $agentMasterMap = ConvertTo-FnfAgentMasterMap -InputObject $AgentMaster
     $idMapTable = ConvertTo-FnfIdMap -InputObject $IdMap
+
+    # C1: distinct tenant agent count (the sweep denominator) is known ONLY when an agent master
+    # was supplied. $null otherwise -> the sweep cannot be claimed tenant-complete.
+    $agentsInTenant = if ($null -ne $AgentMaster) { $agentMasterMap.Count } else { $null }
 
     # SEAM 1: People filter + provisional gate + id-map reconciliation.
     $peopleSet = Resolve-FnfPeopleAgentSet -CapabilityArtifact $CapabilityArtifact -IdMap $idMapTable
@@ -1219,6 +1404,7 @@ function Invoke-FnfPeopleSweep {
         -PeopleAgentSourceMap $peopleSet.SourceMap -EngineDecisions $decisions -ResolverResult $resolverResult `
         -EngineDecisionsMissing $engineDecisionsMissing -ExpectedDecisionCount $expectedDecisionCount `
         -ActualDecisionCount $actualDecisionCount `
+        -AgentsInTenant $agentsInTenant -IdMapShadowedAgentIds @($peopleSet.IdMapShadowedAgentIds) `
         -SampleCapValue $SampleCapValue -Capability $Capability
 }
 
