@@ -1,0 +1,34 @@
+{
+  "$comment": "Sample owner-attestation response set for the FNF manifest-opaque tier, consumed by scripts/Convert-AttestationToCapabilityRows.ps1. Each response is keyed by the REAL Microsoft 365 Agent Registry bot/agent id (NOT a provisional manifest stem such as 'declarativeAgent'). 'peopleCapable' records whether the owner confirmed the declarative-agent People capability ('Reference org chart and profile info') is enabled - accepted: yes/no (also y/n, true/false, 1/0, enabled/disabled). Optional fields: agentName, environmentId, attestedBy (owner UPN), attestedAt (ISO 8601), attestationId (ticket/survey response id), notes. The converter emits a capability artifact shape-compatible with detect_people_capability.py, stamping peopleCapableSource=attested. Illustrative example identities only. The converter accepts a bare array, this { responses: [...] } wrapper, or a { value: [...] } envelope.",
+  "responses": [
+    {
+      "agentId": "11110000-0000-0000-0000-0000000000a1",
+      "agentName": "Branch People Finder",
+      "peopleCapable": "yes",
+      "environmentId": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "attestedBy": "owner1@contoso.com",
+      "attestedAt": "2026-06-13T15:00:00Z",
+      "attestationId": "ATT-1001",
+      "notes": "Owner confirmed the 'Reference org chart and profile info' capability is enabled."
+    },
+    {
+      "agentId": "11110000-0000-0000-0000-0000000000a2",
+      "agentName": "Loan Ops Assistant",
+      "peopleCapable": "no",
+      "environmentId": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "attestedBy": "owner2@contoso.com",
+      "attestedAt": "2026-06-13T16:30:00Z",
+      "attestationId": "ATT-1002",
+      "notes": "Owner confirmed the capability is not enabled."
+    },
+    {
+      "agentId": "11110000-0000-0000-0000-0000000000a3",
+      "agentName": "Wealth Advisory Concierge",
+      "peopleCapable": "yes",
+      "attestedBy": "owner3@contoso.com",
+      "attestedAt": "2026-06-14T09:15:00Z",
+      "attestationId": "ATT-1003",
+      "notes": "Owner exported the app package; People capability present in declarativeAgent.json."
+    }
+  ]
+}

@@ -37,6 +37,16 @@ specific obligations.
 CBG reads — rather than re-discovers — the agent dimension from
 `copilot-agent-inventory` and the usage tier from `work-iq-usage-detection`.
 
+A focused application of this engine is the **FNF People-Sweep lens**
+(`scripts/Get-FnfPeopleSweepReport.ps1`): it identifies declarative agents with the
+"Reference org chart and profile info" (declarative-manifest `People`) capability that are
+shared with users who hold **no paid Microsoft 365 Copilot license and no PAYG coverage**,
+and reports the blocked users per agent with an explicit coverage-scope statement. For the
+agents whose manifest is not readable by any supported API, the **owner-attestation
+workflow** (`scripts/Convert-AttestationToCapabilityRows.ps1`,
+[`docs/owner-attestation-workflow.md`](docs/owner-attestation-workflow.md)) feeds owner-
+confirmed capability into the same lens.
+
 ## Related Controls
 
 | Control | Title | How this solution contributes |
@@ -112,18 +122,32 @@ copilot-billing-governance/
 ├── CHANGELOG.md
 ├── manifest.yaml
 ├── docs/
-│   ├── architecture.md            # 2 objects + 3 groups + engine + coverage-gap
-│   ├── entitlement-contract.md    # switch-on-pathway decision tree + pseudocode
-│   ├── prerequisites.md           # licensing, permissions, managed-identity model
-│   ├── dataverse-schema.md        # auto-generated; do not hand-edit
-│   └── flow-configuration.md      # 15-min policy sync + nightly coverage-gap
+│   ├── architecture.md                # 2 objects + 3 groups + engine + coverage-gap
+│   ├── entitlement-contract.md        # switch-on-pathway decision tree + pseudocode
+│   ├── prerequisites.md               # licensing, permissions, managed-identity model
+│   ├── dataverse-schema.md            # auto-generated; do not hand-edit
+│   ├── flow-configuration.md          # 15-min policy sync + nightly coverage-gap
+│   └── owner-attestation-workflow.md  # manifest-opaque tier: owner attestation -> attested rows
 ├── scripts/
-│   ├── create_cbg_dataverse_schema.py     # schema + --output-docs
-│   ├── Get-BillingPolicyInventory.ps1     # PAYG + credit policy read
-│   └── Invoke-EntitlementEvaluation.ps1   # switch-on-pathway engine + coverage-gap
-└── templates/
-    ├── coverage-gap.sample.json
-    └── entitlement-decision.sample.json
+│   ├── create_cbg_dataverse_schema.py            # schema + --output-docs
+│   ├── Get-BillingPolicyInventory.ps1            # PAYG + credit policy read (scope + connected surfaces)
+│   ├── Get-CopilotEntitlement.ps1                # per-user entitlement resolver (real Graph + PAYG inputs → engine)
+│   ├── Invoke-EntitlementEvaluation.ps1          # switch-on-pathway engine + coverage-gap
+│   ├── Get-FnfPeopleSweepReport.ps1              # FNF People-Sweep lens (manifest|attested capability rows → report)
+│   └── Convert-AttestationToCapabilityRows.ps1   # owner attestation responses → attested capability rows for the lens
+├── templates/
+│   ├── coverage-gap.sample.json
+│   ├── entitlement-decision.sample.json
+│   ├── agent-id-map.sample.json
+│   ├── fnf-people-sweep-report.sample.json
+│   ├── owner-attestation-responses.sample.csv    # attestation response intake template (CSV)
+│   └── owner-attestation-responses.sample.json   # attestation response intake template (JSON)
+└── tests/
+    ├── CopilotEntitlement.Tests.ps1
+    ├── EntitlementEngine.Tests.ps1
+    ├── FnfPeopleSweepReport.Tests.ps1
+    ├── ConvertAttestationToCapabilityRows.Tests.ps1   # converter + lens schema-compatibility tests
+    └── test_cbg_dataverse_logical_names.py
 ```
 
 ## Prerequisites
@@ -148,9 +172,17 @@ registry), Power Platform Admin (Dataverse and flows).
    [`docs/flow-configuration.md`](docs/flow-configuration.md) to build the 15-minute
    policy-sync flow and the nightly coverage-gap flow (no exported flow JSON is
    shipped).
-5. **Run coverage-gap analysis monitor-only.**
+5. **Resolve per-user entitlement inputs (real tenant data).**
+   [`scripts/Get-CopilotEntitlement.ps1`](scripts/Get-CopilotEntitlement.ps1) reads each
+   user's Copilot license (by the paid service-plan allowlist, including transitive group
+   assignments) and PAYG / credit coverage, and emits the engine-ready per-user booleans
+   plus a Find-No-Filter "blocked" lens. Supply the audience UPNs (from
+   `copilot-agent-inventory`); for the policy dimension, prefer `-BillingPolicyInputPath`
+   (the normalized `Get-BillingPolicyInventory.ps1` output) while the billing-policy REST
+   schema remains unproven.
+6. **Run coverage-gap analysis monitor-only.**
    [`scripts/Invoke-EntitlementEvaluation.ps1`](scripts/Invoke-EntitlementEvaluation.ps1)
-   evaluates entitlement and writes per-agent gaps; confirm rows in
+   evaluates the resolved entitlement inputs and writes per-agent gaps; confirm rows in
    `fsi_cbgcoveragegap` before enabling any enforcement.
 
 Authentication is **managed-identity-first**; client secrets are a legacy
@@ -184,6 +216,20 @@ sources.
   `feat/copilot-agent-governance` wave; until they are catalog-registered, the engine
   runs on fixture inputs via `-InputPath`. Work IQ GA / consumption-billing switch is
   **June 16 2026**.
+- **Per-user inputs from real tenant data.** `Get-CopilotEntitlement.ps1` produces the
+  engine's per-user booleans from Microsoft Graph (license by the paid service-plan
+  allowlist — including transitive group assignments — with `Bing_Chat_Enterprise` and
+  other confusable plans explicitly denied) and PAYG / credit coverage (mapped to
+  `inCreditScopeGroup`, with an "All Users" policy collapsing the blocked set to zero per
+  capability). PAYG coverage is granted only from a policy the resolver can fully parse:
+  a policy whose connection state, capability surface, or scope cannot be determined is
+  treated as **not covering** (fail-closed) and routed to a `needsManualReview` list with
+  a `coverageUncertain` flag, so unlicensed in-scope users are not silently under-reported
+  as entitled. A user whose Graph read fails is recorded **unresolved** and excluded —
+  never reported as "blocked" — because misclassifying a licensed user is a serious,
+  customer-facing error; fail-open is reserved for that transient per-user read case. The
+  billing-policy REST schema is **unproven**; prefer `-BillingPolicyInputPath` (the
+  `Get-BillingPolicyInventory.ps1` output) over the best-effort live read.
 - **2.27 is a proposal**, not an implemented control in this manifest.
 
 ## Changelog

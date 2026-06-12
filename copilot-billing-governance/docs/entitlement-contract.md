@@ -27,10 +27,10 @@ metered Copilot features. Instead:
   deny a user. The anomaly is recorded for follow-up rather than silently allowed.
 
 This contract supports compliance with **Control 3.5 (Cost Allocation and Budget
-Tracking)**, **Control 1.18 (Application-Level Authorization and RBAC)**, and
-**Control 1.14 (Data Minimization and Agent Scope Control)**. It does not, on its
-own, satisfy any regulation; organizations should verify their configuration meets
-their specific obligations.
+Tracking)** and contributes to **Control 1.18 (Application-Level Authorization
+and RBAC)** and **Control 1.14 (Data Minimization and Agent Scope Control)**. It
+does not, on its own, satisfy any regulation; organizations should verify their
+configuration meets their specific obligations.
 
 ---
 
@@ -49,6 +49,81 @@ their specific obligations.
 > sibling solutions `copilot-agent-inventory` and `work-iq-usage-detection`. Until
 > those land, the engine operates on sample/fixture inputs (see the script's
 > `-InputPath` parameter).
+
+### 2.1 Per-user input resolver (`Get-CopilotEntitlement.ps1`)
+
+The engine consumes six per-user fields under each agent's `intendedUsers[]`: `upn`,
+`hasCopilotLicense`, `inApiAudienceGroup`, `inCreditScopeGroup`, `inEligibleCohort`,
+and `surfaceZeroRated`. During development these come from fixtures; in production they
+are produced from **real tenant data** by
+[`scripts/Get-CopilotEntitlement.ps1`](../scripts/Get-CopilotEntitlement.ps1). The
+resolver takes a set of UPNs (or an agents skeleton whose agents carry `intendedUpns`)
+and returns / persists the engine-ready document plus a **Find-No-Filter (FNF)
+"blocked from a gated capability" lens**.
+
+- **`hasCopilotLicense` — by literal service-plan GUID, never by name.** The resolver
+  reads `GET /users/{id}/licenseDetails` (which **includes transitive, group-assigned**
+  licenses) and sets `hasCopilotLicense = true` only when the user holds at least one
+  `servicePlans[]` entry whose `servicePlanId` is in the **paid Microsoft 365 Copilot
+  allowlist** (eight GUIDs) **and** whose `provisioningStatus` is `Success`. Detection is
+  by the literal GUID allowlist — never a `COPILOT` substring or `servicePlanName` regex.
+- **DENY trap.** Confusable plans are explicitly excluded and can never grant
+  entitlement: `Bing_Chat_Enterprise` (the free Copilot Chat plan bundled in E5 — the
+  key false-positive trap), Microsoft Sales Copilot, and Viva Sales. An E5 user whose
+  only Copilot-looking plan is `Bing_Chat_Enterprise` is therefore **not** licensed.
+- **Undocumented SKUs (by construction).** "Microsoft 365 E7" and "Copilot Premium" have
+  no published SKU GUIDs, so the resolver does **not** hard-code SKU names. It builds a
+  tenant SKU dictionary from `GET /subscribedSkus` and resolves entitlement from the
+  service-plan allowlist, so any local SKU carrying an allowlisted Copilot plan is
+  "licensed by construction" regardless of its display name.
+- **PAYG / credit coverage → `inCreditScopeGroup`.** There is **no Graph endpoint** for
+  billing-policy membership. The resolver reads pay-as-you-go / credit policy scope and
+  maps **coverage for the gated capability** to the engine's `inCreditScopeGroup` input:
+  a policy scoped to **All Users** covers every tenant user for its surface and collapses
+  the blocked set to zero for that capability (surfaced as a loud warning so "0 blocked"
+  is not misread as "all entitled"); a **group-scoped** policy covers the group's
+  transitive members (`GET /groups/{id}/transitiveMembers`); coverage is evaluated **per
+  capability** (PAYG today covers Chat / SharePoint, not every feature), so a
+  SharePoint-only policy does not cover a Chat gate.
+- **Fail-CLOSED on policy-shape uncertainty.** A false "covered" silently flips unlicensed
+  in-scope users to not-blocked and under-reports the people who actually lack access, so
+  the resolver grants PAYG coverage only from a policy it can fully parse. A policy is
+  treated as **NOT covering** — routed to a `needsManualReview[]` list (distinct from
+  `appliedPolicies`) with `coverageUncertain` set — when its **connection state is
+  undetermined** (no `connected` / `isConnected` / `status` signal; `connected` defaults
+  to *false* and a positive signal is required, because a billing policy not connected to
+  a service entitles no one), its **capability surface is unrecognized** (none of the
+  known capabilities / services / connectedServices / serviceTypes / spendScope /
+  surfaceScope fields, so coverage of the gated capability cannot be confirmed), or its
+  **scope cannot be resolved**. Affected unlicensed users stay reported as blocked pending
+  manual verification against the Microsoft 365 admin center rather than being granted on
+  an unparseable policy.
+- **FNF "blocked" lens.** Independently of the engine decision, the resolver computes
+  `isBlocked ⇔ (no paid Copilot service plan) AND (not covered by an applicable PAYG /
+  credit policy for the gated capability)` — always joining license **and** PAYG.
+  > **Coverage-limit caveat (F5):** `isBlocked` is a resolver-level pre-filter, not the
+  > authoritative engine decision. For the **`mcp-agentbuilder` pathway** (the typical path
+  > for Agent Builder People-capable declarative agents), PAYG / credit policy coverage does
+  > **not** substitute for a Microsoft 365 Copilot license — the engine blocks an unlicensed
+  > user regardless of PAYG coverage (see §4). A user flagged `isBlocked = false` because
+  > they hold PAYG coverage but no license may still receive an engine `Block` on this
+  > pathway. Always verify against engine decisions (`fsi_decision = Block`) rather than
+  > relying on `isBlocked` alone for pathway-specific conclusions. The FNF People-Sweep
+  > report uses engine decisions for its `blockedUserCount`, so the report output is
+  > authoritative; the lens field is a summary aid only.
+- **Accuracy-first (fail-open only on transient read error).** Misclassifying a licensed
+  user as "blocked" is a serious, customer-facing error, so a user whose Graph license
+  read fails (a transient per-user I/O error) is recorded as **unresolved** (never
+  "blocked") and **excluded** from the engine input for manual review, rather than
+  asserted blocked on incomplete data. Fail-*open* is reserved for these transient
+  per-user read errors; policy-shape uncertainty fails **closed** (previous bullet).
+
+> **Assumption (unproven schema).** The Power Platform billing-policy REST shape
+> (`…/providers/Microsoft.BusinessAppPlatform/billingPolicies`) is not yet proven, so the
+> resolver prefers an explicit `-BillingPolicyInputPath` / `-BillingPolicy` (for example,
+> the normalized output of [`Get-BillingPolicyInventory.ps1`](../scripts/Get-BillingPolicyInventory.ps1))
+> and treats the live read as best-effort. The PAYG → `inCreditScopeGroup` mapping is a
+> deliberate design choice; confirm coverage against the Microsoft 365 admin center.
 
 ---
 

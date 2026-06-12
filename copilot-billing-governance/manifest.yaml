@@ -9,6 +9,15 @@ controls:
 - '3.5'
 - '1.18'
 - '1.14'
+# controls_partial: controls the solution contributes to but does not
+# primarily implement.  The FNF lens + entitlement engine gate who may invoke
+# a metered People-capable agent (1.18) and scope spend to the declared surface
+# (1.14), but both controls are addressed more comprehensively by other solutions
+# (agent-sharing-access-restriction-detector, conditional-access-automation,
+# credential-oversharing-detector, scope-drift-monitor).  3.5 is CBG's primary.
+controls_partial:
+- '1.18'
+- '1.14'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-billing-governance/
 prerequisites:
   m365-admin: Microsoft 365 admin for Copilot billing and credit policy read/configuration in the Microsoft 365 admin center.

@@ -15,7 +15,13 @@
         grounding stays on PAYG.
 
     This cmdlet returns a normalized inventory of both objects plus headroom against
-    each ceiling. It reads from one of two sources:
+    each ceiling. For each PAYG policy it also surfaces the user scope (AllUsers,
+    Group, or Unknown), any assigned Entra security group object ids (ScopeGroupIds),
+    and the connected Copilot surfaces (ConnectedServices: Chat / SharePoint) so an
+    operator can see at a glance which policies cover all users for which capability.
+    A PAYG policy scoped to all users covers every tenant user for its surface and, in
+    the entitlement resolver, collapses the blocked set to zero for that capability. It
+    reads from one of two sources:
 
       - Dataverse (default): the reconciled rows in fsi_cbgbillingpolicy and
         fsi_cbgcreditpolicy that CBG-PolicySync maintains. This is the proven path.
@@ -26,7 +32,7 @@
         the README "Assumptions & build-time verifications".
 
     Authentication is managed-identity-first. Supply -AccessToken (Dataverse) and,
-    for -FromPlatform, -BillingApiAccessToken (https://api.bap.microsoft.com/) from a
+    for -FromPlatform, -BillingApiAccessToken (https://api.powerplatform.com/) from a
     managed identity or workload identity. An Az.Accounts fallback is provided for
     dev-only use.
 
@@ -45,8 +51,8 @@
     Dataverse.
 
 .PARAMETER BillingApiAccessToken
-    Bearer token for the Power Platform billing-policy admin API
-    (resource https://api.bap.microsoft.com/). Used only with -FromPlatform.
+    Bearer token for the Power Platform licensing API
+    (resource https://api.powerplatform.com/). Used only with -FromPlatform.
     Managed-identity-first; falls back to Get-AzAccessToken (dev-only).
 
 .PARAMETER PayAsYouGoCeiling
@@ -96,8 +102,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Power Platform billing-policy admin API resource (BAP).
-$script:BillingApiResource = 'https://api.bap.microsoft.com/'
+# Power Platform licensing API resource. Live billing policies are served by
+# https://api.powerplatform.com/licensing/billingPolicies (api-version 2024-10-01, verified
+# 200). The legacy api.bap.microsoft.com billingPolicies route no longer serves this resource.
+$script:BillingApiResource = 'https://api.powerplatform.com/'
 
 function Get-DataverseAccessToken {
     <#
@@ -148,6 +156,131 @@ function Get-DataverseRecords {
     return @($response.value)
 }
 
+function Get-CbgProperty {
+    <#
+    .SYNOPSIS
+        Read a property safely under Set-StrictMode -Version Latest (missing
+        properties return the default instead of throwing).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][AllowNull()]$InputObject,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter()]$Default = $null
+    )
+    if ($null -eq $InputObject) { return $Default }
+    if ($InputObject -is [System.Collections.IDictionary]) {
+        if ($InputObject.Contains($Name)) { return $InputObject[$Name] }
+        return $Default
+    }
+    $prop = $InputObject.PSObject.Properties[$Name]
+    if ($null -ne $prop) { return $prop.Value }
+    return $Default
+}
+
+function ConvertFrom-CbgSpendScopeValue {
+    <#
+    .SYNOPSIS
+        Decode the fsi_cbg_spendscope option-set integer into the connected-surface
+        tokens (Chat / SharePoint) the FNF lens and the entitlement resolver use.
+    #>
+    [CmdletBinding()]
+    param([Parameter()][AllowNull()]$Value)
+    switch ([string]$Value) {
+        '100000000' { return @('Chat') }          # Chat - Credit-eligible
+        '100000001' { return @('SharePoint') }    # SharePoint - PAYG-only
+        '100000002' { return @('Chat', 'SharePoint') }  # Mixed
+        default { return @() }
+    }
+}
+
+function ConvertFrom-CbgUserScopeValue {
+    <#
+    .SYNOPSIS
+        Decode the fsi_cbg_userscope option-set integer into a user-scope token
+        (AllUsers / Group / Unknown).
+    #>
+    [CmdletBinding()]
+    param([Parameter()][AllowNull()]$Value)
+    switch ([string]$Value) {
+        '100000000' { return 'AllUsers' }   # All users
+        '100000001' { return 'Group' }      # Specific security group
+        default { return 'Unknown' }
+    }
+}
+
+function Get-CbgPlatformPolicyScope {
+    <#
+    .SYNOPSIS
+        Best-effort extraction of user scope + connected services from a live
+        (UNPROVEN) Power Platform billing-policy object. Tolerates several field
+        spellings. Authoritative per-user scope resolution lives in
+        Get-CopilotEntitlement.ps1; this is for the inventory report only.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][AllowNull()]$Policy)
+
+    $scope = 'Unknown'
+    $groupIds = New-Object System.Collections.Generic.List[string]
+    $services = New-Object System.Collections.Generic.List[string]
+
+    if ($null -ne $Policy) {
+        $scopeContainer = $Policy
+        $props = Get-CbgProperty -InputObject $Policy -Name 'properties'
+        if ($null -ne $props) {
+            $inner = Get-CbgProperty -InputObject $props -Name 'scope'
+            if ($null -ne $inner) { $scopeContainer = $inner } else { $scopeContainer = $props }
+        }
+
+        $scopeRaw = $null
+        foreach ($k in @('scopeType', 'userScopeType', 'type', 'userScope', 'scope')) {
+            $v = Get-CbgProperty -InputObject $scopeContainer -Name $k
+            if ($null -ne $v -and $v -is [string]) { $scopeRaw = $v; break }
+        }
+
+        foreach ($container in @($scopeContainer, $Policy)) {
+            foreach ($gk in @('groupIds', 'groups', 'securityGroups')) {
+                $gv = Get-CbgProperty -InputObject $container -Name $gk
+                foreach ($g in @($gv)) {
+                    if ($null -eq $g) { continue }
+                    if ($g -is [string]) {
+                        if (-not $groupIds.Contains($g)) { $groupIds.Add($g) }
+                    }
+                    else {
+                        $gid = Get-CbgProperty -InputObject $g -Name 'id'
+                        if (-not $gid) { $gid = Get-CbgProperty -InputObject $g -Name 'groupId' }
+                        if ($gid -and -not $groupIds.Contains([string]$gid)) { $groupIds.Add([string]$gid) }
+                    }
+                }
+            }
+        }
+
+        if ($scopeRaw) {
+            if ($scopeRaw -match '(?i)all|tenant|everyone') { $scope = 'AllUsers' }
+            elseif ($scopeRaw -match '(?i)specific|group') { $scope = 'Group' }
+        }
+        if ($scope -eq 'Unknown' -and $groupIds.Count -gt 0) { $scope = 'Group' }
+
+        foreach ($ck in @('connectedServices', 'services', 'serviceTypes', 'capabilities')) {
+            $cv = Get-CbgProperty -InputObject $Policy -Name $ck
+            if ($null -eq $cv) { $cv = Get-CbgProperty -InputObject $scopeContainer -Name $ck }
+            foreach ($c in @($cv)) {
+                if ($null -eq $c) { continue }
+                $ctext = if ($c -is [string]) { $c } else { [string](Get-CbgProperty -InputObject $c -Name 'name') }
+                if ([string]::IsNullOrWhiteSpace($ctext)) { continue }
+                if ($ctext -match '(?i)chat' -and -not $services.Contains('Chat')) { $services.Add('Chat') }
+                if ($ctext -match '(?i)sharepoint|spo' -and -not $services.Contains('SharePoint')) { $services.Add('SharePoint') }
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        Scope             = $scope
+        ScopeGroupIds     = $groupIds.ToArray()
+        ConnectedServices = $services.ToArray()
+    }
+}
+
 function Get-PayAsYouGoInventory {
     <#
     .SYNOPSIS
@@ -163,19 +296,26 @@ function Get-PayAsYouGoInventory {
 
     if ($Platform) {
         $token = Get-DataverseAccessToken -ResourceUrl $script:BillingApiResource -ProvidedToken $BillingToken
-        $uri = "$($script:BillingApiResource.TrimEnd('/'))/providers/Microsoft.BusinessAppPlatform/billingPolicies?api-version=2022-03-01-preview"
+        $uri = "$($script:BillingApiResource.TrimEnd('/'))/licensing/billingPolicies?api-version=2024-10-01"
         $headers = @{ 'Authorization' = "Bearer $token"; 'Accept' = 'application/json' }
         Write-Verbose "Reading PAYG billing policies from platform API: $uri"
         $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers
         $rows = @()
-        if ($null -ne $response.value) {
-            foreach ($p in $response.value) {
+        $value = Get-CbgProperty -InputObject $response -Name 'value'
+        if ($null -ne $value) {
+            foreach ($p in @($value)) {
+                $instrument = Get-CbgProperty -InputObject $p -Name 'billingInstrument'
+                $statusVal = Get-CbgProperty -InputObject $p -Name 'status'
+                $scopeInfo = Get-CbgPlatformPolicyScope -Policy $p
                 $rows += [pscustomobject]@{
-                    Name                 = $p.name
-                    PolicyType           = 'PAYG'
-                    AzureSubscriptionId  = $p.billingInstrument.resourceGroup
-                    IsConnected          = ($null -ne $p.status -and $p.status -eq 'EnabledForFlowsAndPowerApps')
-                    Source               = 'platform'
+                    Name                = Get-CbgProperty -InputObject $p -Name 'name'
+                    PolicyType          = 'PAYG'
+                    AzureSubscriptionId = Get-CbgProperty -InputObject $instrument -Name 'resourceGroup'
+                    IsConnected         = ($null -ne $statusVal -and "$statusVal" -match '(?i)enabled|connected|active')
+                    Scope               = $scopeInfo.Scope
+                    ScopeGroupIds       = @($scopeInfo.ScopeGroupIds)
+                    ConnectedServices   = @($scopeInfo.ConnectedServices)
+                    Source              = 'platform'
                 }
             }
         }
@@ -183,15 +323,24 @@ function Get-PayAsYouGoInventory {
     }
 
     # Proven path: reconciled Dataverse store.
-    $select = 'fsi_name,fsi_policytype,fsi_azuresubscriptionid,fsi_isconnected,fsi_spendscope,fsi_policycountsnapshot,fsi_lastsyncedat'
+    $select = 'fsi_name,fsi_policytype,fsi_azuresubscriptionid,fsi_isconnected,fsi_spendscope,fsi_userscope,fsi_assignedgroupid,fsi_policycountsnapshot,fsi_lastsyncedat'
     $records = Get-DataverseRecords -BaseUrl $BaseUrl -Token $DataverseToken -EntitySet 'fsi_cbgbillingpolicies' -Select $select
     $rows = @()
     foreach ($r in $records) {
+        $userScope = ConvertFrom-CbgUserScopeValue -Value (Get-CbgProperty -InputObject $r -Name 'fsi_userscope')
+        $assignedGroupId = Get-CbgProperty -InputObject $r -Name 'fsi_assignedgroupid'
+        $scopeGroupIds = @()
+        if ($userScope -eq 'Group' -and -not [string]::IsNullOrWhiteSpace($assignedGroupId)) {
+            $scopeGroupIds = @([string]$assignedGroupId)
+        }
         $rows += [pscustomobject]@{
-            Name                = $r.fsi_name
+            Name                = Get-CbgProperty -InputObject $r -Name 'fsi_name'
             PolicyType          = 'PAYG'
-            AzureSubscriptionId = $r.fsi_azuresubscriptionid
-            IsConnected         = [bool]$r.fsi_isconnected
+            AzureSubscriptionId = Get-CbgProperty -InputObject $r -Name 'fsi_azuresubscriptionid'
+            IsConnected         = [bool](Get-CbgProperty -InputObject $r -Name 'fsi_isconnected' -Default $false)
+            Scope               = $userScope
+            ScopeGroupIds       = $scopeGroupIds
+            ConnectedServices   = @(ConvertFrom-CbgSpendScopeValue -Value (Get-CbgProperty -InputObject $r -Name 'fsi_spendscope'))
             Source              = 'dataverse'
         }
     }
@@ -232,39 +381,41 @@ function Get-CreditPolicyInventory {
     return $rows
 }
 
-# --- Main ---
-$dataverseToken = Get-DataverseAccessToken -ResourceUrl $EnvironmentUrl -ProvidedToken $AccessToken
+# --- Main (runs only on direct invocation; dot-sourcing for tests skips this) ---
+if ($MyInvocation.InvocationName -ne '.') {
+    $dataverseToken = Get-DataverseAccessToken -ResourceUrl $EnvironmentUrl -ProvidedToken $AccessToken
 
-$payg = @(Get-PayAsYouGoInventory -BaseUrl $EnvironmentUrl -DataverseToken $dataverseToken -Platform:$FromPlatform -BillingToken $BillingApiAccessToken)
-$credit = @(Get-CreditPolicyInventory -BaseUrl $EnvironmentUrl -DataverseToken $dataverseToken -Platform:$FromPlatform)
+    $payg = @(Get-PayAsYouGoInventory -BaseUrl $EnvironmentUrl -DataverseToken $dataverseToken -Platform:$FromPlatform -BillingToken $BillingApiAccessToken)
+    $credit = @(Get-CreditPolicyInventory -BaseUrl $EnvironmentUrl -DataverseToken $dataverseToken -Platform:$FromPlatform)
 
-$paygCount = $payg.Count
-$creditCount = $credit.Count
+    $paygCount = $payg.Count
+    $creditCount = $credit.Count
 
-$inventory = [pscustomobject]@{
-    PayAsYouGo = [pscustomobject]@{
-        Count        = $paygCount
-        Ceiling      = $PayAsYouGoCeiling
-        Headroom     = ($PayAsYouGoCeiling - $paygCount)
-        AtCeiling    = ($paygCount -ge $PayAsYouGoCeiling)
-        Policies     = $payg
+    $inventory = [pscustomobject]@{
+        PayAsYouGo  = [pscustomobject]@{
+            Count     = $paygCount
+            Ceiling   = $PayAsYouGoCeiling
+            Headroom  = ($PayAsYouGoCeiling - $paygCount)
+            AtCeiling = ($paygCount -ge $PayAsYouGoCeiling)
+            Policies  = $payg
+        }
+        Credit      = [pscustomobject]@{
+            Count     = $creditCount
+            Ceiling   = $CreditCeiling
+            Headroom  = ($CreditCeiling - $creditCount)
+            AtCeiling = ($creditCount -ge $CreditCeiling)
+            Policies  = $credit
+        }
+        Source      = $(if ($FromPlatform) { 'platform-with-dataverse-fallback' } else { 'dataverse' })
+        EvaluatedAt = (Get-Date).ToUniversalTime().ToString('o')
     }
-    Credit     = [pscustomobject]@{
-        Count        = $creditCount
-        Ceiling      = $CreditCeiling
-        Headroom     = ($CreditCeiling - $creditCount)
-        AtCeiling    = ($creditCount -ge $CreditCeiling)
-        Policies     = $credit
+
+    Write-Output $inventory
+
+    if ($inventory.PayAsYouGo.AtCeiling) {
+        Write-Warning "PAYG billing policies are at the tenant ceiling ($PayAsYouGoCeiling); no headroom for additional policies."
     }
-    Source     = $(if ($FromPlatform) { 'platform-with-dataverse-fallback' } else { 'dataverse' })
-    EvaluatedAt = (Get-Date).ToUniversalTime().ToString('o')
-}
-
-Write-Output $inventory
-
-if ($inventory.PayAsYouGo.AtCeiling) {
-    Write-Warning "PAYG billing policies are at the tenant ceiling ($PayAsYouGoCeiling); no headroom for additional policies."
-}
-if ($inventory.Credit.AtCeiling) {
-    Write-Warning "Credit policies are at the tenant ceiling ($CreditCeiling); no headroom for additional policies."
+    if ($inventory.Credit.AtCeiling) {
+        Write-Warning "Credit policies are at the tenant ceiling ($CreditCeiling); no headroom for additional policies."
+    }
 }

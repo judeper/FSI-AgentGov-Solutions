@@ -1,0 +1,4 @@
+{
+  "_comment": "Sample billing-policy input for the FNF lens (forwarded verbatim to the CBG resolver -BillingPolicyInputPath). EMPTY here so the fixtures exercise the unlicensed-and-no-PAYG -> BLOCKED path: an unlicensed user covered by no pay-as-you-go credit policy is blocked. To model PAYG coverage, add policies under billingPolicies[] per the CBG resolver contract.",
+  "billingPolicies": []
+}
