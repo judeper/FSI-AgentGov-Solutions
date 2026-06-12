@@ -37,6 +37,16 @@ specific obligations.
 CBG reads — rather than re-discovers — the agent dimension from
 `copilot-agent-inventory` and the usage tier from `work-iq-usage-detection`.
 
+A focused application of this engine is the **FNF People-Sweep lens**
+(`scripts/Get-FnfPeopleSweepReport.ps1`): it identifies declarative agents with the
+"Reference org chart and profile info" (declarative-manifest `People`) capability that are
+shared with users who hold **no paid Microsoft 365 Copilot license and no PAYG coverage**,
+and reports the blocked users per agent with an explicit coverage-scope statement. For the
+agents whose manifest is not readable by any supported API, the **owner-attestation
+workflow** (`scripts/Convert-AttestationToCapabilityRows.ps1`,
+[`docs/owner-attestation-workflow.md`](docs/owner-attestation-workflow.md)) feeds owner-
+confirmed capability into the same lens.
+
 ## Related Controls
 
 | Control | Title | How this solution contributes |
