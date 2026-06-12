@@ -5,6 +5,81 @@ All notable changes to the Copilot Agent Inventory are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-preview] - 2026-06-12
+
+Adds two FNF-governance extensions that feed the downstream Copilot Billing
+Governance (CBG) solution: declarative-agent "People" capability detection and
+sharing-audience-to-UPN expansion.
+
+### Added
+
+- **People capability detection** (`scripts/detect_people_capability.py`): a
+  manifest-source-agnostic parser that detects the declarative-agent
+  `capabilities[].name == "People"` signal (the "Reference org chart and profile
+  info" toggle) from `declarativeAgent.json`. Case-sensitive literal match, stable
+  across manifest schema v1.5–v1.7, with the optional v1.7 `include_related_content`
+  captured (it does not gate detection). Includes an **acquisition-adapter seam**
+  with two implemented adapters — `local-package` (app-package directory/`.zip`)
+  and `source-repo` (source/CI tree) — plus a clearly-marked `FutureExportAdapter`
+  seam for a scalable tenant-export path. Emits `fsi_caiagentfeature` rows of the
+  new **People (Org Chart & Profile)** feature type with provenance
+  (`fsi_detectionsource`) and a **Declared (Manifest)** confidence marker
+  (`fsi_detectionconfidence`); flags the agent id **provisional** when no
+  `--id-map` binds the manifest to its Dataverse bot GUID.
+- **Audience → UPN expansion** (`scripts/expand_audience_upns.py`): resolves an
+  agent's sharing audience (security groups in `fsi_caiauthshare`) to concrete
+  member UPNs via Microsoft Graph **transitive** membership
+  (`GET /groups/{id}/transitiveMembers`, `GroupMember.Read.All`), flattening nested
+  groups and de-duplicating across viewer/editor groups. Flags
+  **"Everyone in the organization"** sharing as `wholeTenant` **without enumerating
+  the tenant** (configurable `--whole-tenant-cap`), bounds large groups with
+  `--max-members-per-group` (truncation flag), honors HTTP 429 Retry-After backoff,
+  and surfaces per-group resolution errors as `Partial`/`Failed` status. Emits a
+  CBG-shaped `intendedUsers[].upn` artifact and an optional Dataverse write-back of
+  **counts/flags only (no UPNs/PII)**.
+- **Schema additions** (`scripts/create_cai_dataverse_schema.py`): new
+  `fsi_caiagentfeature` columns `fsi_detectionsource`, `fsi_detectionconfidence`
+  (picklists), and `fsi_detectiondetail` (memo); new `fsi_caiauthshare` columns
+  `fsi_audiencewholetenant`, `fsi_audienceupncount`, `fsi_audiencetruncated`,
+  `fsi_audienceresolutionstatus`, and `fsi_audienceresolvedat`. Adds the
+  **People (Org Chart & Profile)** value to the `fsi_cai_featuretype` option set
+  and two new option sets, `fsi_cai_detectionsource` and `fsi_cai_detectionconfidence`.
+  `docs/dataverse-schema.md` regenerated from the schema source of truth.
+- **Sample artifacts**: `templates/people-detection.sample.json`,
+  `templates/audience-input.sample.json`, and
+  `templates/audience-upn-list.sample.json`.
+- **Unit tests**: `tests/test_detect_people_capability.py` and
+  `tests/test_expand_audience_upns.py`.
+
+### Fixed
+
+- **GATE-1 hardening (accuracy is customer-facing).** Org-wide-shared agents no
+  longer resolve to a confidently-empty audience: whole-tenant reach is now a
+  per-agent signal (`fsi_caiauthshare.fsi_sharedwitheveryone`, derived from the
+  bot `accesscontrolpolicy` during discovery) instead of being mis-inferred from
+  the environment-wide `bot-limitSharingMode`; a posture row with no whole-tenant
+  signal and no refs is marked `Partial` (never a silent empty). Provisional
+  manifest detections are now queryable (`fsi_caiagentfeature.fsi_agentrefprovisional`)
+  and no longer collapse on the `(fsi_agentid, fsi_sourceobjectid)` alternate key
+  — provisional rows salt `fsi_sourceobjectid` with a stable per-manifest hash.
+  The Microsoft Graph token now refreshes near expiry (no 401 on long runs),
+  `Retry-After` parsing handles the RFC 7231 HTTP-date format, malformed/unzippable
+  manifests increment a `manifestsFailed` counter that surfaces a `Partial` scan,
+  and the Dataverse write-back `$filter` escapes single quotes. Adds two schema
+  columns (`fsi_sharedwitheveryone`, `fsi_agentrefprovisional`) and a regression
+  test per finding; `docs/dataverse-schema.md` regenerated.
+
+### Notes
+
+- **Declared ≠ effective** — the People signal is detected as authored/available
+  in the manifest; a v1.7 `user_overrides` block can remove a capability at
+  runtime, so the marker is "Declared (Manifest)", not "effective".
+- **Provisional agent ids** — declarative manifests carry no Dataverse bot GUID;
+  detections without an `--id-map` match are flagged provisional for the
+  orchestrator to reconcile before joining CAI/CBG.
+- **Privacy** — full UPN lists are emitted only as a transient artifact; Dataverse
+  persists audience counts and flags, not member UPNs.
+
 ## [0.1.0-preview] - 2026-06-09
 
 Initial preview scaffold of the tier-1 system-of-record for the FSI Copilot

@@ -1,6 +1,6 @@
 # Architecture - Copilot Agent Inventory
 
-> **Status:** `0.1.0-preview`. This document describes the intended architecture
+> **Status:** `0.2.0-preview`. This document describes the intended architecture
 > of the discovery scanner and the canonical Dataverse system-of-record. Several
 > build-time facts are tagged for live verification (see
 > [Assumptions and build-time verifications](#assumptions-and-build-time-verifications));

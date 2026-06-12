@@ -1,6 +1,6 @@
 {
   "_comment": "Sample fsi_copilotagent record plus its fsi_caiagentfeature rows produced by discover_agents.py. Field names are Dataverse LOGICAL names (SchemaName lowercased, no underscores between words). Picklist fields show the label; the scanner resolves the label to the option-set integer value at write time. This is illustrative sample data, NOT an exported Power Platform artifact.",
-  "schemaVersion": "0.1.0-preview",
+  "schemaVersion": "0.2.0-preview",
   "runId": "cai-1781029367",
   "fsi_copilotagent": {
     "fsi_name": "Wealth Advisory Assistant (Z2)",
@@ -39,6 +39,8 @@
       "fsi_sourceobjectname": "Account Balance Inquiry",
       "fsi_isenabled": true,
       "fsi_relationshipname": "botcomponent",
+      "fsi_detectionsource": "Dataverse Botcomponent Scan",
+      "fsi_detectionconfidence": "Configured (Dataverse)",
       "fsi_lastscannedat": "2026-06-09T14:00:00Z",
       "fsi_runid": "cai-1781029367"
     },
@@ -53,6 +55,8 @@
       "fsi_sourceobjectname": "Product Disclosures Library",
       "fsi_isenabled": true,
       "fsi_relationshipname": "botcomponent",
+      "fsi_detectionsource": "Dataverse Botcomponent Scan",
+      "fsi_detectionconfidence": "Configured (Dataverse)",
       "fsi_lastscannedat": "2026-06-09T14:00:00Z",
       "fsi_runid": "cai-1781029367"
     },
@@ -67,6 +71,8 @@
       "fsi_sourceobjectname": "Advisory Tone GPT",
       "fsi_isenabled": true,
       "fsi_relationshipname": "botcomponent",
+      "fsi_detectionsource": "Dataverse Botcomponent Scan",
+      "fsi_detectionconfidence": "Configured (Dataverse)",
       "fsi_lastscannedat": "2026-06-09T14:00:00Z",
       "fsi_runid": "cai-1781029367"
     },
@@ -81,6 +87,8 @@
       "fsi_sourceobjectname": "CRM Account Lookup",
       "fsi_isenabled": true,
       "fsi_relationshipname": "botcomponent_aipluginoperation",
+      "fsi_detectionsource": "Dataverse Botcomponent Scan",
+      "fsi_detectionconfidence": "Configured (Dataverse)",
       "fsi_lastscannedat": "2026-06-09T14:00:00Z",
       "fsi_runid": "cai-1781029367"
     },
@@ -95,6 +103,8 @@
       "fsi_sourceobjectname": "Holdings",
       "fsi_isenabled": true,
       "fsi_relationshipname": "botcomponent_dvtablesearch",
+      "fsi_detectionsource": "Dataverse Botcomponent Scan",
+      "fsi_detectionconfidence": "Configured (Dataverse)",
       "fsi_lastscannedat": "2026-06-09T14:00:00Z",
       "fsi_runid": "cai-1781029367"
     }

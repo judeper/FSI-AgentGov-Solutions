@@ -1,7 +1,7 @@
 id: copilot-agent-inventory
 name: Copilot Agent Inventory
 description: Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent.
-version: 0.1.0-preview
+version: 0.2.0-preview
 status: preview
 domain: monitoring-analytics
 tier: '1'

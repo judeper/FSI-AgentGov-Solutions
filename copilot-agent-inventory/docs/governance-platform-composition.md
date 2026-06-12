@@ -203,6 +203,227 @@ brought into the system-of-record between nightly batch runs. This composes with
 governance: when a new environment appears, the listener keeps the inventory
 current without waiting for the next scheduled discovery.
 
+## FNF People-capability sweep — composition lens
+
+> **Context and scope.** This section documents a specialized composition lens built on
+> Pillars 1–3 for a financial services organization running approximately 2,000 Microsoft
+> 365 Copilot declarative agents. The governance question is: *which agents expose the
+> declarative `People` capability to users who lack a paid M365 Copilot license and are
+> not covered by PAYG, and how many such users are shared with that agent?* The lens
+> **supports compliance with** control 1.18 (Application-Level Authorization and RBAC)
+> and **contributes to** control 3.5 (Cost Allocation and Budget Tracking). It does not
+> perform real-time enforcement; it is a detection and reporting composition.
+>
+> **Cloud scope.** US commercial Microsoft 365 only; verify applicability for other
+> cloud environments independently.
+
+### What this lens governs
+
+| Dimension | In scope | Out of scope |
+|-----------|----------|--------------|
+| Capability | Declarative `People` (org chart + profile) | Work IQ; other manifest capabilities |
+| Entitlement | Paid M365 Copilot service-plan; PAYG / Copilot Credits | Guest users; non-M365 workloads |
+| Audience | Sharing groups → expanded UPN list | In-agent AAD group membership at prompt time |
+| Output | Blocked-user count + `coverageStatus` per People-capable agent | Real-time enforcement; auto-remediation |
+
+### The chain: CAI → CBG → engine → FNF report
+
+The sweep composes four existing solutions in a fixed pipeline.
+
+#### Step 1 — Capability detection (`copilot-agent-inventory`)
+
+CAI reads each agent's `declarativeAgent.json` manifest and records an
+`fsi_caiagentfeature` row when `capabilities[].name == "People"` with
+`fsi_isenabled = true`. The detection requires the manifest file to be readable; Work IQ
+telemetry cannot substitute for it (see Architecture facts below).
+
+For agents built with Microsoft 365 Agents Toolkit the manifest is read from
+source-controlled `appPackage/declarativeAgent.json`. For other provenance paths the
+manifest must be supplied via `--source local-package` or a resolved id-map. Agents
+without a readable manifest are not silently dropped; they are flagged as provisional
+coverage gaps (see Coverage model below).
+
+#### Step 2 — Audience expansion (`copilot-agent-inventory`)
+
+For each People-capable agent, `expand_audience_upns.py` resolves the agent's sharing
+groups from `fsi_caiauthshare` and expands them to a UPN list written to the
+`audience-upn-list` artifact. Agents shared with the whole organization
+(`wholeTenant = true`) emit an empty `intendedUsers[]`; the lens handles them as a
+separate `coverageStatus = "Partial"` row — they are not silently assigned "0 blocked"
+(see Integration caveats below).
+
+#### Step 3 — Entitlement scoring (`copilot-billing-governance`)
+
+The CBG resolver (`Get-CopilotEntitlement.ps1`) evaluates each UPN against:
+
+1. A **paid M365 Copilot service-plan allowlist** — checked via
+   `GET /v1.0/users/{id}/licenseDetails` with `provisioningStatus == "Success"`.
+2. **PAYG / Copilot Credits eligibility** — whether the user is in an "All Users" scope
+   or in a security group linked to a connected billing policy.
+
+The resolver is **fail-closed on uncertainty**: users whose license state cannot be
+determined are routed to `needsManualReview`, not silently counted as "allowed."
+
+The entitlement engine (`Invoke-EntitlementEvaluation.ps1`) then classifies each
+(agent, user) pair as `Block`, `Allow`, `Fail-open-Anomaly`, or
+`Fail-closed-ZeroRatingUnresolved` and writes results to
+`fsi_cbgentitlementmaterialized`.
+
+#### Step 4 — FNF report
+
+The lens joins `fsi_caiagentfeature` (People filter), the audience artifact, and the
+engine decisions to produce one report row per People-capable agent:
+
+| Report field | Source |
+|---|---|
+| `agentId`, `agentName` | `fsi_copilotagent` |
+| `audienceMode` | `audience-upn-list.agents[].wholeTenant` → `WholeTenant \| GroupScoped` |
+| `coverageStatus` | Rolled-up from audience `resolutionStatus`, CBG `unresolvedCount`, engine anomalies |
+| `coverageGaps[]` | Named gaps: `manifest-id-unreconciled`, `audience-truncated`, `audience-resolution-errors`, `audience-wholetenant-not-enumerated`, `entitlement-unresolved-users`, `payg-policy-needs-manual-review`, `pathway-unmapped-fail-open` |
+| `blockedUserCount`, `blockedUsers[]` | `fsi_cbgentitlementmaterialized` where `fsi_decision = Block` |
+| `totalAudience` | `audience-upn-list.agents[].audienceSize` (0 / null for whole-tenant) |
+
+`coverageStatus = "Partial"` is emitted whenever any of the named gaps is present.
+A `coverageStatus = "Complete"` row represents a fully scored agent with no audience
+or entitlement gaps — it does not imply the agent's sharing or licensing posture is
+acceptable; it means the data for that agent is complete enough to produce a reliable
+blocked-user count.
+
+---
+
+### Corrected architecture facts
+
+The following facts were adversarially verified (GATE0a, GATE0b, R6) and differ from
+common assumptions that should not be carried into implementations.
+
+#### `People` is a declarative-agent manifest capability — not Work IQ
+
+`People` is expressed as `{ "name": "People" }` inside `declarativeAgent.json`
+(manifest schema v1.5+) and enables grounding on org-chart and profile data for that
+specific agent. It is a per-agent manifest declaration — **distinct from Work IQ** in
+layer, detection surface, and admin governance:
+
+| Attribute | `People` capability | Work IQ |
+|---|---|---|
+| Layer | Per-agent declarative manifest | Tenant-level Copilot intelligence layer |
+| Where defined | `declarativeAgent.json` → `capabilities[].name` | M365 admin center; Copilot and Dataverse settings |
+| How detected | Manifest parse (CAI) | `fsi_wiqstate` four-state model (Pillar 2) |
+| Runtime telemetry signal | **None documented (R6)** | Purview `AISystemPlugin[]` (documented Ids: `BingWebSearch`, `EnterpriseSearch`) |
+
+**Work IQ telemetry does not detect the declarative `People` capability.** Across all
+tested surfaces as of 2026-06-11 — Purview Audit `CopilotInteraction.AISystemPlugin[]`,
+Defender XDR `CloudAppEvents`, Application Insights, and Microsoft Graph `aiInteraction`
+— no documented, distinct, queryable signal fires when People grounding is invoked
+(R6 adversarial research). Build no automated detection on an inferred
+`AISystemPlugin[].Id == "People"` until validated live in a tenant post-GA.
+
+#### License detection is service-plan–based; display names are not contracts
+
+The CBG resolver checks paid entitlement against **service-plan GUIDs** read from
+`GET /v1.0/users/{id}/licenseDetails`. The **eight** service plans that constitute a paid
+M365 Copilot entitlement — the six `M365_COPILOT_*` plans plus two sibling plans bundled in
+the same paid SKU (GATE0b 8-GUID allowlist; Microsoft licensing-service-plan reference):
+
+| `servicePlanName` | `servicePlanId` |
+|---|---|
+| `M365_COPILOT_BUSINESS_CHAT` | `3f30311c-6b1e-48a4-ab79-725b469da960` |
+| `M365_COPILOT_APPS` | `a62f8878-de10-42f3-b68f-6149a25ceb97` |
+| `M365_COPILOT_TEAMS` | `b95945de-b3bd-46db-8437-f2beb6ea2347` |
+| `M365_COPILOT_SHAREPOINT` | `0aedf20c-091d-420b-aadf-30c042609612` |
+| `M365_COPILOT_INTELLIGENT_SEARCH` | `931e4a88-a67f-48b5-814f-16a5f1e6028d` |
+| `M365_COPILOT_CONNECTORS` | `89f1c4c8-0878-40f7-804d-869c9128ab5d` |
+| `GRAPH_CONNECTORS_COPILOT` | `82d30987-df9b-4486-b146-198b21d164c7` |
+| `COPILOT_STUDIO_IN_COPILOT_FOR_M365` | `fe6c28b3-d468-44ea-bbd0-a10a5167435c` |
+
+`Bing_Chat_Enterprise` (`0d0c0d31-fae7-41f2-b909-eaf4d7f26dba`) — present in M365 E3
+and E5 SKUs — is **explicitly excluded**: its friendly name in Microsoft's reference is
+"RETIRED - Commercial data protection for Microsoft Copilot" and it does not constitute
+a paid M365 Copilot entitlement (GATE0b C2).
+
+Tenant-local labels such as "Microsoft 365 E7" and "Copilot Premium" are not published
+Microsoft SKU names (neither appears in the Microsoft licensing-service-plan reference
+as of 2026-06-11; GATE0b C3). The resolver MUST reconcile against live tenant
+`subscribedSkus` by GUID — never by display name.
+
+---
+
+### Coverage model and honest limits
+
+Automated capability detection is bounded by manifest access. The entitlement and
+sharing join is **fully automated for every agent that is identified**, regardless of
+how the agent was built.
+
+| Tier | Population | Capability detection | Entitlement + sharing join |
+|---|---|---|---|
+| **A — source-controlled** | ~5–20% (Toolkit-built; `declarativeAgent.json` in version control or CI artifact) | ✅ Automated | ✅ Automated |
+| **B — org-catalog, no source** | Published agents without checked-in manifest | ❌ No supported API today | ✅ Automated once identified |
+| **C — Shared by creator (long tail)** | ~60–85% (Agent-Builder self-service agents) | ❌ No supported API today | ✅ Automated once identified |
+
+**No supported, scalable API returns `capabilities[]` for deployed declarative agents
+as of 2026-06-11.** The following surfaces were tested and return metadata only — no
+manifest body or parsed `capabilities[]` array: Microsoft Graph
+`/appCatalogs/teamsApps` (`AppCatalog.Read.All`), the M365 admin-center Agent Registry
+CSV export, Teams Admin Center PowerShell (`Get-TeamsApp`), Purview Audit, Defender XDR
+`CloudAppEvents`, and Microsoft Graph `aiInteraction` (SPIKE adversarial research +
+GATE0a enumeration across all documented surfaces).
+
+For Tier B and C agents, **manual owner attestation is the primary recommended path**:
+the owning team confirms whether the "Reference org chart and profile info" toggle is
+enabled in Agent Builder. The entitlement and sharing join then runs automatically once
+the agent is included in the sweep.
+
+**Future static-API candidates — validate live, do not promise customers today:**
+
+- **M365 Agent Registry Graph API (preview)** — if it returns a parsed
+  `declarativeAgent.json`, Tier B and C agents could be resolved programmatically.
+  Whether `capabilities[]` is exposed is undocumented; must be validated against a live
+  tenant and not relied upon until confirmed.
+- **Defender XDR `AgentsInfo` (preview; rename from `AIAgentsInfo` completes
+  2026-07-01)** — carries a `Capabilities` dynamic column reflecting declared posture.
+  Whether it ingests M365 Copilot declarative agents (vs. Copilot Studio / Foundry
+  agents only) and whether `capabilities[].name = "People"` is captured is unverified
+  as of 2026-06-11. This is a posture (inventory) table, not a runtime invocation
+  signal; even if it resolves the capability-detection gap for some agents, it does not
+  produce a telemetry trace of when People grounding fires.
+
+---
+
+### Integration caveats (GATE-1 seams)
+
+Three seams between CAI and CBG were identified as blocking in the cross-branch
+contract review. Implementations MUST address all three.
+
+1. **SEAM 1 — Agent-id reconciliation.** CAI stamps `fsi_agentrefprovisional = true`
+   on `fsi_caiagentfeature` rows where the manifest was read without a resolved
+   Dataverse bot GUID. Joining these rows to the audience artifact or CBG on
+   `fsi_agentid` without prior reconciliation either joins onto nothing (provisional id
+   ≠ any real GUID) or collapses multiple distinct provisional manifests onto the same
+   stem. The People-capability filter MUST gate on `fsi_agentrefprovisional = false`
+   (or supply `--id-map` and re-query). Unreconciled rows MUST surface as
+   `coverageStatus = "Partial"` with `coverageGap = "manifest-id-unreconciled"` — never
+   silently dropped.
+
+2. **SEAM 2a — Audience artifact shape mismatch.** CAI emits
+   `agents[].intendedUsers[{ "upn": "..." }]` (array of objects). The CBG resolver
+   expects `agents[].intendedUpns: ["..."]` (flat array of strings). Passing the CAI
+   audience artifact directly as the CBG resolver `-InputPath` produces a silent
+   zero-user run: `intendedUpns` is `$null`, the per-user loop iterates nothing, and the
+   report reads "0 blocked." A normalization step is required before invoking the
+   resolver.
+
+3. **SEAM 2c — Whole-tenant audience.** Agents shared with the entire organization emit
+   `wholeTenant = true` with `intendedUsers = []`. The lens MUST NOT report "0 blocked"
+   for these agents; it MUST emit `audienceMode = "WholeTenant"`,
+   `coverageStatus = "Partial"`, and `blockedUsersComputed = false`. Org-wide-shared
+   People-capable agents represent the highest-risk profile in the sweep and must remain
+   visible in the output.
+
+> **Pathway fallback note.** The engine falls back to the `createdIn` field when
+> `configuredTier` (WIQ) is out of scope. Agents with `fsi_createdin ∈ {Unknown, null}`
+> produce `pathway = unmapped → FAIL-OPEN` and under-report blocked users. The lens MUST
+> treat such agents as `coverageStatus = "Partial"` with
+> `coverageGap = "pathway-unmapped-fail-open"`.
+
 ## Composition map
 
 ```mermaid

@@ -4,7 +4,7 @@ Auto-generated schema documentation. Do not edit manually — regenerate with `p
 
 ## Overview
 
-The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-specific option sets**, and **1 shared option set(s)**, with **96 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
+The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-specific option sets**, and **1 shared option set(s)**, with **106 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
 
 > **Logical-name convention.** Dataverse logical names are the SchemaName lowercased with NO underscores between words (`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> `fsi_agentid`). Always use logical names in OData `$select` / `$filter` / `$orderby`.
 
@@ -25,7 +25,7 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-
 | `fsi_cai_createdin` | Copilot Studio (100000000), Microsoft 365 Copilot Agent Builder (100000001), Unknown (100000002) |
 | `fsi_cai_agenttype` | Standard (100000000), Lite / Agent Builder (100000001), Declarative Agent (100000002), Classic V1 (excluded) (100000003), Unknown (100000004) |
 | `fsi_cai_discoverysource` | Azure Resource Graph (100000000), Per-Environment Dataverse Scan (100000001), PPAC Reconciliation (100000002), Reconciled (multi-source) (100000003) |
-| `fsi_cai_featuretype` | Topic (100000000), Skill (100000001), Knowledge Source (100000002), Custom GPT (100000003), Copilot Settings (100000004), External Trigger (100000005), File Attachment (100000006), Bot Variable (100000007), Bot Entity (100000008), Dialog (100000009), Dialog Schema (100000021), Trigger (100000010), Language Understanding (100000011), Language Generation (100000012), Bot Translations (100000013), Test Case (100000014), Tool / Plugin (100000015), Connector (100000016), Power Automate Flow (100000017), Environment Variable (100000018), Dataverse Search Grounding (100000019), AI Builder Model (100000020), Other / Unrecognized (100000099) |
+| `fsi_cai_featuretype` | Topic (100000000), Skill (100000001), Knowledge Source (100000002), Custom GPT (100000003), Copilot Settings (100000004), External Trigger (100000005), File Attachment (100000006), Bot Variable (100000007), Bot Entity (100000008), Dialog (100000009), Dialog Schema (100000021), Trigger (100000010), Language Understanding (100000011), Language Generation (100000012), Bot Translations (100000013), Test Case (100000014), Tool / Plugin (100000015), Connector (100000016), Power Automate Flow (100000017), Environment Variable (100000018), Dataverse Search Grounding (100000019), AI Builder Model (100000020), People (Org Chart & Profile) (100000022), Other / Unrecognized (100000099) |
 | `fsi_cai_componentversion` | V1 (100000000), V2 (100000001), Not Applicable (100000002) |
 | `fsi_cai_policytype` | PAYG Billing Policy (100000000), Prepaid Credit Policy (100000001), None (100000002), Unknown (100000003) |
 | `fsi_cai_spendscope` | Chat (100000000), SharePoint (100000001), All Surfaces (100000002), Unknown (100000003) |
@@ -33,6 +33,8 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-
 | `fsi_cai_workiqobserved` | Not Observed (100000000), Invoked (100000001), Configured, Not Invoked (100000002), Unknown (100000003) |
 | `fsi_cai_risklevel` | Low (100000000), Medium (100000001), High (100000002), Critical (100000003), Unknown (100000004) |
 | `fsi_cai_scancompleteness` | Complete (100000000), Incomplete Scan (100000001), Failed (100000002) |
+| `fsi_cai_detectionsource` | Dataverse Botcomponent Scan (100000000), Declarative Manifest (Local App Package) (100000001), Declarative Manifest (Source/CI Repo) (100000002), Declarative Manifest (Export Adapter - Future) (100000003), Unknown (100000099) |
+| `fsi_cai_detectionconfidence` | Declared (Manifest) (100000000), Configured (Dataverse) (100000001), Inferred (100000002), Unknown (100000099) |
 
 ---
 
@@ -116,6 +118,10 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-
 | `fsi_SourceObjectName` | `fsi_sourceobjectname` | String(500) | No | Display name of the source component / target |
 | `fsi_IsEnabled` | `fsi_isenabled` | Boolean (default: true) | No | Whether the feature is enabled on the agent |
 | `fsi_RelationshipName` | `fsi_relationshipname` | String(200) | No | botcomponent navigation property the feature was matched through |
+| `fsi_DetectionSource` | `fsi_detectionsource` | Picklist (`fsi_cai_detectionsource`) | No | Acquisition source that produced this row (Dataverse botcomponent scan or a declarative-manifest adapter) |
+| `fsi_DetectionConfidence` | `fsi_detectionconfidence` | Picklist (`fsi_cai_detectionconfidence`) | No | Declared (manifest) vs Configured (Dataverse); declared capabilities may be removed by the user at runtime (v1.7 user_overrides) |
+| `fsi_DetectionDetail` | `fsi_detectiondetail` | Memo(4000) | No | JSON provenance for manifest-derived rows: source locator, manifest schema version, and capability sub-settings such as the v1.7 People include_related_content flag |
+| `fsi_AgentRefProvisional` | `fsi_agentrefprovisional` | Boolean (default: false) | No | The fsi_agentid is a PROVISIONAL manifest/app id not yet bound to a Dataverse bot GUID (no --id-map match during manifest detection). Downstream joins (Copilot Billing Governance) must reconcile provisional rows before use; queryable so provisional rows can be filtered |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this feature row was last refreshed |
 | `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
 
@@ -142,6 +148,12 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **11 solution-
 | `fsi_SharedWithViewerCount` | `fsi_sharedwithviewercount` | Integer | No | Count of viewer principals/groups |
 | `fsi_SharedWithEditorCount` | `fsi_sharedwitheditorcount` | Integer | No | Count of editor principals |
 | `fsi_LimitSharingMode` | `fsi_limitsharingmode` | String(100) | No | Managed-environment bot-limitSharingMode value |
+| `fsi_SharedWithEveryone` | `fsi_sharedwitheveryone` | Boolean (default: false) | No | Per-agent org-wide reach: the agent is shared with 'Everyone in the organization' (derived from the bot accesscontrolpolicy Any / Any-multi-tenant signal during discovery). This is a PER-AGENT posture signal and is NOT the environment-wide bot-limitSharingMode policy; it drives whole-tenant audience handling in expand_audience_upns.py |
+| `fsi_AudienceWholeTenant` | `fsi_audiencewholetenant` | Boolean (default: false) | No | 'Everyone in the organization' sharing detected; members are deliberately NOT enumerated (whole-tenant flag) |
+| `fsi_AudienceUpnCount` | `fsi_audienceupncount` | Integer | No | Distinct member UPNs resolved by Microsoft Graph transitive group expansion (0 when whole-tenant and not enumerated) |
+| `fsi_AudienceTruncated` | `fsi_audiencetruncated` | Boolean (default: false) | No | At least one group exceeded the per-group member cap; the resolved UPN list is partial |
+| `fsi_AudienceResolutionStatus` | `fsi_audienceresolutionstatus` | String(100) | No | Complete / Partial / WholeTenantNotEnumerated / Failed / NotResolved — outcome of the UPN expansion |
+| `fsi_AudienceResolvedAt` | `fsi_audienceresolvedat` | DateTime | No | When the audience-to-UPN expansion last ran for this agent |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this posture was last scanned |
 | `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
 

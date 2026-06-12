@@ -177,3 +177,54 @@ def test_reconcile_sources_disjoint_id_spaces_warns(
     assert any(
         "id-space check FAILED" in record.getMessage() for record in caplog.records
     ), "expected the H-3 id-space-split warning to be emitted"
+
+
+# ---------------------------------------------------------------------------
+# derive_shared_with_everyone / _authshare_record (finding H1 - population side)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "policy,expected",
+    [
+        (0, True), (3, True),        # Any / Any (multi-tenant) -> org-wide reach
+        ("0", True), ("3", True),    # string codes parse too
+        (1, False), (2, False),      # more restrictive / security groups
+        ("2", False),
+    ],
+)
+def test_derive_shared_with_everyone_known_policies(
+    policy: object, expected: bool
+) -> None:
+    assert da.derive_shared_with_everyone({"accesscontrolpolicy": policy}) is expected
+
+
+@pytest.mark.parametrize(
+    "bot",
+    [
+        {},                                # signal absent
+        {"accesscontrolpolicy": None},     # explicit null
+        {"accesscontrolpolicy": "weird"},  # unparseable
+        {"accesscontrolpolicy": 99},       # unknown / drifted code
+        {"accesscontrolpolicy": True},     # a bool is not a policy code
+    ],
+)
+def test_derive_shared_with_everyone_unknown_is_none(bot: dict) -> None:
+    # An unknown signal must be None (NOT coerced to False) so the audience expander
+    # marks the agent Partial rather than emitting a confident empty audience.
+    assert da.derive_shared_with_everyone(bot) is None
+
+
+def test_authshare_record_stamps_shared_with_everyone_for_org_wide() -> None:
+    ctx = da.ScanContext(run_id="run-1", dry_run=True)
+    rec = da._authshare_record(ctx, {"botid": "bot-1", "accesscontrolpolicy": 0})
+    assert rec["fsi_agentid"] == "bot-1"
+    assert rec["fsi_sharedwitheveryone"] is True
+
+
+def test_authshare_record_omits_column_when_signal_unknown() -> None:
+    ctx = da.ScanContext(run_id="run-1", dry_run=True)
+    rec = da._authshare_record(ctx, {"botid": "bot-2"})
+    # The column is left OFF the record so the Dataverse value stays unset and the
+    # expander treats whole-tenant reach as unknown (Partial), not a confident empty.
+    assert "fsi_sharedwitheveryone" not in rec
+    assert rec["fsi_agentid"] == "bot-2"

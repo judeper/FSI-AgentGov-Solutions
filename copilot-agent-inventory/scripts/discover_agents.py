@@ -130,10 +130,12 @@ MM_RELATIONSHIPS: dict[str, tuple[str, str]] = {
 }
 
 # Widened $select on the bot table (the legacy registry scan omitted authMode,
-# createdon, modifiedon — all needed for the canonical Agent record).
+# createdon, modifiedon - all needed for the canonical Agent record). The
+# accesscontrolpolicy + authorizedsecuritygroupids columns carry the per-agent
+# sharing posture used to derive whole-tenant reach (fsi_sharedwitheveryone).
 BOT_SELECT = (
     "botid,name,schemaname,statecode,statuscode,authenticationmode,"
-    "createdon,modifiedon,_ownerid_value"
+    "createdon,modifiedon,_ownerid_value,accesscontrolpolicy,authorizedsecuritygroupids"
 )
 
 
@@ -524,7 +526,13 @@ def _feature_record(
     component_type: Any,
     relationship: str,
 ) -> dict:
-    """Build one fsi_caiagentfeature row (logical column names)."""
+    """Build one fsi_caiagentfeature row (logical column names).
+
+    Botcomponent-derived rows are stamped with the Dataverse provenance and a
+    "Configured (Dataverse)" confidence marker. Manifest-derived rows (e.g., the
+    People capability detected by detect_people_capability.py) carry their own
+    "Declared (Manifest)" marker — declared is NOT the same as effective.
+    """
     return {
         "fsi_agentid": bot_id,
         "fsi_featuretype": feature_type,
@@ -533,9 +541,73 @@ def _feature_record(
         "fsi_sourceobjectid": source_object_id,
         "fsi_sourceobjectname": source_object_name,
         "fsi_relationshipname": relationship,
+        "fsi_detectionsource": "Dataverse Botcomponent Scan",
+        "fsi_detectionconfidence": "Configured (Dataverse)",
         "fsi_isenabled": True,
         "fsi_runid": ctx.run_id,
     }
+
+
+# The bot.accesscontrolpolicy option-set: 0 = "Any" (everyone in the org) and
+# 3 = "Any (multi-tenant)" (everyone + external) both mean the agent is reachable
+# org-wide; 2 = specific security groups and 1 = a more restrictive policy are NOT
+# whole-tenant. Values verified against unrestricted-agent-sharing-detector
+# (SOLUTION-DOCUMENTATION.md: accesscontrolpolicy 0=Any, 2=security groups,
+# 3=Any (multi-tenant)).
+ORG_WIDE_ACCESS_POLICIES = frozenset({0, 3})
+RESTRICTED_ACCESS_POLICIES = frozenset({1, 2})
+
+
+def derive_shared_with_everyone(bot: dict) -> Optional[bool]:
+    """Derive per-agent whole-tenant reach from the bot accesscontrolpolicy.
+
+    Returns True for an org-wide policy (Any / Any multi-tenant), False for a
+    restricted policy (security groups / more restrictive), and None when the
+    signal is absent or unparseable. None is deliberate: it must NOT be coerced to
+    False, because expand_audience_upns.py treats an unset fsi_sharedwitheveryone
+    as an unknown whole-tenant signal and marks the audience Partial rather than
+    emitting a confident empty audience for a possibly tenant-reachable agent.
+
+    This is a PER-AGENT signal and must never be confused with the
+    environment-wide bot-limitSharingMode policy.
+    """
+    raw = bot.get("accesscontrolpolicy")
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        policy = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if policy in ORG_WIDE_ACCESS_POLICIES:
+        return True
+    if policy in RESTRICTED_ACCESS_POLICIES:
+        return False
+    return None
+
+
+def _authshare_record(ctx: ScanContext, bot: dict) -> dict:
+    """Build one fsi_caiauthshare row capturing the agent's sharing posture.
+
+    Stamps fsi_sharedwitheveryone from the per-agent accesscontrolpolicy signal.
+    When the signal is unknown (derive_shared_with_everyone returns None) the
+    column is intentionally left OFF the record so the Dataverse value stays unset
+    and the downstream audience expander marks the agent Partial instead of
+    asserting a confident empty audience.
+    """
+    record = {
+        "fsi_agentid": bot.get("botid", ""),
+        "fsi_authmode": bot.get("authenticationmode"),
+        "fsi_runid": ctx.run_id,
+    }
+    groups = bot.get("authorizedsecuritygroupids")
+    if groups:
+        record["fsi_viewergroups"] = json.dumps(
+            [g.strip() for g in str(groups).split(",") if g.strip()]
+        )
+    shared_everyone = derive_shared_with_everyone(bot)
+    if shared_everyone is not None:
+        record["fsi_sharedwitheveryone"] = shared_everyone
+    return record
 
 
 # =============================================================================
@@ -656,7 +728,7 @@ def _scan_one_environment(
     env_url = environment.get("url") or environment.get("instanceUrl") or ""
     env_id = environment.get("name") or environment.get("id") or ""
     result = {"environmentId": env_id, "agents": [], "features": [],
-              "deltaLink": None}
+              "authShares": [], "deltaLink": None}
     try:
         bots, delta_link = scan_environment_bots(ctx, session, env_url)
         # Thread the delta link into the result instead of discarding it; a
@@ -671,6 +743,11 @@ def _scan_one_environment(
                 result["features"].extend(
                     scan_bot_features(ctx, session, env_url, bot_id)
                 )
+                authshare = _authshare_record(ctx, bot)
+                authshare["fsi_environmentid"] = (
+                    authshare.get("fsi_environmentid") or env_id
+                )
+                result["authShares"].append(authshare)
     except Exception as exc:  # one bad env must not abort the tenant scan
         logger.warning("Environment %s scan failed (fail-open): %s", env_id, exc)
     return result
@@ -729,6 +806,7 @@ def scan_all(ctx: ScanContext) -> dict:
     environments = enumerate_environments(ctx, session)
     scanned_agents: list[dict] = []
     features: list[dict] = []
+    auth_shares: list[dict] = []
 
     # Throttled concurrent per-environment fan-out (~10 workers, 429 backoff).
     with ThreadPoolExecutor(max_workers=ctx.max_workers) as pool:
@@ -740,6 +818,7 @@ def scan_all(ctx: ScanContext) -> dict:
             outcome = future.result()
             scanned_agents.extend(outcome["agents"])
             features.extend(outcome["features"])
+            auth_shares.extend(outcome.get("authShares", []))
 
     reconciliation = reconcile_sources(arg_agents, scanned_agents)
     summary = {
@@ -747,6 +826,7 @@ def scan_all(ctx: ScanContext) -> dict:
         "argAgentCount": len(arg_agents),
         "scannedAgentCount": len(scanned_agents),
         "featureCount": len(features),
+        "authShareCount": len(auth_shares),
         "environmentCount": len(environments),
         "reconciliation": reconciliation,
     }
@@ -755,6 +835,7 @@ def scan_all(ctx: ScanContext) -> dict:
         "summary": summary,
         "agents": arg_agents or scanned_agents,
         "features": features,
+        "authShares": auth_shares,
     }
 
 
