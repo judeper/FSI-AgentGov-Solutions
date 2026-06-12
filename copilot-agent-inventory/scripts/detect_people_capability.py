@@ -3,7 +3,8 @@
 
 The Agent Builder toggle *"Reference org chart and profile info"* maps to the
 declarative-agent manifest capability ``{ "name": "People" }`` inside
-``declarativeAgent.json`` (manifest schema v1.5-v1.7). This capability is NOT a
+``declarativeAgent.json`` (manifest schema v1.3+, introduced in schema v1.3;
+unchanged through v1.7). This capability is NOT a
 Copilot Studio ``botcomponent`` and is NOT returned by any public API for a
 *deployed* agent (verified in GATE0a). Capability-level detection therefore
 requires the source manifest itself, obtained from the agent app package or from
@@ -12,7 +13,7 @@ source control. This module:
   * Parses a ``declarativeAgent.json`` (or an app-package ``.zip``, or a
     directory of packages) and extracts ``capabilities[]``.
   * Detects ``name == "People"`` as a **case-sensitive literal**, independent of
-    the manifest ``version`` (the const is unchanged across v1.5-v1.7).
+    the manifest ``version`` (the const is unchanged through v1.7).
   * Captures the optional v1.7 ``include_related_content`` sub-setting.
   * Emits one ``fsi_caiagentfeature`` row (logical column names) per detected
     agent, using the feature type ``People (Org Chart & Profile)``, a
@@ -65,7 +66,7 @@ logger = logging.getLogger("detect_people_capability")
 # =============================================================================
 
 # Case-sensitive const from the declarative-agent manifest JSON Schema; the
-# value is unchanged across schema v1.5, v1.6 and v1.7.
+# value is present since schema v1.3 (introduced in v1.3; unchanged through v1.7).
 PEOPLE_CAPABILITY_NAME = "People"
 
 # fsi_cai_featuretype label for the People capability (see create_cai_dataverse_schema.py).
@@ -170,17 +171,25 @@ def parse_manifest_version(manifest: Any) -> tuple[Optional[str], Optional[str]]
     return (version, schema_url)
 
 
-def detect_people_capability(manifest: Any) -> PeopleDetection:
+def detect_people_capability(manifest: Any, agent_label: str = "") -> PeopleDetection:
     """Test a parsed declarative-agent manifest for the People capability.
 
     Matches ``capabilities[].name == "People"`` as a case-sensitive literal so a
     lowercase ``"people"`` (or any other casing) does NOT match. Returns the
     first matching capability object; the optional v1.7 ``include_related_content``
     boolean is captured but does NOT gate detection (it is a sub-setting).
+
+    A non-fatal WARNING is emitted via the module logger for any capability whose
+    ``name`` differs from ``"People"`` only by case or surrounding whitespace
+    (i.e. ``name.strip().lower() == "people"`` but ``name != "People"``).  The
+    capability is still NOT counted as detected — the warning surfaces a
+    mis-authored manifest rather than silently dropping it.  ``agent_label`` is
+    included in the warning to identify the source.
     """
     version, schema_url = parse_manifest_version(manifest)
     for capability in extract_capabilities(manifest):
-        if capability.get("name") == PEOPLE_CAPABILITY_NAME:
+        name = capability.get("name")
+        if name == PEOPLE_CAPABILITY_NAME:
             irc = capability.get("include_related_content")
             return PeopleDetection(
                 detected=True,
@@ -188,6 +197,15 @@ def detect_people_capability(manifest: Any) -> PeopleDetection:
                 manifest_version=version,
                 schema_url=schema_url,
                 raw_capability=capability,
+            )
+        if isinstance(name, str) and name.strip().lower() == "people":
+            logger.warning(
+                "Manifest capability name %r looks like %r but does not match the "
+                "exact schema const (case/whitespace drift); capability will NOT be "
+                "detected (agent: %s). Correct the manifest to avoid silent omission.",
+                name,
+                PEOPLE_CAPABILITY_NAME,
+                agent_label or "<unknown>",
             )
     return PeopleDetection(detected=False, manifest_version=version, schema_url=schema_url)
 
@@ -587,7 +605,10 @@ def detect_over_adapter(
     run = DetectionRun(run_id=run_id)
     for record in adapter.iter_records():
         run.manifests_scanned += 1
-        detection = detect_people_capability(record.manifest)
+        detection = detect_people_capability(
+            record.manifest,
+            agent_label=record.agent_name or record.agent_id or record.locator,
+        )
         if not detection.detected:
             continue
         run.people_detected += 1

@@ -5,7 +5,7 @@ adapters in ``scripts/detect_people_capability.py``:
 
   * ``detect_people_capability`` matches ``capabilities[].name == "People"`` as a
     CASE-SENSITIVE literal, independent of the manifest ``version`` (the const is
-    unchanged across schema v1.5-v1.7), and captures the optional v1.7
+    unchanged through v1.7), and captures the optional v1.7
     ``include_related_content`` sub-setting without letting it gate detection.
   * ``extract_capabilities`` / ``parse_manifest_version`` fail open on missing or
     malformed manifests (platform drift surfaces as "not detected", not an error).
@@ -72,6 +72,38 @@ def test_people_match_is_case_sensitive() -> None:
     for name in ("people", "PEOPLE", "PeoplE", "people "):
         manifest = {"capabilities": [{"name": name}]}
         assert dp.detect_people_capability(manifest).detected is False, name
+
+
+def test_case_drift_warns_not_detected_and_exact_people_has_no_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Near-miss casing must NOT be detected but MUST emit a WARNING; the exact
+    schema const "People" must be detected with NO warning emitted."""
+    import logging
+
+    # Near-miss: "people" (lowercase) → not detected, warning contains offending
+    # value and agent identity.
+    with caplog.at_level(logging.WARNING, logger="detect_people_capability"):
+        result = dp.detect_people_capability(
+            {"capabilities": [{"name": "people"}]},
+            agent_label="test-agent-drift",
+        )
+    assert result.detected is False
+    assert len(caplog.records) >= 1
+    warning_text = caplog.text
+    assert "'people'" in warning_text   # offending value (%r format)
+    assert "test-agent-drift" in warning_text  # agent identity
+
+    caplog.clear()
+
+    # Exact match: "People" → detected, no warning emitted.
+    with caplog.at_level(logging.WARNING, logger="detect_people_capability"):
+        result_exact = dp.detect_people_capability(
+            {"capabilities": [{"name": "People"}]},
+            agent_label="test-agent-exact",
+        )
+    assert result_exact.detected is True
+    assert caplog.records == [], [r.getMessage() for r in caplog.records]
 
 
 def test_no_capabilities_array_is_not_detected() -> None:
