@@ -782,6 +782,7 @@ function Invoke-FnfEntitlementScoring {
         [Parameter()][string]$CreditScopeGroupId,
         [Parameter()][bool]$SurfaceZeroRatedValue = $true,
         [Parameter()][bool]$ZeroRatingResolvedValue = $true,
+        [Parameter()][string]$BillingReadError,
         [Parameter(Mandatory)][string]$EngineScript,
         [Parameter(Mandatory)][string]$WorkingDir
     )
@@ -794,12 +795,14 @@ function Invoke-FnfEntitlementScoring {
 
     # The resolver produces the per-user booleans (license + PAYG + cohorts) and assembles the
     # engine-ready document (agents[].intendedUsers[] with the 6 booleans). Token acquisition
-    # and HTTP go through the resolver's mockable seam.
+    # and HTTP go through the resolver's mockable seam. A live billing-read failure
+    # ($BillingReadError) is forwarded so PAYG coverage is flagged uncertain, never aborting.
     $resolverResult = Invoke-CbgEntitlementResolution `
         -Upn $AllUpns -AgentsSkeleton $agents -Policy @($Policy) `
         -GraphToken $GraphToken -Capability $Capability `
         -ApiAudienceGroupId $ApiAudienceGroupId -EligibleCohortGroupId $EligibleCohortGroupId `
-        -CreditScopeGroupId $CreditScopeGroupId -SurfaceZeroRatedValue $SurfaceZeroRatedValue
+        -CreditScopeGroupId $CreditScopeGroupId -SurfaceZeroRatedValue $SurfaceZeroRatedValue `
+        -BillingReadError $BillingReadError
 
     $decisions = @()
     $engineInput = Get-FnfProperty -InputObject $resolverResult -Name 'engineInput'
@@ -1171,6 +1174,7 @@ function Invoke-FnfPeopleSweep {
         [Parameter()][string]$CreditScopeGroupId,
         [Parameter()][bool]$SurfaceZeroRatedValue = $true,
         [Parameter()][bool]$ZeroRatingResolvedValue = $true,
+        [Parameter()][string]$BillingReadError,
         [Parameter(Mandatory)][string]$EngineScript,
         [Parameter(Mandatory)][string]$WorkingDir,
         [Parameter()][int]$SampleCapValue = 20
@@ -1198,7 +1202,8 @@ function Invoke-FnfPeopleSweep {
             -GraphToken $GraphToken -Capability $Capability -Policy @($Policy) `
             -ApiAudienceGroupId $ApiAudienceGroupId -EligibleCohortGroupId $EligibleCohortGroupId `
             -CreditScopeGroupId $CreditScopeGroupId -SurfaceZeroRatedValue $SurfaceZeroRatedValue `
-            -ZeroRatingResolvedValue $ZeroRatingResolvedValue -EngineScript $EngineScript -WorkingDir $WorkingDir
+            -ZeroRatingResolvedValue $ZeroRatingResolvedValue -BillingReadError $BillingReadError `
+            -EngineScript $EngineScript -WorkingDir $WorkingDir
         $decisions = @($scoring.Decisions)
         $resolverResult = $scoring.ResolverResult
         $engineDecisionsMissing = [bool]$scoring.EngineDecisionsMissing
@@ -1247,9 +1252,18 @@ if ($MyInvocation.InvocationName -ne '.') {
     if (-not [string]::IsNullOrWhiteSpace($BillingPolicyInputPath)) {
         if (-not (Test-Path -LiteralPath $BillingPolicyInputPath)) { throw "Billing policy file not found: $BillingPolicyInputPath" }
         $bpObject = Get-Content -LiteralPath $BillingPolicyInputPath -Raw | ConvertFrom-Json
-        $bpArray = Get-FnfProperty -InputObject $bpObject -Name 'billingPolicies'
-        if ($null -eq $bpArray) { $bpArray = $bpObject }
-        $policy = @($bpArray)
+        if ($bpObject -is [System.Array]) {
+            # Bare top-level array of policies.
+            $policy = @($bpObject)
+        }
+        else {
+            # Object wrapper: tolerate { "billingPolicies": [...] } and the live REST { "value": [...] }.
+            # An object with no recognized policy collection (e.g. an empty { "value": [] }) yields
+            # zero policies, not a spurious single entry.
+            $bpArray = Get-FnfProperty -InputObject $bpObject -Name 'billingPolicies'
+            if ($null -eq $bpArray) { $bpArray = Get-FnfProperty -InputObject $bpObject -Name 'value' }
+            if ($null -ne $bpArray) { $policy = @($bpArray) }
+        }
     }
 
     # Resolve sibling script paths.
@@ -1274,11 +1288,19 @@ if ($MyInvocation.InvocationName -ne '.') {
     # Acquire the Graph token (managed-identity-first; resolver falls back to Get-AzAccessToken).
     $graphToken = Get-CbgResourceToken -ResourceUrl 'https://graph.microsoft.com' -ProvidedToken $GraphAccessToken
 
-    # Live billing-policy read fallback (only if no policies supplied).
+    # Live billing-policy read fallback (only if no policies supplied). A read failure degrades:
+    # it does not abort the report. The resolver returns a structured result so the failure can be
+    # forwarded as $billingReadError, which flags PAYG coverage uncertain (fail-closed).
+    $billingReadError = ''
     if (@($policy).Count -eq 0 -and [string]::IsNullOrWhiteSpace($BillingPolicyInputPath)) {
         Write-Verbose "No billing policies supplied; attempting a live Power Platform billing-policy read via the resolver."
-        $billingToken = Get-CbgResourceToken -ResourceUrl 'https://api.bap.microsoft.com/' -ProvidedToken $BillingApiAccessToken
-        $policy = @(Get-CbgBillingPolicyLive -Token $billingToken)
+        $billingToken = Get-CbgResourceToken -ResourceUrl $script:BillingApiResource -ProvidedToken $BillingApiAccessToken
+        $live = Get-CbgBillingPolicyLive -Token $billingToken
+        $policy = @($live.Policies)
+        if ($live.ReadFailed) {
+            $billingReadError = $live.ReadError
+            Write-Warning "Live billing-policy read failed; PAYG coverage will be flagged uncertain and routed to manual review. $billingReadError"
+        }
     }
 
     $report = Invoke-FnfPeopleSweep `
@@ -1287,7 +1309,8 @@ if ($MyInvocation.InvocationName -ne '.') {
         -GraphToken $graphToken -Capability $GatedCapability `
         -ApiAudienceGroupId $ApiAudienceGroupId -EligibleCohortGroupId $EligibleCohortGroupId `
         -CreditScopeGroupId $CreditScopeGroupId -SurfaceZeroRatedValue $SurfaceZeroRated `
-        -ZeroRatingResolvedValue $ZeroRatingResolved -EngineScript $EngineScriptPath `
+        -ZeroRatingResolvedValue $ZeroRatingResolved -BillingReadError $billingReadError `
+        -EngineScript $EngineScriptPath `
         -WorkingDir $WorkingDirectory -SampleCapValue $SampleCap
 
     if (-not [string]::IsNullOrWhiteSpace($ReportOutputPath)) {

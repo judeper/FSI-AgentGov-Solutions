@@ -308,6 +308,139 @@ Describe 'Get-CopilotEntitlement - PAYG / credit coverage join' {
     }
 }
 
+Describe 'Get-CopilotEntitlement - live billing read (api-version + degrade-not-throw)' {
+
+    # The Power Platform licensing api-versions observed live on the billingPolicies
+    # resource (GET .../licensing/billingPolicies). The pinned constant must be one of
+    # these; 2024-10-01 (GA) was verified to return 200 against a live tenant. The legacy
+    # api.bap.microsoft.com billingPolicies route no longer serves this resource.
+    BeforeAll {
+        $script:SupportedBillingApiVersions = @('2024-10-01', '2026-05-01-preview', '2022-03-01-preview', '2021-10-01-preview')
+    }
+
+    It 'targets the Power Platform licensing endpoint with a SUPPORTED api-version (not the dead BAP route)' {
+        Mock Invoke-CbgRestMethod { return [pscustomobject]@{ value = @() } }
+
+        $live = Get-CbgBillingPolicyLive -Token 'tok'
+        $live.ReadFailed | Should -BeFalse
+
+        # The single request must hit /licensing/billingPolicies (never api.bap.microsoft.com)
+        # and carry an api-version drawn from the supported list.
+        Should -Invoke Invoke-CbgRestMethod -Times 1 -Exactly -ParameterFilter {
+            ($Uri -match '/licensing/billingPolicies\?api-version=') -and
+            ($Uri -notmatch 'api\.bap\.microsoft\.com') -and
+            (([regex]::Match($Uri, 'api-version=([^&]+)$')).Groups[1].Value -in $script:SupportedBillingApiVersions)
+        }
+    }
+
+    It 'degrades (does NOT throw) when the billing read returns a 400 InvalidApiVersion' {
+        Mock Invoke-CbgRestMethod { throw "Response status code does not indicate success: 400 (InvalidApiVersion)." }
+
+        # A billing-read failure must be caught, not propagated - it must not abort the report.
+        { Get-CbgBillingPolicyLive -Token 'tok' } | Should -Not -Throw
+
+        $live = Get-CbgBillingPolicyLive -Token 'tok'
+        $live.ReadFailed | Should -BeTrue
+        @($live.Policies).Count | Should -Be 0
+        $live.ReadError | Should -Match '400'
+    }
+
+    It 'returns the policy array (structured contract) on a successful read' {
+        Mock Invoke-CbgRestMethod {
+            return [pscustomobject]@{ value = @(
+                    [pscustomobject]@{ name = 'P1'; status = 'Enabled'; type = 'TenantOwned' },
+                    [pscustomobject]@{ name = 'P2'; status = 'Enabled'; type = 'TenantOwned' }
+                ) }
+        }
+
+        $live = Get-CbgBillingPolicyLive -Token 'tok'
+        $live.ReadFailed | Should -BeFalse
+        @($live.Policies).Count | Should -Be 2
+    }
+}
+
+Describe 'Get-CopilotEntitlement - Get-CbgBillingPolicyArray (input-shape tolerance)' {
+
+    It 'reads the documented { billingPolicies: [...] } wrapper' {
+        $obj = [pscustomobject]@{ billingPolicies = @([pscustomobject]@{ name = 'A' }) }
+        @(Get-CbgBillingPolicyArray -InputObject $obj).Count | Should -Be 1
+    }
+
+    It 'reads the live REST { value: [...] } wrapper' {
+        $obj = [pscustomobject]@{ value = @([pscustomobject]@{ name = 'A' }, [pscustomobject]@{ name = 'B' }) }
+        @(Get-CbgBillingPolicyArray -InputObject $obj).Count | Should -Be 2
+    }
+
+    It 'reads a bare top-level array of policies' {
+        $arr = @([pscustomobject]@{ name = 'A' }, [pscustomobject]@{ name = 'B' }, [pscustomobject]@{ name = 'C' })
+        @(Get-CbgBillingPolicyArray -InputObject $arr).Count | Should -Be 3
+    }
+
+    # Regression: an empty { "value": [] } previously fell back to the whole wrapper object
+    # and surfaced as one spurious "policy needs manual review". It must be zero policies.
+    It 'yields ZERO policies for an empty { value: [] } (no spurious wrapper policy)' {
+        $obj = [pscustomobject]@{ value = @() }
+        @(Get-CbgBillingPolicyArray -InputObject $obj).Count | Should -Be 0
+    }
+
+    It 'yields ZERO policies for an empty { billingPolicies: [] }' {
+        $obj = [pscustomobject]@{ billingPolicies = @() }
+        @(Get-CbgBillingPolicyArray -InputObject $obj).Count | Should -Be 0
+    }
+
+    It 'yields ZERO policies for $null and for an object with no recognized collection' {
+        @(Get-CbgBillingPolicyArray -InputObject $null).Count | Should -Be 0
+        @(Get-CbgBillingPolicyArray -InputObject ([pscustomobject]@{ unrelated = 'x' })).Count | Should -Be 0
+    }
+}
+
+Describe 'Get-CopilotEntitlement - billing-read failure degrades the report (does not abort)' {
+
+    # A live billing-policy read failure must NOT abort the report. PAYG coverage is flagged
+    # uncertain and routed to manual review (fail-closed), while the license-based blocked-user
+    # detection (Graph licenseDetails) still completes.
+    It 'flags coverage uncertain + manual review, yet license-based blocked detection still completes' {
+        $script:MockLdByUser = @{ 'lic@contoso.com' = @(Get-CbgLicenseDetailFixture -SkuPartNumber 'Microsoft_365_Copilot' -ServicePlanId $script:PlanApps) }
+        $script:MockSkus = @()
+        $script:MockErrorUsers = @()
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+
+        $r = $null
+        $threw = $false
+        try {
+            $r = Invoke-CbgEntitlementResolution -Upn @('lic@contoso.com', 'unlic@contoso.com') -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' -BillingReadError 'Response status code 400 (InvalidApiVersion)'
+        }
+        catch { $threw = $true }
+
+        $threw | Should -BeFalse
+        $r | Should -Not -BeNullOrEmpty
+        # PAYG coverage flagged uncertain with a fail-closed manual-review entry for the read failure.
+        $r.summary.paygCoverageUncertain | Should -BeTrue
+        $r.summary.needsManualReviewCount | Should -BeGreaterOrEqual 1
+        @($r.paygCoverage.needsManualReview | Where-Object { $_.name -eq '(billing-policy read failed)' }).Count | Should -Be 1
+        # License-based detection completed: licensed user not blocked, unlicensed user blocked.
+        (Get-CbgResolvedUser -Result $r -Upn 'lic@contoso.com').isBlocked | Should -BeFalse
+        (Get-CbgResolvedUser -Result $r -Upn 'unlic@contoso.com').isBlocked | Should -BeTrue
+        # F5: PAYG cannot rescue a license-required user, and here it was undetermined anyway.
+        (Get-CbgResolvedUser -Result $r -Upn 'unlic@contoso.com').paygCovered | Should -BeFalse
+    }
+
+    # The minor fix: a genuinely empty policy set (no read failure) is 0 policies / no
+    # manual-review entry - not a spurious single uncertain policy.
+    It 'a genuinely empty policy set yields ZERO manual-review entries and no uncertainty' {
+        $script:MockLdByUser = @{}
+        $script:MockSkus = @()
+        $script:MockErrorUsers = @()
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+
+        $r = Invoke-CbgEntitlementResolution -Upn @('u@contoso.com') -Policy @() -GraphToken 'tok' -Capability 'CopilotChat'
+
+        $r.summary.needsManualReviewCount | Should -Be 0
+        $r.summary.paygCoverageUncertain | Should -BeFalse
+        $r.paygCoverage.allUsersCovered | Should -BeFalse
+    }
+}
+
 Describe 'Get-CopilotEntitlement - tenant SKU dictionary (undocumented SKUs)' {
 
     It 'marks an undocumented SKU bearing a Copilot plan as licensed-by-construction' {
@@ -470,5 +603,35 @@ Describe 'Get-BillingPolicyInventory - PAYG scope + connected-capability surfaci
         $info = Get-CbgPlatformPolicyScope -Policy ([pscustomobject]@{ name = 'P3' })
         $info.Scope | Should -Be 'Unknown'
         @($info.ScopeGroupIds).Count | Should -Be 0
+    }
+
+    # Regression: the live platform read previously targeted the api.bap.microsoft.com
+    # billingPolicies route at 2022-03-01-preview (400 InvalidApiVersion) and mapped only the
+    # legacy 'EnabledForFlowsAndPowerApps' status to connected. The resource now lives at
+    # api.powerplatform.com/licensing/billingPolicies (verified 200) with status='Enabled'.
+    It 'reads platform PAYG policies from the licensing endpoint and maps status=Enabled to connected' {
+        Mock Invoke-RestMethod {
+            return [pscustomobject]@{ value = @(
+                    [pscustomobject]@{
+                        name              = 'CopilotStudioAgentsBilling'
+                        status            = 'Enabled'
+                        type              = 'TenantOwned'
+                        billingInstrument = [pscustomobject]@{ subscriptionId = 'sub-1'; resourceGroup = 'CopilotStudioAgents' }
+                    }
+                ) }
+        }
+
+        $rows = @(Get-PayAsYouGoInventory -BaseUrl 'https://contoso.crm.dynamics.com' -DataverseToken 'dv' -Platform -BillingToken 'tok')
+
+        $rows.Count | Should -Be 1
+        $rows[0].Name | Should -Be 'CopilotStudioAgentsBilling'
+        $rows[0].IsConnected | Should -BeTrue
+        $rows[0].AzureSubscriptionId | Should -Be 'CopilotStudioAgents'
+        $rows[0].Source | Should -Be 'platform'
+
+        # The request must target the Power Platform licensing endpoint, not the dead BAP route.
+        Should -Invoke Invoke-RestMethod -Times 1 -Exactly -ParameterFilter {
+            ($Uri -match '/licensing/billingPolicies\?api-version=') -and ($Uri -notmatch 'api\.bap\.microsoft\.com')
+        }
     }
 }

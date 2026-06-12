@@ -439,6 +439,46 @@ Describe 'Invoke-FnfPeopleSweep - happy path + never-silent-zero invariant' {
     }
 }
 
+Describe 'Invoke-FnfPeopleSweep - billing-read failure degrades (report still produced)' {
+
+    BeforeEach {
+        Initialize-FnfDefaultLicenses
+        Mock Invoke-CbgRestMethod $script:GraphMockBody
+    }
+
+    # A live Power Platform billing-policy read failure must NOT abort the FNF report. The
+    # failure is threaded in as -BillingReadError; PAYG coverage is flagged uncertain (surfaced
+    # per-agent as evidence.paygCoverageUncertain) while the license-based blocked-user detection
+    # still completes (F5: PAYG cannot rescue a license-required People agent's users).
+    It 'still produces the report (no throw), flags paygCoverageUncertain, and keeps the license-based blocked set intact' {
+        $capability = Get-FnfFixture -Name 'cai-people-capability.sample.json'
+        $audience = Get-FnfFixture -Name 'cai-audience.sample.json'
+        $agentMaster = Get-FnfFixture -Name 'agent-master.sample.json'
+
+        $report = $null
+        $threw = $false
+        try {
+            $report = Invoke-FnfPeopleSweep -CapabilityArtifact $capability -AudienceArtifact $audience `
+                -AgentMaster $agentMaster -IdMap $null -Policy @() -GraphToken 'tok' -Capability 'CopilotChat' `
+                -BillingReadError 'Response status code 400 (InvalidApiVersion)' `
+                -EngineScript $script:EngineScript -WorkingDir $script:WorkDir
+        }
+        catch { $threw = $true }
+
+        $threw | Should -BeFalse
+        $report | Should -Not -BeNullOrEmpty
+        $report.reportType | Should -Be 'FnfPeopleSweep'
+
+        # The grouped (scored) People agent's license-based blocked set is intact.
+        $row = Get-FnfRow -Report $report -AgentId $script:AgentGrouped
+        $row | Should -Not -BeNullOrEmpty
+        $row.blockedUserCount | Should -Be 1
+        $row.blockedUsers | Should -Be @('unlicensed@contoso.com')
+        # The billing-read failure surfaced as PAYG-coverage uncertainty on the row evidence.
+        $row.evidence.paygCoverageUncertain | Should -BeTrue
+    }
+}
+
 Describe 'Invoke-FnfPeopleSweep - SEAM 1 id-map stem collision (HIGH regression)' {
 
     BeforeAll {

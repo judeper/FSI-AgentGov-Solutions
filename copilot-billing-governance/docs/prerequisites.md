@@ -59,13 +59,16 @@ Requirements for deploying Copilot Billing Governance (CBG).
 The per-user resolver ([`Get-CopilotEntitlement.ps1`](../scripts/Get-CopilotEntitlement.ps1))
 maps **PAYG / credit coverage** to the engine's `inCreditScopeGroup` input. There is **no
 Microsoft Graph endpoint** for billing-policy membership, so coverage is read from the
-Power Platform billing-policy admin REST
-(`https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/billingPolicies`)
-using a token for the `https://api.bap.microsoft.com/` audience, acquired via the same
+Power Platform licensing REST
+(`https://api.powerplatform.com/licensing/billingPolicies?api-version=2024-10-01`)
+using a token for the `https://api.powerplatform.com/` audience, acquired via the same
 managed-identity-first model. The calling principal needs **Power Platform Admin** (or an
 equivalent billing-policy reader) rights.
 
-> **Unproven schema.** This REST shape is not yet proven. Prefer supplying the resolver an
+> **Summary-only list view.** The live list response (verified HTTP 200 against a test
+> tenant) is a summary that omits per-policy scope and capability detail, so live-read
+> policies route to manual review (fail-closed). A live-read failure degrades to a warning
+> and a manual-review flag rather than aborting the report. Prefer supplying the resolver an
 > explicit `-BillingPolicyInputPath` / `-BillingPolicy` — for example the normalized output
 > of [`Get-BillingPolicyInventory.ps1`](../scripts/Get-BillingPolicyInventory.ps1) — and
 > treat the live read as best-effort.

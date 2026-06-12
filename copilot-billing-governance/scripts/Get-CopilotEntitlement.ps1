@@ -88,23 +88,26 @@
     (dev-only). Required permissions: User.Read.All and Group.Read.All (application).
 
 .PARAMETER BillingApiAccessToken
-    Bearer token for the Power Platform billing-policy admin API
-    (resource https://api.bap.microsoft.com/). Used only when PAYG policies are read
+    Bearer token for the Power Platform licensing API
+    (resource https://api.powerplatform.com/). Used only when PAYG policies are read
     live (no -BillingPolicyInputPath / -BillingPolicy supplied). Managed-identity-first;
-    falls back to Get-AzAccessToken (dev-only).
+    falls back to Get-AzAccessToken (dev-only). A live-read failure degrades (it does not
+    abort the report): PAYG coverage is flagged uncertain and routed to manual review.
 
 .PARAMETER BillingPolicyInputPath
     Path to a JSON file of pre-enumerated PAYG/credit billing policies, e.g. exported
     from Get-AdminBillingPolicy or hand-built from the Microsoft 365 admin center. This
-    is the RECOMMENDED path because the live Copilot billing-policy REST schema is
-    unproven. Canonical shape:
+    is the RECOMMENDED path because the live Copilot billing-policy REST schema is a
+    summary view (no per-policy scope/capability surface). Canonical shape:
       { "billingPolicies": [
           { "name": "All-up Chat", "scope": "AllUsers", "capabilities": ["Chat"],
             "connected": true },
           { "name": "Pilot group", "scope": "Group",
             "groupIds": ["00000000-0000-0000-0000-000000000000"],
             "capabilities": ["Chat", "SharePoint"], "connected": true } ] }
-    Raw BAP / Get-AdminBillingPolicy shapes are also tolerated on a best-effort basis.
+    The live REST shape ({ "value": [...] }) and a bare top-level array are also tolerated;
+    an input with no recognized policy collection (e.g. an empty { "value": [] }) yields
+    zero policies (no spurious manual-review entry).
 
 .PARAMETER BillingPolicy
     Pre-enumerated billing-policy objects supplied directly (same shape as the elements
@@ -146,10 +149,13 @@
 
 .NOTES
     Commercial-cloud Microsoft 365 only. Microsoft's licensing service-plan reference
-    disclaims drift; re-verify the GUID allowlist quarterly. The Power Platform Copilot
-    billing-policy REST schema is unproven - prefer -BillingPolicyInputPath and verify a
-    live read against your tenant before relying on it. Dataverse logical names are
-    lowercase with no inter-word underscores; this resolver emits engine input JSON, not
+    disclaims drift; re-verify the GUID allowlist quarterly. The live PAYG read targets
+    https://api.powerplatform.com/licensing/billingPolicies (api-version 2024-10-01,
+    verified 200); its list view is a summary (no scope/capability surface) so live
+    policies typically route to manual review - prefer -BillingPolicyInputPath for the full
+    policy shape. A live-read failure degrades rather than aborting the report. Dataverse
+    logical names are lowercase with no inter-word underscores; this resolver emits engine
+    input JSON, not
     Dataverse rows.
 
     The functions in this script are defined at top level so the script can be
@@ -249,7 +255,17 @@ $script:KnownCopilotBearingSkuIds = @{
 
 $script:GraphResource = 'https://graph.microsoft.com'
 $script:GraphBaseUri = 'https://graph.microsoft.com/v1.0'
-$script:BillingApiResource = 'https://api.bap.microsoft.com/'
+# Power Platform licensing API surface for the PAYG billing-policy read. The legacy
+# api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/billingPolicies route no
+# longer serves billing policies: the old '2022-03-01-preview' is rejected provider-wide
+# (400 InvalidApiVersion) and the provider's currently-supported versions 404 on that path
+# (the resource moved). Verified live against the licensing surface (2026-06): GET
+# https://api.powerplatform.com/licensing/billingPolicies?api-version=2024-10-01 -> 200.
+$script:BillingApiResource = 'https://api.powerplatform.com/'
+# Most-recent GENERALLY-AVAILABLE licensing api-version (supported list observed live:
+# 2024-10-01, 2026-05-01-preview, 2022-03-01-preview, 2021-10-01-preview). A GA version is
+# pinned deliberately - the original outage was a *-preview version being retired.
+$script:BillingApiVersion = '2024-10-01'
 $script:SuccessStatus = 'Success'
 
 # --------------------------------------------------------------------------------------
@@ -680,20 +696,63 @@ function Test-CbgPolicyCoversCapability {
     return $false
 }
 
+function Get-CbgBillingPolicyArray {
+    <#
+    .SYNOPSIS
+        Extract the billing-policy array from a parsed -BillingPolicyInputPath document.
+    .DESCRIPTION
+        Tolerates the documented wrapper ({ "billingPolicies": [...] }), the live REST
+        shape ({ "value": [...] }) and a bare top-level array. An object that carries no
+        recognized policy collection yields an EMPTY set - it is NOT misread as a single
+        wrapper "policy" (that bug surfaced an empty { "value": [] } input as one spurious
+        policy needing manual review).
+    #>
+    [CmdletBinding()]
+    param([Parameter()][AllowNull()]$InputObject)
+    if ($null -eq $InputObject) { return @() }
+    $arr = Get-CbgProperty -InputObject $InputObject -Name 'billingPolicies'
+    if ($null -eq $arr) { $arr = Get-CbgProperty -InputObject $InputObject -Name 'value' }
+    if ($null -eq $arr) {
+        # No recognized collection property. Only a bare array is itself a policy set;
+        # any other object (e.g. an empty { "value": [] } whose value unwrapped to $null)
+        # carries zero policies.
+        if ($InputObject -is [System.Array]) { $arr = $InputObject } else { return @() }
+    }
+    return @($arr)
+}
+
 function Get-CbgBillingPolicyLive {
     <#
     .SYNOPSIS
-        Best-effort live read of PAYG billing policies from the Power Platform
-        billing-policy admin API. UNPROVEN schema - prefer -BillingPolicyInputPath.
+        Best-effort live read of PAYG billing policies from the Power Platform licensing
+        API. DEGRADES (never throws) so a billing-read failure cannot abort the report.
+    .DESCRIPTION
+        Reads https://api.powerplatform.com/licensing/billingPolicies. The list view is a
+        summary (no per-policy scope/capability surface), so live policies typically route
+        to manual review (fail-closed) rather than asserting coverage - prefer
+        -BillingPolicyInputPath when the full policy shape is needed.
+
+        A non-200 / network / auth failure is caught and reported via ReadFailed + ReadError
+        instead of throwing: PAYG coverage is one input to the report, and a read failure
+        must not abort the license-based blocked-user detection that does not depend on it.
+    .OUTPUTS
+        [pscustomobject] with Policies (object[]), ReadFailed (bool) and ReadError (string).
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Token)
-    $uri = "$($script:BillingApiResource.TrimEnd('/'))/providers/Microsoft.BusinessAppPlatform/billingPolicies?api-version=2022-03-01-preview"
+    $uri = "$($script:BillingApiResource.TrimEnd('/'))/licensing/billingPolicies?api-version=$($script:BillingApiVersion)"
     $headers = @{ Authorization = "Bearer $Token"; Accept = 'application/json' }
-    $resp = Invoke-CbgRestMethod -Uri $uri -Headers $headers -Method 'Get'
-    $value = Get-CbgProperty -InputObject $resp -Name 'value'
-    if ($null -eq $value) { return @() }
-    return @($value)
+    try {
+        $resp = Invoke-CbgRestMethod -Uri $uri -Headers $headers -Method 'Get'
+        $value = Get-CbgProperty -InputObject $resp -Name 'value'
+        $policies = if ($null -eq $value) { @() } else { @($value) }
+        return [pscustomobject]@{ Policies = $policies; ReadFailed = $false; ReadError = $null }
+    }
+    catch {
+        $err = $_.Exception.Message
+        Write-Warning "Live billing-policy read failed; PAYG coverage will be treated as undetermined (fail-closed, manual review) and the rest of the report still runs. Error: $err"
+        return [pscustomobject]@{ Policies = @(); ReadFailed = $true; ReadError = $err }
+    }
 }
 
 function Resolve-CbgPaygCoverage {
@@ -706,13 +765,23 @@ function Resolve-CbgPaygCoverage {
     param(
         [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Policies,
         [Parameter(Mandatory)][ValidateSet('CopilotChat', 'SharePointAgents', 'Both')][string]$Capability,
-        [Parameter()][string]$GraphToken
+        [Parameter()][string]$GraphToken,
+        [Parameter()][string]$BillingReadError
     )
     $allUsersCovered = $false
     $coveredUpns = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
     $applied = New-Object System.Collections.Generic.List[object]
     $needsReview = New-Object System.Collections.Generic.List[object]
     $uncertain = $false
+
+    # --- Fail-CLOSED when the live billing-policy read failed. We could not enumerate the
+    #     PAYG policies at all, so coverage is undetermined: treat it as NOT covering (no
+    #     unlicensed user is silently rescued) and surface a manual-review entry so the
+    #     uncertainty is reported rather than read as "0 policies, all clear". ---
+    if (-not [string]::IsNullOrWhiteSpace($BillingReadError)) {
+        $uncertain = $true
+        $needsReview.Add([pscustomobject]@{ name = '(billing-policy read failed)'; scopeType = 'Unknown'; applies = $false; capabilitiesKnown = $false; connectionUnknown = $true; readFailed = $true; reason = "live billing-policy read failed ($BillingReadError); PAYG coverage could not be determined and was treated as NOT covering pending manual review" })
+    }
 
     foreach ($raw in @($Policies)) {
         $p = ConvertFrom-CbgBillingPolicy -Policy $raw
@@ -874,7 +943,8 @@ function Invoke-CbgEntitlementResolution {
         [Parameter()][string]$ApiAudienceGroupId,
         [Parameter()][string]$EligibleCohortGroupId,
         [Parameter()][string]$CreditScopeGroupId,
-        [Parameter()][bool]$SurfaceZeroRatedValue = $true
+        [Parameter()][bool]$SurfaceZeroRatedValue = $true,
+        [Parameter()][string]$BillingReadError
     )
 
     # De-duplicate UPNs (case-insensitive) preserving order, so each user is resolved once.
@@ -886,8 +956,10 @@ function Invoke-CbgEntitlementResolution {
         if ($seen.Add($t)) { $uniqueUpns.Add($t) }
     }
 
-    # --- PAYG / credit coverage for the gated capability. ---
-    $paygCoverage = Resolve-CbgPaygCoverage -Policies @($Policy) -Capability $Capability -GraphToken $GraphToken
+    # --- PAYG / credit coverage for the gated capability. A live billing-read failure
+    #     ($BillingReadError) is threaded in so coverage is flagged uncertain (fail-closed)
+    #     rather than silently treated as "no policies / all clear". ---
+    $paygCoverage = Resolve-CbgPaygCoverage -Policies @($Policy) -Capability $Capability -GraphToken $GraphToken -BillingReadError $BillingReadError
 
     # --- Optional cohort group memberships (resolved once). ---
     $apiAudienceSet = Resolve-CbgGroupMemberUpnSet -GroupId $ApiAudienceGroupId -GraphToken $GraphToken
@@ -1064,32 +1136,34 @@ if ($MyInvocation.InvocationName -ne '.') {
 
     if ($upns.Count -eq 0) { Write-Warning "No UPNs to resolve." }
 
-    # --- Acquire tokens (managed-identity-first). Graph always; BAP only for live read. ---
+    # --- Acquire tokens (managed-identity-first). Graph always; licensing API only for live read. ---
     $graphToken = Get-CbgResourceToken -ResourceUrl $script:GraphResource -ProvidedToken $GraphAccessToken
 
-    # --- PAYG / credit coverage. Prefer supplied policies; else a live BAP read. ---
+    # --- PAYG / credit coverage. Prefer supplied policies; else a live licensing read. ---
     $policies = @()
+    $billingReadError = ''
     if ($PSBoundParameters.ContainsKey('BillingPolicy') -and $null -ne $BillingPolicy) {
         $policies = @($BillingPolicy)
     }
     elseif (-not [string]::IsNullOrWhiteSpace($BillingPolicyInputPath)) {
         if (-not (Test-Path -LiteralPath $BillingPolicyInputPath)) { throw "Billing policy file not found: $BillingPolicyInputPath" }
         $bpObject = Get-Content -LiteralPath $BillingPolicyInputPath -Raw | ConvertFrom-Json
-        $bpArray = Get-CbgProperty -InputObject $bpObject -Name 'billingPolicies'
-        if ($null -eq $bpArray) { $bpArray = $bpObject }   # tolerate a bare array
-        $policies = @($bpArray)
+        $policies = @(Get-CbgBillingPolicyArray -InputObject $bpObject)
     }
     else {
-        Write-Verbose "No billing policies supplied; attempting a live (unproven) Power Platform billing-policy read."
+        Write-Verbose "No billing policies supplied; attempting a best-effort live Power Platform licensing billing-policy read."
         $billingToken = Get-CbgResourceToken -ResourceUrl $script:BillingApiResource -ProvidedToken $BillingApiAccessToken
-        $policies = @(Get-CbgBillingPolicyLive -Token $billingToken)
+        $live = Get-CbgBillingPolicyLive -Token $billingToken
+        $policies = @($live.Policies)
+        $billingReadError = [string]$live.ReadError
     }
 
     $result = Invoke-CbgEntitlementResolution `
         -Upn $upns.ToArray() -AgentsSkeleton $agentsSkeleton -Policy $policies `
         -GraphToken $graphToken -Capability $GatedCapability `
         -ApiAudienceGroupId $ApiAudienceGroupId -EligibleCohortGroupId $EligibleCohortGroupId `
-        -CreditScopeGroupId $CreditScopeGroupId -SurfaceZeroRatedValue $SurfaceZeroRated
+        -CreditScopeGroupId $CreditScopeGroupId -SurfaceZeroRatedValue $SurfaceZeroRated `
+        -BillingReadError $billingReadError
 
     if (-not [string]::IsNullOrWhiteSpace($OutputPath)) {
         $result | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $OutputPath -Encoding UTF8

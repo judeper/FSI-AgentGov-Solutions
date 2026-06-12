@@ -32,7 +32,7 @@
         the README "Assumptions & build-time verifications".
 
     Authentication is managed-identity-first. Supply -AccessToken (Dataverse) and,
-    for -FromPlatform, -BillingApiAccessToken (https://api.bap.microsoft.com/) from a
+    for -FromPlatform, -BillingApiAccessToken (https://api.powerplatform.com/) from a
     managed identity or workload identity. An Az.Accounts fallback is provided for
     dev-only use.
 
@@ -51,8 +51,8 @@
     Dataverse.
 
 .PARAMETER BillingApiAccessToken
-    Bearer token for the Power Platform billing-policy admin API
-    (resource https://api.bap.microsoft.com/). Used only with -FromPlatform.
+    Bearer token for the Power Platform licensing API
+    (resource https://api.powerplatform.com/). Used only with -FromPlatform.
     Managed-identity-first; falls back to Get-AzAccessToken (dev-only).
 
 .PARAMETER PayAsYouGoCeiling
@@ -102,8 +102,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Power Platform billing-policy admin API resource (BAP).
-$script:BillingApiResource = 'https://api.bap.microsoft.com/'
+# Power Platform licensing API resource. Live billing policies are served by
+# https://api.powerplatform.com/licensing/billingPolicies (api-version 2024-10-01, verified
+# 200). The legacy api.bap.microsoft.com billingPolicies route no longer serves this resource.
+$script:BillingApiResource = 'https://api.powerplatform.com/'
 
 function Get-DataverseAccessToken {
     <#
@@ -294,7 +296,7 @@ function Get-PayAsYouGoInventory {
 
     if ($Platform) {
         $token = Get-DataverseAccessToken -ResourceUrl $script:BillingApiResource -ProvidedToken $BillingToken
-        $uri = "$($script:BillingApiResource.TrimEnd('/'))/providers/Microsoft.BusinessAppPlatform/billingPolicies?api-version=2022-03-01-preview"
+        $uri = "$($script:BillingApiResource.TrimEnd('/'))/licensing/billingPolicies?api-version=2024-10-01"
         $headers = @{ 'Authorization' = "Bearer $token"; 'Accept' = 'application/json' }
         Write-Verbose "Reading PAYG billing policies from platform API: $uri"
         $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers
@@ -309,7 +311,7 @@ function Get-PayAsYouGoInventory {
                     Name                = Get-CbgProperty -InputObject $p -Name 'name'
                     PolicyType          = 'PAYG'
                     AzureSubscriptionId = Get-CbgProperty -InputObject $instrument -Name 'resourceGroup'
-                    IsConnected         = ($null -ne $statusVal -and "$statusVal" -eq 'EnabledForFlowsAndPowerApps')
+                    IsConnected         = ($null -ne $statusVal -and "$statusVal" -match '(?i)enabled|connected|active')
                     Scope               = $scopeInfo.Scope
                     ScopeGroupIds       = @($scopeInfo.ScopeGroupIds)
                     ConnectedServices   = @($scopeInfo.ConnectedServices)
