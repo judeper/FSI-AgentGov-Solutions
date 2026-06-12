@@ -171,7 +171,7 @@ See [`docs/pilot-deployment-runbook.md`](docs/pilot-deployment-runbook.md) for t
 Express, Standard, and Full paths all ship in v1.0.0-preview. Forward-looking items:
 
 - **v1.1** — Convert `fsi_appealofid` to a self-lookup; live-tenant verification of the Microsoft Entra Agent ID `fsiReviewerAttestations` open-type field; Power Pages multistep form-binding automation once PAC CLI supports it.
-- **Post-v1.0** — M365 Copilot declarative agent surface (conversational intake); sovereign cloud adaptation guide (GCC / GCC-High / DoD); localization beyond en-US.
+- **Post-v1.0** — M365 Copilot declarative agent surface (conversational intake); localization beyond en-US.
 - **v1.0 (live)** — Promote from preview after pilot-firm validation feedback is incorporated.
 
 ## Changelog
