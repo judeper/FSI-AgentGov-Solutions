@@ -27,10 +27,10 @@ metered Copilot features. Instead:
   deny a user. The anomaly is recorded for follow-up rather than silently allowed.
 
 This contract supports compliance with **Control 3.5 (Cost Allocation and Budget
-Tracking)**, **Control 1.18 (Application-Level Authorization and RBAC)**, and
-**Control 1.14 (Data Minimization and Agent Scope Control)**. It does not, on its
-own, satisfy any regulation; organizations should verify their configuration meets
-their specific obligations.
+Tracking)** and contributes to **Control 1.18 (Application-Level Authorization
+and RBAC)** and **Control 1.14 (Data Minimization and Agent Scope Control)**. It
+does not, on its own, satisfy any regulation; organizations should verify their
+configuration meets their specific obligations.
 
 ---
 
@@ -101,6 +101,16 @@ and returns / persists the engine-ready document plus a **Find-No-Filter (FNF)
 - **FNF "blocked" lens.** Independently of the engine decision, the resolver computes
   `isBlocked ⇔ (no paid Copilot service plan) AND (not covered by an applicable PAYG /
   credit policy for the gated capability)` — always joining license **and** PAYG.
+  > **Coverage-limit caveat (F5):** `isBlocked` is a resolver-level pre-filter, not the
+  > authoritative engine decision. For the **`mcp-agentbuilder` pathway** (the typical path
+  > for Agent Builder People-capable declarative agents), PAYG / credit policy coverage does
+  > **not** substitute for a Microsoft 365 Copilot license — the engine blocks an unlicensed
+  > user regardless of PAYG coverage (see §4). A user flagged `isBlocked = false` because
+  > they hold PAYG coverage but no license may still receive an engine `Block` on this
+  > pathway. Always verify against engine decisions (`fsi_decision = Block`) rather than
+  > relying on `isBlocked` alone for pathway-specific conclusions. The FNF People-Sweep
+  > report uses engine decisions for its `blockedUserCount`, so the report output is
+  > authoritative; the lens field is a summary aid only.
 - **Accuracy-first (fail-open only on transient read error).** Misclassifying a licensed
   user as "blocked" is a serious, customer-facing error, so a user whose Graph license
   read fails (a transient per-user I/O error) is recorded as **unresolved** (never

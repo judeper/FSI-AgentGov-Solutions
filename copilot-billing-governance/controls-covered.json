@@ -12,11 +12,11 @@
     },
     {
       "id": "1.18",
-      "coverage": "full"
+      "coverage": "partial"
     },
     {
       "id": "1.14",
-      "coverage": "full"
+      "coverage": "partial"
     }
   ],
   "controlCount": 3

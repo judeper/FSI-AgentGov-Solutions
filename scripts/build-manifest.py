@@ -541,9 +541,16 @@ def emit_solutions_json(
 
 
 def emit_controls_covered_json(slug: str, m: dict) -> str:
-    """Return the per-solution controls-covered.json content."""
+    """Return the per-solution controls-covered.json content.
+
+    Controls listed in the optional ``controls_partial`` manifest field are
+    exported with ``"coverage": "partial"`` (the solution contributes to the
+    control but does not provide primary/full implementation).  All other
+    controls default to ``"coverage": "full"``.
+    """
+    partial_controls: set[str] = set(m.get("controls_partial", []))
     controls = [
-        {"id": ctrl, "coverage": "full"}
+        {"id": ctrl, "coverage": "partial" if ctrl in partial_controls else "full"}
         for ctrl in m.get("controls", [])
     ]
     out = {
