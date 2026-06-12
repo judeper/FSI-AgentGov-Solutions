@@ -164,9 +164,9 @@ the converter consumes only the final responses.
 
 ## Coverage-statement language for the deliverable
 
-Use this FSI-compliant wording (no "ensures" / "guarantees" / "will prevent" / "eliminates risk")
-when stating coverage in the deliverable. Fill the bracketed counts from the Agent Registry
-reconciliation and the converter/lens summaries.
+Use this FSI-compliant wording (avoid absolute-outcome or guarantee-style claims; see the repository
+FSI language rules for the prohibited list) when stating coverage in the deliverable. Fill the
+bracketed counts from the Agent Registry reconciliation and the converter/lens summaries.
 
 > **People-capability coverage.** Of **[N]** declarative agents in scope, **[A]** (~[a]%) were
 > determined by automated manifest scan (`peopleCapableSource = manifest`), **[B]** (~[b]%) by
