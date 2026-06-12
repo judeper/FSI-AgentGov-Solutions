@@ -179,6 +179,7 @@ nav:
         - Entitlement Contract: solutions/copilot-billing-governance/entitlement-contract.md
         - Dataverse Schema: solutions/copilot-billing-governance/dataverse-schema.md
         - Flow Configuration: solutions/copilot-billing-governance/flow-configuration.md
+        - Owner Attestation Workflow: solutions/copilot-billing-governance/owner-attestation-workflow.md
     - Monitoring & Analytics:
       - Agent Observability Foundation:
         - solutions/agent-observability-foundation/index.md

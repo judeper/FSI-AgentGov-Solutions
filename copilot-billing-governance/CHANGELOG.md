@@ -8,6 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Owner-attestation workflow for the manifest-opaque FNF tier** (`scripts/Convert-AttestationToCapabilityRows.ps1`,
+  `docs/owner-attestation-workflow.md`, `templates/owner-attestation-responses.sample.csv` / `.json`):
+  the Agent-Builder "shared by creator" long tail (typically the majority of the population) has a
+  `declarativeAgent.json` that cannot be read by any supported admin API or telemetry signal, so the
+  only path to a People (Org Chart & Profile) determination is manual owner attestation. The new
+  converter turns owners' yes/no responses -- keyed by the REAL Microsoft 365 Agent Registry
+  bot/agent id, never the provisional manifest stem `declarativeAgent` -- into the CAI
+  People-capability artifact shape the FNF lens consumes, stamping `fsi_detectionsource = "Owner
+  Attestation"` / `fsi_detectionconfidence = "Attested (owner attestation)"` so
+  `Get-FnfPeopleCapabilitySource` reports `peopleCapableSource = attested`. Attestation-covered
+  agents then flow into the same per-agent People-Sweep report as manifest-detected agents, and the
+  lens folds the gap `manifest-opaque-attestation-pending` into each such agent's coverage so an
+  attested determination is reported `coverageStatus = Partial` (never `Complete`) -- attested is not
+  equivalent to a manifest read. The converter is defensive: it rejects an empty agent id, the
+  provisional stem, an unrecognized answer (never silently coerced to "no"), and conflicting
+  duplicate responses; agreeing duplicates are collapsed; all row errors are reported together. By
+  default a "no" response is emitted as a declared-but-disabled row for a complete attestation
+  record (`-PeopleCapableOnly` omits them). The process doc documents the coverage tiers
+  (manifest-detected vs attested vs unknown), the Agent Registry CSV as the owner-list source, the
+  outreach / intake / cadence, and FSI-compliant coverage-statement language. This supports
+  compliance with oversight of Copilot agent reach (controls 3.5, 1.18, 1.14) and with the
+  record-keeping expectations of FINRA Rule 4511 and SEC Rule 17a-3/17a-4.
+- **Converter test suite** (`tests/ConvertAttestationToCapabilityRows.Tests.ps1`): 49 Pester tests
+  covering answer-token normalization, the attested capability-row schema, response validation
+  (missing id, provisional-stem rejection, unrecognized-value rejection, conflicting-duplicate
+  rejection, agreeing-duplicate collapse, non-attest `DetectionSource` rejection), CSV / JSON (bare
+  array, `responses` wrapper, `value` envelope) intake, and a schema-compatibility cross-check that
+  round-trips an attested artifact through JSON and drives the FNF lens's own
+  `Get-FnfPeopleCapabilitySource` and `Resolve-FnfPeopleAgentSet` to prove an attested row keys on
+  the real agent id and classifies as `attested`.
+
 ### Fixed
 
 - **FNF People-Sweep lens: id-map stem collisions no longer silently drop or mis-attribute

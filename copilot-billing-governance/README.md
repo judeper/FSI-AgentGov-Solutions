@@ -112,19 +112,32 @@ copilot-billing-governance/
 ├── CHANGELOG.md
 ├── manifest.yaml
 ├── docs/
-│   ├── architecture.md            # 2 objects + 3 groups + engine + coverage-gap
-│   ├── entitlement-contract.md    # switch-on-pathway decision tree + pseudocode
-│   ├── prerequisites.md           # licensing, permissions, managed-identity model
-│   ├── dataverse-schema.md        # auto-generated; do not hand-edit
-│   └── flow-configuration.md      # 15-min policy sync + nightly coverage-gap
+│   ├── architecture.md                # 2 objects + 3 groups + engine + coverage-gap
+│   ├── entitlement-contract.md        # switch-on-pathway decision tree + pseudocode
+│   ├── prerequisites.md               # licensing, permissions, managed-identity model
+│   ├── dataverse-schema.md            # auto-generated; do not hand-edit
+│   ├── flow-configuration.md          # 15-min policy sync + nightly coverage-gap
+│   └── owner-attestation-workflow.md  # manifest-opaque tier: owner attestation -> attested rows
 ├── scripts/
-│   ├── create_cbg_dataverse_schema.py     # schema + --output-docs
-│   ├── Get-BillingPolicyInventory.ps1     # PAYG + credit policy read (scope + connected surfaces)
-│   ├── Get-CopilotEntitlement.ps1         # per-user entitlement resolver (real Graph + PAYG inputs → engine)
-│   └── Invoke-EntitlementEvaluation.ps1   # switch-on-pathway engine + coverage-gap
-└── templates/
-    ├── coverage-gap.sample.json
-    └── entitlement-decision.sample.json
+│   ├── create_cbg_dataverse_schema.py            # schema + --output-docs
+│   ├── Get-BillingPolicyInventory.ps1            # PAYG + credit policy read (scope + connected surfaces)
+│   ├── Get-CopilotEntitlement.ps1                # per-user entitlement resolver (real Graph + PAYG inputs → engine)
+│   ├── Invoke-EntitlementEvaluation.ps1          # switch-on-pathway engine + coverage-gap
+│   ├── Get-FnfPeopleSweepReport.ps1              # FNF People-Sweep lens (manifest|attested capability rows → report)
+│   └── Convert-AttestationToCapabilityRows.ps1   # owner attestation responses → attested capability rows for the lens
+├── templates/
+│   ├── coverage-gap.sample.json
+│   ├── entitlement-decision.sample.json
+│   ├── agent-id-map.sample.json
+│   ├── fnf-people-sweep-report.sample.json
+│   ├── owner-attestation-responses.sample.csv    # attestation response intake template (CSV)
+│   └── owner-attestation-responses.sample.json   # attestation response intake template (JSON)
+└── tests/
+    ├── CopilotEntitlement.Tests.ps1
+    ├── EntitlementEngine.Tests.ps1
+    ├── FnfPeopleSweepReport.Tests.ps1
+    ├── ConvertAttestationToCapabilityRows.Tests.ps1   # converter + lens schema-compatibility tests
+    └── test_cbg_dataverse_logical_names.py
 ```
 
 ## Prerequisites
