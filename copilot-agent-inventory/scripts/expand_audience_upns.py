@@ -486,6 +486,11 @@ class GraphMemberResolver:
             elif self.auth_mode == "interactive":
                 self._credential_obj = azid.InteractiveBrowserCredential(
                     tenant_id=self.tenant_id, client_id=self.client_id)
+            elif self.auth_mode == "azure-cli":
+                # Single non-interactive credential backed by an existing `az login`.
+                # Unlike DefaultAzureCredential it does NOT probe IMDS first, so a live
+                # run stays quiet (no managed-identity 400s in the log).
+                self._credential_obj = azid.AzureCliCredential()
             else:
                 self._credential_obj = azid.DefaultAzureCredential()
         return self._credential_obj
@@ -680,7 +685,7 @@ def main() -> None:
     parser.add_argument("--client-id", default=os.environ.get("CAI_CLIENT_ID"),
                         help="Service principal / managed identity client ID")
     parser.add_argument("--auth-mode",
-                        choices=["managed-identity", "workload-identity", "interactive", "default"],
+                        choices=["managed-identity", "workload-identity", "interactive", "default", "azure-cli"],
                         default=os.environ.get("CAI_AUTH_MODE", "managed-identity"),
                         help="Graph/Dataverse auth mode; prefer managed-identity for automation")
     parser.add_argument("--max-members-per-group", type=int, default=DEFAULT_MAX_MEMBERS_PER_GROUP,
@@ -702,6 +707,12 @@ def main() -> None:
         level=getattr(logging, str(args.log_level).upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
+    # Quiet noisy third-party SDK loggers (Azure credential-chain/IMDS probes, HTTP
+    # wire logs, MSAL) so a live run reads cleanly; this script's own logger is
+    # unaffected and keeps emitting at the requested --log-level.
+    logging.getLogger("azure").setLevel(logging.ERROR)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("msal").setLevel(logging.WARNING)
 
     sentinels = (tuple(s.strip().lower() for s in args.whole_tenant_sentinels.split(",") if s.strip())
                  if args.whole_tenant_sentinels else DEFAULT_WHOLE_TENANT_SENTINELS)
