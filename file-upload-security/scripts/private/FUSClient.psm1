@@ -258,6 +258,51 @@ function Get-AgentBots {
     }
 }
 
+function ConvertTo-FileUploadBool {
+    <#
+    .SYNOPSIS
+        Normalizes a raw configuration value to boolean True/False.
+
+    .DESCRIPTION
+        Coerces the supported representations of a file-upload flag
+        (bool, string, numeric, or nested { enabled } / { isEnabled } object)
+        into a boolean. Returns $null when the value cannot be normalized so
+        callers can treat it as indeterminate rather than as disabled.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [AllowNull()]
+        [object]$RawValue
+    )
+
+    if ($null -eq $RawValue) { return $null }
+
+    if ($RawValue -is [PSCustomObject]) {
+        if ($RawValue.PSObject.Properties.Name -contains 'enabled') {
+            return [bool]$RawValue.enabled
+        }
+        if ($RawValue.PSObject.Properties.Name -contains 'isEnabled') {
+            return [bool]$RawValue.isEnabled
+        }
+        return $null
+    }
+
+    if ($RawValue -is [bool]) { return $RawValue }
+
+    if ($RawValue -is [string]) {
+        $normalized = $RawValue.Trim().ToLower()
+        if ([string]::IsNullOrWhiteSpace($normalized)) { return $null }
+        return ($normalized -in @('true', 'yes', 'enabled', '1', 'on'))
+    }
+
+    if ($RawValue -is [int] -or $RawValue -is [long] -or $RawValue -is [double]) {
+        return $RawValue -ne 0
+    }
+
+    return $null
+}
+
 function Get-BotFileUploadEnabled {
     <#
     .SYNOPSIS
@@ -265,17 +310,19 @@ function Get-BotFileUploadEnabled {
 
     .DESCRIPTION
         Parses the bot.configuration JSON blob to extract the file upload setting.
-        The configuration field is a JSON string containing various bot settings.
-        File upload settings may appear under several key names depending on
-        Copilot Studio version:
-        - FileUpload
-        - fileUpload
-        - FileUploadEnabled
-        - AllowFileUpload
-        - allowFileUpload
+        The configuration field is a JSON string containing the agent's settings.
 
-        Normalizes returned values to boolean True/False.
-        Returns $null if the setting cannot be determined.
+        PRIMARY (live Copilot Studio schema, verified on the lab validation tenant): the flag lives
+        nested at 'aISettings.isFileAnalysisEnabled' (boolean). The parser reads
+        that first.
+
+        FALLBACK (legacy / fixture schemas): older or synthetic configurations may
+        carry a flat top-level key (FileUpload, AllowFileUpload, etc.). These are
+        evaluated only when the nested flag is absent.
+
+        Normalizes returned values to boolean True/False. Returns $null when the
+        setting cannot be determined so the caller can treat it as INDETERMINATE.
+        A missing setting is never collapsed into 'disabled' / 'compliant'.
 
     .PARAMETER Bot
         A bot record PSCustomObject from Get-AgentBots.
@@ -286,51 +333,57 @@ function Get-BotFileUploadEnabled {
         [PSCustomObject]$Bot
     )
 
-    # Try extracting from bot.configuration JSON blob
-    if ($Bot.configuration) {
-        try {
-            $config = $Bot.configuration | ConvertFrom-Json -ErrorAction Stop
+    if (-not $Bot.configuration) {
+        Write-Verbose "Bot '$($Bot.name)' has no configuration -- treating as indeterminate"
+        return $null
+    }
 
-            # Check known key names for file upload settings
-            $fileUploadValue = $null
-            $keyNames = @(
-                'FileUpload', 'fileUpload', 'FileUploadEnabled', 'fileUploadEnabled',
-                'AllowFileUpload', 'allowFileUpload', 'AllowFileUploads', 'allowFileUploads',
-                'IsFileUploadEnabled', 'isFileUploadEnabled'
-            )
+    try {
+        $config = $Bot.configuration | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        Write-Verbose "Failed to parse configuration JSON for bot '$($Bot.name)': $($_.Exception.Message) -- treating as indeterminate"
+        return $null
+    }
 
-            foreach ($key in $keyNames) {
-                if ($config.PSObject.Properties.Name -contains $key) {
-                    $rawValue = $config.$key
+    $rawValue = $null
+    $found = $false
 
-                    # Handle nested object (e.g., { "enabled": true })
-                    if ($rawValue -is [PSCustomObject]) {
-                        if ($rawValue.PSObject.Properties.Name -contains 'enabled') {
-                            $fileUploadValue = $rawValue.enabled
-                        } elseif ($rawValue.PSObject.Properties.Name -contains 'isEnabled') {
-                            $fileUploadValue = $rawValue.isEnabled
-                        }
-                    } elseif ($rawValue -is [bool]) {
-                        $fileUploadValue = $rawValue
-                    } elseif ($rawValue -is [string]) {
-                        $normalized = $rawValue.Trim().ToLower()
-                        $fileUploadValue = $normalized -in @('true', 'yes', 'enabled', '1', 'on')
-                    } elseif ($rawValue -is [int]) {
-                        $fileUploadValue = $rawValue -ne 0
-                    }
-                    break
-                }
-            }
-
-            if ($null -ne $fileUploadValue) {
-                return [bool]$fileUploadValue
-            }
-        } catch {
-            Write-Verbose "Failed to parse configuration JSON for bot '$($Bot.name)': $($_.Exception.Message)"
+    # PRIMARY: nested aISettings.isFileAnalysisEnabled (live Copilot Studio shape).
+    if (($config.PSObject.Properties.Name -contains 'aISettings') -and ($null -ne $config.aISettings)) {
+        $aiSettings = $config.aISettings
+        if ($aiSettings.PSObject.Properties.Name -contains 'isFileAnalysisEnabled') {
+            $rawValue = $aiSettings.isFileAnalysisEnabled
+            $found = $true
         }
     }
 
-    Write-Verbose "File upload setting not found for bot '$($Bot.name)' -- treating as indeterminate"
+    # FALLBACK: legacy / fixture flat top-level keys (only if the nested flag is absent).
+    if (-not $found) {
+        $legacyKeys = @(
+            'FileUpload', 'fileUpload', 'FileUploadEnabled', 'fileUploadEnabled',
+            'AllowFileUpload', 'allowFileUpload', 'AllowFileUploads', 'allowFileUploads',
+            'IsFileUploadEnabled', 'isFileUploadEnabled'
+        )
+        foreach ($key in $legacyKeys) {
+            if ($config.PSObject.Properties.Name -contains $key) {
+                $rawValue = $config.$key
+                $found = $true
+                break
+            }
+        }
+    }
+
+    if (-not $found) {
+        Write-Verbose "File upload setting (aISettings.isFileAnalysisEnabled or legacy key) not found for bot '$($Bot.name)' -- treating as indeterminate"
+        return $null
+    }
+
+    $fileUploadValue = ConvertTo-FileUploadBool -RawValue $rawValue
+    if ($null -ne $fileUploadValue) {
+        return [bool]$fileUploadValue
+    }
+
+    Write-Verbose "File upload value for bot '$($Bot.name)' could not be normalized -- treating as indeterminate"
     return $null  # Caller must handle $null as indeterminate, not as disabled
 }
 
@@ -341,8 +394,17 @@ function Get-BotModerationLevel {
 
     .DESCRIPTION
         Parses the bot.configuration JSON blob to extract the content moderation setting.
+
+        PRIMARY (live Copilot Studio schema, verified on the lab validation tenant): the setting lives
+        nested at 'aISettings.contentModeration'. The parser reads that first.
+
+        FALLBACK (legacy / fixture schemas): older or synthetic configurations may
+        carry a flat top-level key (ContentModeration, etc.), evaluated only when the
+        nested setting is absent.
+
         Normalizes returned values to canonical levels: Low, Medium, High, Highest.
-        Returns 'Unknown' if the level cannot be determined.
+        Returns 'Unknown' when the level cannot be determined. A missing setting is
+        never collapsed into a concrete level.
 
     .PARAMETER Bot
         A bot record PSCustomObject from Get-AgentBots.
@@ -364,34 +426,53 @@ function Get-BotModerationLevel {
         'standard' = 'Medium'
     }
 
-    if ($Bot.configuration) {
-        try {
-            $config = $Bot.configuration | ConvertFrom-Json -ErrorAction Stop
+    if (-not $Bot.configuration) { return 'Unknown' }
 
-            $moderationValue = $null
-            foreach ($key in @('ContentModeration', 'contentModeration', 'ContentModerationSetting', 'contentModerationSetting')) {
-                if ($config.PSObject.Properties.Name -contains $key) {
-                    $rawValue = $config.$key
+    try {
+        $config = $Bot.configuration | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        Write-Verbose "Failed to parse moderation config for bot '$($Bot.name)': $($_.Exception.Message)"
+        return 'Unknown'
+    }
 
-                    if ($rawValue -is [PSCustomObject] -and $rawValue.PSObject.Properties.Name -contains 'level') {
-                        $moderationValue = $rawValue.level
-                    } elseif ($rawValue -is [string]) {
-                        $moderationValue = $rawValue
-                    }
-                    break
-                }
+    $moderationValue = $null
+
+    # PRIMARY: nested aISettings.contentModeration (live Copilot Studio shape).
+    if (($config.PSObject.Properties.Name -contains 'aISettings') -and ($null -ne $config.aISettings)) {
+        $aiSettings = $config.aISettings
+        if ($aiSettings.PSObject.Properties.Name -contains 'contentModeration') {
+            $rawValue = $aiSettings.contentModeration
+            if ($rawValue -is [PSCustomObject] -and $rawValue.PSObject.Properties.Name -contains 'level') {
+                $moderationValue = $rawValue.level
+            } elseif ($rawValue -is [string]) {
+                $moderationValue = $rawValue
             }
-
-            if ($moderationValue) {
-                $normalized = $moderationValue.ToLower().Trim()
-                if ($levelMap.ContainsKey($normalized)) {
-                    return $levelMap[$normalized]
-                }
-                return $moderationValue
-            }
-        } catch {
-            Write-Verbose "Failed to parse moderation config for bot '$($Bot.name)': $($_.Exception.Message)"
         }
+    }
+
+    # FALLBACK: legacy / fixture flat top-level keys (only if the nested setting is absent).
+    if (-not $moderationValue) {
+        foreach ($key in @('ContentModeration', 'contentModeration', 'ContentModerationSetting', 'contentModerationSetting')) {
+            if ($config.PSObject.Properties.Name -contains $key) {
+                $rawValue = $config.$key
+
+                if ($rawValue -is [PSCustomObject] -and $rawValue.PSObject.Properties.Name -contains 'level') {
+                    $moderationValue = $rawValue.level
+                } elseif ($rawValue -is [string]) {
+                    $moderationValue = $rawValue
+                }
+                break
+            }
+        }
+    }
+
+    if ($moderationValue) {
+        $normalized = $moderationValue.ToLower().Trim()
+        if ([string]::IsNullOrWhiteSpace($normalized)) { return 'Unknown' }
+        if ($levelMap.ContainsKey($normalized)) {
+            return $levelMap[$normalized]
+        }
+        return $moderationValue
     }
 
     return 'Unknown'
@@ -404,36 +485,33 @@ function Get-BotModerationLevel {
 function ConvertTo-ZoneOptionValue {
     <#
     .SYNOPSIS
-        Converts zone string label to fsi_acv_zone option set integer value.
+        Converts a zone string label to its fsi_acv_zone option set integer value.
+
+    .DESCRIPTION
+        Maps to the LIVE shared fsi_acv_zone 4-member set verified on the lab validation tenant:
+          Unclassified = 100000000
+          Zone 1       = 100000001
+          Zone 2       = 100000002
+          Zone 3       = 100000003
+        Accepts both spaced ('Zone 1') and unspaced ('Zone1') labels, and treats
+        'Unclassified' / 'Unknown' as the Unclassified member. Returns $null for
+        anything that cannot be mapped so callers omit the picklist rather than
+        writing a wrong integer.
+
+        Canonical zone semantics (reconciled per coordinator decision
+        Option A): Zone 1 (Enterprise) is the MOST-restrictive tier and
+        Zone 3 (Personal) the least. FUS's policy table, naming classifier,
+        and violation text are all aligned to this meaning, so the name-derived
+        zone (Zone1..Zone3) maps straight to its canonical integer.
     #>
     param([string]$Zone)
     switch -Regex ($Zone) {
-        '1' { return 100000000 }
-        '2' { return 100000001 }
-        '3' { return 100000002 }
+        '3' { return 100000003 }
+        '2' { return 100000002 }
+        '1' { return 100000001 }
+        '(?i)^\s*(unclassified|unknown)\s*$' { return 100000000 }
         default {
             Write-Warning "Unknown zone '$Zone' -- cannot map to option set value"
-            return $null
-        }
-    }
-}
-
-function ConvertTo-SeverityOptionValue {
-    <#
-    .SYNOPSIS
-        Converts severity string label to fsi_acv_severity option set integer value.
-    #>
-    param([string]$Severity)
-    switch ($Severity) {
-        'None'     { return 100000000 }   # legacy callers -- alias for Info
-        'Info'     { return 100000000 }
-        'Low'      { return 100000001 }
-        'Warning'  { return 100000005 }
-        'Medium'   { return 100000002 }
-        'High'     { return 100000003 }
-        'Critical' { return 100000004 }
-        default {
-            Write-Warning "Unknown severity '$Severity' -- cannot map to option set value"
             return $null
         }
     }
@@ -714,7 +792,7 @@ function Write-FileUploadViolation {
             fsi_fileuploadactual        = $Violation.ActualFileUpload
             fsi_contentmoderationminimum = $Violation.ExpectedModeration
             fsi_contentmoderationlevel  = $Violation.ActualModeration
-            fsi_severity                = (ConvertTo-SeverityOptionValue -Severity $Violation.Severity)
+            fsi_severity                = $Violation.Severity
             fsi_violationtype           = $Violation.ViolationType
             fsi_detectedon              = (Get-Date).ToUniversalTime().ToString('o')
         }

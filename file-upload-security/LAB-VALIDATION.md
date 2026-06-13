@@ -2,8 +2,61 @@
 
 > **Validation type:** Static (no live tenant) — parse-validity + authoritative-source verification + documentation completeness
 > **Solution version:** v1.1.2
-> **Date:** 2026-06-04
-> **Branch:** `validation/file-upload-security`
+> **Static validation date:** 2026-06-04
+> **Live tenant validation:** 2026-06-13 against the lab validation tenant — see **"Live tenant validation outcome (2026-06-13)"** below
+> **Branch:** `validation/file-upload-security` (static report) · `lab/file-upload-security` (live validation)
+
+## Live tenant validation outcome (2026-06-13)
+
+On 2026-06-13 the single-flight lab leg was run against the lab validation tenant. This
+section records what was proven; the static report below remains the parse/source
+record from 2026-06-04 and is unchanged.
+
+**Schema deployed (retained deliverable).** The three FUS tables
+(`fsi_fileuploadbaseline`, `fsi_fileuploadvalidationhistory`,
+`fsi_fileuploadviolation`) and their 41 columns were deployed and verified on
+the lab validation tenant. `fsi_severity` is a free **String** column (the label text
+`Critical/High/Medium/Warning/Info`); `fsi_zone` is a Picklist bound to the
+canonical shared `fsi_acv_zone` set (`Unclassified=100000000, Zone 1=100000001,
+Zone 2=100000002, Zone 3=100000003`). An idempotent re-run created 0 new objects.
+**The deployed schema is the retained deliverable** — it stays on the tenant after
+the test fixtures are removed.
+
+**Detection proven on disposable-bot fixtures.** Authored disposable Copilot Studio
+bots exercised the bot-config-STATE detection path (`aISettings.isFileAnalysisEnabled`):
+
+- **Violation** — an upload-enabled bot in an Enterprise (Zone 1) context resolved to
+  Critical and persisted a violation row (`fsi_zone=100000001`, `fsi_severity="Critical"`
+  written as a String).
+- **Compliant** — an upload-disabled bot produced **no** violation row.
+- **Discrimination (same-fixture flip)** — flipping the same fixture between enabled and
+  disabled changed the outcome, so the detector is not tautologically green.
+- **Indeterminate** — a bot with the nested node absent resolved to **Indeterminate**,
+  never a false Compliant (fail-open-to-review).
+- **Real-agent cross-check** — a real agent's configuration parsed correctly read-only,
+  without mutation.
+
+**Evidence integrity.** The SHA-256 evidence digest recomputed to an integrity match
+(digest prefix `E195D5B5…`). 
+
+**Teardown verified.** Every disposable fixture was removed: the violation table
+returned 1→0, the three disposable bots were deleted (with their orphaned
+botcomponents), and the two real agents on the tenant were left untouched. No
+violation rows persist in the lab validation tenant.
+
+**Committed-script fix during the leg.** `scripts/private/Get-ZoneClassification.ps1`
+previously dot-sourced the parameterised shared zone script, which executed its
+mandatory-parameter body at import and left the function undefined; it now invokes the
+shared script via the call operator (`&`) with a naming-convention fallback.
+
+**Evidence framing (lab evidence, not a production claim).** The above is **lab
+evidence** gathered on disposable-bot fixtures in the lab validation tenant. It demonstrates
+that the bot-config-STATE detection path runs and discriminates; it is **not** proof of
+behavior in any customer's production tenant. A customer's tenant evidence is generated
+by running the solution against that tenant. Coverage stays **PARTIAL**: only bot-config
+STATE is in scope — runtime upload telemetry and Purview DLP evidence remain out of lab
+scope. File Upload Security Configurator **supports compliance with** its named controls;
+it does not by itself ensure, guarantee, or eliminate regulatory risk.
 
 ## Purpose and controls
 
@@ -121,7 +174,7 @@ Guidelines Establishing Information Security Standards (12 CFR 30 App. B).
    auth code.
 4. **Zone classification fallback.** When ELM Dataverse lookup is unavailable,
    zone classification falls back to display-name pattern matching and defaults
-   unclassifiable environments to Zone 3 (most restrictive). Accurate zoning
+   unclassifiable environments to Zone 1 (most restrictive). Accurate zoning
    requires passing `-DataverseUrl` so the `fsi_acv_environmentregistrations`
    lookup is used.
 

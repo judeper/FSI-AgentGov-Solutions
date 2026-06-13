@@ -75,7 +75,7 @@
 
 .NOTES
     File: Test-AgentAccessCompliance.ps1
-    Version: 1.1.2
+    Version: 1.2.0
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 
     Part of FSI Agent Governance Framework
@@ -383,9 +383,9 @@ if ($DataverseUrl -and $PersistResults) {
         ValidationTime    = $validationTime
     }
     
-    # Write summary to validation history (immutable). Failures here are critical
-    # (no audit trail) — surface a terminating error so the runbook captures
-    # this as a runbook failure rather than silently demoting to warning.
+    # Write summary to validation history (append-only by role design). Failures here
+    # are critical (no audit trail) — surface a terminating error so the runbook
+    # captures this as a runbook failure rather than silently demoting to warning.
     if ($PSCmdlet.ShouldProcess("fsi_accessvalidationhistory", "Write validation summary (RunId=$runId)")) {
         try {
             Write-AAMValidationHistory -ValidationResult $validationResult -RunId $runId
@@ -475,9 +475,9 @@ switch ($OutputFormat) {
         
         # Zone Distribution
         Write-Host "Zone Distribution:" -ForegroundColor White
-        Write-Host "  Zone1 (Personal):   $($zoneSummary.Zone1)"
+        Write-Host "  Zone1 (Enterprise): $($zoneSummary.Zone1)"
         Write-Host "  Zone2 (Team):       $($zoneSummary.Zone2)"
-        Write-Host "  Zone3 (Enterprise): $($zoneSummary.Zone3)"
+        Write-Host "  Zone3 (Personal):   $($zoneSummary.Zone3)"
         if ($zoneSummary.Unknown -gt 0) {
             Write-Host "  Unknown:            $($zoneSummary.Unknown)" -ForegroundColor Yellow
         }

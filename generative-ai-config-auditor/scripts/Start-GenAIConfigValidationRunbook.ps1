@@ -573,9 +573,9 @@ try {
         }
     }
 
-    # Zone 3 weakened drift escalates to Critical
-    $zone3Weakened = @($driftedAgents | Where-Object { ($_.Direction -eq 'Weakened' -or $_.Direction -eq 'Mixed') -and $_.Zone -match '3' })
-    if ($zone3Weakened.Count -gt 0) {
+    # Zone 1 (Enterprise, most-restrictive) weakened drift escalates to Critical
+    $zone1Weakened = @($driftedAgents | Where-Object { ($_.Direction -eq 'Weakened' -or $_.Direction -eq 'Mixed') -and $_.Zone -match '1' })
+    if ($zone1Weakened.Count -gt 0) {
         $alertSeverity = 'Critical'
     }
 

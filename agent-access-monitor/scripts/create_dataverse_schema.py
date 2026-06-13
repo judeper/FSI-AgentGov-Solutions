@@ -23,6 +23,10 @@ PUBLISHER_PREFIX = "fsi"
 
 SHARED_OPTIONSETS = {
     "fsi_acv_zone": {
+        # Dataverse rejects the payload as 'Invalid property Options ... on
+        # OptionSetMetadataBase' unless the derived OptionSetMetadata type is
+        # declared on the root resource.
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Governance Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Governance zone classification", "LanguageCode": 1033}]},
@@ -36,6 +40,7 @@ SHARED_OPTIONSETS = {
         ],
     },
     "fsi_acv_severity": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_severity",
         "DisplayName": {"LocalizedLabels": [{"Label": "Validation Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Validation result severity", "LanguageCode": 1033}]},
@@ -124,17 +129,20 @@ def get_validation_history_entity() -> dict:
     """
     Get AccessValidationHistory entity definition.
 
-    CRITICAL: OwnershipType is OrganizationOwned for immutability.
-    Immutable audit log for FINRA 4511/SEC 17a-3 compliance evidence.
-    Security roles must remove Write/Delete privileges post-deployment.
+    Append-only by ROLE DESIGN, not by a Dataverse feature. Dataverse has no native
+    column- or row-level immutability. OwnershipType OrganizationOwned controls who
+    OWNS rows (org vs user), not whether rows can be modified. The append-only audit
+    behavior that supports FINRA 4511 / SEC 17a-3 evidence is achieved post-deployment
+    by granting the AAM application user Create + Read only and denying Write/Delete on
+    this table. See docs/role-design-append-only.md.
     """
     return {
         "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
         "SchemaName": "fsi_AccessValidationHistory",
         "DisplayName": {"LocalizedLabels": [{"Label": "Access Validation History", "LanguageCode": 1033}]},
         "DisplayCollectionName": {"LocalizedLabels": [{"Label": "Access Validation History", "LanguageCode": 1033}]},
-        "Description": {"LocalizedLabels": [{"Label": "Immutable access validation audit log for FINRA 4511/SEC 17a-3 regulatory evidence", "LanguageCode": 1033}]},
-        "OwnershipType": "OrganizationOwned",  # CRITICAL: immutability requires org-owned
+        "Description": {"LocalizedLabels": [{"Label": "Append-only access validation audit log (Create+Read role design) supporting FINRA 4511/SEC 17a-3 regulatory evidence", "LanguageCode": 1033}]},
+        "OwnershipType": "OrganizationOwned",  # org-owned audit semantics; append-only comes from role design, not this flag
         "IsActivity": False,
         "HasActivities": False,
         "HasNotes": False,
@@ -238,13 +246,19 @@ BASELINE_TABLE_COLUMNS = [
         "Description": {"LocalizedLabels": [{"Label": "Whether bot authoring sharing is disabled", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "DefaultValue": False,
+        "OptionSet": {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+            "OptionSetType": "Boolean",
+            "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
+            "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
+        },
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-        "SchemaName": "fsi_BotPublishedBotLimitSharingMode",
-        "DisplayName": {"LocalizedLabels": [{"Label": "Published Bot Limit Sharing Mode", "LanguageCode": 1033}]},
-        "Description": {"LocalizedLabels": [{"Label": "Published bot sharing limitation mode setting", "LanguageCode": 1033}]},
-        "RequiredLevel": {"Value": "ApplicationRequired"},
+        "SchemaName": "fsi_BotMaxLimitUserSharing",
+        "DisplayName": {"LocalizedLabels": [{"Label": "Max Limit User Sharing", "LanguageCode": 1033}]},
+        "Description": {"LocalizedLabels": [{"Label": "Managed Environment bot-maxLimitUserSharing value: max individual users an agent may be shared with (-1 = no limit; blank when the environment is not a Managed Environment)", "LanguageCode": 1033}]},
+        "RequiredLevel": {"Value": "None"},
         "MaxLength": 200,
         "FormatName": {"Value": "Text"},
     },
@@ -255,6 +269,12 @@ BASELINE_TABLE_COLUMNS = [
         "Description": {"LocalizedLabels": [{"Label": "Whether this baseline is the current active baseline", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
         "DefaultValue": True,
+        "OptionSet": {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+            "OptionSetType": "Boolean",
+            "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
+            "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
+        },
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata",
@@ -469,6 +489,12 @@ VIOLATION_TABLE_COLUMNS = [
         "Description": {"LocalizedLabels": [{"Label": "Whether the violation has been acknowledged by an administrator", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "DefaultValue": False,
+        "OptionSet": {
+            "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+            "OptionSetType": "Boolean",
+            "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
+            "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
+        },
     },
     {
         "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
@@ -510,6 +536,73 @@ VIOLATION_TABLE_COLUMNS = [
 # Schema Deployment Functions
 # ============================================================================
 
+# ---------------------------------------------------------------------------
+# Deployment helpers (Dataverse Web API metadata requirements)
+# ---------------------------------------------------------------------------
+# CreateEntity / CreateAttribute require AttributeType + AttributeTypeName in
+# addition to the @odata.type discriminator, the primary-name attribute must be
+# explicitly flagged IsPrimaryName (PrimaryNameAttribute alone is insufficient),
+# and a Picklist column's GlobalOptionSet@odata.bind must reference the option
+# set by MetadataId GUID (a Name='...' key is rejected, surfacing as repeated
+# HTTP 5xx). These helpers inject the missing members so the source dicts stay
+# compact. (Mirrors the proven agent-intake / ASARD schema helpers.)
+_ATTRIBUTE_TYPE_NAMES = {
+    "Microsoft.Dynamics.CRM.StringAttributeMetadata": ("String", "StringType"),
+    "Microsoft.Dynamics.CRM.MemoAttributeMetadata": ("Memo", "MemoType"),
+    "Microsoft.Dynamics.CRM.PicklistAttributeMetadata": ("Picklist", "PicklistType"),
+    "Microsoft.Dynamics.CRM.BooleanAttributeMetadata": ("Boolean", "BooleanType"),
+    "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata": ("DateTime", "DateTimeType"),
+    "Microsoft.Dynamics.CRM.IntegerAttributeMetadata": ("Integer", "IntegerType"),
+}
+
+
+def _normalize_attribute(attr: dict) -> dict:
+    """Inject AttributeType/AttributeTypeName (required by CreateAttribute) from
+    the @odata.type discriminator when absent. Mutates and returns the dict."""
+    pair = _ATTRIBUTE_TYPE_NAMES.get(attr.get("@odata.type", ""))
+    if pair and "AttributeTypeName" not in attr:
+        attr.setdefault("AttributeType", pair[0])
+        attr["AttributeTypeName"] = {"Value": pair[1]}
+    return attr
+
+
+def _prepare_entity(entity: dict) -> dict:
+    """Normalize the entity's primary-name attribute and flag IsPrimaryName so
+    CreateEntity accepts the payload. Mutates and returns the entity dict."""
+    entity.setdefault("@odata.type", "Microsoft.Dynamics.CRM.EntityMetadata")
+    primary = str(entity.get("PrimaryNameAttribute", "")).lower()
+    for attr in entity.get("Attributes", []):
+        _normalize_attribute(attr)
+        if str(attr.get("SchemaName", "")).lower() == primary:
+            attr["IsPrimaryName"] = True
+    return entity
+
+
+def _resolve_picklist_bind(client: AAMClient, attr: dict, cache: dict) -> dict:
+    """Rewrite a Picklist column's GlobalOptionSet@odata.bind from a Name='...'
+    reference to the MetadataId GUID form Dataverse requires at create time. The
+    id is resolved via a live GET and cached per option set. The shared option
+    set is bound (never recreated), so the live MetadataId is authoritative."""
+    bind_key = "GlobalOptionSet@odata.bind"
+    bind_value = attr.get(bind_key, "")
+    if "Name='" not in bind_value:
+        return attr
+    name = bind_value.split("Name='", 1)[1].split("'", 1)[0]
+    metadata_id = cache.get(name)
+    if not metadata_id:
+        definition = client.get_global_optionset(name)
+        if not definition or not definition.get("MetadataId"):
+            raise RuntimeError(
+                f"Picklist column {attr.get('SchemaName', '?')} references "
+                f"unknown or unresolved global option set '{name}'. Deploy the "
+                f"shared option set (ACV) before AAM; AAM binds it, never recreates it."
+            )
+        metadata_id = definition["MetadataId"]
+        cache[name] = metadata_id
+    attr[bind_key] = f"/GlobalOptionSetDefinitions({metadata_id})"
+    return attr
+
+
 def create_tables(client: AAMClient, dry_run: bool = False) -> dict:
     """Create AAM tables with primary name attributes.
 
@@ -529,7 +622,7 @@ def create_tables(client: AAMClient, dry_run: bool = False) -> dict:
         print(f"  {baseline_logical_name}: would create (User-owned, auditing enabled)")
         counts["created"] += 1
     else:
-        client.create_entity(get_access_baseline_entity())
+        client.create_entity(_prepare_entity(get_access_baseline_entity()))
         print(f"  {baseline_logical_name}: created")
         counts["created"] += 1
 
@@ -540,10 +633,10 @@ def create_tables(client: AAMClient, dry_run: bool = False) -> dict:
         print(f"  {history_logical_name}: already exists")
         counts["skipped"] += 1
     elif dry_run:
-        print(f"  {history_logical_name}: would create (Org-owned, auditing enabled, immutable)")
+        print(f"  {history_logical_name}: would create (Org-owned, auditing enabled, append-only by role design)")
         counts["created"] += 1
     else:
-        client.create_entity(get_validation_history_entity())
+        client.create_entity(_prepare_entity(get_validation_history_entity()))
         print(f"  {history_logical_name}: created")
         counts["created"] += 1
 
@@ -557,7 +650,7 @@ def create_tables(client: AAMClient, dry_run: bool = False) -> dict:
         print(f"  {violation_logical_name}: would create (User-owned, auditing enabled)")
         counts["created"] += 1
     else:
-        client.create_entity(get_access_violation_entity())
+        client.create_entity(_prepare_entity(get_access_violation_entity()))
         print(f"  {violation_logical_name}: created")
         counts["created"] += 1
 
@@ -572,6 +665,7 @@ def create_columns(client: AAMClient, dry_run: bool = False) -> dict:
     """
     print("\n[Creating Columns]")
     counts = {"created": 0, "skipped": 0}
+    optionset_cache: dict = {}
 
     # AccessBaseline columns
     print("  AccessBaseline columns:")
@@ -585,7 +679,10 @@ def create_columns(client: AAMClient, dry_run: bool = False) -> dict:
             print(f"    {col_name}: would create")
             counts["created"] += 1
         else:
-            client.create_attribute("fsi_accessbaseline", col)
+            client.create_attribute(
+                "fsi_accessbaseline",
+                _resolve_picklist_bind(client, _normalize_attribute(col), optionset_cache),
+            )
             print(f"    {col_name}: created")
             counts["created"] += 1
 
@@ -601,7 +698,10 @@ def create_columns(client: AAMClient, dry_run: bool = False) -> dict:
             print(f"    {col_name}: would create")
             counts["created"] += 1
         else:
-            client.create_attribute("fsi_accessvalidationhistory", col)
+            client.create_attribute(
+                "fsi_accessvalidationhistory",
+                _resolve_picklist_bind(client, _normalize_attribute(col), optionset_cache),
+            )
             print(f"    {col_name}: created")
             counts["created"] += 1
 
@@ -617,7 +717,10 @@ def create_columns(client: AAMClient, dry_run: bool = False) -> dict:
             print(f"    {col_name}: would create")
             counts["created"] += 1
         else:
-            client.create_attribute("fsi_accessviolation", col)
+            client.create_attribute(
+                "fsi_accessviolation",
+                _resolve_picklist_bind(client, _normalize_attribute(col), optionset_cache),
+            )
             print(f"    {col_name}: created")
             counts["created"] += 1
 

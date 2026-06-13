@@ -1,9 +1,27 @@
 # Lab Validation Report — Generative AI Config Auditor (GAC)
 
-> **Validation date:** 2026-06-04
+> **Original static validation date:** 2026-06-04
+> **Live tenant validation date:** 2026-06-13 (see "Live tenant validation outcome — 2026-06-13" below)
 > **Branch:** `validation/generative-ai-config-auditor`
 > **Solution version:** v1.2.1 (fixes recorded under CHANGELOG `[Unreleased]`)
-> **Validation type:** Static — parse-validity + authoritative-source verification + documentation completeness. No live tenant was used.
+> **Validation type:** Static (parse-validity + authoritative-source verification + documentation completeness, 2026-06-04) **followed by live tenant validation of the bot-config-state detection path on the lab validation tenant (2026-06-13)**. The static report below is retained as the historical record; the live outcome is appended in its own dated section.
+
+## Live tenant validation outcome — 2026-06-13
+
+On 2026-06-13 the bot-config-STATE detection path was validated live against the lab validation tenant. This supersedes the "no live tenant was used" framing of the 2026-06-04 static report for the config-state path; the static report is retained below as the historical record.
+
+**What was deployed.** The five `fsi_GAC*` Dataverse tables (baseline, validation history, violation, approved-connection, feature-inventory) with their columns, the two shared option sets (`fsi_acv_zone`, `fsi_acv_severity`) bound to the canonical live `100000000`-based members, and the three GAC-specific option sets. The schema deploy is idempotent (create-if-missing → reuse). The **deployed schema is the retained deliverable**; the disposable test fixtures described below were all removed afterward.
+
+**What was proven against disposable-bot fixtures.** Detection was exercised end-to-end on throwaway bots authored with the real nested `bot.configuration` shape, with the real agents only read, never mutated:
+
+- **Violation** — a fixture with `settings.GenerativeActionsEnabled = true`, `aISettings.useModelKnowledge = true`, and `aISettings.isSemanticSearchEnabled = true` on a Zone 1 (Enterprise) environment resolved to **Critical** with three rules firing (all three generative capabilities are prohibited at Zone 1).
+- **Compliant** — a fixture with all three flags off produced **no** violation row.
+- **Indeterminate (and the Rule 7 fix it exposed)** — a fixture with all three config-state nodes **absent** resolved each sub-check to "Unable to Determine". The live indeterminate run **exposed a comparator gap**: with no rule firing, the prior logic would have reported the bot **Compliant** — a false-Compliant on a bot whose posture is genuinely unknown. This was fixed by adding **Rule 7 (Indeterminate configuration, fail-closed)**: when all three config-state nodes are "Unable to Determine" and no other rule has fired, the detector now emits a `Warning` `IndeterminateConfiguration` violation rather than a silent Compliant. Rule 7 mirrors the Indeterminate handling already present in the CMM and FUS sibling solutions. The real-agent cross-check confirmed Rule 7 does **not** mis-flag normally-configured production agents.
+- **Same-fixture flip + evidence integrity** — flipping the same fixture between the violation and compliant shapes flipped the detector result accordingly, and the **SHA-256 evidence digest (prefix `8D55C369`)** recomputed to an integrity match.
+
+**Teardown verified.** After the proofs, the violation table returned from one row to zero, the three disposable bots were deleted (with their botcomponents), and the four GAC evidence tables were verified clean. **No disposable violation rows persist in the lab validation tenant.** The deployed schema remains as the deliverable.
+
+**Honest framing.** This is **lab evidence** gathered from disposable-bot fixtures on the lab validation tenant — it demonstrates that GAC's config-state detection path works against the real Dataverse nested configuration shape. It is **not** a production guarantee: a customer's tenant evidence is produced by running the solution against the customer's own tenant, not by reading this report. Coverage remains **PARTIAL** — see "Known lab-scope limitation" below; the Work IQ usage-telemetry and Purview DLP legs remain out of lab scope (no connectors on the lab validation tenant), a scope boundary rather than an unrun check. This solution **supports compliance with** its named controls; it does not by itself ensure, guarantee, or eliminate regulatory risk.
 
 ## Purpose & Controls
 
@@ -67,4 +85,37 @@ The Generative AI Config Auditor validates that Copilot Studio agents comply wit
 
 ## Lab-Readiness Assessment
 
-**Ready for lab use, with the SecureString fix applied.** Before this change, the core enumeration path (`Get-AgentGenAISettings.ps1`) would have failed authentication on any host running Az.Accounts 5.x — a likely default in a fresh lab. With the fix plus the prerequisite/permission corrections, an operator following `docs/prerequisites.md` can install the correct modules, grant the correct permissions, and exercise the scan/baseline/evidence flows. Live functional execution against a tenant remains the only outstanding verification and is outside the scope of this static validation.
+**Ready for lab use, with the SecureString fix applied.** Before this change, the core enumeration path (`Get-AgentGenAISettings.ps1`) would have failed authentication on any host running Az.Accounts 5.x — a likely default in a fresh lab. With the fix plus the prerequisite/permission corrections, an operator following `docs/prerequisites.md` can install the correct modules, grant the correct permissions, and exercise the scan/baseline/evidence flows. The bot-config-state detection path has since been **live-validated against the lab validation tenant on 2026-06-13** (see "Live tenant validation outcome — 2026-06-13" above); the remaining out-of-scope items are the telemetry-dependent sub-checks recorded under "Known lab-scope limitation".
+
+## OPTION A zone reconciliation (2026-06-13)
+
+Per the accepted coordinator decision (Option A), the canonical zone semantics are:
+
+| Integer | Canonical label | Sensitivity |
+|---|---|---|
+| 100000000 | Unclassified (fail-closed -> most-restrictive) | n/a |
+| 100000001 | Zone 1 (Enterprise) | MOST restrictive / highest-risk |
+| 100000002 | Zone 2 (Team) | middle |
+| 100000003 | Zone 3 (Personal) | LEAST restrictive / lowest-risk |
+
+GAC was authored against the inverted model (Zone 3 = Enterprise = strictest). It is reconciled under Option A so the strictest gen-AI policy attaches to Zone 1 and the canonical shared `fsi_acv_zone` integers are written:
+
+- shared `scripts/shared/Get-ZoneClassification.ps1` naming map flipped (enterprise/prod -> Zone1, personal/dev/sandbox -> Zone3);
+- `scripts/private/Get-ExpectedGenAIPolicy.ps1` policy bodies swapped (Zone 1 now ExplicitAllowlistOnly / Restricted / ModelKnowledge Disabled / Critical; Zone 3 now Allowed / Advisory / Warning);
+- zone-to-integer maps canonicalized to 100000001/2/3 (`private/GACClient.psm1`, `Compare-GenAIConfigCompliance.ps1`, `private/Get-GACValidationResults.ps1`, `governance/Import-ApprovedAoaiConnections.ps1`);
+- the SHARED `fsi_acv_zone` / `fsi_acv_severity` declarations in `scripts/create_dataverse_schema.py` reconciled to the live 100000000-based members (create-if-missing -> reuse, never recreate);
+- whitelist enforcement now derives from the per-zone policy (`WhitelistEnforcement -eq 'Enforced'`) instead of a hardcoded inverted zone list;
+- unit assertion `lab/tests/GacZoneCanonical.Tests.ps1` proves "strictest gen-AI policy = Zone 1 = 100000001" (10/10 pass).
+
+The detector was also re-pathed to the live NESTED `bot.configuration` keys (Phase 0 probe): `settings.GenerativeActionsEnabled`, `aISettings.useModelKnowledge`, `aISettings.isSemanticSearchEnabled`; legacy flat keys remain as a fallback and a missing node stays 'Unable to Determine' (defensive — never a false Compliant).
+
+`fsi_GACViolation.fsi_Severity` remains a free String (`Critical/High/Medium/Warning`) and is NOT bound to `fsi_acv_severity`, so no severity-bind fix is required (verified; mirrors CMM).
+
+## Known lab-scope limitation
+
+**Telemetry sub-checks are out of scope.** GAC's generative-AI config check is validatable on the lab validation tenant only for the **bot-config STATE** checks read from the Dataverse `bot` / `botcomponent` tables. Two sub-checks are **out of lab scope** because the lab tenant has no Purview / Work IQ connectors:
+
+- **Purview DLP evidence** (`Get-PurviewDLPEvidence.ps1`) — needs a separate Microsoft Graph token + Dataverse token and DLP for Microsoft 365 Copilot policies.
+- **Work IQ / semantic-search TELEMETRY** (usage signals) — only the config-state flag (`aISettings.isSemanticSearchEnabled`) is validatable; usage telemetry is not.
+
+Lab validation is **not** gated on these telemetry legs. See `controls-covered.json` (`coverageScope.gaps`) and `AGENTS.md` -> "Out-of-lab-scope".

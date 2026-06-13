@@ -56,19 +56,19 @@ Each governance zone has a minimum required content moderation level:
 
 | Zone | Description | Minimum Moderation | Rationale |
 |------|-------------|-------------------|-----------|
-| Zone 1 | Personal Productivity | Medium | Baseline content protection for individual use |
+| Zone 1 | Enterprise Managed | High | Customer-facing agents require the strictest built-in Copilot Studio moderation target used by CMM's canonical scale |
 | Zone 2 | Team Collaboration | High | Shared agents require stronger content controls |
-| Zone 3 | Enterprise Managed | High | Customer-facing agents require the strictest built-in Copilot Studio moderation target used by CMM's canonical scale |
+| Zone 3 | Personal Productivity | Medium | Baseline content protection for individual use |
 
 ### Violation Severity Matrix
 
 | Zone | Actual Level | Severity | Regulatory Context |
 |------|-------------|----------|-------------------|
-| Zone 3 | Low | Critical | FINRA 3110 — Unmoderated customer-facing AI agent |
-| Zone 3 | Medium | High | GLBA 501(b) — Insufficient content protection for enterprise agent |
+| Zone 1 | Low | Critical | FINRA 3110 — Unmoderated customer-facing AI agent |
+| Zone 1 | Medium | High | GLBA 501(b) — Insufficient content protection for enterprise agent |
 | Zone 2 | Low | High | SOX 404 — Inadequate content controls for shared agent |
 | Zone 2 | Medium | Medium | Best practice uplift recommended for team agents |
-| Zone 1 | Low | High | Governance gap — Below minimum content moderation threshold |
+| Zone 3 | Low | High | Governance gap — Below minimum content moderation threshold |
 | Unknown | Low | High | Governance gap — Unclassified environment with minimal content moderation |
 | Unknown | Medium | Warning | Governance gap — Environment not assigned to zone |
 
@@ -136,7 +136,7 @@ Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com
 - **Speech-to-text transcription** may not be subject to the same content moderation filters as text input — organizations should verify that moderation applies equally to both modalities
 - **Barge-in behavior** (user interrupting agent speech) may bypass moderation checkpoints if the interrupted content is not fully evaluated
 - **DTMF input** is numeric-only and lower risk, but agents that combine DTMF with natural language voice require full moderation coverage
-- **Zone 3 agents** with telephony channels are customer-facing by definition and should maintain High moderation regardless of voice mode
+- **Zone 1 agents** with telephony channels are customer-facing by definition and should maintain High moderation regardless of voice mode
 
 > **Note:** This solution currently validates content moderation levels for text-based agent interactions only. Voice-specific moderation validation is not yet automated. Organizations deploying voice-enabled agents should include voice moderation coverage in their manual governance reviews.
 

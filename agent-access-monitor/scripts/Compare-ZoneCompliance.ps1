@@ -50,7 +50,7 @@
 
 .NOTES
     File: Compare-ZoneCompliance.ps1
-    Version: 1.1.2
+    Version: 1.2.0
 #>
 
 [CmdletBinding()]
@@ -95,14 +95,14 @@ begin {
     $settingsToCheck = @(
         'BotLimitSharingMode',
         'BotAuthoringSharingDisabled',
-        'BotPublishedLimitSharingMode'
+        'BotMaxLimitUserSharing'
     )
     
     # Mapping from property names to baseline keys
     $settingKeyMap = @{
         'BotLimitSharingMode'         = 'bot-limitSharingMode'
         'BotAuthoringSharingDisabled' = 'bot-authoringSharingDisabled'
-        'BotPublishedLimitSharingMode' = 'bot-publishedBotLimitSharingMode'
+        'BotMaxLimitUserSharing'      = 'bot-maxLimitUserSharing'
     }
     
     # Results collection for pipeline processing
@@ -150,7 +150,7 @@ begin {
             return $ZoneConfig.violations.$lookupKey
         }
         
-        # Check for 'any_setting' fallback (Zone1)
+        # Check for 'any_setting' fallback (Zone3)
         if ($ZoneConfig.violations.PSObject.Properties.Name -contains 'any_setting') {
             return $ZoneConfig.violations.any_setting
         }
@@ -207,7 +207,20 @@ begin {
         $valueText = $Value.ToString()
         $normalizedText = ($valueText -replace '[^A-Za-z0-9]', '').ToLowerInvariant()
 
-        if ($SettingKey -in @('bot-limitSharingMode', 'bot-publishedBotLimitSharingMode')) {
+        if ($SettingKey -eq 'bot-maxLimitUserSharing') {
+            # Numeric viewer cap. -1 / 0 / blank / non-numeric => Uncapped (most
+            # permissive); any positive integer => Capped. Compared as a category so a
+            # per-zone baseline can express intent ("must be capped") without pinning an
+            # exact number. Parse the raw text (not $normalizedText, which strips the
+            # leading minus sign).
+            $parsedCap = 0
+            if ([int]::TryParse($valueText.Trim(), [ref]$parsedCap) -and $parsedCap -gt 0) {
+                return 'Capped'
+            }
+            return 'Uncapped'
+        }
+
+        if ($SettingKey -eq 'bot-limitSharingMode') {
             $broadSharingValues = @(
                 'nolimit',
                 'all',
@@ -247,6 +260,32 @@ process {
         $highestSeverityRank = 0
         $highestSeverity = 'None'
         
+        # H1: a non-Managed environment exposes none of the agent-sharing controls, so
+        # there is nothing to evaluate. Emit an informational ScopeOutOfBand result
+        # (compliant, zero violations) rather than treating absent settings as failures
+        # or as a script bug. This keeps non-Managed environments visible in the output
+        # without generating noise.
+        if ($envSetting.Status -eq 'NotManaged') {
+            Write-Verbose "Environment is not a Managed Environment; agent-sharing controls are out of scope: $($envSetting.EnvironmentDisplayName)"
+            $result = [PSCustomObject]@{
+                EnvironmentId          = $envSetting.EnvironmentId
+                EnvironmentDisplayName = $envSetting.EnvironmentDisplayName
+                EnvironmentType        = $envSetting.EnvironmentType
+                Zone                   = $zone
+                Status                 = 'ScopeOutOfBand'
+                IsCompliant            = $true
+                ViolationCount         = 0
+                HighestSeverity        = 'None'
+                Violations             = @()
+            }
+            if ($IncludeCompliant) {
+                $allResults += $result
+            } else {
+                Write-Verbose "Skipping out-of-scope environment in non-compliant-only output"
+            }
+            continue
+        }
+        
         # Get zone configuration
         $zoneConfig = Get-ZoneConfig -Zone $zone -Baseline $baseline
         
@@ -274,6 +313,7 @@ process {
                 if ($null -eq $actualValue) {
                     $actualValue = switch ($settingProp) {
                         'BotAuthoringSharingDisabled' { $false }
+                        'BotMaxLimitUserSharing' { '-1' }
                         default { 'noLimit' }
                     }
                     Write-Verbose "Setting '$settingProp' is null, using platform default: $actualValue"
@@ -337,6 +377,7 @@ process {
             EnvironmentDisplayName = $envSetting.EnvironmentDisplayName
             EnvironmentType        = $envSetting.EnvironmentType
             Zone                   = $zone
+            Status                 = 'Evaluated'
             IsCompliant            = $isCompliant
             ViolationCount         = $violations.Count
             HighestSeverity        = $highestSeverity

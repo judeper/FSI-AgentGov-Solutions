@@ -6,7 +6,7 @@ Requirements for deploying the Agent Access Governance Monitor solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.1+ | Core runtime |
+| PowerShell | 7.4 | Core runtime (Azure Automation supports PowerShell 7.4; 7.1/7.2 are retired) |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform queries |
 | Microsoft.Graph | 2.0+ | Entra ID group queries (optional) |
 
@@ -28,9 +28,9 @@ Use the strongest available unattended identity for the execution host:
 
 1. Managed identity for Azure-hosted deployment automation (`python scripts/deploy.py --managed-identity` or `--managed-identity-client-id`).
 2. Workload identity federation for CI/CD (`python scripts/deploy.py --workload-identity --client-id <app-id>`).
-3. Interactive authentication for one-off administrator workstations.
-4. Certificate-based application authentication for PowerShell runbooks that still require MSAL.PS app credentials.
-5. Client secrets only as a legacy dev-only fallback; do not use them in production runbooks or customer-facing automation.
+3. Interactive (device-code) authentication for one-off administrator workstations — the default for the PowerShell scripts via `-Interactive`.
+4. Service-principal authentication via client secret (`-ClientSecret`) for unattended PowerShell runs. Modern OAuth is acquired through `Get-AAMAccessToken`; the archived MSAL.PS module and certificate-thumbprint auth are no longer used.
+5. Client secrets are a legacy dev-only fallback; do not use them in production runbooks or customer-facing automation where a managed identity is available.
 
 ### Power Platform
 

@@ -237,7 +237,9 @@ if ($IncludeBaselines) {
 
 # ── Apply Zone Filter ────────────────────────────────────────────
 if ($Zone) {
-    $zoneMap = @{ 'Zone1' = 100000000; 'Zone2' = 100000001; 'Zone3' = 100000002 }
+    # Live fsi_acv_zone integers (verified on the lab validation tenant): Zone 1=100000001,
+    # Zone 2=100000002, Zone 3=100000003 (Unclassified=100000000).
+    $zoneMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003 }
     $zoneValues = $Zone | ForEach-Object { $zoneMap[$_] }
     $violations = $violations | Where-Object { $_.fsi_zone -in $zoneValues }
     if ($IncludeBaselines) {

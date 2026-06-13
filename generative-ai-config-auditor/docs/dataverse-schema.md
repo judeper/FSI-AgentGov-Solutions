@@ -148,14 +148,15 @@ These option sets are shared with other FSI Agent Governance solutions (Audit Co
 
 #### fsi_acv_zone
 
-Zone classification for governance grouping.
+Zone classification for governance grouping. On the lab validation tenant, Zone 1 (Enterprise) is the
+most-restrictive / highest-risk tier and Zone 3 (Personal) the least-restrictive.
 
 | Value | Label |
 |-------|-------|
-| 0 | Unclassified |
-| 1 | Zone 1 (Personal Productivity) |
-| 2 | Zone 2 (Team Collaboration) |
-| 3 | Zone 3 (Enterprise Managed) |
+| 100000000 | Unclassified |
+| 100000001 | Zone 1 (Enterprise Managed) |
+| 100000002 | Zone 2 (Team Collaboration) |
+| 100000003 | Zone 3 (Personal Productivity) |
 
 #### fsi_acv_severity
 
@@ -163,11 +164,11 @@ Severity classification for validation outcomes.
 
 | Value | Label |
 |-------|-------|
-| 1 | Passed |
-| 2 | Warning |
-| 3 | GracePeriod |
-| 4 | Failed |
-| 5 | Error |
+| 100000000 | Passed |
+| 100000001 | Warning |
+| 100000002 | GracePeriod |
+| 100000003 | Failed |
+| 100000004 | Error |
 
 > **Note:** GAC's `fsi_Severity` column on `fsi_GACViolation` uses a String type (Critical/High/Medium/Warning) rather than this option set, because GAC severity labels differ from the shared option set labels. The shared option set is retained in the schema for cross-solution consistency but is not bound to the violation severity column.
 

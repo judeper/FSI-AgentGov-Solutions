@@ -30,18 +30,20 @@
 $script:DataverseUrl = $null
 $script:AccessToken = $null
 
-# Zone string-to-integer mapping for Dataverse picklist column (fsi_zone option set)
+# Zone string-to-integer mapping for Dataverse picklist column (shared fsi_acv_zone option set).
+# Canonical zone integers are 100000000-based: Unclassified=100000000,
+# Zone 1 (Enterprise)=100000001 ... Zone 3 (Personal)=100000003.
 $script:ZoneToInt = @{
-    'Unknown' = 0
-    'Zone1'   = 1
-    'Zone2'   = 2
-    'Zone3'   = 3
+    'Unknown' = 100000000
+    'Zone1'   = 100000001
+    'Zone2'   = 100000002
+    'Zone3'   = 100000003
 }
 $script:IntToZone = @{
-    0 = 'Unknown'
-    1 = 'Zone1'
-    2 = 'Zone2'
-    3 = 'Zone3'
+    100000000 = 'Unknown'
+    100000001 = 'Zone1'
+    100000002 = 'Zone2'
+    100000003 = 'Zone3'
 }
 
 # Action type picklist mapping
@@ -716,7 +718,7 @@ function Get-BotActionSettings {
         - name: Component display name
         - componenttype: Type of component (action, trigger, topic, etc.)
         - content: JSON blob containing action configuration
-        - _botid_value: Reference to parent bot
+        - _parentbotid_value: Reference to parent bot
 
     .PARAMETER DataverseUrl
         The Dataverse URL for the environment to query.
@@ -750,8 +752,8 @@ function Get-BotActionSettings {
         }
 
         $baseUrl = $DataverseUrl.TrimEnd('/')
-        $select = "botcomponentid,name,componenttype,content,_botid_value"
-        $filter = "_botid_value eq '$BotId' and statecode eq 0"
+        $select = "botcomponentid,name,componenttype,content,_parentbotid_value"
+        $filter = "_parentbotid_value eq '$BotId' and statecode eq 0"
 
         $uri = "$baseUrl/api/data/v9.2/botcomponents?`$select=$select&`$filter=$filter"
 
@@ -780,7 +782,22 @@ function Get-BotActionSettings {
             if (-not $component.content) { continue }
 
             try {
-                $content = $component.content | ConvertFrom-Json -ErrorAction Stop
+                # Copilot Studio topics are authored as YAML; exported/legacy components may be
+                # JSON. Try JSON first, then fall back to YAML (normalized to objects via a JSON
+                # round-trip) so YAML topics are not silently skipped. NOTE: this library helper is
+                # not on the live scan path (the standalone Get-AgentActionSettings.ps1 detector is);
+                # full YAML detection is best-effort and not proven headless this round.
+                $content = $null
+                try {
+                    $content = $component.content | ConvertFrom-Json -ErrorAction Stop
+                } catch {
+                    if (Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue) {
+                        $yamlObj = $component.content | ConvertFrom-Yaml -ErrorAction Stop
+                        $content = $yamlObj | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+                    } else {
+                        throw
+                    }
+                }
 
                 # Look for action nodes in topic content
                 # Bot topics contain action nodes with connector references and confirmation settings
@@ -872,7 +889,7 @@ function Get-BotActionSettings {
                     $actionSettings += [PSCustomObject]@{
                         ComponentId     = $component.botcomponentid
                         ComponentName   = $component.name
-                        BotId           = $component._botid_value
+                        BotId           = $component._parentbotid_value
                         ActionType      = $actionType
                         ActionName      = $actionName
                         ConnectorId     = $connectorId

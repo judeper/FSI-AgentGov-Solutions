@@ -396,9 +396,10 @@ try {
         }
     }
 
-    # Zone 3 weakened drift (file upload enabled in enterprise zone) escalates to Critical
-    $zone3Weakened = @($driftedAgents | Where-Object { $_.Direction -eq 'Weakened' -and $_.Zone -match '3' })
-    if ($zone3Weakened.Count -gt 0) {
+    # Zone 1 weakened drift (file upload enabled in the enterprise/most-restrictive
+    # zone) escalates to Critical
+    $zone1Weakened = @($driftedAgents | Where-Object { $_.Direction -eq 'Weakened' -and $_.Zone -match '1' })
+    if ($zone1Weakened.Count -gt 0) {
         $alertSeverity = 'Critical'
     }
 

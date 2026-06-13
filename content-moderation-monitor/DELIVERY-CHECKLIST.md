@@ -103,13 +103,13 @@ Key Capabilities:
 ✓ SHA-256 integrity-hashed evidence for audit examinations
 
 Zone Requirements:
-• Zone 1 (Personal): Medium minimum
+• Zone 1 (Enterprise): High required
 • Zone 2 (Team): High required
-• Zone 3 (Enterprise): High required
+• Zone 3 (Personal): Medium minimum
 
 Violation Severity Matrix:
-• Zone 3 + Low moderation = CRITICAL (FINRA 3110 — Unmoderated customer-facing agent)
-• Zone 3 + Medium moderation = HIGH (GLBA 501(b) — Insufficient content protection)
+• Zone 1 + Low moderation = CRITICAL (FINRA 3110 — Unmoderated customer-facing agent)
+• Zone 1 + Medium moderation = HIGH (GLBA 501(b) — Insufficient content protection)
 • Zone 2 + Low moderation = HIGH (SOX 404 — Inadequate content controls)
 
 Business Value:
@@ -148,8 +148,8 @@ CRITICAL CONFIGURATION REQUIREMENTS:
    - Remediation targets specific agents (update moderation level in Copilot Studio)
 
 3. **Severity Matrix:**
-   - Critical = Zone 3 customer-facing agent with Low moderation → IMMEDIATE ACTION REQUIRED
-   - High = Zone 2 agent with Low moderation OR Zone 3 with Medium → Fix within 2 days
+   - Critical = Zone 1 customer-facing agent with Low moderation → IMMEDIATE ACTION REQUIRED
+   - High = Zone 2 agent with Low moderation OR Zone 1 with Medium → Fix within 2 days
    - Medium = Zone 2 agent with Medium moderation → Best practice uplift
    - Warning = Unclassified environment → Assign zone within 30 days
 

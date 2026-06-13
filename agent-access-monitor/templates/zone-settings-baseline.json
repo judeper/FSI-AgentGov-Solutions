@@ -1,6 +1,7 @@
 {
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Expected agent access settings per governance zone",
+  "scopeNote": "These controls apply only to Managed Environments. A non-Managed environment exposes no governanceConfiguration extended settings; Compare-ZoneCompliance reports such environments as ScopeOutOfBand (informational, not a violation).",
   "normalization": {
     "broadSharingAliases": [
       "all",
@@ -12,18 +13,26 @@
       "organization",
       "tenant-wide"
     ],
-    "comparisonBehavior": "Broad-sharing aliases are evaluated as the Managed Environment noLimit value."
+    "comparisonBehavior": "Broad-sharing aliases are evaluated as the Managed Environment noLimit value. The numeric bot-maxLimitUserSharing value is normalized to a category: any positive integer is Capped; -1, 0, blank, or unset is Uncapped.",
+    "maxLimitUserSharingCategories": {
+      "Capped": "A positive integer cap on the number of viewers a published agent can be shared with.",
+      "Uncapped": "No finite cap (-1, 0, blank, or unset)."
+    }
   },
   "zones": {
     "Zone1": {
-      "description": "Personal Productivity - Permissive access for individual development",
+      "description": "Enterprise Managed - Restricted access for production/customer-facing",
       "expected": {
-        "bot-limitSharingMode": "noLimit",
-        "bot-authoringSharingDisabled": false,
-        "bot-publishedBotLimitSharingMode": "noLimit"
+        "bot-limitSharingMode": "ExcludeSharingToSecurityGroups",
+        "bot-authoringSharingDisabled": true,
+        "bot-maxLimitUserSharing": "Capped"
       },
       "violations": {
-        "any_setting": "Info"
+        "bot-limitSharingMode_noLimit": "Critical",
+        "bot-limitSharingMode_null": "Critical",
+        "bot-authoringSharingDisabled_false": "Critical",
+        "bot-authoringSharingDisabled_null": "Critical",
+        "bot-maxLimitUserSharing_Uncapped": "Critical"
       }
     },
     "Zone2": {
@@ -31,30 +40,24 @@
       "expected": {
         "bot-limitSharingMode": "ExcludeSharingToSecurityGroups",
         "bot-authoringSharingDisabled": false,
-        "bot-publishedBotLimitSharingMode": "ExcludeSharingToSecurityGroups"
+        "bot-maxLimitUserSharing": "Capped"
       },
       "violations": {
         "bot-limitSharingMode_noLimit": "High",
         "bot-limitSharingMode_null": "High",
-        "bot-publishedBotLimitSharingMode_noLimit": "High",
-        "bot-publishedBotLimitSharingMode_null": "High",
+        "bot-maxLimitUserSharing_Uncapped": "High",
         "bot-authoringSharingDisabled_null": "High"
       }
     },
     "Zone3": {
-      "description": "Enterprise Managed - Restricted access for production/customer-facing",
+      "description": "Personal Productivity - Permissive access for individual development",
       "expected": {
-        "bot-limitSharingMode": "ExcludeSharingToSecurityGroups",
-        "bot-authoringSharingDisabled": true,
-        "bot-publishedBotLimitSharingMode": "ExcludeSharingToSecurityGroups"
+        "bot-limitSharingMode": "noLimit",
+        "bot-authoringSharingDisabled": false,
+        "bot-maxLimitUserSharing": "Uncapped"
       },
       "violations": {
-        "bot-limitSharingMode_noLimit": "Critical",
-        "bot-limitSharingMode_null": "Critical",
-        "bot-authoringSharingDisabled_false": "Critical",
-        "bot-authoringSharingDisabled_null": "Critical",
-        "bot-publishedBotLimitSharingMode_noLimit": "Critical",
-        "bot-publishedBotLimitSharingMode_null": "Critical"
+        "any_setting": "Info"
       }
     },
     "Unknown": {
@@ -69,20 +72,20 @@
     "Critical": "FINRA 4511 - Unapproved tool distribution to customer-facing users. Immediate remediation required.",
     "High": "SOX 404 - Insufficient access controls for regulated workloads. Review within 24 hours.",
     "Warning": "Governance gap - Environment not assigned to zone or minor deviation. Review within 7 days.",
-    "Info": "Informational - Zone 1 allows permissive settings by design. No action required."
+    "Info": "Informational - Zone 3 allows permissive settings by design. No action required."
   },
   "setting_descriptions": {
     "bot-limitSharingMode": {
-      "noLimit": "Agents can be shared with anyone in the organization",
-      "ExcludeSharingToSecurityGroups": "Agent sharing with security groups is excluded; sharing is limited to individual users"
+      "nolimit": "Agents can be shared with anyone in the organization",
+      "excludesharingtosecuritygroups": "Agent sharing with security groups is excluded; sharing is limited to individual users"
     },
     "bot-authoringSharingDisabled": {
       "true": "Agent authoring sharing is disabled (ALM-only deployment)",
       "false": "Agent authoring can be shared with editors"
     },
-    "bot-publishedBotLimitSharingMode": {
-      "noLimit": "Published agents can be accessed by anyone",
-      "ExcludeSharingToSecurityGroups": "Published agent sharing with security groups is excluded; access is limited to individual users"
+    "bot-maxLimitUserSharing": {
+      "capped": "The number of users who can be granted viewer access to a published agent is capped to a finite limit",
+      "uncapped": "The number of users who can be granted viewer access to a published agent is not capped (-1, 0, blank, or unset)"
     }
   }
 }

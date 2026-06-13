@@ -117,7 +117,7 @@ This guide provides step-by-step instructions for manually building the Action C
      - `fsi_name`: Expression `take(concat(items('Apply_to_each')?['ActionName'], ' - Missing Confirmation'), 100)`
      - `fsi_environmentguid`: Parsed `EnvironmentId` from violation item
      - `fsi_environmentname`: Parsed `EnvironmentName` from violation item
-     - `fsi_zone`: Parsed `Zone` — map to option set integer: Zone 1 = 1, Zone 2 = 2, Zone 3 = 3
+     - `fsi_zone`: Parsed `Zone` — map to canonical option set integer: Zone 1 = 100000001, Zone 2 = 100000002, Zone 3 = 100000003 (Unclassified = 100000000)
      - `fsi_agentid`: Parsed `AgentId` from violation item
      - `fsi_agentname`: Parsed `AgentName` from violation item
      - `fsi_actionname`: `ActionName`

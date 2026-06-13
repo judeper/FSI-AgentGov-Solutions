@@ -34,7 +34,7 @@ ZONE_POLICIES: dict[str, dict[str, Any]] = {
             "UnapprovedGroup": "Critical",
         },
         "regulatory_context": (
-            "Zone 1 (Personal Productivity) — No group sharing permitted; "
+            "Zone 1 (Enterprise/Regulated) — No group sharing permitted; "
             "agents restricted to specific named users per "
             "FINRA Rule 4511 and GLBA Section 501(b)"
         ),
@@ -68,7 +68,7 @@ ZONE_POLICIES: dict[str, dict[str, Any]] = {
             "UnapprovedGroup": "High",
         },
         "regulatory_context": (
-            "Zone 3 (Enterprise/Regulated) — Approved groups only; "
+            "Zone 3 (Personal Productivity) — Approved groups only; "
             "org-wide and public sharing prohibited per "
             "FINRA Rule 4511, SOX Section 404, and GLBA Section 501(b)"
         ),

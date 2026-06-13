@@ -6,7 +6,9 @@ Creates three tables with idempotent column provisioning:
   - fsi_FileUploadValidationHistory (OrgOwned / immutable)
   - fsi_FileUploadViolation     (UserOwned)
 
-Reuses shared option sets: fsi_acv_zone, fsi_acv_severity.
+Reuses the shared option set fsi_acv_zone for zone classification. The
+violation severity column (fsi_severity) is a free String label, not bound to
+fsi_acv_severity (which is a monitoring-result set, not a severity rank).
 
 Usage:
   python create_dataverse_schema.py --tenant-id <tid> --url <url> [--dry-run]
@@ -163,7 +165,12 @@ VIOLATION_COLUMNS = [
     ("fsi_EnvironmentId", "string", lambda: _string_col("fsi_EnvironmentId", "Environment ID", 200)),
     ("fsi_EnvironmentName", "string", lambda: _string_col("fsi_EnvironmentName", "Environment Name", 500)),
     ("fsi_zone", "picklist", lambda: _picklist_col("fsi_zone", "Zone", "fsi_acv_zone")),
-    ("fsi_severity", "picklist", lambda: _picklist_col("fsi_severity", "Severity", "fsi_acv_severity")),
+    # fsi_severity is a free String (not bound to fsi_acv_severity): the live
+    # shared fsi_acv_severity is a monitoring-RESULT set (Passed/Warning/
+    # GracePeriod/Failed/Error), not a severity rank. Binding it rejected the
+    # Warning write and mis-rendered the rank values, so FUS writes the severity
+    # label as text (Critical/High/Medium/Warning/Info/Low), mirroring CMM.
+    ("fsi_severity", "string", lambda: _string_col("fsi_severity", "Severity", 50)),
     ("fsi_ViolationType", "string", lambda: _string_col("fsi_ViolationType", "Violation Type", 100)),
     ("fsi_FileUploadExpected", "string", lambda: _string_col("fsi_FileUploadExpected", "File Upload Expected", 50)),
     ("fsi_FileUploadActual", "string", lambda: _string_col("fsi_FileUploadActual", "File Upload Actual", 50)),
@@ -233,21 +240,28 @@ def ensure_shared_option_sets(client: FUSClient) -> None:
     """Create shared option sets if they don't already exist."""
     print("\n--- Shared Option Sets ---")
 
+    # Shared fsi_acv_zone -- declared to MATCH the live 4-member set on the lab validation tenant
+    # (verified read-only via GlobalOptionSetDefinitions). create_option_set is
+    # create-if-missing, so where the set already exists this is a no-op and the
+    # live set wins; declaring the exact live members keeps a FRESH deploy elsewhere
+    # from forking a divergent set. Canonical semantics (coordinator decision
+    # Option A): Zone 1 (Enterprise) = MOST-restrictive .. Zone 3 (Personal) =
+    # least-restrictive; FUS's policy table, naming classifier, and violation text
+    # are all aligned to this meaning.
     client.create_option_set(
         "fsi_acv_zone",
-        [("Zone 1 - Personal", 100000000), ("Zone 2 - Team", 100000001), ("Zone 3 - Enterprise", 100000002)],
-    )
-    client.create_option_set(
-        "fsi_acv_severity",
         [
-            ("Info", 100000000),
-            ("Low", 100000001),
-            ("Medium", 100000002),
-            ("High", 100000003),
-            ("Critical", 100000004),
-            ("Warning", 100000005),
+            ("Unclassified", 100000000),
+            ("Zone 1 (Enterprise)", 100000001),
+            ("Zone 2 (Team)", 100000002),
+            ("Zone 3 (Personal)", 100000003),
         ],
     )
+    # NOTE: fsi_acv_severity is intentionally NOT declared or bound. The live
+    # fsi_acv_severity is a monitoring-RESULT set (Passed/Warning/GracePeriod/
+    # Failed/Error), not a severity rank; FUS now writes fsi_severity as a free
+    # String label instead (see VIOLATION_COLUMNS), so no severity option set is
+    # needed.
 
 
 def deploy_schema(client: FUSClient) -> None:

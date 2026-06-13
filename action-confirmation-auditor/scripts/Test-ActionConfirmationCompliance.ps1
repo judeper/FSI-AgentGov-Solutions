@@ -471,7 +471,7 @@ function Test-ActionConfirmationCompliance {
                     Severity           = $severity
                     ViolationType      = "MissingConfirmation_$category"
                 }
-            } elseif ($policy.AdvisoryOnly -and $action.ConfirmationStatus -in @('Missing', 'Partial')) {
+            } elseif ($policy.AdvisoryOnly -and $action.ConfirmationStatus -in @('Missing', 'Partial', 'UnableToDetermine')) {
                 # Advisory: include as warning for visibility
                 $agentViolations += [PSCustomObject]@{
                     ActionName         = $action.ActionName

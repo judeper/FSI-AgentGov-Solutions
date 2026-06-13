@@ -5,10 +5,21 @@
   "solutionName": "Generative AI Config Auditor",
   "solutionVersion": "1.2.1",
   "status": "live",
+  "coverageScope": {
+    "summary": "GAC supports compliance with Control 2.24 by reading each Copilot Studio agent's generative-AI posture from the Dataverse bot/botcomponent tables (generative orchestration via settings.GenerativeActionsEnabled, allow-ungrounded / AI general knowledge via aISettings.useModelKnowledge, Work IQ / semantic search STATE via aISettings.isSemanticSearchEnabled, generative-answers nodes, and the Azure OpenAI connection whitelist) and comparing it to per-zone governance policy under the canonical zone semantics (Zone 1 Enterprise = most restrictive = 100000001 ... Zone 3 Personal = least restrictive = 100000003). Validated live on the lab validation tenant on 2026-06-13: the bot-config-STATE detection path was exercised end-to-end against disposable-bot fixtures — a violation fixture (all three generative flags on in a Zone 1 environment) fired Critical with three rules, a compliant fixture (all three off) produced no row, and an indeterminate fixture (all three config nodes absent) fired the new fail-closed Rule 7 (Warning, never a false Compliant); the SHA-256 evidence digest (prefix 8D55C369) recomputed to an integrity match, and all disposable fixtures were torn down with the tables verified back to zero — the deployed schema is the retained deliverable, not the fixtures. This is lab evidence from disposable fixtures, not a production guarantee: customer-tenant evidence comes from running the solution against the customer tenant. Coverage remains PARTIAL: only the bot-config-state checks are validatable on the lab validation tenant. The telemetry-dependent sub-checks (Work IQ usage signals, Purview DLP evidence) require Microsoft Graph + Purview / Work IQ connectors the lab tenant does not have and remain out of lab scope — a scope boundary, not an unrun check. GAC does not by itself satisfy Control 2.24 in isolation.",
+    "reference": "LAB-VALIDATION.md#known-lab-scope-limitation",
+    "gaps": [
+      "Purview DLP evidence leg (Get-PurviewDLPEvidence.ps1) needs a separate Microsoft Graph token + Dataverse token and Purview DLP for Microsoft 365 Copilot policies the lab validation tenant does not have; out of lab scope.",
+      "Work IQ / semantic-search TELEMETRY (usage signals) is out of lab scope; only the bot-config STATE flag (aISettings.isSemanticSearchEnabled) is validatable from bot.configuration.",
+      "Live detect-and-persist against the Dataverse bot/botcomponent + five fsi_GAC* tables was validated on the lab validation tenant on 2026-06-13 (disposable-bot fixtures covering violation, compliant, and indeterminate cases; SHA-256 evidence integrity match, prefix 8D55C369; teardown verified back to zero). The deployed schema is retained as the deliverable while all disposable fixtures were removed. This is lab evidence from disposable fixtures, not a production guarantee.",
+      "Azure OpenAI top-level config keys are not present on real lab-tenant bots, so AzureOpenAIEnabled resolves to 'Unable to Determine' (defensive) rather than a positive read on the lab tenant."
+    ]
+  },
   "controls": [
     {
       "id": "2.24",
-      "coverage": "full"
+      "coverage": "partial",
+      "notes": "Supports compliance with Agent Feature Enablement Governance by validating each agent's generative-AI configuration (generative orchestration, allow-ungrounded / AI general knowledge, Work IQ / semantic-search state, generative-answers nodes, AOAI connection whitelist) against per-zone policy under canonical zone semantics (strictest policy = Zone 1 = 100000001). Validated live on the lab validation tenant 2026-06-13 against disposable-bot fixtures (violation, compliant, and indeterminate cases; the indeterminate case is caught by the new fail-closed Rule 7; SHA-256 integrity match; fixtures torn down, deployed schema retained). Coverage remains PARTIAL: only bot-config-state checks are validatable on the lab validation tenant; the Work IQ usage-telemetry and Purview DLP evidence legs are out of lab scope (no connectors). Does not by itself satisfy the control."
     }
   ],
   "controlCount": 1

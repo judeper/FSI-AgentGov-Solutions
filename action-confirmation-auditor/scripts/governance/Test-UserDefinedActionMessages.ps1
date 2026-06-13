@@ -9,10 +9,10 @@
     controls whether custom messages are displayed to users before an agent
     performs an action, supporting human-in-the-loop confirmation workflows.
 
-    Zone-based policy enforcement:
-    - Zone 3 (Enterprise/Regulated): User-defined action messages required
+    Zone-based policy enforcement (canonical zone semantics - Zone 1 = Enterprise = strictest):
+    - Zone 1 (Enterprise/Regulated): User-defined action messages required
     - Zone 2 (Team/Collaborative): User-defined action messages recommended
-    - Zone 1 (Personal Productivity): User-defined action messages optional (advisory)
+    - Zone 3 (Personal Productivity): User-defined action messages optional (advisory)
 
     Results are exported as evidence-compatible JSON or console output. Violations
     are classified by severity based on zone assignment and written to Dataverse
@@ -205,11 +205,11 @@ function Test-UserDefinedActionMessages {
     #region Zone Policy Definition
 
     $zonePolicies = @{
-        'Zone3' = [PSCustomObject]@{
-            Zone              = 'Zone3'
+        'Zone1' = [PSCustomObject]@{
+            Zone              = 'Zone1'
             Requirement       = 'Required'
             Severity          = 'Critical'
-            RegulatoryContext  = 'Zone 3 (Enterprise/Regulated) - User-defined action messages required for all agents per FINRA 3110 supervisory requirements'
+            RegulatoryContext  = 'Zone 1 (Enterprise/Regulated) - User-defined action messages required for all agents per FINRA 3110 supervisory requirements'
         }
         'Zone2' = [PSCustomObject]@{
             Zone              = 'Zone2'
@@ -217,11 +217,11 @@ function Test-UserDefinedActionMessages {
             Severity          = 'Medium'
             RegulatoryContext  = 'Zone 2 (Team/Collaborative) - User-defined action messages recommended to support GLBA 501(b) safeguards'
         }
-        'Zone1' = [PSCustomObject]@{
-            Zone              = 'Zone1'
+        'Zone3' = [PSCustomObject]@{
+            Zone              = 'Zone3'
             Requirement       = 'Optional'
             Severity          = 'Low'
-            RegulatoryContext  = 'Zone 1 (Personal Productivity) - User-defined action messages optional, advisory monitoring only'
+            RegulatoryContext  = 'Zone 3 (Personal Productivity) - User-defined action messages optional, advisory monitoring only'
         }
         'Unknown' = [PSCustomObject]@{
             Zone              = 'Unknown'
@@ -322,7 +322,7 @@ function Test-UserDefinedActionMessages {
         try {
             # Query botcomponent for action-related components (componenttype 12 = Topic, 2 = Dialog/Skill)
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
+                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
                 "`$select=name,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
@@ -344,8 +344,8 @@ function Test-UserDefinedActionMessages {
 
                 $contentStr = $component.content
 
-                # Detect action invocation nodes
-                $hasActions = $contentStr -match '"kind"\s*:\s*"(InvokeFlowAction|InvokeConnectorAction|InvokeSkillAction|HttpRequest|InvokePlugin|InvokeCustomAction)"'
+                # Detect action invocation nodes (JSON "kind": "X" or YAML kind: X)
+                $hasActions = $contentStr -match '["'']?kind["'']?\s*:\s*["'']?(InvokeFlowAction|InvokeConnectorAction|InvokeSkillAction|HttpRequest|InvokePlugin|InvokeCustomAction)\b'
 
                 if (-not $hasActions) { continue }
 
@@ -356,11 +356,11 @@ function Test-UserDefinedActionMessages {
                 # 2. UserDefinedActionMessage configuration in bot settings
                 # 3. ActionConfirmationMessage or DisplayMessage nodes preceding actions
                 $hasUserMessage = (
-                    ($contentStr -match '"kind"\s*:\s*"Message"' -and
+                    ($contentStr -match '["'']?kind["'']?\s*:\s*["'']?Message\b' -and
                      $contentStr -match '(?i)(before\s+(executing|running|performing)|about\s+to|will\s+now|action\s+message|user[\-\s]?defined[\-\s]?action)') -or
-                    ($contentStr -match '(?i)"userdefinedactionmessage"') -or
-                    ($contentStr -match '(?i)"actionconfirmationmessage"') -or
-                    ($contentStr -match '(?i)"displaymessagebeforeaction"')
+                    ($contentStr -match '(?i)["'']?userdefinedactionmessage["'']?') -or
+                    ($contentStr -match '(?i)["'']?actionconfirmationmessage["'']?') -or
+                    ($contentStr -match '(?i)["'']?displaymessagebeforeaction["'']?')
                 )
 
                 if ($hasUserMessage) {
@@ -577,13 +577,13 @@ function Test-UserDefinedActionMessages {
             }
 
             foreach ($v in $violations) {
-                # Map zone string to picklist integer. Labels must match
-                # the output of Get-ZoneClassification.ps1 (no spaces).
+                # Map zone string to canonical fsi_acv_zone picklist integer (100000000-based).
+                # Labels must match the output of Get-ZoneClassification.ps1 (no spaces).
                 $zoneInt = switch ($v.Zone) {
-                    'Zone1'  { 1 }
-                    'Zone2'  { 2 }
-                    'Zone3'  { 3 }
-                    default  { 0 }
+                    'Zone1'  { 100000001 }
+                    'Zone2'  { 100000002 }
+                    'Zone3'  { 100000003 }
+                    default  { 100000000 }
                 }
 
                 $record = @{

@@ -116,15 +116,27 @@ def create_environment_variables(client: AAMClient, dry_run: bool = False) -> di
                     "environmentvariabledefinitions", definition_data
                 )
 
-                # Create environment variable value (current value)
-                value_data = {
-                    "value": var["defaultvalue"],
-                    "environmentvariabledefinitionid@odata.bind": (
-                        f"/environmentvariabledefinitions({definition_id})"
-                    ),
-                }
-
-                client.create_record("environmentvariablevalues", value_data)
+                # Create environment variable value (current value).
+                # Dataverse requires the PascalCase navigation property
+                # 'EnvironmentVariableDefinitionId@odata.bind' plus a schemaname;
+                # the lowercase binding is rejected (HTTP 400). Roll back the
+                # definition if the value POST fails.
+                try:
+                    value_data = {
+                        "schemaname": schemaname,
+                        "value": var["defaultvalue"],
+                        "EnvironmentVariableDefinitionId@odata.bind": (
+                            f"/environmentvariabledefinitions({definition_id})"
+                        ),
+                    }
+                    client.create_record("environmentvariablevalues", value_data)
+                except Exception as val_err:
+                    print(f"  {schemaname}: value creation failed, rolling back definition - {val_err}")
+                    try:
+                        client.delete_record("environmentvariabledefinitions", definition_id)
+                    except Exception as cleanup_err:
+                        print(f"  {schemaname}: WARNING - rollback failed, orphaned definition {definition_id} - {cleanup_err}")
+                    raise
 
                 print(f"  {schemaname}: created")
                 print(f"    Type: {var['type']}, Default: {var['defaultvalue']!r}")

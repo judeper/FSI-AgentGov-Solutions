@@ -467,6 +467,10 @@ function Get-AgentGenAISettings {
                 $botConfig = $Bot.configuration | ConvertFrom-Json -ErrorAction Stop
 
                 if ($config.AzureOpenAIEnabled -eq 'Unable to Determine') {
+                    # Live lab-tenant shape (Phase 0 probe, 2026-06-13): real bots expose
+                    # NO Azure OpenAI top-level keys, so this stays 'Unable to Determine' on the
+                    # current tenant (defensive — never a false Compliant). The flat candidates
+                    # below remain for environments that do surface an AOAI toggle.
                     $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
                         'AzureOpenAIEnabled', 'azureOpenAIEnabled', 'UseAzureOpenAI', 'useAzureOpenAI',
                         'AzureOpenAI', 'azureOpenAI', 'IsAzureOpenAIEnabled', 'isAzureOpenAIEnabled'
@@ -476,7 +480,13 @@ function Get-AgentGenAISettings {
                 }
 
                 if ($config.OrchestrationMode -eq 'Unable to Determine') {
+                    # Live lab-tenant shape (Phase 0 probe, 2026-06-13): generative
+                    # orchestration is the nested boolean settings.GenerativeActionsEnabled.
+                    # Probe the real nested key first; keep the legacy flat candidates as a
+                    # fallback. A missing node leaves 'Unable to Determine' (defensive — never
+                    # a false Compliant).
                     $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
+                        'GenerativeActionsEnabled', 'generativeActionsEnabled',
                         'OrchestrationMode', 'orchestrationMode', 'Orchestration', 'orchestration',
                         'GenerativeMode', 'generativeMode', 'GenerativeOrchestration', 'generativeOrchestration',
                         'UseGenerativeOrchestration', 'useGenerativeOrchestration'
@@ -486,10 +496,16 @@ function Get-AgentGenAISettings {
                 }
 
                 if ($config.ModelKnowledgeEnabled -eq 'Unable to Determine') {
+                    # Live lab-tenant shape (Phase 0 probe, 2026-06-13): allow-ungrounded /
+                    # AI general knowledge is the nested boolean aISettings.useModelKnowledge.
+                    # Probe the real nested key first; keep the legacy flat candidates as a
+                    # fallback. A missing node leaves 'Unable to Determine' (defensive — never a
+                    # false Compliant).
                     $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
+                        'useModelKnowledge', 'UseModelKnowledge',
                         'AllowUngroundedResponses', 'allowUngroundedResponses', 'AllowUngroundedResponse', 'allowUngroundedResponse',
                         'AllowGeneralKnowledge', 'allowGeneralKnowledge', 'AIGeneralKnowledge', 'aiGeneralKnowledge',
-                        'ModelKnowledge', 'modelKnowledge', 'UseModelKnowledge', 'useModelKnowledge',
+                        'ModelKnowledge', 'modelKnowledge',
                         'AllowAIKnowledge', 'allowAIKnowledge'
                     )
                     $yesNo = Convert-ToYesNoFlag -Value $rawValue
@@ -497,7 +513,13 @@ function Get-AgentGenAISettings {
                 }
 
                 if ($config.SemanticSearchEnabled -eq 'Unable to Determine') {
+                    # Live lab-tenant shape (Phase 0 probe, 2026-06-13): Work IQ / semantic
+                    # search is the nested boolean aISettings.isSemanticSearchEnabled. Probe the
+                    # real nested key first; keep the legacy flat candidates as a fallback. A
+                    # missing node leaves 'Unable to Determine' (defensive — never a false
+                    # Compliant).
                     $rawValue = Get-FirstJsonPropertyValue -InputObject $botConfig -PropertyNames @(
+                        'isSemanticSearchEnabled', 'IsSemanticSearchEnabled',
                         'WorkIQ', 'workIQ', 'WorkIq', 'workIq', 'UseWorkIQ', 'useWorkIQ',
                         'TurnOnWorkIQ', 'turnOnWorkIQ', 'EnableWorkIQ', 'enableWorkIQ',
                         'SemanticSearch', 'semanticSearch', 'UseSemanticSearch', 'useSemanticSearch',

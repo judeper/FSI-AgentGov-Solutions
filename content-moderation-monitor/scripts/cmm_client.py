@@ -50,6 +50,8 @@ class CMMClient:
         self.dry_run = dry_run
         self.base_url = f"{self.environment_url}/api/data/{self.API_VERSION}"
         self._token_cache = msal.SerializableTokenCache()
+        # Cache of global option-set Name -> MetadataId GUID for picklist binds
+        self._optionset_metadata_cache: dict[str, str] = {}
 
         # Dataverse requires the environment URL as the scope
         authority = f"https://login.microsoftonline.com/{tenant_id}"
@@ -291,6 +293,47 @@ class CMMClient:
                 return get_resp.json()
         return {"LogicalName": definition.get("SchemaName", "").lower()}
 
+    def _resolve_picklist_bind(self, definition: dict) -> dict:
+        """Rewrite a picklist GlobalOptionSet bind from Name to MetadataId GUID.
+
+        Dataverse rejects attribute-create when ``GlobalOptionSet@odata.bind``
+        references a global option set by ``Name='...'`` (HTTP 500
+        "Guid should contain 32 digits"). Resolve the option-set Name to its live
+        MetadataId (cached) and rewrite the bind to GUID form. The shared option
+        set is only *bound*, never recreated. No-op for non-picklist definitions
+        or binds already expressed as a GUID.
+
+        Args:
+            definition: Attribute definition per Dataverse Web API spec
+
+        Returns:
+            A definition whose picklist bind references the option set by GUID
+        """
+        bind_key = "GlobalOptionSet@odata.bind"
+        bind_val = definition.get(bind_key)
+        if not bind_val:
+            return definition
+
+        match = re.search(r"\(Name='([^']+)'\)", bind_val)
+        if not match:
+            return definition  # already a GUID or unrecognised form
+
+        os_name = match.group(1)
+        metadata_id = self._optionset_metadata_cache.get(os_name)
+        if not metadata_id:
+            meta = self.get_global_optionset(os_name)
+            if not meta or not meta.get("MetadataId"):
+                raise RuntimeError(
+                    f"Cannot resolve global option set '{os_name}' to a "
+                    "MetadataId for the picklist bind"
+                )
+            metadata_id = meta["MetadataId"]
+            self._optionset_metadata_cache[os_name] = metadata_id
+
+        resolved = dict(definition)
+        resolved[bind_key] = f"/GlobalOptionSetDefinitions({metadata_id})"
+        return resolved
+
     def create_attribute(self, entity_name: str, definition: dict) -> Optional[dict]:
         """Create a new attribute (column) on an entity.
 
@@ -306,6 +349,7 @@ class CMMClient:
             print(f"  [DRY-RUN] Would create attribute {name} on {entity_name}")
             return definition
 
+        definition = self._resolve_picklist_bind(definition)
         url = (
             f"{self.base_url}/EntityDefinitions"
             f"(LogicalName='{entity_name}')/Attributes"
@@ -473,6 +517,30 @@ class CMMClient:
             "HasNotes": False,
             "IsAuditEnabled": {"Value": True, "CanBeChanged": True},
             "PrimaryNameAttribute": "fsi_name",
+            "Attributes": [
+                {
+                    "@odata.type": (
+                        "#Microsoft.Dynamics.CRM.StringAttributeMetadata"
+                    ),
+                    "SchemaName": "fsi_Name",
+                    "IsPrimaryName": True,
+                    "DisplayName": {
+                        "@odata.type": "Microsoft.Dynamics.CRM.Label",
+                        "LocalizedLabels": [
+                            {
+                                "@odata.type": (
+                                    "Microsoft.Dynamics.CRM.LocalizedLabel"
+                                ),
+                                "Label": f"{display} ID",
+                                "LanguageCode": 1033,
+                            }
+                        ],
+                    },
+                    "RequiredLevel": {"Value": "ApplicationRequired"},
+                    "MaxLength": 500,
+                    "FormatName": {"Value": "Text"},
+                },
+            ],
         }
 
         self.create_entity(definition)

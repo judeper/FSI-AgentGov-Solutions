@@ -98,8 +98,9 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
                 # Create default value; roll back definition on failure
                 try:
                     value_data = {
+                        "schemaname": schemaname,
                         "value": var["defaultvalue"],
-                        "environmentvariabledefinitionid@odata.bind": f"/environmentvariabledefinitions({definition_id})",
+                        "EnvironmentVariableDefinitionId@odata.bind": f"/environmentvariabledefinitions({definition_id})",
                     }
                     client.create_record("environmentvariablevalues", value_data)
                 except Exception as val_err:
