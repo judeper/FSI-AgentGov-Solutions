@@ -49,12 +49,12 @@ if (Test-Path $sharedScript) {
 # Standalone fallback: classify by environment name convention or Dataverse lookup
 function Get-ZoneFromEnvironmentName {
     param([string]$Name)
-    if ($Name -match '(?i)^Zone\s*3[-_\s]|[-_\s]Zone\s*3$|(?i)\b(production|prod|enterprise|customer)\b') {
-        return 'Zone3'
+    if ($Name -match '(?i)^Zone\s*1[-_\s]|[-_\s]Zone\s*1$|(?i)\b(production|prod|enterprise|customer)\b') {
+        return 'Zone1'
     } elseif ($Name -match '(?i)^Zone\s*2[-_\s]|[-_\s]Zone\s*2$|(?i)\b(team|collab|shared)\b') {
         return 'Zone2'
-    } elseif ($Name -match '(?i)^Zone\s*1[-_\s]|[-_\s]Zone\s*1$|(?i)\b(personal|dev|sandbox)\b') {
-        return 'Zone1'
+    } elseif ($Name -match '(?i)^Zone\s*3[-_\s]|[-_\s]Zone\s*3$|(?i)\b(personal|dev|sandbox)\b') {
+        return 'Zone3'
     }
     return $null
 }

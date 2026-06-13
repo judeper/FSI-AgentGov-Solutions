@@ -126,9 +126,9 @@ function Get-ZoneFromNamingConvention {
     
     # Pattern matching for zone indicators
     $patterns = @{
-        'Zone3' = @('-z3-', '-zone3-', '_z3_', '_zone3_', 'zone3', '-prod-', '-production-', '-enterprise-')
+        'Zone1' = @('-z1-', '-zone1-', '_z1_', '_zone1_', 'zone1', '-prod-', '-production-', '-enterprise-')
         'Zone2' = @('-z2-', '-zone2-', '_z2_', '_zone2_', 'zone2', '-team-', '-collab-', '-shared-')
-        'Zone1' = @('-z1-', '-zone1-', '_z1_', '_zone1_', 'zone1', '-personal-', '-dev-', '-sandbox-')
+        'Zone3' = @('-z3-', '-zone3-', '_z3_', '_zone3_', 'zone3', '-personal-', '-dev-', '-sandbox-')
     }
     
     foreach ($zone in $patterns.Keys) {

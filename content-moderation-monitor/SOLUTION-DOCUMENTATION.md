@@ -91,19 +91,19 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 
 | Zone | Description | Minimum Moderation | Rationale |
 |------|-------------|-------------------|-----------|
-| **Zone 1** | Personal Productivity | Medium | Baseline content protection for individual use |
+| **Zone 1** | Enterprise Managed | High | Customer-facing agents require the strictest built-in Copilot Studio moderation target used by CMM's canonical scale |
 | **Zone 2** | Team Collaboration | High | Shared agents require stronger content controls |
-| **Zone 3** | Enterprise Managed | High | Customer-facing agents require the strictest built-in Copilot Studio moderation target used by CMM's canonical scale |
+| **Zone 3** | Personal Productivity | Medium | Baseline content protection for individual use |
 
 ### Violation Severity Matrix
 
 | Zone | Actual Level | Severity | Regulatory Context |
 |------|-------------|----------|-------------------|
-| Zone 3 | Low | **Critical** | FINRA 3110 — Unmoderated customer-facing AI agent |
-| Zone 3 | Medium | **High** | GLBA 501(b) — Insufficient content protection for enterprise agent |
+| Zone 1 | Low | **Critical** | FINRA 3110 — Unmoderated customer-facing AI agent |
+| Zone 1 | Medium | **High** | GLBA 501(b) — Insufficient content protection for enterprise agent |
 | Zone 2 | Low | **High** | SOX 404 — Inadequate content controls for shared agent |
 | Zone 2 | Medium | **Medium** | Best practice uplift recommended for team agents |
-| Zone 1 | Low | **High** | Governance gap — Below minimum content moderation threshold |
+| Zone 3 | Low | **High** | Governance gap — Below minimum content moderation threshold |
 | Unknown | Low | **High** | Governance gap — Unclassified environment with minimal content moderation |
 | Unknown | Medium | **Warning** | Governance gap — Environment not assigned to zone |
 
@@ -582,8 +582,8 @@ Test-EvidenceIntegrity -EvidenceFilePath ".\exports\evidence-cmm-All-*.json"
 **Requirement:** Member firms must establish and maintain a system to supervise the activities of associated persons, including oversight of customer-facing technology.
 
 **Solution Support:**
-- Validates customer-facing agents (Zone 3) have High content moderation
-- Critical severity violations for Zone 3 agents with Low moderation
+- Validates customer-facing agents (Zone 1) have High content moderation
+- Critical severity violations for Zone 1 agents with Low moderation
 - Immutable audit trail of validation history for examination evidence
 
 ### SOX 404 — Internal Controls over Financial Reporting

@@ -3,7 +3,7 @@
     RootModule = 'private\AAMClient.psm1'
     
     # Version number of this module
-    ModuleVersion     = '1.1.2'
+    ModuleVersion     = '1.2.0'
     
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -24,7 +24,7 @@
     Description       = 'Agent Access Governance Monitor for Power Platform environments. Validates agent sharing and authoring settings against FSI governance zone requirements. Part of the FSI Agent Governance Framework.'
     
     # Minimum version of the PowerShell engine required by this module
-    PowerShellVersion = '7.0'
+    PowerShellVersion = '7.4'
     
     # Modules that must be imported into the global environment prior to importing this module
     RequiredModules   = @(
@@ -49,6 +49,7 @@
     FunctionsToExport = @(
         'Connect-AAMDataverse',
         'Get-AAMConnection',
+        'Get-AAMAccessToken',
         'Get-ValidToken',
         'Get-AAMEnvironmentVariable',
         'Get-AAMActiveBaseline',
@@ -92,6 +93,25 @@
             
             # ReleaseNotes of this module
             ReleaseNotes = @'
+## 1.2.0 - 2026-06-09
+
+### Changed
+- Removed the non-existent published-bot limit sharing-mode Managed Environment key
+  (a `bot-...` name absent from `extendedSettings`) and its Dataverse column. Replaced
+  with the real `bot-maxLimitUserSharing` key (numeric viewer cap normalized to
+  Capped/Uncapped for zone comparison).
+- Replaced the archived `MSAL.PS` PowerShell dependency with modern OAuth 2.0 REST
+  auth via `Get-AAMAccessToken` (device-code or service-principal). Certificate
+  thumbprint auth is deprecated and now throws.
+- Reframed "immutable audit" claims as append-only by role design (Create+Read app
+  user, deny Write/Delete). See docs/role-design-append-only.md.
+- Retargeted the runbook and module floor to PowerShell 7.4 (Azure Automation dropped
+  7.1/7.2).
+- Guarded non-Managed environments as ScopeOutOfBand instead of emitting false
+  violations.
+- Deferred Azure Automation: the validation runbook runs standalone locally; the daily
+  flow becomes a Recurrence + Dataverse read.
+
 ## 1.1.2 - 2026-05-22
 
 ### Fixed

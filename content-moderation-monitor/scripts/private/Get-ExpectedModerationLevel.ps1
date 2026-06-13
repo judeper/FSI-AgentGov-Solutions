@@ -27,12 +27,12 @@
     - RegulatoryContext: Regulatory reference string or $null if compliant
 
 .EXAMPLE
-    $result = & ./Get-ExpectedModerationLevel.ps1 -Zone "Zone3" -ActualLevel "Low"
+    $result = & ./Get-ExpectedModerationLevel.ps1 -Zone "Zone1" -ActualLevel "Low"
     $result.Severity  # Returns: Critical
     $result.IsCompliant  # Returns: False
 
 .EXAMPLE
-    $result = & ./Get-ExpectedModerationLevel.ps1 -Zone "Zone1" -ActualLevel "High"
+    $result = & ./Get-ExpectedModerationLevel.ps1 -Zone "Zone3" -ActualLevel "High"
     $result.IsCompliant  # Returns: True
 
 .NOTES

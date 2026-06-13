@@ -328,8 +328,10 @@ $select = 'fsi_complianceid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_envi
 
 $filter = "fsi_detectedat ge $fromDateUtc and fsi_detectedat le $toDateUtc"
 if ($Zone -ne 'All') {
-    # Map zone name to option set integer
-    $zoneIntMap = @{ '1' = 1; '2' = 2; '3' = 3 }
+    # Map zone filter (1/2/3) to the live fsi_acv_zone option-set integer.
+    # Live-verified in-env (GlobalOptionSetDefinitions, the lab validation tenant 2026-06-09):
+    # Zone 1=100000001, Zone 2=100000002, Zone 3=100000003. See docs/option-set-integers.md.
+    $zoneIntMap = @{ '1' = 100000001; '2' = 100000002; '3' = 100000003 }
     $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { $Zone }
     $filter += " and fsi_zone eq $zoneInt"
 }

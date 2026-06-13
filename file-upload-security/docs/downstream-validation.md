@@ -105,7 +105,7 @@ def validate_magic_number(file_bytes: bytes, declared_mime: str) -> bool:
 
 ### 2. Microsoft Defender for Cloud Integration Check
 
-Before processing uploaded files, verify that Microsoft Defender for Cloud Apps (MDCA) or Defender for Endpoint has scanned the file. This check is especially important for Zone 3 (Enterprise Managed) agents.
+Before processing uploaded files, verify that Microsoft Defender for Cloud Apps (MDCA) or Defender for Endpoint has scanned the file. This check is especially important for Zone 1 (Enterprise Managed) agents.
 
 **Power Automate pattern:**
 

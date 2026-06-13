@@ -26,18 +26,21 @@
 $script:DataverseUrl = $null
 $script:AccessToken = $null
 
-# Zone string-to-integer mapping for Dataverse picklist column (fsi_zone option set)
+# Zone string-to-integer mapping for Dataverse picklist column (fsi_zone option set).
+# Canonical zone integers (shared fsi_acv_zone): Unclassified/Unknown=100000000,
+# Zone 1 (Enterprise, most restrictive)=100000001, Zone 2=100000002,
+# Zone 3 (Personal, least restrictive)=100000003.
 $script:ZoneToInt = @{
-    'Unknown' = 0
-    'Zone1'   = 1
-    'Zone2'   = 2
-    'Zone3'   = 3
+    'Unknown' = 100000000
+    'Zone1'   = 100000001
+    'Zone2'   = 100000002
+    'Zone3'   = 100000003
 }
 $script:IntToZone = @{
-    0 = 'Unknown'
-    1 = 'Zone1'
-    2 = 'Zone2'
-    3 = 'Zone3'
+    100000000 = 'Unknown'
+    100000001 = 'Zone1'
+    100000002 = 'Zone2'
+    100000003 = 'Zone3'
 }
 
 # Generative AI feature type picklist mapping

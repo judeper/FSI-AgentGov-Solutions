@@ -18,10 +18,20 @@ This document provides an overview of the two Power Automate cloud flows require
 - Processes agents sequentially (concurrency = 1) with configurable approval timeout (default: 7 days)
 - Queries approved security groups from `fsi_approvedsecuritygrouppolicies` per agent zone
 - Builds remediation plan (principals to remove/add) and sends approval request to governance lead
-- On approval: applies sharing corrections via Dataverse Web API PATCH to the `bots` table (`accesscontrolpolicy` and `authorizedsecuritygroupids`), runs post-remediation validation
+- On approval: applies the sharing correction to the `bots` table by writing `accesscontrolpolicy = 2` (Group membership) **and** `authorizedsecuritygroupids` in the **same** request, then reads the row back and asserts both values stuck before recording success (see **Remediation build requirements** below)
 - On rejection: records rejection with 7-day cooldown to prevent repeated requests
 
-**Known limitation:** Microsoft Learn notes that an approval flow can wait for 28 days before the flow fails. The sequential approval loop with 7-day timeouts means more than four agents can exceed this approval wait limit. Keep **Create an approval** and **Wait for an approval** steps close together, and consider a batch approval or child flow pattern for environments with more than four non-compliant agents.
+**Known limitation:** Microsoft Learn notes that an approval flow can wait for 28 days before the flow fails. The sequential approval loop with 7-day timeouts means more than four agents can exceed this approval wait limit. Keep **Create an approval** and **Wait for an approval** steps close together (the lab build uses the single **Start and wait for an approval** action), and consider a batch approval or child flow pattern for environments with more than four non-compliant agents.
+
+#### Remediation build requirements — chat-ACL plane (C1/C2)
+
+ASARD remediation targets the **runtime chat ACL** plane only — `bot.accesscontrolpolicy` plus `bot.authorizedsecuritygroupids`. The authoring-share plane (`PrincipalObjectAccess` Editor/Viewer assignments) and the M365 Copilot Agent Store plane are out of scope (see [`LAB-VALIDATION.md`](../LAB-VALIDATION.md)). Flow builders **must** implement the following, which support compliance with the Control 1.18 (RBAC) and 2.8 (Segregation of Duties) record-keeping and access-control expectations behind FINRA Rule 4511, SOX Section 404, and GLBA Section 501(b):
+
+1. **Single-write policy + groups (C1).** When restricting an over-shared agent, set `accesscontrolpolicy = 2` (Group membership) **and** the comma-delimited `authorizedsecuritygroupids` (up to 20 Entra group GUIDs, ≤739 characters) in the **same** "Update a row" request. Per Microsoft Learn, `authorizedsecuritygroupids` is ignored unless `accesscontrolpolicy = 2`; a write that sets the group list while the policy is `0`/`1`/`3` returns success while the agent stays over-shared. Do **not** split these into two writes.
+2. **Read-back assertion (C1).** Immediately after the write, GET `bots(<botid>)?$select=accesscontrolpolicy,authorizedsecuritygroupids` and assert (a) `accesscontrolpolicy = 2` and (b) the returned `authorizedsecuritygroupids` equals the requested list (case-normalized; sort before comparing in production). If either check fails, record `fsi_compliancestatus = Error (100000003)` and `fsi_remediationstatus = Failed (100000004)` — never `Completed`. This guards against the silent no-op described in requirement 1.
+3. **Create/Wait adjacency and timeout (H3).** Keep approval creation and the wait adjacent (the lab uses the single **Start and wait for an approval** action) and set the action timeout below the 28-day Approvals ceiling — the lab uses `P7D`, tracking `fsi_ASARD_ApprovalTimeoutDays` (default 7). Process agents sequentially (concurrency = 1) so the loop cannot serially walk past the ceiling.
+4. **First-class messages vs. direct write (C2).** The `bot` table exposes first-class `GrantAccess` / `ModifyAccess` / `RevokeAccess` messages, but those mutate the **authoring-share** plane (`PrincipalObjectAccess`), not the chat-ACL columns. For the chat-ACL plane ASARD governs, the single write in requirement 1 is the correct mechanism, and `accesscontrolpolicy` mode changes (for example `3` → `2`) are only possible via the direct column write — `ModifyAccess` does not cover them. Document this split; do not substitute `ModifyAccess` for the chat-ACL remediation.
+5. **Empirical enforcement (C1/C2).** Direct-write enforcement and propagation lag are not assumed. Verify empirically on a disposable lab agent — attempt a chat as a removed security-group member after the documented up-to-one-hour enforcement window — and record the observed result in [`LAB-VALIDATION.md`](../LAB-VALIDATION.md).
 
 ### 2. Exception Review Workflow
 
@@ -69,7 +79,7 @@ Do not mix the two syntaxes within a single card. See each template's `_metadata
 
 - Managed Environment agent sharing limits control new **Editor** and **Viewer** sharing assignments; existing access is not removed automatically when limits are configured.
 - **Editor** permissions are individual-only. **Viewer** permissions can be granted to individuals or security groups unless Managed Environment rules restrict security group sharing.
-- ASARD evaluates the Dataverse `bot.accesscontrolpolicy` values (`0` = any tenant user, `1` = Copilot readers, `2` = group membership, `3` = multi-tenant/open) and `authorizedsecuritygroupids` rather than a `sharingtype` column.
+- ASARD evaluates the Dataverse `bot.accesscontrolpolicy` values (`0` = Any — for authenticated bots any tenant user, for unauthenticated bots anyone with the link; `1` = Copilot readers; `2` = Group membership; `3` = Any (multi-tenant)) and `authorizedsecuritygroupids` rather than a `sharingtype` column.
 - Power Automate adaptive card data templating is not fully supported in all hosts; use the documented string replacement or templating SDK pipeline per template and validate JSON in the Adaptive Card designer.
 
 ## Related Resources

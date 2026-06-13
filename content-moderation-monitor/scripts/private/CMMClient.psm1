@@ -508,11 +508,15 @@ function Get-BotModerationLevel {
 
     .DESCRIPTION
         Parses the bot.configuration JSON blob to extract the content moderation setting.
-        The configuration field is a JSON string containing various bot settings. Content
-        moderation may appear under several key names depending on Copilot Studio version:
-        - ContentModeration
-        - contentModeration
-        - ContentModerationSetting
+        The configuration field is a JSON string containing various bot settings. The
+        content moderation level is NESTED at aISettings.contentModeration (confirmed on
+        the live lab validation tenant 2026-06-13: a string level such as "High"). The legacy
+        flat top-level keys (ContentModeration / contentModeration / ...) do not exist on
+        real agents and are no longer read — reading them produced a tautological fixture
+        green and an 'Unknown' against real agents.
+
+        Defensive: if aISettings or aISettings.contentModeration is absent, the level
+        resolves to 'Unknown' (Indeterminate) — never a false Compliant.
 
         Normalizes returned values to canonical levels: Low, Medium, High.
         Copilot Studio labels such as Lowest and Highest are mapped to Low and High.
@@ -557,11 +561,17 @@ function Get-BotModerationLevel {
         try {
             $config = $Bot.configuration | ConvertFrom-Json -ErrorAction Stop
 
-            # Check known key names for content moderation
+            # Canonical path (confirmed live on the lab validation tenant 2026-06-13): the content
+            # moderation level is NESTED at aISettings.contentModeration. It is a
+            # string level (e.g. "High"); some Copilot Studio versions may nest it as
+            # an object exposing a .level property, so handle both shapes.
+            # Defensive: if aISettings or contentModeration is absent, leave
+            # $moderationValue $null -> resolves to 'Unknown', never a false Compliant.
             $moderationValue = $null
-            foreach ($key in @('ContentModeration', 'contentModeration', 'ContentModerationSetting', 'contentModerationSetting')) {
-                if ($config.PSObject.Properties.Name -contains $key) {
-                    $rawValue = $config.$key
+            if ($config.PSObject.Properties.Name -contains 'aISettings' -and $config.aISettings) {
+                $aiSettings = $config.aISettings
+                if ($aiSettings.PSObject.Properties.Name -contains 'contentModeration') {
+                    $rawValue = $aiSettings.contentModeration
 
                     # Handle nested object (e.g., { "level": "High" })
                     if ($rawValue -is [PSCustomObject] -and $rawValue.PSObject.Properties.Name -contains 'level') {
@@ -569,7 +579,6 @@ function Get-BotModerationLevel {
                     } elseif ($rawValue -is [string]) {
                         $moderationValue = $rawValue
                     }
-                    break
                 }
             }
 

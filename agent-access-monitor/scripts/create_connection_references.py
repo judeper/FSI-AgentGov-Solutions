@@ -107,7 +107,7 @@ def create_connection_references(client: AAMClient, dry_run: bool = False) -> di
     print()
     print("  Connection references created (definitions only).")
     print("  After deployment, bind actual connections in Power Automate:")
-    print("    1. Open make.powerapps.com → Solutions → Agent Access Monitor")
+    print("    1. Open make.powerapps.com -> Solutions -> Agent Access Monitor")
     print("    2. Select each connection reference")
     print("    3. Click \"Set connection\" and choose or create the connection")
 

@@ -8,7 +8,7 @@
     1. Enumerates Power Platform environments
     2. Queries each environment's Dataverse for Copilot Studio agents
     3. Retrieves content moderation level for each agent
-    4. Validates against zone requirements (Zone 1: Medium min, Zone 2/3: High)
+    4. Validates against zone requirements (Zone 1/2: High, Zone 3: Medium min)
     5. Reports violations with severity classification and regulatory context
 
     This is the primary validation script for the Content Moderation Governance
@@ -43,7 +43,7 @@ function Test-ContentModerationCompliance {
         1. Enumerates Power Platform environments
         2. Queries each environment's Dataverse for Copilot Studio agents
         3. Retrieves content moderation level for each agent
-        4. Validates against zone requirements (Zone 1: Medium min, Zone 2/3: High)
+        4. Validates against zone requirements (Zone 1/2: High, Zone 3: Medium min)
         5. Reports violations with severity classification and regulatory context
 
         This is the primary validation script for the Content Moderation Governance

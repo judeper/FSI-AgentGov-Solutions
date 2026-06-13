@@ -1,35 +1,53 @@
-#Requires -Version 7.1
-#Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
+﻿#Requires -Version 7.4
 
 <#
 .SYNOPSIS
-    Azure Automation runbook wrapper for agent access compliance validation.
+    Standalone runbook for agent access compliance validation across governance zones.
 
 .DESCRIPTION
-    Adapts Test-AgentAccessCompliance.ps1 for Azure Automation execution context.
-    This runbook provides non-interactive authentication, structured JSON output to
-    the pipeline, and drift detection logic for downstream alerting.
+    Runs Test-AgentAccessCompliance logic in a non-interactive, pipeline-friendly form
+    suitable for scheduled local execution (pwsh 7.4 via Windows Task Scheduler or cron).
+    Provides modern-auth token acquisition, structured JSON output to the pipeline, and
+    per-environment drift detection for downstream alerting.
 
-    Key differences from interactive orchestrator:
-    - Uses certificate-based authentication (no interactive prompts)
+    Deferred Azure Automation (lab model): for the lab this runbook runs standalone on a
+    workstation or build agent — no Azure subscription, Automation Account, premium
+    connector, or always-on service principal is required. The daily Power Automate flow
+    is reduced to a Recurrence trigger plus a Dataverse read of the validation-history and
+    violation tables this runbook writes. Promoting to Azure Automation later is a
+    packaging step, not a code change.
+
+    Key characteristics:
+    - Modern OAuth 2.0 authentication via Get-AAMAccessToken (device-code or service
+      principal secret); the archived MSAL.PS module is no longer used
     - Scans all governance zones in a single run (no -Zone parameter)
-    - Outputs JSON to pipeline (captured by Get-AzAutomationJobOutput)
+    - Outputs JSON to the pipeline (capturable by any scheduler or the calling flow)
     - Includes per-environment drift detection via Dataverse baseline comparison
     - Adds AlertRequired flag for Power Automate flow routing
     - No Write-Host (uses Write-Verbose for diagnostics)
 
-    Output structure enables Power Automate HTTP webhook actions to parse validation
-    results and route alerts based on severity and drift status.
+    Output structure enables Power Automate to parse validation results and route alerts
+    based on severity and drift status.
 
 .PARAMETER TenantId
     Microsoft Entra ID tenant ID for authentication.
 
 .PARAMETER ClientId
-    Microsoft Entra ID application (client) ID for certificate-based authentication.
+    Microsoft Entra ID application (client) ID. Required for both -Interactive
+    (public-client app) and service-principal (client-secret) authentication.
+
+.PARAMETER Interactive
+    Use device-code authentication. The user copies a one-time code into
+    https://microsoft.com/devicelogin from any browser. Recommended for local lab runs.
+
+.PARAMETER ClientSecret
+    Service-principal client secret (SecureString) for unattended runs. Dev-only legacy
+    fallback; production should use a managed identity. Used when -Interactive is omitted.
 
 .PARAMETER CertificateThumbprint
-    Certificate thumbprint for service principal authentication. Certificate must be
-    uploaded to the Azure Automation account.
+    [DEPRECATED] Certificate-thumbprint authentication required the archived MSAL.PS
+    module. Passing this parameter now throws a terminating error. Use -Interactive or
+    -ClientSecret instead.
 
 .PARAMETER DataverseUrl
     Central Dataverse organization URL where validation history and baselines are stored.
@@ -49,21 +67,23 @@
     Start-AccessValidationRunbook `
         -TenantId "contoso.onmicrosoft.com" `
         -ClientId "12345-app-id" `
-        -CertificateThumbprint "ABCDEF123456" `
-        -DataverseUrl "https://governance.crm.dynamics.com"
+        -DataverseUrl "https://governance.crm.dynamics.com" `
+        -Interactive
 
-    Runs access validation across all zones using certificate authentication.
-    Outputs JSON to pipeline for Power Automate consumption.
+    Runs access validation across all zones using device-code authentication.
+    Outputs JSON to the pipeline for Power Automate consumption.
 
 .EXAMPLE
+    $secret = Read-Host -AsSecureString "Client secret"
     Start-AccessValidationRunbook `
         -TenantId "contoso.onmicrosoft.com" `
         -ClientId "12345-app-id" `
-        -CertificateThumbprint "ABCDEF123456" `
+        -ClientSecret $secret `
         -DataverseUrl "https://governance.crm.dynamics.com" `
         -GracePeriodHours 0
 
-    Runs validation with no grace period - all environments are evaluated immediately.
+    Runs validation unattended (service principal) with no grace period - all
+    environments are evaluated immediately.
 
 .OUTPUTS
     JSON object with properties:
@@ -79,20 +99,21 @@
     - AlertSeverity: Status value for alert priority
 
 .NOTES
-    Version: 1.1.2
+    Version: 1.2.0
 
-    Azure Automation setup:
-    1. Import this script as a runbook
-    2. Upload certificate to Automation Account > Certificates
-    3. Install required modules: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
-    4. Grant application permissions as required by Power Platform admin APIs
-    5. Schedule via Schedules or trigger via webhook
+    Local scheduled execution (lab default):
+    1. Install PowerShell 7.4 and the Microsoft.PowerApps.Administration.PowerShell module
+    2. Register a public-client app (for -Interactive) or a confidential app with a secret
+    3. Grant the app the Power Platform admin and Dataverse permissions it needs
+    4. Schedule via Windows Task Scheduler (pwsh -File ...) and capture the JSON output
+    5. Point a Power Automate Recurrence flow at the Dataverse tables this runbook writes
+
+    Deferring to Azure Automation later: import this script as a runbook, supply the same
+    parameters via Automation variables, and schedule it there. No code change is required;
+    only -CertificateThumbprint remains unsupported (use -ClientSecret or managed identity).
 
     Performance:
     - Typical scan across environments: 2-5 minutes depending on environment count
-
-    This script is designed to run as an Azure Automation runbook. Import into
-    Azure Automation Account and configure with certificate-based authentication.
 #>
 
 [CmdletBinding()]
@@ -103,7 +124,13 @@ param(
     [Parameter(Mandatory)]
     [string]$ClientId,
 
-    [Parameter(Mandatory)]
+    [Parameter()]
+    [switch]$Interactive,
+
+    [Parameter()]
+    [securestring]$ClientSecret,
+
+    [Parameter()]
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory)]
@@ -148,15 +175,28 @@ function Get-DriftDirection {
         'ExcludeSharingToSecurityGroups' = 1
         'noLimit'                        = 2
     }
+    # Viewer-cap categories (most restrictive first). Capped = a finite limit;
+    # Uncapped = no limit (-1, 0, blank, or unset).
+    $maxLimitOrder = @{
+        'Capped'   = 1
+        'Uncapped' = 2
+    }
 
     switch ($SettingName) {
         'bot-limitSharingMode' {
             return Get-SharingDriftDirection -OrderMap $sharingModeOrder `
                 -BaselineValue $BaselineValue -CurrentValue $CurrentValue
         }
-        'bot-publishedBotLimitSharingMode' {
-            return Get-SharingDriftDirection -OrderMap $sharingModeOrder `
-                -BaselineValue $BaselineValue -CurrentValue $CurrentValue
+        'bot-maxLimitUserSharing' {
+            # Normalize the numeric viewer cap to a category before ranking:
+            # any positive integer => Capped (restrictive); -1, 0, blank, or unset
+            # => Uncapped (permissive).
+            $blParsed = 0
+            $curParsed = 0
+            $blCat = if ([int]::TryParse(([string]$BaselineValue).Trim(), [ref]$blParsed) -and $blParsed -gt 0) { 'Capped' } else { 'Uncapped' }
+            $curCat = if ([int]::TryParse(([string]$CurrentValue).Trim(), [ref]$curParsed) -and $curParsed -gt 0) { 'Capped' } else { 'Uncapped' }
+            return Get-SharingDriftDirection -OrderMap $maxLimitOrder `
+                -BaselineValue $blCat -CurrentValue $curCat
         }
         'bot-authoringSharingDisabled' {
             # true = more restrictive, false = more permissive
@@ -215,29 +255,29 @@ try {
 
     #region Authenticate and acquire Dataverse token
 
-    Write-Verbose "Acquiring Dataverse token via certificate authentication"
+    # Import the AAMClient module first so its modern-auth helper (Get-AAMAccessToken)
+    # is available. C2 remediation: the archived MSAL.PS module is no longer used.
+    Import-Module "$scriptRoot\private\AAMClient.psm1" -Force
 
-    Import-Module MSAL.PS -ErrorAction Stop
+    if ($CertificateThumbprint) {
+        throw "CertificateThumbprint authentication was removed (it required the archived MSAL.PS module). Use -Interactive for device-code flow, or -ClientSecret for service-principal authentication."
+    }
 
-    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
-    Write-Verbose "Certificate found: $($cert.Subject)"
-
-    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-    $tokenResult = Get-MsalToken `
-        -ClientId $ClientId `
-        -ClientCertificate $cert `
-        -TenantId $TenantId `
-        -Scopes $dataverseScope `
-        -ErrorAction Stop
-
-    $dataverseToken = $tokenResult.AccessToken
+    Write-Verbose "Acquiring Dataverse token via modern OAuth 2.0 (Get-AAMAccessToken)"
+    $tokenParams = @{
+        TenantId = $TenantId
+        ClientId = $ClientId
+        Resource = $DataverseUrl
+    }
+    if ($Interactive)  { $tokenParams['Interactive']  = $true }
+    if ($ClientSecret) { $tokenParams['ClientSecret'] = $ClientSecret }
+    $dataverseToken = Get-AAMAccessToken @tokenParams
     Write-Verbose "Dataverse token acquired"
 
     #endregion
 
     #region Connect AAMClient to Dataverse
 
-    Import-Module "$scriptRoot\private\AAMClient.psm1" -Force
     Connect-AAMDataverse -DataverseUrl $DataverseUrl -AccessToken $dataverseToken
 
     # Read operational parameters from Dataverse environment variables
@@ -292,7 +332,7 @@ try {
     Write-Verbose "Running per-environment drift detection against active baselines"
 
     # Query environment settings directly for drift detection (includes all environments
-    # with BotLimitSharingMode, BotAuthoringSharingDisabled, BotPublishedLimitSharingMode)
+    # with BotLimitSharingMode, BotAuthoringSharingDisabled, BotMaxLimitUserSharing)
     $getSettingsScript = Join-Path $scriptRoot 'Get-EnvironmentAccessSettings.ps1'
     $envSettingsParams = @{ GracePeriodHours = $GracePeriodHours }
     if ($ExcludeSandbox) { $envSettingsParams['ExcludeSandbox'] = $true }
@@ -309,6 +349,25 @@ try {
         $envName = $env.EnvironmentDisplayName
 
         Write-Verbose "Checking drift for: $envName ($envId)"
+
+        # H1: non-Managed environments expose none of the agent-sharing controls, so
+        # there is no baseline to drift from. Skip drift evaluation and record the
+        # environment as out-of-scope rather than emitting a spurious first-run entry.
+        if ($env.Status -eq 'NotManaged') {
+            Write-Verbose "Skipping drift for non-Managed environment: $envName"
+            $driftResults += [PSCustomObject]@{
+                EnvironmentId   = $envId
+                EnvironmentName = $envName
+                Zone            = $env.Zone
+                HasDrift        = $false
+                IsFirstRun      = $false
+                IsStaleBaseline = $false
+                Changes         = @()
+                Direction       = $null
+                Status          = 'ScopeOutOfBand'
+            }
+            continue
+        }
 
         $driftEntry = @{
             EnvironmentId   = $envId
@@ -363,14 +422,15 @@ try {
                         Current  = if ($null -eq $env.BotAuthoringSharingDisabled) { '' } else { [string]$env.BotAuthoringSharingDisabled }
                     },
                     @{
-                        Name     = 'bot-publishedBotLimitSharingMode'
-                        Baseline = if ($null -eq $bl.fsi_botpublishedbotlimitsharingmode) { '' } else { [string]$bl.fsi_botpublishedbotlimitsharingmode }
-                        Current  = if ($null -eq $env.BotPublishedLimitSharingMode) { '' } else { [string]$env.BotPublishedLimitSharingMode }
+                        Name     = 'bot-maxLimitUserSharing'
+                        Baseline = if ($null -eq $bl.fsi_botmaxlimitusersharing) { '' } else { [string]$bl.fsi_botmaxlimitusersharing }
+                        Current  = if ($null -eq $env.BotMaxLimitUserSharing) { '' } else { [string]$env.BotMaxLimitUserSharing }
                     }
                 )
 
                 foreach ($setting in $settingsToCheck) {
-                    if ($setting.Baseline -ne $setting.Current) {
+                    # H2: explicit case-insensitive comparison of baseline vs current.
+                    if ($setting.Baseline -ine $setting.Current) {
                         $direction = Get-DriftDirection -SettingName $setting.Name `
                             -BaselineValue $setting.Baseline `
                             -CurrentValue $setting.Current

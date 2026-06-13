@@ -8,7 +8,7 @@
 
 .NOTES
     Module: AAMClient.psm1
-    Version: 1.1.2
+    Version: 1.2.0
     Author: FSI Agent Governance Team
 #>
 
@@ -77,21 +77,15 @@ function Get-ValidToken {
     param()
 
     $isExpiring = (-not $script:TokenExpiry) -or ((Get-Date) -ge $script:TokenExpiry.AddMinutes(-5))
-    if ($isExpiring) {
-        if ($script:ClientId -and $script:TenantId -and $script:DataverseUrl) {
-            try {
-                $token = Get-MsalToken -ClientId $script:ClientId -TenantId $script:TenantId -Scopes "$($script:DataverseUrl)/.default" -Silent
-                $script:AccessToken = $token.AccessToken
-                $script:TokenExpiry = $token.ExpiresOn.LocalDateTime
-            } catch {
-                Write-Warning "Token refresh failed: $($_.Exception.Message). Using existing token."
-            }
-        } elseif ($script:TokenExpiry) {
-            # Caller-supplied token without refresh credentials — warn loudly so a 401 is expected.
-            Write-Warning ("Access token has expired or is near expiry and no ClientId/TenantId is " +
-                "available to refresh it. Reconnect via Connect-AAMDataverse with -ClientId/-TenantId, " +
-                "or supply a freshly issued -AccessToken. Subsequent Dataverse requests are likely to fail with HTTP 401.")
-        }
+    if ($isExpiring -and $script:TokenExpiry) {
+        # In-module silent refresh was removed with the archived MSAL.PS dependency.
+        # Tokens are acquired up front via Get-AAMAccessToken and stay valid for the
+        # duration of a typical scan (2-5 minutes). If a token is near expiry, reconnect
+        # with a freshly issued -AccessToken rather than relying on an in-module refresh.
+        Write-Warning ("Access token has expired or is near expiry and AAMClient no longer " +
+            "performs an in-module token refresh (the archived MSAL.PS dependency was removed). " +
+            "Reconnect via Connect-AAMDataverse with a freshly issued -AccessToken (acquire one " +
+            "with Get-AAMAccessToken). Subsequent Dataverse requests are likely to fail with HTTP 401.")
     }
     return $script:AccessToken
 }
@@ -107,6 +101,133 @@ function Get-AAMConnection {
     [PSCustomObject]@{
         DataverseUrl = $script:DataverseUrl
         IsConnected  = $null -ne $script:DataverseUrl
+    }
+}
+
+function Get-AAMAccessToken {
+    <#
+    .SYNOPSIS
+        Acquires a Dataverse access token via direct OAuth 2.0 REST calls.
+
+    .DESCRIPTION
+        Modern-auth replacement for the archived MSAL.PS module (Microsoft archived
+        MSAL.PS on 2024-04-15). Mirrors the Agent Sharing Access Restriction Detector
+        (ASARD) auth pattern. Two flows are supported:
+          -Interactive : device-code flow. The user copies a one-time code into
+                         https://microsoft.com/devicelogin from any browser. Uses a
+                         public-client app registration.
+          default      : client-credentials flow with a service-principal secret.
+
+        Certificate-thumbprint authentication is intentionally not supported here
+        because it required the archived MSAL.PS module. Use -Interactive or
+        -ClientSecret instead. Managed identity is the recommended production path.
+
+    .PARAMETER TenantId
+        Microsoft Entra ID tenant ID.
+
+    .PARAMETER ClientId
+        Application (client) ID. Required for both flows.
+
+    .PARAMETER Resource
+        Resource base URL the token is scoped to (for example the Dataverse org URL).
+        The "/.default" scope suffix is appended automatically.
+
+    .PARAMETER Interactive
+        Use device-code flow instead of a service-principal secret.
+
+    .PARAMETER ClientSecret
+        Service-principal client secret (SecureString) for the client-credentials
+        flow. Dev-only legacy fallback; production should use a managed identity.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory)]
+        [string]$Resource,
+
+        [Parameter()]
+        [switch]$Interactive,
+
+        [Parameter()]
+        [securestring]$ClientSecret
+    )
+
+    $scope = "$($Resource.TrimEnd('/'))/.default"
+    $tokenEndpoint = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+
+    if ($Interactive) {
+        # Device-code flow: pure REST equivalent of MSAL.PS interactive auth.
+        $deviceCodeEndpoint = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/devicecode"
+        $deviceCodeResponse = Invoke-RestMethod -Uri $deviceCodeEndpoint -Method Post `
+            -ContentType 'application/x-www-form-urlencoded' `
+            -Body @{ client_id = $ClientId; scope = $scope } -ErrorAction Stop
+
+        Write-Host ""
+        Write-Host $deviceCodeResponse.message -ForegroundColor Yellow
+        Write-Host ""
+
+        $pollIntervalSeconds = [int]$deviceCodeResponse.interval
+        if ($pollIntervalSeconds -lt 1) { $pollIntervalSeconds = 5 }
+        $deadline = (Get-Date).AddSeconds([int]$deviceCodeResponse.expires_in)
+        $pollBody = @{
+            grant_type  = 'urn:ietf:params:oauth:grant-type:device_code'
+            client_id   = $ClientId
+            device_code = $deviceCodeResponse.device_code
+        }
+
+        $accessToken = $null
+        while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds $pollIntervalSeconds
+            try {
+                $tokenResponse = Invoke-RestMethod -Uri $tokenEndpoint -Method Post `
+                    -ContentType 'application/x-www-form-urlencoded' -Body $pollBody -ErrorAction Stop
+                $accessToken = $tokenResponse.access_token
+                break
+            } catch {
+                $errorBody = $null
+                if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+                    try { $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json } catch { $errorBody = $null }
+                }
+                $errorCode = if ($errorBody) { $errorBody.error } else { $_.Exception.Message }
+                switch ($errorCode) {
+                    'authorization_pending' { continue }
+                    'slow_down'             { $pollIntervalSeconds += 5; continue }
+                    default { throw "Device-code authentication failed: $errorCode" }
+                }
+            }
+        }
+
+        if (-not $accessToken) {
+            throw "Device-code authentication timed out before the user completed sign-in."
+        }
+        return $accessToken
+    }
+
+    if (-not $ClientSecret) {
+        throw "ClientSecret is required for service-principal authentication. Use -Interactive for device-code flow."
+    }
+
+    # legacy: dev-only — replace with managed identity in production.
+    $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR(
+        [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
+    )
+    try {
+        $tokenResponse = Invoke-RestMethod -Uri $tokenEndpoint -Method Post `
+            -ContentType 'application/x-www-form-urlencoded' `
+            -Body @{
+                grant_type    = 'client_credentials'
+                client_id     = $ClientId
+                client_secret = $plainSecret
+                scope         = $scope
+            } -ErrorAction Stop
+        return $tokenResponse.access_token
+    } finally {
+        $plainSecret = $null
     }
 }
 
@@ -269,11 +390,18 @@ function Get-AAMActiveBaseline {
 function Write-AAMValidationHistory {
     <#
     .SYNOPSIS
-        Writes immutable validation record to Dataverse.
-    
+        Writes a validation history record to Dataverse.
+
+    .DESCRIPTION
+        The fsi_accessvalidationhistory table is append-only by role design: the AAM
+        application user is granted Create + Read only, with Write and Delete denied.
+        Dataverse does not provide native column- or row-level immutability; the
+        append-only behavior comes from the security role, not from a table flag.
+        See docs/role-design-append-only.md.
+
     .PARAMETER ValidationResult
         Hashtable containing validation summary metrics.
-    
+
     .PARAMETER RunId
         GUID correlating all records from a single scan execution.
     #>
@@ -360,11 +488,12 @@ function Write-AAMViolation {
     
     try {
         $zoneMap = @{
-            "Zone1" = 100000001
-            "Zone2" = 100000002
-            "Zone3" = 100000003
+            "Zone1"   = 100000001
+            "Zone2"   = 100000002
+            "Zone3"   = 100000003
+            "Unknown" = 100000000
         }
-        $zoneValue = if ($zoneMap.ContainsKey($Violation.Zone)) { $zoneMap[$Violation.Zone] } else { $Violation.Zone }
+        $zoneValue = if ($zoneMap.ContainsKey($Violation.Zone)) { $zoneMap[$Violation.Zone] } else { 100000000 }
 
         # Map severity strings to fsi_acv_severity picklist integers
         # Note: Critical and High both map to 100000003 (Failed) per the shared fsi_acv_severity
@@ -383,8 +512,8 @@ function Write-AAMViolation {
             fsi_environmentname   = $Violation.EnvironmentDisplayName
             fsi_zone              = $zoneValue
             fsi_violationtype     = $Violation.ViolationType
-            fsi_expectedvalue     = $Violation.Expected
-            fsi_actualvalue       = $Violation.Actual
+            fsi_expectedvalue     = [string]$Violation.Expected
+            fsi_actualvalue       = [string]$Violation.Actual
             fsi_severity          = $severityValue
             fsi_severitylabel     = $Violation.Severity
             fsi_regulatorycontext = $Violation.RegulatoryContext
@@ -437,13 +566,14 @@ function Save-AAMBaseline {
         [int]$Zone,
 
         [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$BotLimitSharingMode,
 
         [Parameter(Mandatory)]
         [bool]$BotAuthoringSharingDisabled,
 
-        [Parameter(Mandatory)]
-        [string]$BotPublishedBotLimitSharingMode,
+        [Parameter()]
+        [string]$BotMaxLimitUserSharing,
 
         [string]$CapturedBy,
 
@@ -500,7 +630,7 @@ function Save-AAMBaseline {
             fsi_zone                             = $zoneValue
             fsi_botlimitsharingmode              = $BotLimitSharingMode
             fsi_botauthoringsharingdisabled       = $BotAuthoringSharingDisabled
-            fsi_botpublishedbotlimitsharingmode   = $BotPublishedBotLimitSharingMode
+            fsi_botmaxlimitusersharing            = $BotMaxLimitUserSharing
             fsi_capturedby                       = $capturedByValue
             fsi_capturedat                       = $timestamp
             fsi_isactive                         = $true
@@ -582,6 +712,7 @@ function Get-AAMLastValidation {
 Export-ModuleMember -Function @(
     'Connect-AAMDataverse',
     'Get-AAMConnection',
+    'Get-AAMAccessToken',
     'Get-ValidToken',
     'Get-AAMEnvironmentVariable',
     'Get-AAMActiveBaseline',

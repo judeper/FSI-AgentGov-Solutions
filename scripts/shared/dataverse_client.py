@@ -69,6 +69,10 @@ class DataverseClient:
         # Dataverse requires the environment URL as the scope
         self._scope = [f"{self.environment_url}/.default"]
         self._token: Optional[dict] = None
+        # Cache of global option-set Name (lowercased) -> MetadataId GUID, used
+        # to rewrite picklist GlobalOptionSet@odata.bind references to the GUID
+        # form the Web API requires (see _resolve_picklist_bind).
+        self._optionset_id_cache: dict = {}
 
         # Setup retry strategy
         self._session = requests.Session()
@@ -302,11 +306,43 @@ class DataverseClient:
                 return get_response.json()
         return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
 
+    def _resolve_picklist_bind(self, attribute_metadata: dict) -> dict:
+        """Rewrite a picklist GlobalOptionSet@odata.bind from Name to GUID form.
+
+        The Dataverse Web API rejects a navigation bind that references a global
+        option set by Name when creating a picklist attribute (it returns
+        "Guid should contain 32 digits"); it requires the MetadataId GUID form
+        /GlobalOptionSetDefinitions(<MetadataId>). This helper resolves the
+        option-set Name to its live MetadataId (cached) and rewrites the bind.
+        Binds already in GUID form, or attributes without such a bind, are
+        returned unchanged. The referenced option set is never created here —
+        it must already exist (deploy order creates option sets first).
+        """
+        bind_key = "GlobalOptionSet@odata.bind"
+        bind = attribute_metadata.get(bind_key)
+        if not bind or "Name='" not in bind:
+            return attribute_metadata
+        name = bind.split("Name='", 1)[1].split("'", 1)[0]
+        metadata_id = self._optionset_id_cache.get(name.lower())
+        if not metadata_id:
+            existing = self.get_global_optionset(name)
+            if not existing or not existing.get("MetadataId"):
+                raise RuntimeError(
+                    f"Cannot resolve global option set '{name}' to a MetadataId; "
+                    "ensure the option set exists before binding a picklist column."
+                )
+            metadata_id = existing["MetadataId"]
+            self._optionset_id_cache[name.lower()] = metadata_id
+        resolved = dict(attribute_metadata)
+        resolved[bind_key] = f"/GlobalOptionSetDefinitions({metadata_id})"
+        return resolved
+
     def create_attribute(self, entity_logical_name, attribute_metadata):
         if self.dry_run:
             col_name = attribute_metadata.get("SchemaName", "Unknown")
             print(f"  [DRY RUN] Would create column: {entity_logical_name}.{col_name}")
             return attribute_metadata
+        attribute_metadata = self._resolve_picklist_bind(attribute_metadata)
         response = self._session.post(urljoin(self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes"), headers=self._get_headers(), json=attribute_metadata)
         self._raise_for_status(response, context=f"create attribute {entity_logical_name}.{attribute_metadata.get('SchemaName', '?')}")
         return attribute_metadata

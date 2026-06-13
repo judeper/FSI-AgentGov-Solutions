@@ -8,7 +8,7 @@ The evidence export workflow produces JSON files with SHA-256 integrity hashes f
 
 - AAM Dataverse schema deployed with validation history records
 - PowerShell 7.0+
-- MSAL.PS module installed (`Install-Module MSAL.PS -Scope CurrentUser`)
+- Modern OAuth via `Get-AAMAccessToken` (bundled in `scripts/private/AAMClient.psm1`) — no MSAL.PS module required
 - Dataverse User role (minimum) on the governance environment
 
 ## Export Compliance Evidence
@@ -23,16 +23,22 @@ The evidence export workflow produces JSON files with SHA-256 integrity hashes f
     -Interactive
 ```
 
-### Certificate App Authentication
+### Service Principal Authentication (client secret, dev-only fallback)
 
 ```powershell
+$secret = Read-Host -AsSecureString -Prompt "Client secret"
 ./scripts/Export-AgentAccessEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
     -TenantId "contoso.onmicrosoft.com" `
     -OutputDirectory "C:\compliance\evidence" `
     -ClientId "12345678-abcd-efgh-ijkl-123456789012" `
-    -CertificateThumbprint "ABCDEF1234567890..."
+    -ClientSecret $secret
 ```
+
+> Certificate-thumbprint authentication was removed (it required the archived MSAL.PS
+> module). Passing `-CertificateThumbprint` now throws a terminating error. Use
+> `-Interactive` for device-code flow, or `-ClientSecret` for unattended runs. Prefer a
+> managed identity in production.
 
 ### Export with Zone Filter
 
@@ -138,7 +144,7 @@ sha256sum -c aam-evidence-All-20260209-143022.json.sha256
 | Quarterly | Regulatory examination preparation (FINRA, SEC) |
 | On-demand | Incident investigations and ad-hoc auditor requests |
 
-> **Tip:** Prefer managed identity where available for scheduled exports. When MSAL.PS certificate authentication is required, store the certificate in the automation host and review rotation procedures. See [flow-configuration.md](flow-configuration.md) for automation patterns.
+> **Tip:** Prefer managed identity where available for scheduled exports. For unattended runs without a managed identity, use service-principal authentication via `-ClientSecret` (a dev-only legacy fallback) with the secret supplied through `$env:AAM_CLIENT_SECRET`, and review rotation procedures. Certificate-thumbprint authentication is no longer supported (it required the archived MSAL.PS module). See [flow-configuration.md](flow-configuration.md) for automation patterns.
 
 ## Troubleshooting
 

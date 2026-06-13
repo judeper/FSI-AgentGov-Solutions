@@ -56,7 +56,7 @@
 
     CSV Format:
         ConnectionId,ConnectionName,Zone,ResourceGroup,AoaiEndpoint,Notes
-        abc-123,prod-openai-eastus,Zone3,rg-ai-prod,https://prod-openai.openai.azure.com/,Production AOAI
+        abc-123,prod-openai-eastus,Zone1,rg-ai-prod,https://prod-openai.openai.azure.com/,Production AOAI
 
     Valid Zone values: Zone1, Zone2, Zone3
     The ConnectionId is used as the idempotency key.
@@ -98,9 +98,9 @@ $TableName = 'fsi_gacapprovedconnections'
 $ApiVersion = 'v9.2'
 $ValidZones = @('Zone1', 'Zone2', 'Zone3')
 $ZoneOptionSetMap = @{
-    'Zone1' = 1
-    'Zone2' = 2
-    'Zone3' = 3
+    'Zone1' = 100000001
+    'Zone2' = 100000002
+    'Zone3' = 100000003
 }
 
 # --- Functions ---

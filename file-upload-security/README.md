@@ -29,7 +29,7 @@ Automated validation of Copilot Studio agent file upload settings against govern
 
 Copilot Studio agents can accept file uploads (images, PDFs, text files) during conversations. When file uploads are enabled, agents can ingest data beyond their declared operational scope — creating data minimization risks that FSI organizations must manage:
 
-- **Zone 3 (Enterprise Managed)** agents handle sensitive data; unrestricted file uploads expand attack surface
+- **Zone 1 (Enterprise Managed)** agents handle sensitive data; unrestricted file uploads expand attack surface
 - **Zone 2 (Team Collaboration)** agents require governance approval before accepting user-uploaded content
 - **Content moderation cross-check** — agents accepting file uploads should have elevated content moderation levels
 
@@ -115,9 +115,9 @@ Import-Module ./scripts/private/FUSClient.psm1
 
 | Zone | File Upload | Approval | Min Moderation | Violation Severity |
 |------|------------|----------|----------------|-------------------|
-| Zone 1 (Personal) | Allowed | Not required | Low | Warning if no moderation |
+| Zone 1 (Enterprise) | Disabled | Required | Highest | Critical if enabled |
 | Zone 2 (Team) | Restricted | Required | High | High if enabled without approval/moderation |
-| Zone 3 (Enterprise) | Disabled | Required | Highest | Critical if enabled |
+| Zone 3 (Personal) | Allowed | Not required | Low | Warning if no moderation |
 
 ## Documentation
 

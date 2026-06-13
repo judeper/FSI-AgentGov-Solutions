@@ -8,10 +8,10 @@ coe_function: optimize
 ---
 # Agent Access Governance Monitor
 
-> **Version:** v1.1.2
+> **Version:** v1.2.0
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-06-09
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 
@@ -59,15 +59,20 @@ Add-PowerAppsAccount
 
 ## Zone Requirements
 
-| Setting | Zone 1 (Personal) | Zone 2 (Team) | Zone 3 (Enterprise) |
-|---------|-------------------|---------------|---------------------|
-| `bot-limitSharingMode` | noLimit | ExcludeSharingToSecurityGroups | ExcludeSharingToSecurityGroups |
-| `bot-authoringSharingDisabled` | false | false | true |
-| `bot-publishedBotLimitSharingMode` | noLimit | ExcludeSharingToSecurityGroups | ExcludeSharingToSecurityGroups |
+| Setting | Zone 1 (Enterprise) | Zone 2 (Team) | Zone 3 (Personal) |
+|---------|---------------------|---------------|-------------------|
+| `bot-limitSharingMode` | ExcludeSharingToSecurityGroups | ExcludeSharingToSecurityGroups | noLimit |
+| `bot-authoringSharingDisabled` | true | false | false |
+| `bot-maxLimitUserSharing` | Capped | Capped | Uncapped |
+
+> `bot-maxLimitUserSharing` is the Managed-Environment per-maker user-sharing cap. AAM
+> normalizes the raw value to **Capped** (a positive integer limit, e.g. `20`) or
+> **Uncapped** (`-1`, `0`, blank, or unset). The more-restrictive zones (Zone 1 Enterprise,
+> Zone 2 Team) require a Capped limit; Zone 3 personal environments may remain Uncapped.
 
 ## Scope and Microsoft Learn Alignment
 
-AAM validates Managed Environment agent sharing settings documented in [Power Platform limit sharing](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits). It does not enumerate individual Copilot Studio shares or Microsoft 365 Copilot package assignments. Current sharing semantics note that limits apply when users share authenticated agents, can take up to an hour to enforce, and do not immediately revoke existing access.
+AAM validates Managed Environment agent sharing settings documented in [Power Platform limit sharing](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits). It does not enumerate individual Copilot Studio shares or Microsoft 365 Copilot package assignments. Microsoft Learn does not restrict these sharing limits to agents that require authentication; consult the authoritative [agent sharing rules](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules) for scope. The documented sharing semantics note that limit changes can take up to an hour to enforce and do not immediately revoke existing access.
 
 Broad-sharing values from adjacent APIs (`all`, `AllUsers`, `OrgWide`, and tenant-wide variants) are normalized to the Managed Environment `noLimit` value during severity evaluation. Future inventory expansion should treat Microsoft Graph package and Agent Registry APIs as preview sources until production support is confirmed.
 

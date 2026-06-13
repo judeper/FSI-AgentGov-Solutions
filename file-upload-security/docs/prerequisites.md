@@ -95,7 +95,7 @@ The zone classification logic (`scripts/private/Get-ZoneClassification.ps1`) is 
 1. **ELM Dataverse lookup** (preferred) — queries the `fsi_acv_environmentregistrations` table when `-DataverseUrl` and `-AccessToken` are provided
 2. **Naming convention fallback** — pattern-matches the environment display name when ELM data is unavailable
 
-Unclassifiable environments default to Zone 3 (most restrictive) for fail-safe governance. To ensure accurate zone classification, pass `-DataverseUrl` to `Get-AgentFileUploadSettings`.
+Unclassifiable environments default to Zone 1 (most restrictive) for fail-safe governance. To ensure accurate zone classification, pass `-DataverseUrl` to `Get-AgentFileUploadSettings`.
 
 ## Network Requirements
 

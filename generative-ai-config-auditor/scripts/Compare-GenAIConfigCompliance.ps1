@@ -124,7 +124,7 @@ function Compare-GenAIConfigCompliance {
 
                 $response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers -ErrorAction Stop
                 $approvedConnections = @{}
-                $zoneIntToName = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3'; 0 = 'Unknown' }
+                $zoneIntToName = @{ 100000001 = 'Zone1'; 100000002 = 'Zone2'; 100000003 = 'Zone3'; 100000000 = 'Unknown' }
 
                 foreach ($conn in $response.value) {
                     if ($conn.fsi_connectionid) {
@@ -179,6 +179,7 @@ function Compare-GenAIConfigCompliance {
                     AoaiAllowed                      = $false
                     AllowedOrchestrationModes        = @('Classic')
                     GenerativeAnswersAllowed         = $false
+                    WhitelistEnforcement             = 'Enforced'
                     AoaiViolationSeverity            = 'High'
                     OrchestrationViolationSeverity   = 'High'
                     GenAnswersViolationSeverity      = 'High'
@@ -228,12 +229,13 @@ function Compare-GenAIConfigCompliance {
             # Rule 4: AOAI connection whitelist validation (fail-closed)
             # If AOAI is enabled at the agent and we have a connection ID, the connection MUST appear
             # in the approved-connections store. If the whitelist could not be loaded ($approvedConnections
-            # is $null) and the agent zone enforces the whitelist (Zone 2/3), emit a Critical violation
-            # rather than silently passing — this is an audit control bypass.
-            $whitelistEnforcedZones = @('Zone2', 'Zone3')
+            # is $null) and the agent zone enforces the whitelist (WhitelistEnforcement = 'Enforced',
+            # i.e. the more-restrictive Zone 1 / Zone 2 under canonical zone semantics), emit a
+            # Critical violation rather than silently passing — this is an audit control bypass.
+            $whitelistEnforced = ($policy.WhitelistEnforcement -eq 'Enforced')
             if ($agent.AoaiConnectionId) {
                 if ($null -eq $approvedConnections) {
-                    if ($whitelistEnforcedZones -contains $agentZone) {
+                    if ($whitelistEnforced) {
                         $violations += [PSCustomObject]@{
                             ViolationType    = 'AuditControlBypass'
                             Description      = "AOAI connection whitelist could not be loaded for $agentZone agent — fail-closed; connection '$($agent.AoaiConnectionId)' cannot be validated"
@@ -252,7 +254,7 @@ function Compare-GenAIConfigCompliance {
                         }
                     }
                 }
-            } elseif ($agent.AzureOpenAIEnabled -eq 'Yes' -and ($whitelistEnforcedZones -contains $agentZone)) {
+            } elseif ($agent.AzureOpenAIEnabled -eq 'Yes' -and $whitelistEnforced) {
                 # AOAI enabled but no connection ID extracted in a whitelist-enforced zone — fail-closed.
                 $violations += [PSCustomObject]@{
                     ViolationType    = 'UnresolvedAoaiConnection'
@@ -279,6 +281,28 @@ function Compare-GenAIConfigCompliance {
                     Description      = "Work IQ (semantic search) is enabled but requires explicit approval in $agentZone"
                     Severity         = $policy.SemanticSearchViolationSeverity
                     RegulatoryContext = "SOX Section 404 - internal control over data search capabilities; $($policy.RegulatoryContext)"
+                }
+            }
+
+            # Rule 7: Indeterminate configuration (fail-closed)
+            # If none of the real config-state signals could be resolved from the agent's stored
+            # configuration — OrchestrationMode, Allow-ungrounded-responses (ModelKnowledgeEnabled),
+            # and Work IQ semantic search (SemanticSearchEnabled) are all 'Unable to Determine' — and
+            # no other rule fired, we must NOT report a false Compliant. A genuinely empty or opaque
+            # gen-AI config is an audit gap, not a pass. Emit a Warning so the agent surfaces as
+            # non-compliant (Unable to Determine) pending manual review rather than silently passing.
+            # AzureOpenAIEnabled is deliberately excluded: it is structurally 'Unable to Determine'
+            # for agents that expose no top-level AOAI key, so keying on it would mis-flag
+            # normally-configured agents.
+            if ($violations.Count -eq 0 -and
+                $agent.OrchestrationMode -eq 'Unable to Determine' -and
+                $agent.ModelKnowledgeEnabled -eq 'Unable to Determine' -and
+                $agent.SemanticSearchEnabled -eq 'Unable to Determine') {
+                $violations += [PSCustomObject]@{
+                    ViolationType    = 'IndeterminateConfiguration'
+                    Description      = "Generative AI configuration could not be determined for $agentZone agent — orchestration mode, ungrounded-response, and semantic-search signals are all unresolved; fail-closed pending manual review"
+                    Severity         = 'Warning'
+                    RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for AI configuration auditability; $($policy.RegulatoryContext)"
                 }
             }
 

@@ -1,14 +1,18 @@
 {
-  "version": "1.0.1",
-  "description": "Expected content moderation levels per governance zone",
+  "version": "1.1.0",
+  "description": "Expected content moderation levels per governance zone (canonical Option A: Zone 1 (Enterprise) = strictest, Zone 3 (Personal) = least restrictive)",
   "zones": {
     "Zone1": {
-      "description": "Personal Productivity - Medium minimum",
-      "minimumModerationLevel": "Medium",
+      "description": "Enterprise Managed - High required",
+      "minimumModerationLevel": "High",
       "violations": {
         "Low": {
+          "severity": "Critical",
+          "regulatory": "FINRA 3110 — Unmoderated customer-facing AI agent"
+        },
+        "Medium": {
           "severity": "High",
-          "regulatory": "Governance gap — Below minimum content moderation threshold"
+          "regulatory": "GLBA 501(b) — Insufficient content protection for enterprise agent"
         }
       }
     },
@@ -27,16 +31,12 @@
       }
     },
     "Zone3": {
-      "description": "Enterprise Managed - High required",
-      "minimumModerationLevel": "High",
+      "description": "Personal Productivity - Medium minimum",
+      "minimumModerationLevel": "Medium",
       "violations": {
         "Low": {
-          "severity": "Critical",
-          "regulatory": "FINRA 3110 — Unmoderated customer-facing AI agent"
-        },
-        "Medium": {
           "severity": "High",
-          "regulatory": "GLBA 501(b) — Insufficient content protection for enterprise agent"
+          "regulatory": "Governance gap — Below minimum content moderation threshold"
         }
       }
     },

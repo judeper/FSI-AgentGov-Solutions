@@ -7,10 +7,10 @@
     expected confirmation policy for each governance zone, including per-action-type
     rules, violation severities, and regulatory context.
 
-    Zone policies (hardcoded for v1.0):
-    - Zone1: Advisory only — Low severity for all missing confirmations
+    Zone policies (hardcoded for v1.0; canonical zone semantics — Zone 1 = Enterprise = strictest):
+    - Zone1: ALL actions require confirmation — Critical (write/delete), High (read)
     - Zone2: Write, delete, external transfer require confirmation — High (write/delete), Medium (external)
-    - Zone3: ALL actions require confirmation — Critical (write/delete), High (read)
+    - Zone3: Advisory only — Low severity for all missing confirmations
 
     v1.1 roadmap: Import risk classification rules from CSV via Import-ActionRiskClassifications.ps1
 
@@ -18,8 +18,8 @@
     The governance zone: Zone1, Zone2, Zone3, or Unknown.
 
 .EXAMPLE
-    $policy = .\Get-ExpectedConfirmationPolicy.ps1 -Zone "Zone3"
-    Returns the confirmation policy for Zone 3 (all actions require confirmation).
+    $policy = .\Get-ExpectedConfirmationPolicy.ps1 -Zone "Zone1"
+    Returns the confirmation policy for Zone 1 (Enterprise — all actions require confirmation).
 
 .OUTPUTS
     PSCustomObject with per-action-type policies, violation severities, and regulatory context.
@@ -43,15 +43,15 @@ $zonePolicies = @{
     'Zone1' = [PSCustomObject]@{
         Zone                              = 'Zone1'
         # Action types requiring confirmation
-        RequiresConfirmation              = @()  # Advisory only — none required
-        AdvisoryOnly                      = $true
+        RequiresConfirmation              = @('Write', 'Delete', 'Read', 'ExternalTransfer', 'Execute')
+        AdvisoryOnly                      = $false
         # Severity for missing confirmation by action category
-        WriteDeleteSeverity               = 'Low'
-        ReadSeverity                      = 'Low'
-        ExternalTransferSeverity          = 'Low'
-        DefaultSeverity                   = 'Low'
+        WriteDeleteSeverity               = 'Critical'
+        ReadSeverity                      = 'High'
+        ExternalTransferSeverity          = 'Critical'
+        DefaultSeverity                   = 'High'
         # Regulatory context
-        RegulatoryContext                 = 'Zone 1 (Personal Productivity) - Advisory monitoring, no confirmation requirements enforced'
+        RegulatoryContext                 = 'Zone 1 (Enterprise/Regulated) - ALL actions require user confirmation before execution'
     }
 
     'Zone2' = [PSCustomObject]@{
@@ -71,15 +71,15 @@ $zonePolicies = @{
     'Zone3' = [PSCustomObject]@{
         Zone                              = 'Zone3'
         # Action types requiring confirmation
-        RequiresConfirmation              = @('Write', 'Delete', 'Read', 'ExternalTransfer', 'Execute')
-        AdvisoryOnly                      = $false
+        RequiresConfirmation              = @()  # Advisory only — none required
+        AdvisoryOnly                      = $true
         # Severity for missing confirmation by action category
-        WriteDeleteSeverity               = 'Critical'
-        ReadSeverity                      = 'High'
-        ExternalTransferSeverity          = 'Critical'
-        DefaultSeverity                   = 'High'
+        WriteDeleteSeverity               = 'Low'
+        ReadSeverity                      = 'Low'
+        ExternalTransferSeverity          = 'Low'
+        DefaultSeverity                   = 'Low'
         # Regulatory context
-        RegulatoryContext                 = 'Zone 3 (Enterprise/Regulated) - ALL actions require user confirmation before execution'
+        RegulatoryContext                 = 'Zone 3 (Personal Productivity) - Advisory monitoring, no confirmation requirements enforced'
     }
 
     'Unknown' = [PSCustomObject]@{

@@ -22,27 +22,27 @@ Unlike the Content Moderation Monitor which validates moderation levels, GAC aud
 
 ## Zone Requirements
 
-Each governance zone defines which generative AI features are permitted and under what conditions:
+Each governance zone defines which generative AI features are permitted and under what conditions. On the lab validation tenant the shared `fsi_acv_zone` semantics are canonical: **Zone 1 (Enterprise) = most restrictive / highest-risk** (`100000001`), **Zone 2 (Team) = middle** (`100000002`), **Zone 3 (Personal) = least restrictive / lowest-risk** (`100000003`).
 
 | Feature | Zone 1 | Zone 2 | Zone 3 |
 |---------|--------|--------|--------|
-| Azure OpenAI Integration | Allowed | Approved connections only | Explicit allowlist only |
-| Generative Orchestration | Allowed | Allowed with approval | Restricted (classic unless exception) |
-| Generative Answers Nodes | Allowed | Allowed | Explicit allowlist per topic |
-| AOAI Connection Whitelist | Advisory (warning) | Enforced (high) | Enforced (critical) |
-| Allow ungrounded responses (AI general knowledge) | Allowed | Requires approval | Disabled (only approved knowledge sources) |
-| Work IQ (semantic search) | Allowed | Allowed with logging | Requires explicit approval |
+| Azure OpenAI Integration | Explicit allowlist only | Approved connections only | Allowed |
+| Generative Orchestration | Restricted (classic unless exception) | Allowed with approval | Allowed |
+| Generative Answers Nodes | Explicit allowlist per topic | Allowed | Allowed |
+| AOAI Connection Whitelist | Enforced (critical) | Enforced (high) | Advisory (warning) |
+| Allow ungrounded responses (AI general knowledge) | Disabled (only approved knowledge sources) | Requires approval | Allowed |
+| Work IQ (semantic search) | Requires explicit approval | Allowed with logging | Allowed |
 
 ### Violation Severity Matrix
 
 | Violation | Zone 1 | Zone 2 | Zone 3 |
 |-----------|--------|--------|--------|
-| Unapproved AOAI Connection | Warning | High | Critical |
-| Generative Orchestration (unauthorized) | Warning | Medium | Critical |
-| Generative Answers (unauthorized) | Warning | Medium | High |
-| Allow ungrounded responses (unauthorized) | Warning | Medium | Critical |
-| Work IQ / semantic search (unauthorized) | Warning | Medium | High |
-| Unknown Configuration | Warning | Medium | High |
+| Unapproved AOAI Connection | Critical | High | Warning |
+| Generative Orchestration (unauthorized) | Critical | Medium | Warning |
+| Generative Answers (unauthorized) | High | Medium | Warning |
+| Allow ungrounded responses (unauthorized) | Critical | Medium | Warning |
+| Work IQ / semantic search (unauthorized) | High | Medium | Warning |
+| Unknown Configuration | High | Medium | Warning |
 
 ## Features
 
@@ -160,7 +160,7 @@ Power Platform admin center now exposes a centralized **Copilot > Settings** are
 
 Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-configuration) with Basic and Realtime voice modes, barge-in support, and DTMF navigation. Voice enablement introduces additional governance considerations:
 
-- **Zone 3 agents** with voice capabilities may require explicit approval before enabling real-time voice mode, due to telephony channel exposure
+- **Zone 1 (Enterprise) agents** with voice capabilities may require explicit approval before enabling real-time voice mode, due to telephony channel exposure
 - Voice-enabled agents generate speech transcripts that may fall under FINRA Rule 4511 and SEC Rule 17a-4 record-keeping requirements
 - Organizations should evaluate whether voice feature toggles require the same zone-based governance as other GenAI features audited by this solution
 
