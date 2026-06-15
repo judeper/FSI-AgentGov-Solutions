@@ -21,6 +21,10 @@ PUBLISHER_PREFIX = "fsi"
 # Shared option sets (reused from ACV) - only create if missing
 SHARED_OPTIONSETS = {
     "fsi_acv_zone": {
+        # Dataverse rejects the payload as 'Invalid property Options ... on
+        # OptionSetMetadataBase' unless the derived OptionSetMetadata type is
+        # declared on the root resource.
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Governance Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Governance zone classification", "LanguageCode": 1033}]},
@@ -38,6 +42,7 @@ SHARED_OPTIONSETS = {
 # COD-specific option sets
 OPTIONSETS = {
     "fsi_COD_violationtype": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_COD_violationtype",
         "DisplayName": {"LocalizedLabels": [{"Label": "Violation Type", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Type of credential oversharing violation detected", "LanguageCode": 1033}]},
@@ -53,6 +58,7 @@ OPTIONSETS = {
         ],
     },
     "fsi_COD_violationstatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_COD_violationstatus",
         "DisplayName": {"LocalizedLabels": [{"Label": "Violation Status", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Current status of a credential oversharing violation", "LanguageCode": 1033}]},
@@ -67,6 +73,7 @@ OPTIONSETS = {
         ],
     },
     "fsi_COD_severity": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_COD_severity",
         "DisplayName": {"LocalizedLabels": [{"Label": "Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Severity level of credential oversharing violation", "LanguageCode": 1033}]},
@@ -81,6 +88,7 @@ OPTIONSETS = {
         ],
     },
     "fsi_COD_scanstatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_COD_scanstatus",
         "DisplayName": {"LocalizedLabels": [{"Label": "Scan Status", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Status of a credential oversharing scan run", "LanguageCode": 1033}]},
@@ -94,6 +102,7 @@ OPTIONSETS = {
         ],
     },
     "fsi_COD_exceptionstatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_COD_exceptionstatus",
         "DisplayName": {"LocalizedLabels": [{"Label": "Exception Status", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Status of a credential exception request", "LanguageCode": 1033}]},
@@ -1092,6 +1101,38 @@ def generate_schema_docs() -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Web API normalization helpers (ported from ASARD's proven pattern)
+# ---------------------------------------------------------------------------
+# Without these, CreateEntity rejects the payload with "Required field
+# 'PrimaryAttribute' is missing" (no IsPrimaryName marker on the Attributes
+# list), and CreateAttribute rejects picklist/string/etc. attributes that
+# omit AttributeType / AttributeTypeName. The @odata.type discriminator
+# alone is NOT enough -- Dataverse requires the explicit type fields.
+
+_ATTRIBUTE_TYPE_NAMES = {
+    "Microsoft.Dynamics.CRM.StringAttributeMetadata": ("String", "StringType"),
+    "Microsoft.Dynamics.CRM.MemoAttributeMetadata": ("Memo", "MemoType"),
+    "Microsoft.Dynamics.CRM.PicklistAttributeMetadata": ("Picklist", "PicklistType"),
+    "Microsoft.Dynamics.CRM.BooleanAttributeMetadata": ("Boolean", "BooleanType"),
+    "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata": ("DateTime", "DateTimeType"),
+    "Microsoft.Dynamics.CRM.IntegerAttributeMetadata": ("Integer", "IntegerType"),
+    "Microsoft.Dynamics.CRM.DecimalAttributeMetadata": ("Decimal", "DecimalType"),
+    "Microsoft.Dynamics.CRM.LookupAttributeMetadata": ("Lookup", "LookupType"),
+}
+
+
+def _normalize_attribute(attr: dict) -> dict:
+    """Inject AttributeType/AttributeTypeName (required by CreateAttribute)
+    from the @odata.type discriminator when absent. Mutates and returns the
+    dict."""
+    pair = _ATTRIBUTE_TYPE_NAMES.get(attr.get("@odata.type", ""))
+    if pair and "AttributeTypeName" not in attr:
+        attr.setdefault("AttributeType", pair[0])
+        attr["AttributeTypeName"] = {"Value": pair[1]}
+    return attr
+
+
 def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
     """Create global option sets (shared and COD-specific)."""
     print("\n=== Creating Option Sets ===")
@@ -1135,6 +1176,16 @@ def create_tables(client: DataverseClient, dry_run: bool) -> dict:
             skipped += 1
         else:
             print(f"  {table_name}: Creating")
+            # Inject the EntityMetadata @odata.type discriminator + mark the
+            # primary-name attribute + inject AttributeType/AttributeTypeName
+            # on each attribute. Without this Dataverse rejects CreateEntity
+            # with "Required field 'PrimaryAttribute' is missing".
+            metadata.setdefault("@odata.type", "Microsoft.Dynamics.CRM.EntityMetadata")
+            primary = str(metadata.get("PrimaryNameAttribute", "")).lower()
+            for attr in metadata.get("Attributes", []):
+                _normalize_attribute(attr)
+                if str(attr.get("SchemaName", "")).lower() == primary:
+                    attr["IsPrimaryName"] = True
             client.create_table(metadata)
             created += 1
     return {"created": created, "skipped": skipped}
@@ -1152,6 +1203,10 @@ def create_columns(client: DataverseClient, dry_run: bool) -> None:
                 print(f"  {schema_name}: Already exists")
             else:
                 print(f"  {schema_name}: Creating")
+                # Inject AttributeType/AttributeTypeName from @odata.type
+                # before POST. The shared client's _resolve_picklist_bind
+                # handles the GlobalOptionSet@odata.bind GUID rewrite.
+                _normalize_attribute(column_metadata)
                 client.create_column(table_logical_name, column_metadata)
 
 
