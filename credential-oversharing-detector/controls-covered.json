@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "credential-oversharing-detector",
   "solutionName": "Credential Oversharing Detector",
-  "solutionVersion": "2.1.1",
+  "solutionVersion": "2.1.2",
   "status": "live",
   "controls": [
     {

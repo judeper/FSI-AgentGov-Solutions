@@ -31,7 +31,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | copilot-agent-inventory | v0.2.0-preview | 1.2, 1.7, 2.1, 2.13 | Foundation system-of-record for Copilot agents — three-layer tenant-wide discovery feeding a canonical governance store |
 | copilot-billing-governance | v0.1.0-preview | 3.5, 1.18, 1.14 | Governance for Copilot consumption billing — PAYG/prepaid credit policies, entitlement engine, per-agent caps, coverage-gap analysis |
 | copilot-studio-analytics | v2.0.2 | 3.2 | Business impact analytics for Copilot Studio agents |
-| credential-oversharing-detector | v2.1.1 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
+| credential-oversharing-detector | v2.1.2 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
 | cross-solution-integration | v2.0.3 | 1.7, 1.23, 1.11, 3.8, 1.8, 1.14, 1.18 | Wires Tier 2 solutions into Compliance Dashboard |
 | cross-tenant-external-sharing-governance | v1.1.0 | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.4 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |

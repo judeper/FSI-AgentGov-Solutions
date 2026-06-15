@@ -146,9 +146,15 @@ def create_environment_variables(client: DataverseClient, dry_run: bool = False)
 
                 # Create default value; roll back definition on failure
                 try:
+                    # Dataverse environmentvariablevalues POST requires PascalCase
+                    # nav-prop binding AND a schemaname field. The lowercase
+                    # nav-prop (environmentvariabledefinitionid@odata.bind) or a
+                    # missing schemaname both return HTTP 400. Proven fix
+                    # mirrored from ASARD / AAM (2026-06-09).
                     value_data = {
+                        "schemaname": schemaname,
                         "value": var["defaultvalue"],
-                        "environmentvariabledefinitionid@odata.bind": f"/environmentvariabledefinitions({definition_id})",
+                        "EnvironmentVariableDefinitionId@odata.bind": f"/environmentvariabledefinitions({definition_id})",
                     }
                     client.create_record("environmentvariablevalues", value_data)
                 except Exception as val_err:
