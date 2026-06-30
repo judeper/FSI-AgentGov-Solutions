@@ -2,9 +2,9 @@
   "schemaVersion": "1.5.0",
   "generatedBy": "scripts/build-manifest.py",
   "counts": {
-    "total": 40,
+    "total": 41,
     "live": 35,
-    "preview": 5
+    "preview": 6
   },
   "solutions": {
     "action-confirmation-auditor": {
@@ -418,7 +418,7 @@
     "copilot-agent-inventory": {
       "id": "copilot-agent-inventory",
       "name": "Copilot Agent Inventory",
-      "version": "0.1.0-preview",
+      "version": "0.2.0-preview",
       "domain": "monitoring-analytics",
       "tier": "1",
       "status": "preview",
@@ -503,7 +503,7 @@
     "credential-oversharing-detector": {
       "id": "credential-oversharing-detector",
       "name": "Credential Oversharing Detector",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -642,6 +642,32 @@
         "security-admin": "Entra app registration/admin consent and Dataverse system administrator access for evidence writes."
       },
       "verification": "Confirm Invoke-DRTest.ps1 inserts a fsi_drtestresult row and Export-DREvidence.ps1 packages the evidence.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
+    },
+    "early-release-validation": {
+      "id": "early-release-validation",
+      "name": "Early-Release Validation",
+      "version": "0.1.0-preview",
+      "domain": "lifecycle-ops",
+      "tier": "2",
+      "status": "preview",
+      "description": "Pre-promotion resilience validation for Copilot Studio agents. Structural checks for fallback coverage, connector resilience, and error recovery before early-release-ring promotion, packaged as tamper-evident Dataverse evidence.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/early-release-validation/",
+      "controls": [
+        "2.1",
+        "2.4",
+        "2.8",
+        "1.9"
+      ],
+      "dependencies": [],
+      "prerequisites": {
+        "power-platform-admin": "Power Platform admin to export and unpack the target agent solution (PAC CLI) and to access the early-release ring environment.",
+        "security-admin": "Microsoft Entra app registration / admin consent and Dataverse system administrator access for evidence writes."
+      },
+      "verification": "Run Invoke-EarlyReleaseValidation.ps1 -CheckType AllStructural against an unpacked solution and confirm per-check results print; Export-ValidationEvidence.ps1 produces an fsi_ervalidationresult evidence JSON with a SHA-256 companion file.",
       "zones": [
         "enterprise"
       ],

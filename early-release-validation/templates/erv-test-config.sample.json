@@ -1,0 +1,35 @@
+{
+  "$schema": "erv-test-config",
+  "version": "0.1.0-preview",
+  "description": "Sample configuration for an early-release validation run against an unpacked Copilot Studio solution.",
+  "solutionPath": "./unpacked",
+  "agentId": "00000000-0000-0000-0000-000000000000",
+  "agentVersion": "1.4.0",
+  "environment": "https://contoso.crm.dynamics.com",
+  "authentication": {
+    "preferred": "managedIdentityOrWorkloadIdentityAccessToken",
+    "accessTokenEnvironmentVariable": "DATAVERSE_ACCESS_TOKEN",
+    "clientSecret": "legacy dev-only fallback; do not use for production automation"
+  },
+  "checks": [
+    {
+      "checkType": "FallbackCoverageCheck",
+      "description": "Every topic that calls a connector or cloud flow has an error-handling construct."
+    },
+    {
+      "checkType": "ConnectorResilienceCheck",
+      "description": "Connection references are per-environment bindable (no hard-coded connectionid)."
+    },
+    {
+      "checkType": "ErrorRecoveryCheck",
+      "description": "System Fallback topic (and Escalate topic when present) has a non-stub user-facing message."
+    },
+    {
+      "checkType": "EarlyReleaseReadinessCheck",
+      "description": "Composite gate. Live probe deferred pending MSCAT Part 2 (JudeSquad issue #1266); reports Skipped and PromotionReady=false.",
+      "blocked": true,
+      "blockedReason": "MSCAT Building Enterprise AI Solutions Part 2 - early-release-ring environment-config schema unpublished"
+    }
+  ],
+  "notes": "Replace placeholder GUIDs and the environment URL with real values. The three structural checks run offline and need no credentials; -Environment plus credentials are only required to persist evidence to Dataverse."
+}

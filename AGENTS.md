@@ -6,7 +6,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 **FSI-AgentGov-Solutions** — Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **40 solution implementations (35 live, 5 preview)** mapped to the 78-control framework across all 4 pillars
+- **41 solution implementations (35 live, 6 preview)** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 
@@ -39,6 +39,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | cross-tenant-external-sharing-governance | v1.1.0 | 1.1, 1.18, 2.1, 2.8, 1.7, 1.11 | Three-layer cross-tenant access governance (tenant isolation, Entra CTA, agent shares) |
 | deny-event-correlation-report | v2.0.4 | 1.5, 1.7, 1.8, 3.4 | Daily deny event correlation across Purview, DLP, and App Insights |
 | dr-testing-framework | v2.0.2 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
+| early-release-validation | v0.1.0-preview | 2.1, 2.4, 2.8, 1.9 | Pre-promotion resilience validation for Copilot Studio agents — fallback coverage, connector resilience, and error recovery checks with tamper-evident Dataverse evidence |
 | environment-lifecycle-management | v1.2.2 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
 | file-upload-security | v1.1.2 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.1.1 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |

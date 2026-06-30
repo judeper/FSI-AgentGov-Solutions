@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "early-release-validation",
+  "solutionName": "Early-Release Validation",
+  "solutionVersion": "0.1.0-preview",
+  "status": "preview",
+  "controls": [
+    {
+      "id": "2.1",
+      "coverage": "full"
+    },
+    {
+      "id": "2.4",
+      "coverage": "full"
+    },
+    {
+      "id": "2.8",
+      "coverage": "full"
+    },
+    {
+      "id": "1.9",
+      "coverage": "full"
+    }
+  ],
+  "controlCount": 4
+}
