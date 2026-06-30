@@ -66,7 +66,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 |----------|------|---------|
 | [Agent Intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | v1.0.0-preview |
 | [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.4 |
-| [Copilot Agent Inventory](./copilot-agent-inventory/) | Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. | v0.1.0-preview |
+| [Copilot Agent Inventory](./copilot-agent-inventory/) | Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. | v0.2.0-preview |
 
 ### Layer 2: Tier 2 Governance Solutions
 
@@ -74,7 +74,7 @@ These solutions operate independently but can be wired into the Compliance Dashb
 
 | Solution | Version | Controls |
 |----------|---------|----------|
-| [Agent Access Governance Monitor](./agent-access-monitor/) | v1.1.2 | 3.8 |
+| [Agent Access Governance Monitor](./agent-access-monitor/) | v1.2.0 | 3.8 |
 | [Audit Compliance Manager](./audit-compliance-manager/) | v1.0.5 | 1.7 |
 | [Conditional Access Automation](./conditional-access-automation/) | v2.0.2 | 1.11, 1.23, 1.18 |
 | [Content Moderation Monitor](./content-moderation-monitor/) | v1.1.2 | 1.27, 1.8 |
@@ -98,11 +98,12 @@ All other solutions operate independently and can be deployed in any order based
 | [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.5 | enterprise |
 | [Copilot Billing Governance](./copilot-billing-governance/) | 2 | v0.1.0-preview | team, enterprise |
 | [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.2 | personal, team, enterprise |
-| [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.1 | personal, team, enterprise |
+| [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.2 | personal, team, enterprise |
 | [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.3 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.1.0 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.4 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.2 | enterprise |
+| [Early-Release Validation](./early-release-validation/) | 2 | v0.1.0-preview | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.2 | personal, team, enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.1 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.1 | team, enterprise |
@@ -209,6 +210,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | — | — | ✅ | confidential |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | — | ✅ | ✅ | confidential |
 | [DR Testing Framework](./dr-testing-framework/) | — | — | ✅ | confidential |
+| [Early-Release Validation](./early-release-validation/) | — | — | ✅ | confidential |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | ✅ | ✅ | ✅ | internal |
 | [File Upload Security](./file-upload-security/) | ✅ | ✅ | ✅ | internal |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | — | — | ✅ | restricted |
