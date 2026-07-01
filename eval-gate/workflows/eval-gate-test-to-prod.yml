@@ -1,0 +1,242 @@
+# eval-gate-test-to-prod.yml
+#
+# Evaluation gate: Test → Prod promotion
+#
+# Manual dispatch only. Requires human sign-off via the 'production' GitHub environment
+# protection rule (required reviewer = judep_microsoft) BEFORE the eval runs.
+#
+# Gate logic (TestToProd — stricter than DevToTest):
+#   - HARD-FAIL  → workflow fails; promotion blocked
+#   - SOFT-FAIL  → workflow fails; promotion blocked (stricter than DevToTest)
+#   - PASS       → proceeds to the human sign-off gate (GitHub environment protection)
+#
+# Human-gated prerequisites before this workflow can run live:
+#   1. Power CAT Copilot Studio Kit installed in the Test Dataverse environment
+#   2. Agent configured with Direct Line channel in Test
+#   3. GitHub 'test' and 'production' environment secrets populated:
+#        CS_DIRECTLINE_SECRET_TEST, CS_CERT_THUMBPRINT_TEST,
+#        CS_DIRECTLINE_SECRET_PROD, CS_CERT_THUMBPRINT_PROD
+#   4. configs/environments.json Test section fully populated
+#      (dataverseUrl, tenantId, clientId, agentId)
+#   5. GitHub 'production' environment protection:
+#        required reviewer = judep_microsoft (Decision #8)
+#
+# NOTE: This file lives in eval-gate/workflows/ for visibility.
+#       To activate as a live GitHub Actions workflow, copy to .github/workflows/.
+#
+# Part of: FSI-AgentGov-Solutions eval-gate CI tooling
+# Engine:  Power CAT Copilot Studio Kit + native Agent Evaluation
+
+name: eval-gate Test→Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_set_id:
+        description: 'Kit test set ID to evaluate ("all" runs every registered set)'
+        required: false
+        default: 'all'
+      timeout_seconds:
+        description: 'Max seconds to wait for Kit test run'
+        required: false
+        default: '900'
+      reason:
+        description: 'Promotion reason / change ticket (required for audit trail)'
+        required: true
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  # ─────────────────────────────────────────────────────────
+  # Job 1: Eval gate against the Test environment
+  # Must PASS (all categories) before the human sign-off gate fires.
+  # ─────────────────────────────────────────────────────────
+  eval-gate-test:
+    name: Eval Gate — Test (TestToProd)
+    runs-on: windows-latest
+    environment: test
+
+    env:
+      EVAL_ENVIRONMENT:  test
+      EVAL_TEST_SET_ID:  ${{ github.event.inputs.test_set_id || 'all' }}
+      EVAL_TIMEOUT:      ${{ github.event.inputs.timeout_seconds || '900' }}
+      PROMOTION_REASON:  ${{ github.event.inputs.reason }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Log promotion intent (audit trail)
+        shell: pwsh
+        run: |
+          @"
+          ## Promotion Intent
+
+          - **Initiated by:** ${{ github.actor }}
+          - **Run ID:** ${{ github.run_id }}
+          - **Reason:** $env:PROMOTION_REASON
+          - **Test Set:** $env:EVAL_TEST_SET_ID
+          - **Timestamp:** $(Get-Date -Format 'o')
+          "@ | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          Write-Host "Promotion reason: $env:PROMOTION_REASON"
+
+      - name: Verify prerequisites
+        shell: pwsh
+        run: |
+          $missing = @()
+
+          if (-not $env:CS_DIRECTLINE_SECRET_TEST)  { $missing += 'CS_DIRECTLINE_SECRET_TEST' }
+          if (-not $env:CS_CERT_THUMBPRINT_TEST)    { $missing += 'CS_CERT_THUMBPRINT_TEST' }
+
+          $envCfg = Get-Content 'eval-gate/configs/environments.json' | ConvertFrom-Json
+          $test   = $envCfg.environments.test
+
+          if (-not $test.dataverseUrl)  { $missing += 'environments.json: test.dataverseUrl' }
+          if (-not $test.tenantId)      { $missing += 'environments.json: test.tenantId' }
+          if (-not $test.clientId)      { $missing += 'environments.json: test.clientId' }
+          if (-not $test.agentId)       { $missing += 'environments.json: test.agentId' }
+
+          if ($missing.Count -gt 0) {
+            Write-Error @"
+          HARD-FAIL — Human-gated prerequisites not met. Missing:
+          $($missing | ForEach-Object { "  • $_" } | Out-String)
+
+          See eval-gate/README.md for setup instructions.
+          "@
+            exit 2
+          }
+
+          Write-Host "✓ All prerequisites verified" -ForegroundColor Green
+        env:
+          CS_DIRECTLINE_SECRET_TEST: ${{ secrets.CS_DIRECTLINE_SECRET_TEST }}
+          CS_CERT_THUMBPRINT_TEST:   ${{ secrets.CS_CERT_THUMBPRINT_TEST }}
+
+      - name: Run eval gate (Test environment — TestToProd rules)
+        id: eval
+        shell: pwsh
+        run: |
+          $result = .\eval-gate\Invoke-EvalGate.ps1 `
+            -Environment       $env:EVAL_ENVIRONMENT `
+            -TestSetId         $env:EVAL_TEST_SET_ID `
+            -PromotionContext   TestToProd `
+            -TimeoutSeconds    ([int]$env:EVAL_TIMEOUT) `
+            -OutputPath        "eval-gate-result-test.json"
+
+          $verdict  = $result.verdict
+          $exitCode = $result.exitCode
+          "verdict=$verdict"    | Out-File -Append $env:GITHUB_OUTPUT
+          "exit_code=$exitCode" | Out-File -Append $env:GITHUB_OUTPUT
+
+          $summary = Get-Content 'eval-gate-result-test.json' | ConvertFrom-Json
+          @"
+          ## Eval Gate Result — Test→Prod
+
+          | Field | Value |
+          |-------|-------|
+          | **Verdict** | $($summary.verdict) |
+          | **Environment** | $($summary.environment) |
+          | **Test Set** | $($summary.testSetId) |
+          | **Promotion Context** | $($summary.promotionContext) |
+          | **Promotion Reason** | $env:PROMOTION_REASON |
+          | **Initiated By** | ${{ github.actor }} |
+          | **Timestamp** | $($summary.timestamp) |
+
+          ### Category Results
+
+          | Category | Verdict | Actual | Threshold |
+          |----------|---------|--------|-----------|
+          $(foreach ($c in $summary.categories) {
+            "| $($c.category) | $($c.verdict) | $($c.actual) | $($c.passThreshold) |"
+          } | Out-String)
+
+          > **Note:** A human sign-off gate (required reviewer: judep_microsoft) follows this eval step.
+          > Even if the eval PASSes, promotion to Prod requires explicit reviewer approval (Decision #8).
+          "@ | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        env:
+          CS_DIRECTLINE_SECRET_TEST: ${{ secrets.CS_DIRECTLINE_SECRET_TEST }}
+          CS_CERT_THUMBPRINT_TEST:   ${{ secrets.CS_CERT_THUMBPRINT_TEST }}
+
+      - name: Upload eval result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-gate-result-test-${{ github.run_id }}
+          path: eval-gate-result-test.json
+          if-no-files-found: warn
+
+      - name: Fail on HARD-FAIL or SOFT-FAIL (both block in TestToProd)
+        if: steps.eval.outputs.exit_code != '0'
+        shell: pwsh
+        run: |
+          $summary = Get-Content 'eval-gate-result-test.json' | ConvertFrom-Json
+          $reasons = (@($summary.hardFailReasons) + @($summary.softFailReasons)) -join "`n"
+          Write-Error @"
+          $($summary.verdict) — promotion to Prod is blocked.
+          In TestToProd context, both HARD-FAIL and SOFT-FAIL are blocking.
+          Resolve the following before retrying:
+          $reasons
+          "@
+          exit 2
+
+  # ─────────────────────────────────────────────────────────
+  # Job 2: Human sign-off gate (Decision #8)
+  # Fires ONLY after eval-gate-test passes (all categories PASS).
+  # Blocked until judep_microsoft approves in the GitHub UI.
+  # ─────────────────────────────────────────────────────────
+  human-sign-off:
+    name: Human Sign-Off Gate (judep_microsoft required)
+    needs: eval-gate-test
+    runs-on: windows-latest
+    environment: production   # <-- protected; required reviewer = judep_microsoft
+
+    steps:
+      - name: Confirm promotion approved
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "══════════════════════════════════════════════════════════" -ForegroundColor Green
+          Write-Host "  Human sign-off gate PASSED." -ForegroundColor Green
+          Write-Host "  Promotion to Prod approved by: ${{ github.actor }}" -ForegroundColor Green
+          Write-Host "  Promotion reason: ${{ github.event.inputs.reason }}" -ForegroundColor Green
+          Write-Host "══════════════════════════════════════════════════════════" -ForegroundColor Green
+          Write-Host ""
+
+          @"
+          ## Human Sign-Off Gate Passed
+
+          | Field | Value |
+          |-------|-------|
+          | **Approved by** | ${{ github.actor }} |
+          | **Run ID** | ${{ github.run_id }} |
+          | **Reason** | ${{ github.event.inputs.reason }} |
+          | **Timestamp** | $(Get-Date -Format 'o') |
+
+          ✅ Promotion to production approved. Proceed with deployment.
+          "@ | Out-File -Append $env:GITHUB_STEP_SUMMARY
+
+      - name: Record audit evidence
+        shell: pwsh
+        run: |
+          # Emit an audit-trail record for compliance evidence
+          $evidence = @{
+            eventType         = 'promotion-approved'
+            source            = 'eval-gate-test-to-prod'
+            environment       = 'prod'
+            approvedBy        = '${{ github.actor }}'
+            runId             = '${{ github.run_id }}'
+            promotionReason   = '${{ github.event.inputs.reason }}'
+            testSetId         = '${{ github.event.inputs.test_set_id }}'
+            timestamp         = (Get-Date -Format 'o')
+            regulations       = @('FINRA 3110', 'SEC 17a-3/4', 'SOX 302/404')
+          } | ConvertTo-Json -Depth 5
+
+          Write-Host "Audit evidence:"
+          Write-Host $evidence
+
+          # In production: persist this to Dataverse / Azure Monitor / Purview
+          # as tamper-evident compliance evidence. See audit-compliance-manager solution.

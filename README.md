@@ -91,6 +91,24 @@ Downstream consumers should treat `solutions.json` (top-level `counts` plus each
 
 <!-- END:SOLUTIONS -->
 
+## Shared CI Tooling
+
+### [eval-gate](./eval-gate/) — Copilot Studio Kit evaluation gate
+
+Quality and safety CI gate for Copilot Studio agent promotions. Wraps the **Power CAT Copilot Studio Kit** with a config-driven PASS / SOFT-FAIL / HARD-FAIL decision layer and OWASP LLM Top 10 + FSI safety test set.
+
+| File | Purpose |
+|------|---------|
+| [`eval-gate/Invoke-EvalGate.ps1`](./eval-gate/Invoke-EvalGate.ps1) | CI wrapper — triggers Kit test run, reads results, emits gate verdict |
+| [`eval-gate/configs/eval-thresholds.json`](./eval-gate/configs/eval-thresholds.json) | Configurable thresholds (Safety 100%, Accuracy ≥85%, etc.) |
+| [`eval-gate/configs/environments.json`](./eval-gate/configs/environments.json) | Per-env Dataverse/Direct Line config template |
+| [`eval-gate/test-sets/safety-baseline.json`](./eval-gate/test-sets/safety-baseline.json) | 10 safety cases — OWASP LLM01/06/07/08/09 + FSI overlay (KYC, cross-customer, audit tampering) |
+| [`eval-gate/workflows/`](./eval-gate/workflows/) | CI workflows: Dev→Test (auto on main merge) and Test→Prod (manual + required reviewer) |
+
+> **Prerequisites:** Power CAT Copilot Studio Kit must be installed in each Dataverse environment and GitHub Actions secrets provisioned before live CI runs. See [`eval-gate/README.md`](./eval-gate/README.md).
+
+---
+
 ## How to Use
 
 1. Navigate to the solution folder
