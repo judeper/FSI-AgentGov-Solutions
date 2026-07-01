@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/agent-cost-reporting/schemas/report_manifest.schema.json",
+  "title": "Cost Report Evidence Manifest",
+  "description": "Integrity and provenance manifest emitted alongside each generated report. Travels with report.html, the cost_facts dataset, and sha256.txt as one evidence package, intended for immutable (WORM) storage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "snapshot_id",
+    "generated_at_utc",
+    "generator_version",
+    "tenant_id",
+    "scope",
+    "period",
+    "surfaces",
+    "artifacts"
+  ],
+  "properties": {
+    "snapshot_id": { "type": "string", "description": "Point-in-time collection identifier shared by every row in the dataset." },
+    "generated_at_utc": { "type": "string", "format": "date-time" },
+    "generator_version": { "type": "string", "description": "Solution version (semver), and optionally the git commit SHA." },
+    "git_commit_sha": { "type": ["string", "null"] },
+    "tenant_id": { "type": "string" },
+    "scope": {
+      "type": "object",
+      "description": "What was in scope for this run.",
+      "additionalProperties": true,
+      "properties": {
+        "subscriptions": { "type": "array", "items": { "type": "string" } },
+        "billing_policies": { "type": "array", "items": { "type": "string" } },
+        "environments": { "type": "array", "items": { "type": "string" } },
+        "products": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "period": {
+      "type": "object",
+      "required": ["start_utc", "end_utc"],
+      "additionalProperties": false,
+      "properties": {
+        "start_utc": { "type": "string", "format": "date-time" },
+        "end_utc": { "type": "string", "format": "date-time" }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "description": "Per-surface collection result and freshness.",
+      "items": {
+        "type": "object",
+        "required": ["surface", "status"],
+        "additionalProperties": true,
+        "properties": {
+          "surface": { "type": "string" },
+          "status": { "type": "string", "enum": ["succeeded", "partial", "skipped", "surface_unavailable", "failed"] },
+          "rows": { "type": ["integer", "null"], "minimum": 0 },
+          "data_freshness_utc": { "type": ["string", "null"], "format": "date-time" },
+          "preview": { "type": "boolean" },
+          "note": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "Files in the evidence package with their SHA-256 hashes.",
+      "items": {
+        "type": "object",
+        "required": ["filename", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "filename": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "bytes": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    },
+    "signature_thumbprint": { "type": ["string", "null"], "description": "Optional code-signing/cert thumbprint if the package is signed." }
+  }
+}

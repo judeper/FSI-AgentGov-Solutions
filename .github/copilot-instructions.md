@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **41 solution implementations (35 live, 6 preview)** mapped to the 78-control framework across all 4 pillars
+- **42 solution implementations (35 live, 7 preview)** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
@@ -18,6 +18,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | agent-365-lifecycle-governance | v1.1.5 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.2.0 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.2.1 | 2.17 | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
+| agent-cost-reporting | v0.1.0-preview | 1.7, 3.1, 3.2 | Consolidated, on-demand, point-in-time cost/consumption evidence report for AI agents across Azure Cost Management, Microsoft Graph, the Power Platform API, and Purview audit logs, normalized to a cost-fact dataset and rendered as a self-contained HTML evidence artifact |
 | agent-eligibility-gateway | v0.1.0-preview | 1.1, 1.18, 3.8 | Optional runtime allow/deny gateway (Azure API Management) for owned custom-web and Direct Line agent channels |
 | agent-knowledge-source-scanner | v1.1.3 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
 | agent-registry-automation | v2.1.1 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
