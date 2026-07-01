@@ -90,6 +90,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.2.1 | personal, team, enterprise |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.5 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.2.1 | team, enterprise |
+| [Agent Cost Reporting](./agent-cost-reporting/) | 2 | v0.1.0-preview | team, enterprise |
 | [Agent Eligibility Gateway](./agent-eligibility-gateway/) | 3 | v0.1.0-preview | enterprise |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.3 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.1 | personal, team, enterprise |
@@ -195,6 +196,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | — | — | ✅ | confidential |
 | [Agent Access Governance Monitor](./agent-access-monitor/) | — | ✅ | ✅ | confidential |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | — | ✅ | ✅ | internal |
+| [Agent Cost Reporting](./agent-cost-reporting/) | — | ✅ | ✅ | confidential |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | ✅ | ✅ | ✅ | confidential |
 | [Agent Registry Automation](./agent-registry-automation/) | ✅ | ✅ | ✅ | internal |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | — | ✅ | ✅ | confidential |

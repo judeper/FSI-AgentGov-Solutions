@@ -66,7 +66,7 @@ jobs:
         # close-out).
         run: |
           # Runtime deps of solution scripts that pytest imports
-          pip install requests msal azure-identity
+          pip install requests msal azure-identity jinja2
           test_files=$(git ls-files '*test_*.py' '*_test.py' '**/tests/**/*.py' | grep -v '^message-center-monitor/tests/' | head -50)
           if [ -z "$test_files" ]; then
             echo "No additional pytest files discovered; skipping."

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+{# Self-contained HTML evidence report. No CDN / external requests. Inline CSS + inline SVG only. #}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Cost Reporting — Evidence Report</title>
+  <style>
+    :root { --ms-blue: #0078D4; --green: #107C10; --amber: #C19C00; --red: #A4262C; --ink: #201F1E; --line: #E1DFDD; }
+    body { font-family: Segoe UI, Arial, sans-serif; color: var(--ink); margin: 0; padding: 0 24px 64px; }
+    h1, h2 { color: var(--ms-blue); }
+    h2 { border-bottom: 2px solid var(--line); padding-bottom: 4px; margin-top: 36px; }
+    table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; }
+    th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; font-size: 13px; vertical-align: top; }
+    th { background: #F3F2F1; }
+    .banner { padding: 12px 16px; border-radius: 4px; margin: 16px 0; font-size: 14px; }
+    .banner.limitation { background: #FFF4CE; border: 1px solid var(--amber); }
+    .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; color: #fff; font-size: 11px; font-weight: 600; }
+    .badge.green { background: var(--green); } .badge.amber { background: var(--amber); } .badge.red { background: var(--red); }
+    .kv { display: grid; grid-template-columns: 220px 1fr; gap: 2px 12px; font-size: 13px; }
+    .kv div:nth-child(odd) { color: #605E5C; }
+    code { background: #F3F2F1; padding: 1px 4px; border-radius: 3px; }
+    .muted { color: #605E5C; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Agent Cost Reporting — Evidence Report</h1>
+
+  <h2>Evidence Block</h2>
+  <div class="kv">
+    <div>Tenant</div><div><code>{{ manifest.tenant_id }}</code></div>
+    <div>Snapshot ID</div><div><code>{{ manifest.snapshot_id }}</code></div>
+    <div>Generated at (UTC)</div><div>{{ manifest.generated_at_utc }}</div>
+    <div>Generator version</div><div>{{ manifest.generator_version }}{% if manifest.git_commit_sha %} ({{ manifest.git_commit_sha }}){% endif %}</div>
+    <div>Period (UTC)</div><div>{{ manifest.period.start_utc }} → {{ manifest.period.end_utc }}</div>
+    <div>Dataset rows</div><div>{{ view.row_count }}</div>
+  </div>
+
+  <div class="banner limitation">
+    <strong>Control limitation:</strong> {{ disclaimer }}
+  </div>
+
+  <h2>Executive Summary</h2>
+  <div class="kv">
+    <div>Total authoritative cost (USD)</div><div>{{ "%.2f"|format(view.total_cost) }}</div>
+    <div>Unresolved attribution rows</div><div>{{ view.unresolved_attribution_count }}</div>
+  </div>
+
+  <h2>Source Authority Matrix</h2>
+  <table>
+    <thead><tr><th>Surface</th><th>Status</th><th>Rows</th><th>Freshness (UTC)</th><th>Preview?</th><th>Note</th></tr></thead>
+    <tbody>
+    {% for s in manifest.surfaces %}
+      <tr>
+        <td>{{ s.surface }}</td>
+        <td>{{ s.status }}</td>
+        <td>{{ s.rows if s.rows is not none else "—" }}</td>
+        <td>{{ s.data_freshness_utc or "—" }}</td>
+        <td>{{ "yes" if s.preview else "no" }}</td>
+        <td class="muted">{{ s.note or "" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Cost Backbone (authoritative monetary facts)</h2>
+  <p class="muted">Azure Cost Management per-meter cost. Budgets in Azure are alerts, not hard spending limits.
+  Meter names are discovered dynamically and may change over time.</p>
+  {{ view.cost_chart_svg | safe }}
+  <table>
+    <thead><tr><th>Surface</th><th>Cost (USD)</th></tr></thead>
+    <tbody>
+    {% for surface, amount in view.cost_by_surface.items() %}
+      <tr><td>{{ surface }} <span class="badge green">authoritative-api</span></td><td>{{ "%.2f"|format(amount) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Billing-Policy / Environment Join</h2>
+  <table>
+    <thead><tr><th>Environment</th><th>Environment ID</th><th>Billing Policy ID</th><th>Azure Subscription</th></tr></thead>
+    <tbody>
+    {% for f in facts if f.fact_type == "billing_policy_map" %}
+      <tr>
+        <td>{{ f.environment_name or "—" }}</td>
+        <td><code>{{ f.environment_id or "—" }}</code></td>
+        <td><code>{{ f.billing_policy_id or "—" }}</code></td>
+        <td><code>{{ f.azure_subscription_id or "—" }}</code></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>License / Seat Inventory</h2>
+  <table>
+    <thead><tr><th>SKU Part Number</th><th>SKU ID</th><th>Seats</th></tr></thead>
+    <tbody>
+    {% for f in facts if f.fact_type == "license_inventory" %}
+      <tr><td>{{ f.sku_part_number or "—" }}</td><td><code>{{ f.sku_id or "—" }}</code></td><td>{{ f.quantity if f.quantity is not none else "—" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Usage Enrichment (non-cost, supplementary)</h2>
+  <p class="muted">Copilot usage and audit-interaction signals. Supplementary — not cost-authoritative.</p>
+  <table>
+    <thead><tr><th>Surface</th><th>Fact rows</th></tr></thead>
+    <tbody>
+    {% for surface, count in view.usage_by_surface.items() %}
+      <tr><td>{{ surface }} <span class="badge amber">supplementary</span></td><td>{{ count }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Manual Credit-Consumption Appendix</h2>
+  <p class="muted">Per-agent credit consumption is sourced from a manual admin export (no supported API). Each row carries the source file hash.</p>
+  <table>
+    <thead><tr><th>Agent</th><th>Quantity</th><th>Unit</th><th>Source file (sha256)</th></tr></thead>
+    <tbody>
+    {% for f in facts if f.fact_type == "manual_credit_consumption" %}
+      <tr>
+        <td>{{ f.agent_id or f.row_note or "—" }} <span class="badge red">manual-export</span></td>
+        <td>{{ f.quantity if f.quantity is not none else "—" }}</td>
+        <td>{{ f.quantity_unit or "—" }}</td>
+        <td class="muted"><code>{{ (f.manual_artifact_sha256 or "")[:16] }}</code></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Evidence Appendix</h2>
+  <div class="kv">
+    {% for a in manifest.artifacts %}
+      <div>{{ a.filename }}</div><div class="muted"><code>{{ a.sha256 }}</code></div>
+    {% endfor %}
+  </div>
+  <p class="muted">This HTML is a rendered evidence package, not the sole record. Retain it together with the
+  dataset, the manifest, and the raw extracts in immutable (WORM) storage per your retention schedule.</p>
+</body>
+</html>
