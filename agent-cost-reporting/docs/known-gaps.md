@@ -22,7 +22,7 @@ architecture; they affect specific collectors or mappings.
 | Exact Azure meter names/IDs for Power Platform / Copilot Studio / Agent 365 | `normalize_cost_facts.py` meter filtering | Run a Cost Management query grouped by MeterId/Meter over a subscription with known usage |
 | Whether `capacityAllocations` returns consumed vs allocated | preview PP collector | Live call with nonzero usage; inspect payload |
 | Agent 365 `skuPartNumber` values ($15 standalone, E7 bundle) | license mapping | `GET /subscribedSkus` from a tenant with the SKUs assigned |
-| Purview audit records-fetch endpoint + `CopilotInteraction` schema | beta audit collector | Run a query to completion; enumerate records and agent-identifying fields |
+| Purview audit records-fetch endpoint + `CopilotInteraction` schema | beta audit collector | Records-fetch + `@odata.nextLink` paging + field mapping are now implemented; the `auditData` field names/casing/availability when surfaced through Graph beta remain unverified — run a query to completion, enumerate records, and confirm the agent-identifying fields |
 | Whether Agent 365 ACU consumption is a distinct Azure meter | cost coverage | Export Cost Management while generating known Agent 365 activity |
 | Current GA api-version for PP licensing + Azure Cost Management | all collectors | Confirm against the published REST references at build time |
 
