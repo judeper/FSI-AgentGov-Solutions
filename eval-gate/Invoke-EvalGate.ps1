@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     CI wrapper for the Power CAT Copilot Studio Kit evaluation gate.
 
@@ -408,7 +408,7 @@ catch {
 
 try {
     Write-Host "  Verifying Kit tables ($($schema.TestSetsTable), $($schema.TestRunsTable))..." -ForegroundColor Gray
-    $pingResult = Invoke-DataverseGet `
+    $null = Invoke-DataverseGet `
         -DataverseUrl $dataverseUrl `
         -Token        $token `
         -RelativeUri  "$($schema.TestSetsTable)?`$top=1&`$select=$($schema.TestSetIdCol)"
