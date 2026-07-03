@@ -7,6 +7,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- MSCAT "Building Enterprise AI Solutions" Part 2 watch — `scripts/watch_mscat_part2.py`
+  (unit-tested in `tests/`) plus repo workflow `.github/workflows/mscat-part2-watch.yml`.
+  A weekly poll of the MS Copilot Studio CAT blog opens an issue when Part 2 publishes,
+  self-surfacing the deferred early-release-ring env-var schema
+  (`create_erv_environment_variables.py`) and Check 4 (`EarlyReleaseReadinessCheck`) live
+  probe instead of relying on manual polling. Tracking: JudeSquad #1266 / #1431.
+
 ## [0.1.0-preview] - 2026-06-30
 
 ### Added
