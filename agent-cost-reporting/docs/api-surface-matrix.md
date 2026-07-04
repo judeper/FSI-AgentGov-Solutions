@@ -13,6 +13,7 @@ during deployment. Status reflects research as of 2026-06-16.
 | Power Platform API | Policy → environments | `GET .../licensing/billingPolicies/{id}/environments` | 2024-10-01 | SP + Power Platform RBAC | **No** | GA |
 | Power Platform API | Capacity allocations | `GET .../licensing/capacityAllocations` | 2024-10-01 | SP + Power Platform RBAC | **No** | **Preview — "do not use in production"** |
 | Purview audit (Graph) | Copilot interactions | `POST graph.microsoft.com/beta/security/auditLog/queries` | beta | AuditLogsQuery.Read.All | Yes | **Beta; not in US Gov/China** |
+| Purview audit (Graph) | Copilot interaction records | `GET graph.microsoft.com/beta/security/auditLog/queries/{id}/records` | beta | AuditLogsQuery.Read.All | Yes | **Beta; `@odata.nextLink` paging; `auditData` mapping unverified** |
 | Manual export | Per-agent credit consumption | M365 admin / PPAC CSV | n/a | Admin portal | No | **UI only (the gap)** |
 
 ## What is and is not attributable
