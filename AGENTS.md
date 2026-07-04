@@ -6,7 +6,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 **FSI-AgentGov-Solutions** — Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **42 solution implementations (35 live, 7 preview)** mapped to the 78-control framework across all 4 pillars
+- **43 solution implementations (35 live, 8 preview)** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 
@@ -42,6 +42,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | dr-testing-framework | v2.0.2 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
 | early-release-validation | v0.1.0-preview | 2.1, 2.4, 2.8, 1.9 | Pre-promotion resilience validation for Copilot Studio agents — fallback coverage, connector resilience, and error recovery checks with tamper-evident Dataverse evidence |
 | environment-lifecycle-management | v1.2.2 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
+| eval-gate | v0.1.0-preview | 2.3, 2.5, 2.12, 2.20 | CI evaluation gate for Copilot Studio agent promotions — a Power CAT Copilot Studio Kit wrapper enforcing PASS/SOFT-FAIL/HARD-FAIL safety (OWASP LLM Top 10 + FSI overlay), accuracy, and fallback thresholds across Dev→Test / Test→Prod, with required-reviewer human sign-off before production |
 | file-upload-security | v1.1.2 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.1.1 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.2.1 | 2.24 | GenAI feature enablement governance per zone |

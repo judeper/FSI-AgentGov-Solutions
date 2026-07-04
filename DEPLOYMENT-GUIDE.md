@@ -106,6 +106,7 @@ All other solutions operate independently and can be deployed in any order based
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.2 | enterprise |
 | [Early-Release Validation](./early-release-validation/) | 2 | v0.1.0-preview | enterprise |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.2 | personal, team, enterprise |
+| [Eval Gate](./eval-gate/) | 2 | v0.1.0-preview | enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.1 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
@@ -214,6 +215,7 @@ The table below maps each solution to the governance zones (Personal / Team / En
 | [DR Testing Framework](./dr-testing-framework/) | — | — | ✅ | confidential |
 | [Early-Release Validation](./early-release-validation/) | — | — | ✅ | confidential |
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | ✅ | ✅ | ✅ | internal |
+| [Eval Gate](./eval-gate/) | — | — | ✅ | confidential |
 | [File Upload Security](./file-upload-security/) | ✅ | ✅ | ✅ | internal |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | — | — | ✅ | restricted |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | — | ✅ | ✅ | internal |
