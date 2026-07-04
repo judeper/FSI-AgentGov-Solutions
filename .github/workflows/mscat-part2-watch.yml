@@ -1,0 +1,66 @@
+name: MSCAT Part 2 Watch
+
+# Weekly poll of the MS Copilot Studio CAT blog (microsoft/mcscatblog) for the
+# "Building Enterprise AI Solutions" Part 2 post. Part 2 specifies the
+# early-release-ring environment-variable schema + ring URL that the deferred
+# early-release-validation deliverables depend on (create_erv_environment_variables.py
+# real schema + Check 4 EarlyReleaseReadinessCheck live probe), which currently ship
+# as fail-closed stubs. When Part 2 publishes, this opens an issue so the dependency
+# self-surfaces instead of relying on manual polling / nudges.
+# Tracking: JudeSquad #1266 / #1431.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Mondays 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Detect MSCAT Part 2
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # List the CAT blog post filenames; the matcher tests for a "Part 2" of
+          # the series. Treat any API hiccup (rate limit / outage) as not-found so
+          # the watch never fails the workflow on a transient error.
+          names="$(gh api repos/microsoft/mcscatblog/contents/_posts --jq '.[].name' 2>/dev/null || true)"
+          if [ -z "$names" ]; then
+            echo "Could not list mcscatblog _posts (API error / rate limit); treating as not-found."
+            echo "match=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          match="$(printf '%s\n' "$names" | python early-release-validation/scripts/watch_mscat_part2.py || true)"
+          echo "Matched: '${match:-<none>}'"
+          echo "match=$match" >> "$GITHUB_OUTPUT"
+
+      - name: Open issue when Part 2 is published
+        if: steps.detect.outputs.match != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATCH: ${{ steps.detect.outputs.match }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="MSCAT 'Building Enterprise AI Solutions' Part 2 published — implement early-release-validation deliverables"
+          body=$'MSCAT Part 2 appears to be published: **'"${MATCH}"$'**\n\nThis unblocks the deferred early-release-validation deliverables:\n\n- `early-release-validation/scripts/create_erv_environment_variables.py` — replace the fail-closed stub with the real early-release-ring environment-variable schema from Part 2.\n- Check 4 `EarlyReleaseReadinessCheck` live probe — implement the ring probe (currently reports Skipped).\n\nSee `early-release-validation/docs/` and the header of `create_erv_environment_variables.py`. Tracking: JudeSquad #1266 / #1431.\n\n**Verify** this is the correct post first, implement the two items, then close.\n\nDetected by: '"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          existing="$(gh issue list -R "${GITHUB_REPOSITORY}" --search "$title in:title is:open" --json number --jq '.[0].number' 2>/dev/null || echo "")"
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            echo "Issue #$existing already open; not duplicating."
+          else
+            gh issue create -R "${GITHUB_REPOSITORY}" --title "$title" --body "$body"
+          fi
