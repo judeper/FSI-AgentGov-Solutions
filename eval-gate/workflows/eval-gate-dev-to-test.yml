@@ -1,0 +1,166 @@
+# eval-gate-dev-to-test.yml
+#
+# Evaluation gate: Dev → Test promotion
+#
+# Triggers on every merge to main. Runs the Power CAT Copilot Studio Kit test sets
+# against the Dev environment and applies DevToTest gate logic:
+#   - HARD-FAIL  → workflow fails; promotion blocked
+#   - SOFT-FAIL  → workflow warns (annotations) but succeeds; promotion proceeds
+#   - PASS       → promotion proceeds
+#
+# Human-gated prerequisites before this workflow can run live:
+#   1. Power CAT Copilot Studio Kit installed in the Dev Dataverse environment
+#   2. Agent configured with Direct Line channel in Dev
+#   3. GitHub 'dev' environment secrets populated:
+#        CS_DIRECTLINE_SECRET_DEV, CS_CERT_THUMBPRINT_DEV
+#   4. configs/environments.json Dev section fully populated
+#      (dataverseUrl, tenantId, clientId, agentId)
+#
+# NOTE: This file lives in eval-gate/workflows/ for visibility.
+#       To activate as a live GitHub Actions workflow, copy to .github/workflows/.
+#
+# Part of: FSI-AgentGov-Solutions eval-gate CI tooling
+# Engine:  Power CAT Copilot Studio Kit + native Agent Evaluation
+
+name: eval-gate Dev→Test
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      test_set_id:
+        description: 'Kit test set ID to run ("all" runs every registered set)'
+        required: false
+        default: 'safety-baseline-v1'
+      timeout_seconds:
+        description: 'Max seconds to wait for Kit test run'
+        required: false
+        default: '600'
+
+permissions:
+  contents: read
+  checks: write        # needed to create check annotations for SOFT-FAIL
+  pull-requests: write # needed to post eval summary to PRs
+
+jobs:
+  eval-gate-dev:
+    name: Eval Gate — Dev (DevToTest)
+    runs-on: windows-latest
+    environment: dev
+
+    env:
+      EVAL_ENVIRONMENT:    dev
+      EVAL_TEST_SET_ID:    ${{ github.event.inputs.test_set_id || 'safety-baseline-v1' }}
+      EVAL_TIMEOUT:        ${{ github.event.inputs.timeout_seconds || '600' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify prerequisites
+        shell: pwsh
+        run: |
+          $missing = @()
+
+          # Check required GitHub secrets (presence check only — never echo values)
+          if (-not $env:CS_DIRECTLINE_SECRET_DEV)  { $missing += 'CS_DIRECTLINE_SECRET_DEV' }
+          if (-not $env:CS_CERT_THUMBPRINT_DEV)    { $missing += 'CS_CERT_THUMBPRINT_DEV' }
+
+          # Check environments.json is populated
+          $envCfg = Get-Content 'eval-gate/configs/environments.json' | ConvertFrom-Json
+          $dev    = $envCfg.environments.dev
+
+          if (-not $dev.dataverseUrl)  { $missing += 'environments.json: dev.dataverseUrl' }
+          if (-not $dev.tenantId)      { $missing += 'environments.json: dev.tenantId' }
+          if (-not $dev.clientId)      { $missing += 'environments.json: dev.clientId' }
+          if (-not $dev.agentId)       { $missing += 'environments.json: dev.agentId' }
+
+          if ($missing.Count -gt 0) {
+            Write-Error @"
+          HARD-FAIL — Human-gated prerequisites not met. Missing:
+          $($missing | ForEach-Object { "  • $_" } | Out-String)
+
+          See eval-gate/README.md for setup instructions.
+          These prerequisites require manual configuration by judep_microsoft.
+          "@
+            exit 2
+          }
+
+          Write-Host "✓ All prerequisites verified" -ForegroundColor Green
+        env:
+          CS_DIRECTLINE_SECRET_DEV: ${{ secrets.CS_DIRECTLINE_SECRET_DEV }}
+          CS_CERT_THUMBPRINT_DEV:   ${{ secrets.CS_CERT_THUMBPRINT_DEV }}
+
+      - name: Run eval gate (Dev environment)
+        id: eval
+        shell: pwsh
+        run: |
+          $result = .\eval-gate\Invoke-EvalGate.ps1 `
+            -Environment       $env:EVAL_ENVIRONMENT `
+            -TestSetId         $env:EVAL_TEST_SET_ID `
+            -PromotionContext   DevToTest `
+            -TimeoutSeconds    ([int]$env:EVAL_TIMEOUT) `
+            -OutputPath        "eval-gate-result.json"
+
+          # Surface verdict to GitHub outputs for downstream steps
+          $verdict  = $result.verdict
+          $exitCode = $result.exitCode
+          "verdict=$verdict"   | Out-File -Append $env:GITHUB_OUTPUT
+          "exit_code=$exitCode" | Out-File -Append $env:GITHUB_OUTPUT
+
+          # Write a step summary
+          $summary = Get-Content 'eval-gate-result.json' | ConvertFrom-Json
+          @"
+          ## Eval Gate Result — Dev→Test
+
+          | Field | Value |
+          |-------|-------|
+          | **Verdict** | $($summary.verdict) |
+          | **Environment** | $($summary.environment) |
+          | **Test Set** | $($summary.testSetId) |
+          | **Promotion Context** | $($summary.promotionContext) |
+          | **Timestamp** | $($summary.timestamp) |
+
+          ### Category Results
+
+          | Category | Verdict | Actual | Threshold |
+          |----------|---------|--------|-----------|
+          $(foreach ($c in $summary.categories) {
+            "| $($c.category) | $($c.verdict) | $($c.actual) | $($c.passThreshold) |"
+          } | Out-String)
+          "@ | Out-File -Append $env:GITHUB_STEP_SUMMARY
+        env:
+          CS_DIRECTLINE_SECRET_DEV: ${{ secrets.CS_DIRECTLINE_SECRET_DEV }}
+          CS_CERT_THUMBPRINT_DEV:   ${{ secrets.CS_CERT_THUMBPRINT_DEV }}
+
+      - name: Upload eval result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-gate-result-dev-${{ github.run_id }}
+          path: eval-gate-result.json
+          if-no-files-found: warn
+
+      - name: Annotate SOFT-FAIL (warns; does not block Dev→Test)
+        if: steps.eval.outputs.verdict == 'SOFT-FAIL'
+        shell: pwsh
+        run: |
+          $summary = Get-Content 'eval-gate-result.json' | ConvertFrom-Json
+          $reasons = $summary.softFailReasons -join "; "
+          Write-Warning "SOFT-FAIL (Dev→Test warning): $reasons"
+          # In DevToTest, SOFT-FAIL is a warning only — exit 0 so the workflow succeeds.
+          # The annotation is visible in the PR checks panel.
+          echo "::warning title=Eval Gate SOFT-FAIL::$reasons"
+
+      - name: Fail on HARD-FAIL
+        if: steps.eval.outputs.exit_code == '2'
+        shell: pwsh
+        run: |
+          $summary = Get-Content 'eval-gate-result.json' | ConvertFrom-Json
+          $reasons = $summary.hardFailReasons -join "`n"
+          Write-Error "HARD-FAIL — promotion to Test is blocked.`n$reasons"
+          exit 2

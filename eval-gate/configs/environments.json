@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Template for environment-specific configuration. Copy and populate with real values; store secrets in GitHub Actions environment secrets — never in this file.",
+  "environments": {
+    "dev": {
+      "description": "Development environment — used by eval-gate-dev-to-test.yml on every merge to main.",
+      "directLineEndpoint": "https://directline.botframework.com/v3/directline",
+      "directLineSecretEnvVar": "CS_DIRECTLINE_SECRET_DEV",
+      "agentId": "",
+      "agentDisplayName": "",
+      "copilotStudioKitBaseUrl": "",
+      "copilotStudioKitTestSetTable": "mspcat_testsets",
+      "copilotStudioKitResultTable": "mspcat_testrunresults",
+      "dataverseUrl": "",
+      "tenantId": "",
+      "clientId": "",
+      "certThumbprintEnvVar": "CS_CERT_THUMBPRINT_DEV",
+      "notes": "Human-gated: populate agentId, dataverseUrl, tenantId, clientId after Kit installation."
+    },
+    "test": {
+      "description": "Test/staging environment — promotion gate source for eval-gate-test-to-prod.yml.",
+      "directLineEndpoint": "https://directline.botframework.com/v3/directline",
+      "directLineSecretEnvVar": "CS_DIRECTLINE_SECRET_TEST",
+      "agentId": "",
+      "agentDisplayName": "",
+      "copilotStudioKitBaseUrl": "",
+      "copilotStudioKitTestSetTable": "mspcat_testsets",
+      "copilotStudioKitResultTable": "mspcat_testrunresults",
+      "dataverseUrl": "",
+      "tenantId": "",
+      "clientId": "",
+      "certThumbprintEnvVar": "CS_CERT_THUMBPRINT_TEST",
+      "notes": "Human-gated: populate after Kit installation in Test. GitHub 'test' environment protection recommended."
+    },
+    "prod": {
+      "description": "Production environment — destination for eval-gate-test-to-prod.yml with required reviewer.",
+      "directLineEndpoint": "https://directline.botframework.com/v3/directline",
+      "directLineSecretEnvVar": "CS_DIRECTLINE_SECRET_PROD",
+      "agentId": "",
+      "agentDisplayName": "",
+      "copilotStudioKitBaseUrl": "",
+      "copilotStudioKitTestSetTable": "mspcat_testsets",
+      "copilotStudioKitResultTable": "mspcat_testrunresults",
+      "dataverseUrl": "",
+      "tenantId": "",
+      "clientId": "",
+      "certThumbprintEnvVar": "CS_CERT_THUMBPRINT_PROD",
+      "notes": "Human-gated: GitHub 'production' environment MUST have required reviewer = judep_microsoft before this workflow can run."
+    }
+  },
+  "humanGatedPrerequisites": [
+    "Install Power CAT Copilot Studio Kit in each Dataverse environment (Dev, Test, Prod)",
+    "Configure Direct Line channel for target agent in each environment",
+    "Add GitHub Actions environment secrets: CS_DIRECTLINE_SECRET_DEV, CS_DIRECTLINE_SECRET_TEST, CS_DIRECTLINE_SECRET_PROD",
+    "Add service principal certs as GitHub secrets: CS_CERT_THUMBPRINT_DEV, CS_CERT_THUMBPRINT_TEST, CS_CERT_THUMBPRINT_PROD",
+    "Populate agentId, dataverseUrl, tenantId, clientId for each environment",
+    "Configure GitHub 'production' environment protection rule with required reviewer = judep_microsoft"
+  ]
+}
