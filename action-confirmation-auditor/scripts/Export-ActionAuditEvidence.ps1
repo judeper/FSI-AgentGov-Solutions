@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-#Requires -Modules MSAL.PS
+#Requires -Modules Az.Accounts
 
 <#
 .SYNOPSIS
@@ -114,7 +114,7 @@
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Requires:
     - Windows PowerShell 5.1 or later
-    - MSAL.PS module for Dataverse authentication
+    - Az.Accounts module for Dataverse authentication (Get-AzAccessToken)
     - ACA Dataverse schema deployed (fsi_actionscanrun,
       fsi_actionauditresults, fsi_actionconfirmationexceptions tables)
 
@@ -205,28 +205,56 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
-$dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
+$normalizedUrl = $DataverseUrl.TrimEnd('/')
+
+# Az.Accounts 5.x returns the token as a SecureString by default; convert it
+# back to a plain string for the Dataverse Web API Authorization header.
+function ConvertTo-ACAPlainTextToken {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Token)
+    if ($Token -is [System.Security.SecureString]) {
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Token)
+        try {
+            return [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        }
+        finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+    return [string]$Token
+}
+
+# Verify Az.Accounts is available
+if (-not (Get-Module -ListAvailable -Name Az.Accounts)) {
+    $errorMessage = "Az.Accounts module is not installed."
+    $errorMessage += "`n"
+    $errorMessage += "`n  Remediation:"
+    $errorMessage += "`n  1. Install the module: Install-Module -Name Az.Accounts -Force -Scope CurrentUser"
+    $errorMessage += "`n  2. Connect to Azure: Connect-AzAccount"
+    $errorMessage += "`n  3. Re-run this script"
+    throw $errorMessage
+}
+
+Import-Module Az.Accounts -ErrorAction Stop
 
 if ($Interactive) {
-    # Interactive browser-based authentication via MSAL.PS
+    # Interactive authentication via Az.Accounts (uses existing Azure context)
     try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $msalParams = @{
-            TenantId    = $TenantId
-            Scopes      = @($dataverseScope)
-            Interactive = $true
-        }
-
-        if ($ClientId) {
-            $msalParams.ClientId = $ClientId
+        $context = Get-AzContext -ErrorAction Stop
+        if (-not $context) {
+            $errorMessage = "No Azure context found. You must connect to Azure first."
+            $errorMessage += "`n"
+            $errorMessage += "`n  Remediation:"
+            $errorMessage += "`n  1. Run: Connect-AzAccount"
+            $errorMessage += "`n  2. Select the correct subscription if needed"
+            $errorMessage += "`n  3. Re-run this script"
+            throw $errorMessage
         }
 
-        $authResult = Get-MsalToken @msalParams
-        $accessToken = $authResult.AccessToken
+        Write-Verbose "Using Azure context: $($context.Account.Id) in tenant $($context.Tenant.Id)"
+
+        $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
+        $accessToken = ConvertTo-ACAPlainTextToken -Token $tokenResult.Token
     }
     catch {
         Write-Error "Interactive authentication failed: $($_.Exception.Message)"
@@ -234,7 +262,7 @@ if ($Interactive) {
     }
 }
 else {
-    # Service principal authentication with certificate
+    # Service principal authentication with certificate via Az.Accounts
     if (-not $ClientId) {
         throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
     }
@@ -243,18 +271,19 @@ else {
     }
 
     try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
+        Connect-AzAccount -ServicePrincipal `
+            -ApplicationId $ClientId `
+            -CertificateThumbprint $CertificateThumbprint `
+            -Tenant $TenantId `
+            -ErrorAction Stop | Out-Null
+
+        try {
+            $tokenResult = Get-AzAccessToken -ResourceUrl $normalizedUrl -ErrorAction Stop
         }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $authResult = Get-MsalToken `
-            -TenantId $TenantId `
-            -ClientId $ClientId `
-            -ClientCertificate (Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint") `
-            -Scopes @($dataverseScope)
-
-        $accessToken = $authResult.AccessToken
+        catch {
+            $tokenResult = Get-AzAccessToken -ResourceUri $normalizedUrl -ErrorAction Stop
+        }
+        $accessToken = ConvertTo-ACAPlainTextToken -Token $tokenResult.Token
     }
     catch {
         Write-Error "Service principal authentication failed: $($_.Exception.Message)"

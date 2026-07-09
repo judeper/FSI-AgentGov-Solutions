@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-#Requires -Modules @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
+#Requires -Modules @{ ModuleName="Az.Accounts"; ModuleVersion="5.0.0" }
 
 <#
 .SYNOPSIS
@@ -94,7 +94,7 @@
     Azure Automation setup:
     1. Import this script as a runbook
     2. Upload certificate to Automation Account > Certificates
-    3. Install required modules: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
+    3. Install required modules: Az.Accounts, Microsoft.PowerApps.Administration.PowerShell
     4. Grant application permissions as required by Power Platform admin APIs
     5. Schedule via Schedules or trigger via webhook
 
@@ -142,20 +142,31 @@ try {
 
     Write-Verbose "Acquiring Dataverse token via certificate authentication"
 
-    Import-Module MSAL.PS -ErrorAction Stop
+    Import-Module Az.Accounts -ErrorAction Stop
 
-    $cert = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
-    Write-Verbose "Certificate found: $($cert.Subject)"
+    # Certificate-based service principal sign-in. For Azure Automation, prefer a
+    # system-assigned managed identity (Connect-AzAccount -Identity) where the
+    # Dataverse application user and connectors support it; certificate auth is
+    # retained here for environments that cannot use managed identity.
+    Connect-AzAccount -ServicePrincipal `
+        -ApplicationId $ClientId `
+        -CertificateThumbprint $CertificateThumbprint `
+        -Tenant $TenantId `
+        -ErrorAction Stop | Out-Null
 
-    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-    $tokenResult = Get-MsalToken `
-        -ClientId $ClientId `
-        -ClientCertificate $cert `
-        -TenantId $TenantId `
-        -Scopes $dataverseScope `
-        -ErrorAction Stop
+    $dataverseResource = $DataverseUrl.TrimEnd('/')
+    try {
+        $tokenResult = Get-AzAccessToken -ResourceUrl $dataverseResource -ErrorAction Stop
+    } catch {
+        $tokenResult = Get-AzAccessToken -ResourceUri $dataverseResource -ErrorAction Stop
+    }
 
-    $dataverseToken = $tokenResult.AccessToken
+    # Az.Accounts 5.x returns the token as a SecureString by default; convert it
+    # back to a plain string for the Dataverse Web API Authorization header.
+    $dataverseToken = $tokenResult.Token
+    if ($dataverseToken -is [System.Security.SecureString]) {
+        $dataverseToken = [System.Net.NetworkCredential]::new('', $dataverseToken).Password
+    }
     Write-Verbose "Dataverse token acquired"
 
     #endregion

@@ -1,7 +1,6 @@
 ﻿#Requires -Version 7.2
 #Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
-# NOTE: MSAL.PS is archived and no longer maintained. Plan migration to
-# Az.Accounts (Get-AzAccessToken) or Microsoft.Identity.Client.
+#Requires -Modules Az.Accounts
 
 <#
 .SYNOPSIS
@@ -9,7 +8,7 @@
 
 .DESCRIPTION
     Establishes authentication for both Power Platform Admin API (via PowerShell module)
-    and Dataverse Web API (via MSAL token acquisition). Supports both interactive
+    and Dataverse Web API (via Az.Accounts token acquisition). Supports both interactive
     authentication and service principal authentication. Prefer certificate-based or managed identity paths; client-secret auth is a legacy dev-only fallback.
 
     Power Platform Admin API connection is required for environment discovery and
@@ -55,12 +54,10 @@
 .NOTES
     Version: 1.0.2
     Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
-    Requires MSAL.PS module for Dataverse token acquisition.
+    Requires Az.Accounts module for Dataverse token acquisition.
 
     IMPORTANT: Power Platform Admin or Entra Global Admin role is required
     for environment discovery operations (Get-AdminPowerAppEnvironment).
-
-    Well-known Power Apps client ID for interactive auth: 1950a258-227b-4e31-a9cf-717495945fc2
 
 .OUTPUTS
     Hashtable with authentication status:
@@ -99,9 +96,6 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
-# Well-known Power Apps client ID for interactive authentication
-$PowerAppsClientId = "1950a258-227b-4e31-a9cf-717495945fc2"
 
 function Connect-PowerPlatform {
     [CmdletBinding(DefaultParameterSetName = 'Interactive')]
@@ -206,28 +200,21 @@ function Connect-PowerPlatform {
 
         if ($authMethod -eq "ServicePrincipal-Secret") {
             # legacy: dev-only — replace with managed identity in production
-            # Use MSAL.PS for token acquisition with client secret
-            try {
-                Import-Module MSAL.PS -ErrorAction Stop
-            }
-            catch {
-                throw "MSAL.PS module not found. Install with: Install-Module MSAL.PS"
-            }
-
-            # Convert SecureString to plain text for MSAL
+            # Use OAuth 2.0 client credentials grant directly (no MSAL dependency)
             $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ClientSecret)
             $plainSecret = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
             [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
 
             try {
-                $tokenResult = Get-MsalToken `
-                    -ClientId $ClientId `
-                    -ClientSecret (ConvertTo-SecureString $plainSecret -AsPlainText -Force) `
-                    -TenantId $TenantId `
-                    -Scopes $dataverseScope `
-                    -ErrorAction Stop
-
-                $result.DataverseAccessToken = $tokenResult.AccessToken
+                $body = @{
+                    grant_type    = 'client_credentials'
+                    client_id     = $ClientId
+                    client_secret = $plainSecret
+                    scope         = $dataverseScope
+                }
+                $tokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+                $tokenResponse = Invoke-RestMethod -Uri $tokenUrl -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction Stop
+                $result.DataverseAccessToken = $tokenResponse.access_token
                 Write-Host "Acquired Dataverse Web API token (service principal)." -ForegroundColor Green
             }
             finally {
@@ -236,50 +223,76 @@ function Connect-PowerPlatform {
             }
         }
         elseif ($authMethod -eq "ServicePrincipal-Certificate") {
-            # Use MSAL.PS for token acquisition with certificate
+            # Certificate-based service principal via Az.Accounts
+            Import-Module Az.Accounts -ErrorAction Stop
+
+            Connect-AzAccount -ServicePrincipal `
+                -ApplicationId $ClientId `
+                -CertificateThumbprint $CertificateThumbprint `
+                -Tenant $TenantId `
+                -ErrorAction Stop | Out-Null
+
             try {
-                Import-Module MSAL.PS -ErrorAction Stop
+                $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl -ErrorAction Stop
             }
             catch {
-                throw "MSAL.PS module not found. Install with: Install-Module MSAL.PS"
+                $tokenResult = Get-AzAccessToken -ResourceUri $DataverseUrl -ErrorAction Stop
             }
 
-            # Get certificate from store
-            $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction SilentlyContinue
-            if (-not $cert) {
-                throw "Certificate with thumbprint $CertificateThumbprint not found in certificate store."
+            # Az.Accounts 5.x returns the token as a SecureString by default; convert it
+            # back to a plain string for the Dataverse Web API Authorization header.
+            $rawToken = $tokenResult.Token
+            if ($rawToken -is [System.Security.SecureString]) {
+                $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($rawToken)
+                try {
+                    $rawToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+                }
+                finally {
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+                }
             }
 
-            $tokenResult = Get-MsalToken `
-                -ClientId $ClientId `
-                -ClientCertificate $cert `
-                -TenantId $TenantId `
-                -Scopes $dataverseScope `
-                -ErrorAction Stop
-
-            $result.DataverseAccessToken = $tokenResult.AccessToken
+            $result.DataverseAccessToken = [string]$rawToken
             Write-Host "Acquired Dataverse Web API token (certificate)." -ForegroundColor Green
         }
         else {
-            # Interactive authentication: Use device code flow or browser
+            # Interactive authentication via Az.Accounts (uses existing Azure context)
+            Import-Module Az.Accounts -ErrorAction Stop
+
+            $context = Get-AzContext -ErrorAction Stop
+            if (-not $context) {
+                $errorMessage = "No Azure context found. You must connect to Azure first."
+                $errorMessage += "`n"
+                $errorMessage += "`n  Remediation:"
+                $errorMessage += "`n  1. Run: Connect-AzAccount"
+                $errorMessage += "`n  2. Select the correct subscription if needed"
+                $errorMessage += "`n  3. Re-run this script"
+                throw $errorMessage
+            }
+
+            Write-Verbose "Using Azure context: $($context.Account.Id) in tenant $($context.Tenant.Id)"
+
             try {
-                Import-Module MSAL.PS -ErrorAction Stop
+                $tokenResult = Get-AzAccessToken -ResourceUrl $DataverseUrl -ErrorAction Stop
             }
             catch {
-                throw "MSAL.PS module not found. Install with: Install-Module MSAL.PS"
+                $tokenResult = Get-AzAccessToken -ResourceUri $DataverseUrl -ErrorAction Stop
             }
 
-            # Use well-known Power Apps client ID if no custom ClientId provided
-            $effectiveClientId = if ($ClientId) { $ClientId } else { $PowerAppsClientId }
+            # Az.Accounts 5.x returns the token as a SecureString by default; convert it
+            # back to a plain string for the Dataverse Web API Authorization header.
+            $rawToken = $tokenResult.Token
+            if ($rawToken -is [System.Security.SecureString]) {
+                $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($rawToken)
+                try {
+                    $rawToken = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+                }
+                finally {
+                    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+                }
+            }
 
-            $tokenResult = Get-MsalToken `
-                -ClientId $effectiveClientId `
-                -TenantId $TenantId `
-                -Scopes $dataverseScope `
-                -Interactive `
-                -ErrorAction Stop
-
-            $result.DataverseAccessToken = $tokenResult.AccessToken
+            $result.DataverseAccessToken = [string]$rawToken
             Write-Host "Acquired Dataverse Web API token (interactive)." -ForegroundColor Green
         }
 
@@ -290,8 +303,8 @@ function Connect-PowerPlatform {
         if ($missingCommand -like "*Add-PowerAppsAccount*") {
             throw "Microsoft.PowerApps.Administration.PowerShell module not found. Install with: Install-Module Microsoft.PowerApps.Administration.PowerShell -MinimumVersion 2.0"
         }
-        elseif ($missingCommand -like "*Get-MsalToken*") {
-            throw "MSAL.PS module not found. Install with: Install-Module MSAL.PS"
+        elseif ($missingCommand -like "*Get-AzAccessToken*" -or $missingCommand -like "*Connect-AzAccount*") {
+            throw "Az.Accounts module not found. Install with: Install-Module Az.Accounts -Scope CurrentUser"
         }
         else {
             throw "Required module not found: $missingCommand"
