@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **42 solution implementations (35 live, 7 preview)** mapped to the 78-control framework across all 4 pillars
+- **43 solution implementations (35 live, 8 preview)** mapped to the 78-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
@@ -39,6 +39,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | dr-testing-framework | v2.0.2 | 2.4, 2.1, 1.9 | Automated disaster recovery testing for AI agents |
 | early-release-validation | v0.1.0-preview | 2.1, 2.4, 2.8, 1.9 | Pre-promotion agent resilience validation (fallback coverage, connector resilience, error recovery) |
 | environment-lifecycle-management | v1.2.2 | 2.1, 2.2, 2.8, 1.7 | Automated environment provisioning with zone-based governance |
+| eval-gate | v0.1.0-preview | 2.3, 2.5, 2.12, 2.20 | CI evaluation gate — Power CAT Kit wrapper enforcing safety/accuracy/fallback thresholds and human sign-off across agent promotions |
 | file-upload-security | v1.1.2 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.1.1 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
 | generative-ai-config-auditor | v1.2.1 | 2.24 | GenAI feature enablement governance per zone |

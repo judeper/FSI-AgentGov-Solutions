@@ -2,9 +2,9 @@
   "schemaVersion": "1.5.0",
   "generatedBy": "scripts/build-manifest.py",
   "counts": {
-    "total": 42,
+    "total": 43,
     "live": 35,
-    "preview": 7
+    "preview": 8
   },
   "solutions": {
     "action-confirmation-auditor": {
@@ -731,6 +731,34 @@
         "enterprise"
       ],
       "dataClassification": "internal"
+    },
+    "eval-gate": {
+      "id": "eval-gate",
+      "name": "Eval Gate",
+      "version": "0.1.0-preview",
+      "domain": "lifecycle-ops",
+      "tier": "2",
+      "status": "preview",
+      "description": "CI evaluation gate for Copilot Studio agent promotions — a Power CAT Copilot Studio Kit wrapper that enforces PASS/SOFT-FAIL/HARD-FAIL quality and safety gates (OWASP LLM Top 10 + FSI regulatory overlay, accuracy, fallback, format compliance) across Dev→Test and Test→Prod, with required-reviewer human sign-off before production.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/eval-gate/",
+      "controls": [
+        "2.3",
+        "2.5",
+        "2.12",
+        "2.20"
+      ],
+      "dependencies": [],
+      "prerequisites": {
+        "power-platform-admin": "Install the Power CAT Copilot Studio Kit (managed solution) into each Dataverse environment (Dev/Test/Prod) and configure its Direct Line connection to the target agent.",
+        "security-admin": "Register a Microsoft Entra ID application with a certificate credential and grant it Dataverse user_impersonation plus read/write on the Kit's mspcat_* tables in each environment; publish the certificate thumbprint and Direct Line secret as GitHub Actions environment secrets.",
+        "github-admin": "Configure the production GitHub Actions environment with required reviewer judep_microsoft (gating Test→Prod regardless of eval score, per framework Decision #8) and copy the workflow files from eval-gate/workflows/ into .github/workflows/."
+      },
+      "verification": "Run eval-gate/Invoke-EvalGate.ps1 -Environment dev -TestSetId safety-baseline-v1 -WhatIf for a pre-flight check, then a live -PromotionContext DevToTest run against a Kit-provisioned Dev environment; confirm the gate resolves the safety baseline, applies eval-thresholds.json, and emits a result JSON with exit code 0 (PASS), 1 (SOFT-FAIL), or 2 (HARD-FAIL).",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential",
+      "retention": "Eval result artifacts and CI run evidence should be retained per the organization's change-control recordkeeping schedule (commonly SEC 17a-4 / FINRA 4511, 6+ years); verify against your records-management policy."
     },
     "file-upload-security": {
       "id": "file-upload-security",

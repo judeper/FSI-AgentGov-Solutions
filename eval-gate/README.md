@@ -1,7 +1,19 @@
+---
+# v1.6.0 CAPE alignment metadata
+applicable_patterns: [P4, P5]
+applicable_drivers:
+  - ai_governance
+  - technology_data
+coe_function: govern
+---
 # eval-gate — FSI-AgentGov CI Evaluation Gate
 
-> **Status:** Preview — human-gated prerequisites must be completed before live CI runs.
-> **Location:** `eval-gate/` — shared CI tooling, not a deployable Power Platform solution.
+> **Version:** v0.1.0-preview
+> **Status:** Preview
+> **Validated against framework version:** v1.6.0
+> **Upstream Microsoft dependency:** Mixed — The Power CAT Copilot Studio Kit and Bot Framework Direct Line channel are publicly available Microsoft tooling, but the gate polls the Kit's mspcat_testrunresults / mspcat_testcaseresults tables (pinned to the Kit v1.x schema) and stays inert until the human-gated Kit install, service-principal certificate, GitHub Actions secrets, and production environment-protection prerequisites are completed.
+
+> **Location:** `eval-gate/` — shared CI tooling, not a deployable Power Platform solution. Registered in the framework control catalog; see [manifest.yaml](manifest.yaml).
 
 The eval-gate is a thin CI wrapper around the **Power CAT Copilot Studio Kit** that drives quality and safety gates for Copilot Studio agent promotions in FSI-regulated environments.
 

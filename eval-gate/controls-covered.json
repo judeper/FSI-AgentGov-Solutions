@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "eval-gate",
+  "solutionName": "Eval Gate",
+  "solutionVersion": "0.1.0-preview",
+  "status": "preview",
+  "controls": [
+    {
+      "id": "2.3",
+      "coverage": "full"
+    },
+    {
+      "id": "2.5",
+      "coverage": "full"
+    },
+    {
+      "id": "2.12",
+      "coverage": "partial"
+    },
+    {
+      "id": "2.20",
+      "coverage": "partial"
+    }
+  ],
+  "controlCount": 4
+}
