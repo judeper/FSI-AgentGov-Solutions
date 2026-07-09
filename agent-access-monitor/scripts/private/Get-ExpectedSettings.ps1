@@ -16,13 +16,13 @@
     PSCustomObject with zone configuration and helper methods.
 
 .EXAMPLE
-    $zoneConfig = Get-ExpectedSettings -Zone "Zone3"
+    $zoneConfig = Get-ExpectedSettings -Zone "Zone1"
     $severity = $zoneConfig.GetSeverity("bot-limitSharingMode", "noLimit")
     # Returns: Critical
 
 .NOTES
     File: Get-ExpectedSettings.ps1
-    Version: 1.1.2
+    Version: 1.2.0
 #>
 
 [CmdletBinding()]
@@ -74,7 +74,7 @@ $result | Add-Member -MemberType ScriptMethod -Name 'GetSeverity' -Value {
         return $this.Violations.$lookupKey
     }
     
-    # Check for 'any_setting' fallback (Zone1)
+    # Check for 'any_setting' fallback (Zone3)
     if ($this.Violations.PSObject.Properties.Name -contains 'any_setting') {
         return $this.Violations.any_setting
     }

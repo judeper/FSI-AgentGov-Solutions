@@ -291,6 +291,53 @@ class ACAClient:
                 return get_resp.json()
         return {"LogicalName": definition.get("SchemaName", "").lower()}
 
+    def _resolve_picklist_bind(self, definition: dict) -> dict:
+        """Rewrite a GlobalOptionSet@odata.bind that references an option set by
+        Name into the MetadataId (GUID) form the Web API requires.
+
+        The Dataverse Web API rejects
+        ``/GlobalOptionSetDefinitions(Name='fsi_acv_zone')`` for the
+        ``GlobalOptionSet@odata.bind`` on attribute create ("Guid should contain
+        32 digits"). Resolve the Name to the live option set's MetadataId and
+        rewrite the bind to ``/GlobalOptionSetDefinitions(<guid>)``. This binds
+        the existing global set and never recreates it. Definitions already in
+        GUID form (or with no bind) pass through unchanged.
+
+        Args:
+            definition: Attribute definition (may carry a picklist bind)
+
+        Returns:
+            A definition with the bind resolved to MetadataId form, or the
+            original definition unchanged.
+        """
+        bind = definition.get("GlobalOptionSet@odata.bind")
+        if not bind:
+            return definition
+
+        match = re.search(r"Name='([^']+)'", bind)
+        if not match:
+            # Already a MetadataId/GUID form or an unexpected shape — leave it.
+            return definition
+
+        name = match.group(1)
+        if not hasattr(self, "_optionset_id_cache"):
+            self._optionset_id_cache = {}
+        metadata_id = self._optionset_id_cache.get(name)
+        if not metadata_id:
+            meta = self.get_global_optionset(name)
+            if not meta or not meta.get("MetadataId"):
+                raise RuntimeError(
+                    f"Cannot resolve MetadataId for global option set '{name}'"
+                )
+            metadata_id = meta["MetadataId"]
+            self._optionset_id_cache[name] = metadata_id
+
+        resolved = dict(definition)
+        resolved["GlobalOptionSet@odata.bind"] = (
+            f"/GlobalOptionSetDefinitions({metadata_id})"
+        )
+        return resolved
+
     def create_attribute(self, entity_name: str, definition: dict) -> Optional[dict]:
         """Create a new attribute (column) on an entity.
 
@@ -306,6 +353,7 @@ class ACAClient:
             print(f"  [DRY-RUN] Would create attribute {name} on {entity_name}")
             return definition
 
+        definition = self._resolve_picklist_bind(definition)
         url = (
             f"{self.base_url}/EntityDefinitions"
             f"(LogicalName='{entity_name}')/Attributes"
@@ -371,6 +419,12 @@ class ACAClient:
     def get_global_optionset(self, name: str) -> Optional[dict]:
         """Get global option set by name.
 
+        Dataverse stores global option-set ``Name`` values lowercased, and the
+        ``GlobalOptionSetDefinitions(Name='...')`` key lookup is case-sensitive,
+        so the name is lowercased before the request. This keeps both the
+        create-if-missing existence check and picklist-bind resolution working
+        for sets declared in mixed case (e.g. ``fsi_ACA_actiontype``).
+
         Args:
             name: OptionSet name (e.g., 'fsi_acv_zone')
 
@@ -383,7 +437,7 @@ class ACAClient:
 
         try:
             resp = self.session.get(
-                f"{self.base_url}/GlobalOptionSetDefinitions(Name='{name}')",
+                f"{self.base_url}/GlobalOptionSetDefinitions(Name='{name.lower()}')",
                 headers=self._get_headers(),
             )
             if resp.status_code == 404:

@@ -1,0 +1,8 @@
+{
+  "$comment": "Sample SEAM 1 agent-id reconciliation map, supplied to Get-FnfPeopleSweepReport.ps1 via -IdMapPath (the --id-map input). Maps a PROVISIONAL manifest id to the real Dataverse fsi_copilotagent bot GUID. Each entry's key is matched against a UNIQUE per-feature id first - the CAI capability-row fsi_sourceobjectid (capability:People:<sha1(locator)[:12]>) or fsi_caiagentfeatureid - and falls back to the bare provisional fsi_agentid stem only when no unique id is present. Prefer keying entries by the unique id (sourceObjectId) when the stem is the shared literal 'declarativeAgent', which is identical across distinct Toolkit packages: if one stem entry would reconcile more than one distinct feature row to the same bot GUID, the lens does NOT collapse them - each colliding row is surfaced as coverageStatus=Partial with gap idmap-stem-collision (never silently joined to a real agent and never dropped). A conflicting duplicate key (the same id mapped to two different bot GUIDs) is rejected. WITHOUT a matching entry the provisional row is surfaced as coverageStatus=Partial with gap manifest-id-unreconciled. Illustrative only; example ids, not real.",
+  "mappings": [
+    { "provisionalId": "declarativeAgent", "agentId": "11110000-0000-0000-0000-000000000004" },
+    { "provisionalId": "contoso-people-helper-manifest", "agentId": "22220000-0000-0000-0000-000000000010" },
+    { "sourceObjectId": "capability:People:a1b2c3d4e5f6", "agentId": "22220000-0000-0000-0000-000000000011" }
+  ]
+}

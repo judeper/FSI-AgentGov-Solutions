@@ -22,4 +22,6 @@ regexes = [
   '''<CLIENT-SECRET>''',
   '''YOUR_TENANT_ID''',
   '''YOUR_CLIENT_ID''',
+  # Microsoft public Power Platform API first-party app id (not a secret).
+  '''8578e004-a5c6-46e7-913e-12f58912df43''',
 ]

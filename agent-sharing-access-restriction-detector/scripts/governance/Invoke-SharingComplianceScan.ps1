@@ -306,9 +306,9 @@ function Invoke-SharingComplianceScan {
 
         # Fallback: naming convention
         $normalized = $EnvironmentDisplayName.ToLower()
-        if ($normalized -match 'z3|zone3|prod|production|enterprise') { return 'Zone3' }
+        if ($normalized -match 'z1|zone1|prod|production|enterprise') { return 'Zone1' }
         if ($normalized -match 'z2|zone2|team|collab|shared')         { return 'Zone2' }
-        if ($normalized -match 'z1|zone1|personal|dev|sandbox')       { return 'Zone1' }
+        if ($normalized -match 'z3|zone3|personal|dev|sandbox')       { return 'Zone3' }
 
         return 'Unknown'
     }
@@ -327,8 +327,12 @@ function Invoke-SharingComplianceScan {
         if ($DvUrl -and $DvToken) {
             try {
                 $apiBase = "$($DvUrl.TrimEnd('/'))/api/data/v9.2"
-                $zoneIntMap = @{ 'Zone1' = 1; 'Zone2' = 2; 'Zone3' = 3 }
-                $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { 0 }
+                # fsi_zone binds the shared fsi_acv_zone global option set. Live-verified
+                # in-env integers (GlobalOptionSetDefinitions, the lab validation tenant 2026-06-09):
+                # Unclassified=100000000, Zone 1=100000001, Zone 2=100000002, Zone 3=100000003.
+                # Unknown maps to Unclassified (100000000). See docs/option-set-integers.md.
+                $zoneIntMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003; 'Unknown' = 100000000 }
+                $zoneInt = if ($zoneIntMap.ContainsKey($Zone)) { $zoneIntMap[$Zone] } else { 100000000 }
                 $filter = "fsi_zone eq $zoneInt and fsi_isactive eq true"
                 $select = "fsi_securitygroupid,fsi_securitygroupname,fsi_zone"
                 $queryUrl = "$apiBase/fsi_approvedsecuritygrouppolicies?`$filter=$filter&`$select=$select"
@@ -704,7 +708,13 @@ function Invoke-SharingComplianceScan {
 
     if (-not $DryRun) {
         if ($DataverseUrl -and $dataverseToken -and $violations.Count -gt 0) {
-            $zoneMap = @{ 'Zone1' = 1; 'Zone2' = 2; 'Zone3' = 3; 'Unknown' = 0 }
+            # CUSTOM option-set integers below (fsi_zone, fsi_compliancestatus) are
+            # verified in-env via GlobalOptionSetDefinitions, not assumed. fsi_zone binds
+            # the shared fsi_acv_zone global set, live-verified in the lab tenant
+            # (the lab validation tenant, 2026-06-09) as: Unclassified=100000000, Zone 1=100000001,
+            # Zone 2=100000002, Zone 3=100000003. Unknown maps to Unclassified.
+            # See docs/option-set-integers.md.
+            $zoneMap = @{ 'Zone1' = 100000001; 'Zone2' = 100000002; 'Zone3' = 100000003; 'Unknown' = 100000000 }
             $apiBase = "$($DataverseUrl.TrimEnd('/'))/api/data/v9.2"
             $dvHeaders = @{
                 'Authorization'    = "Bearer $dataverseToken"
@@ -722,11 +732,11 @@ function Invoke-SharingComplianceScan {
                         'fsi_agentname'         = $v.AgentName
                         'fsi_environmentid'     = $v.EnvironmentId
                         'fsi_environmentname'   = $v.EnvironmentName
-                        'fsi_zone'              = if ($zoneMap.ContainsKey($v.Zone)) { $zoneMap[$v.Zone] } else { 0 }
+                        'fsi_zone'              = if ($zoneMap.ContainsKey($v.Zone)) { $zoneMap[$v.Zone] } else { 100000000 }
                         'fsi_sharingtype'       = $v.SharingLabel
                         'fsi_violationtype'     = $v.ViolationType
                         'fsi_severity'          = Get-SeverityCode -Severity $v.Severity
-                        'fsi_compliancestatus'  = 100000001  # NonCompliant
+                        'fsi_compliancestatus'  = 100000001  # NonCompliant (custom value; verify in-env, see docs/option-set-integers.md)
                         'fsi_detectedat'        = $v.DetectedAt
                         'fsi_description'       = $v.Details
                         'fsi_scanrunid'         = $runId

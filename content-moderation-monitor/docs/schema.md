@@ -97,9 +97,9 @@ Zone classification for governance grouping.
 | Value | Label |
 |-------|-------|
 | 100000000 | Unclassified |
-| 100000001 | Zone 1 (Personal Productivity) |
+| 100000001 | Zone 1 (Enterprise Managed) |
 | 100000002 | Zone 2 (Team Collaboration) |
-| 100000003 | Zone 3 (Enterprise Managed) |
+| 100000003 | Zone 3 (Personal Productivity) |
 
 ### fsi_acv_severity
 

@@ -1,0 +1,178 @@
+{
+  "$comment": "Sample Find-No-Filter (FNF) People-Sweep report produced by scripts/Get-FnfPeopleSweepReport.ps1 over the tests/fixtures/fnf artifacts (with the agent-id-map applied). Illustrative only; example identities, not real. Per People-capable agent: agentId, agentName, peopleCapable (+peopleCapableSource manifest|attested), audienceMode (GroupScoped|WholeTenant|None), coverageStatus (Complete|Partial|Failed) with coverageGaps[], blockedUserCount (null when not computable - whole-tenant, failed/unresolved audience, unreconciled provisional id, id-map stem collision, or missing/short engine decision output - never a silent 0), blockedUsers[] (capped sample), totalAudience, and evidence{}. Per-user scoring is produced by the CBG resolver + engine; the blocked set is engine decisions with fsi_decision=100000001 (Block). Emits report JSON, not Dataverse rows. Supports compliance with oversight of Copilot agent reach by surfacing People-capable agents shared with users lacking Copilot entitlement.",
+  "schemaVersion": "0.1.0-preview",
+  "reportType": "FnfPeopleSweep",
+  "generatedAt": "2026-06-13T00:00:00.0000000Z",
+  "gatedCapability": "CopilotChat",
+  "summary": {
+    "peopleCapableAgentCount": 6,
+    "scoredAgentCount": 3,
+    "wholeTenantAgentCount": 1,
+    "failedAudienceCount": 1,
+    "missingAudienceCount": 1,
+    "provisionalUnreconciled": 0,
+    "coverageCompleteCount": 2,
+    "coveragePartialCount": 2,
+    "coverageFailedCount": 2,
+    "totalBlockedUserCount": 3,
+    "agentsWithBlockedUsers": 3
+  },
+  "agents": [
+    {
+      "agentId": "11110000-0000-0000-0000-000000000004",
+      "agentName": "Pilot People Bot",
+      "peopleCapable": true,
+      "peopleCapableSource": "manifest",
+      "audienceMode": "GroupScoped",
+      "coverageStatus": "Complete",
+      "coverageGaps": [],
+      "blockedUserCount": 1,
+      "blockedUsers": [
+        "pilot@contoso.com"
+      ],
+      "blockedUsersSampled": false,
+      "totalAudience": 1,
+      "evaluationTimestamp": "2026-06-13T00:00:00.0000000Z",
+      "evidence": {
+        "createdIn": "Microsoft 365 Copilot Agent Builder",
+        "audienceResolutionStatus": "Complete",
+        "audienceTruncated": false,
+        "audienceResolutionErrorCount": 0,
+        "decisionCount": 1,
+        "failOpenAnomalyCount": 0,
+        "failClosedZeroRatingCount": 0,
+        "unresolvedAudienceUserCount": 0,
+        "cbgResolverUnresolvedCount": 0,
+        "cbgResolverNeedsManualReviewCount": 0,
+        "paygAllUsersCovered": false,
+        "paygCoverageUncertain": false
+      }
+    },
+    {
+      "agentId": "11110000-0000-0000-0000-000000000001",
+      "agentName": "Org Directory Helper",
+      "peopleCapable": true,
+      "peopleCapableSource": "manifest",
+      "audienceMode": "GroupScoped",
+      "coverageStatus": "Complete",
+      "coverageGaps": [],
+      "blockedUserCount": 1,
+      "blockedUsers": [
+        "unlicensed@contoso.com"
+      ],
+      "blockedUsersSampled": false,
+      "totalAudience": 2,
+      "evaluationTimestamp": "2026-06-13T00:00:00.0000000Z",
+      "evidence": {
+        "createdIn": "Microsoft 365 Copilot Agent Builder",
+        "audienceResolutionStatus": "Complete",
+        "audienceTruncated": false,
+        "audienceResolutionErrorCount": 0,
+        "decisionCount": 2,
+        "failOpenAnomalyCount": 0,
+        "failClosedZeroRatingCount": 0,
+        "unresolvedAudienceUserCount": 0,
+        "cbgResolverUnresolvedCount": 0,
+        "cbgResolverNeedsManualReviewCount": 0,
+        "paygAllUsersCovered": false,
+        "paygCoverageUncertain": false
+      }
+    },
+    {
+      "agentId": "11110000-0000-0000-0000-000000000003",
+      "agentName": "Loan Ops People Finder",
+      "peopleCapable": true,
+      "peopleCapableSource": "manifest",
+      "audienceMode": "GroupScoped",
+      "coverageStatus": "Partial",
+      "coverageGaps": [
+        "audience-resolution-partial",
+        "audience-truncated",
+        "audience-resolution-errors"
+      ],
+      "blockedUserCount": 1,
+      "blockedUsers": [
+        "analyst@contoso.com"
+      ],
+      "blockedUsersSampled": false,
+      "totalAudience": 1,
+      "evaluationTimestamp": "2026-06-13T00:00:00.0000000Z",
+      "evidence": {
+        "createdIn": "Copilot Studio",
+        "audienceResolutionStatus": "Partial",
+        "audienceTruncated": true,
+        "audienceResolutionErrorCount": 1,
+        "decisionCount": 1,
+        "failOpenAnomalyCount": 0,
+        "failClosedZeroRatingCount": 0,
+        "unresolvedAudienceUserCount": 0,
+        "cbgResolverUnresolvedCount": 0,
+        "cbgResolverNeedsManualReviewCount": 0,
+        "paygAllUsersCovered": false,
+        "paygCoverageUncertain": false
+      }
+    },
+    {
+      "agentId": "11110000-0000-0000-0000-000000000002",
+      "agentName": "Company Concierge",
+      "peopleCapable": true,
+      "peopleCapableSource": "manifest",
+      "audienceMode": "WholeTenant",
+      "coverageStatus": "Partial",
+      "coverageGaps": [
+        "audience-wholetenant-not-enumerated"
+      ],
+      "blockedUserCount": null,
+      "blockedUsers": [],
+      "blockedUsersSampled": false,
+      "totalAudience": null,
+      "evaluationTimestamp": "2026-06-13T00:00:00.0000000Z",
+      "evidence": {
+        "audienceResolutionStatus": "WholeTenantNotEnumerated",
+        "blockedUsersComputed": false,
+        "wholeTenantCappedAudienceSize": 0,
+        "note": "Org-wide share; blocked count is tenant minus licensed users and was not enumerated."
+      }
+    },
+    {
+      "agentId": "11110000-0000-0000-0000-000000000007",
+      "agentName": "Mentor Match Bot",
+      "peopleCapable": true,
+      "peopleCapableSource": "manifest",
+      "audienceMode": "None",
+      "coverageStatus": "Failed",
+      "coverageGaps": [
+        "audience-not-resolved"
+      ],
+      "blockedUserCount": null,
+      "blockedUsers": [],
+      "blockedUsersSampled": false,
+      "totalAudience": null,
+      "evaluationTimestamp": "2026-06-13T00:00:00.0000000Z",
+      "evidence": {
+        "note": "People-capable agent selected but not present in the audience artifact; audience not resolved."
+      }
+    },
+    {
+      "agentId": "11110000-0000-0000-0000-000000000006",
+      "agentName": "Branch Lookup Bot",
+      "peopleCapable": true,
+      "peopleCapableSource": "manifest",
+      "audienceMode": "None",
+      "coverageStatus": "Failed",
+      "coverageGaps": [
+        "audience-resolution-failed"
+      ],
+      "blockedUserCount": null,
+      "blockedUsers": [],
+      "blockedUsersSampled": false,
+      "totalAudience": null,
+      "evaluationTimestamp": "2026-06-13T00:00:00.0000000Z",
+      "evidence": {
+        "audienceResolutionStatus": "Failed",
+        "blockedUsersComputed": false,
+        "note": "Audience resolution failed (Failed/NotResolved); blocked count is not computable and was not enumerated."
+      }
+    }
+  ]
+}

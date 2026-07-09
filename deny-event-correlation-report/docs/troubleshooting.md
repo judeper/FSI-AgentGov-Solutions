@@ -193,9 +193,9 @@ Connect-ExchangeOnline `
     -Organization "example.onmicrosoft.com"
 ```
 
-### 7. Microsoft Graph Audit Search Preview
+### 7. Microsoft Graph Audit Search (v1.0)
 
-The Graph audit search endpoint (`/security/auditLog/queries`) is currently beta. If experimenting with it outside this production extractor, use `Microsoft.Graph.Beta.Security`, grant `AuditLogsQuery.*` permissions, and avoid depending on beta response shapes for regulated evidence until Microsoft publishes a v1.0 endpoint.
+The Graph audit search endpoint (`POST /security/auditLog/queries`) is generally available on the Microsoft Graph v1.0 endpoint with `AuditLogsQuery.Read.All` (or service-specific `AuditLogsQuery-*.Read.All`) permissions. If you call it through the Graph PowerShell SDK outside this production extractor, the `auditLogQuery` cmdlets are currently available in `Microsoft.Graph.Beta.Security`; validate query coverage and response shapes for regulated evidence before relying on it.
 
 ## Performance Issues
 

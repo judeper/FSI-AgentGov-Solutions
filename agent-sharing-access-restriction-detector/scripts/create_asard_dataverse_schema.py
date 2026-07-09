@@ -3,8 +3,8 @@
 Create Dataverse schema for Agent Sharing Access Restriction Detector.
 
 Creates AgentSharingCompliance and ApprovedSecurityGroupPolicy tables with all
-columns, choice fields, and supporting option sets. Reuses shared ACV option set
-(fsi_acv_zone) when present.
+columns, choice fields, and supporting option sets. Binds the shared ACV option
+set (fsi_acv_zone) by name and never recreates it -- fails fast if it is absent.
 
 ApprovedSecurityGroupPolicy includes admission gate columns (SecurityEnabled,
 MailEnabled, GroupTypes) to enforce that only proper Entra security groups are
@@ -27,20 +27,37 @@ from dataverse_client import DataverseClient
 PUBLISHER_PREFIX = "fsi"
 
 # ---------------------------------------------------------------------------
-# Shared option sets (reused from ACV) — only create if missing
+# Shared option set owned by the ACV (Agent Classification & Validation)
+# solution. ASARD BINDS to it by name (see the GlobalOptionSet@odata.bind
+# references below) and must NEVER recreate it: a local copy would fork the zone
+# integers away from the live-canonical values the scan and remediation logic
+# depend on. create_optionsets() therefore FAILS FAST when it is absent rather
+# than creating a divergent set -- deploy ACV / import the shared set first.
+#
+# The values below are the live-canonical 100000000-based integers (verified
+# in-env via GlobalOptionSetDefinitions). They are retained as the single source
+# of truth for --output-docs schema-doc generation, and as a canonical payload
+# should a create path ever be genuinely required. They are deliberately NOT
+# 0-3: the 0-3 form was a divergent assumption and must not reappear.
 # ---------------------------------------------------------------------------
 SHARED_OPTIONSETS = {
     "fsi_acv_zone": {
+        # Dataverse rejects the payload as 'Invalid property Options ... on
+        # OptionSetMetadataBase' unless the derived OptionSetMetadata type is
+        # declared on the root resource.
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Governance Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Governance zone classification", "LanguageCode": 1033}]},
         "OptionSetType": "Picklist",
         "IsGlobal": True,
+        # Canonical zone integers (must match the ACV-owned shared set and
+        # Invoke-SharingComplianceScan.ps1). Do not revert to 0-3.
         "Options": [
-            {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
-            {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
-            {"Value": 2, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
-            {"Value": 3, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
+            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
+            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
+            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
+            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
         ],
     },
 }
@@ -50,6 +67,7 @@ SHARED_OPTIONSETS = {
 # ---------------------------------------------------------------------------
 OPTIONSETS = {
     "fsi_ASARD_compliancestatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_ASARD_compliancestatus",
         "DisplayName": {"LocalizedLabels": [{"Label": "Compliance Status", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Compliance status of agent sharing configuration", "LanguageCode": 1033}]},
@@ -63,6 +81,7 @@ OPTIONSETS = {
         ],
     },
     "fsi_ASARD_remediationstatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_ASARD_remediationstatus",
         "DisplayName": {"LocalizedLabels": [{"Label": "Remediation Status", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Status of sharing remediation action", "LanguageCode": 1033}]},
@@ -411,6 +430,8 @@ COLUMNS = {
             "Description": {"LocalizedLabels": [{"Label": "Whether this approved security group policy is currently active", "LanguageCode": 1033}]},
             "DefaultValue": True,
             "OptionSet": {
+                "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+                "OptionSetType": "Boolean",
                 "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
                 "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
             },
@@ -424,6 +445,8 @@ COLUMNS = {
             "Description": {"LocalizedLabels": [{"Label": "Whether the Entra group has securityEnabled=true at admission time. Groups with securityEnabled=false are rejected.", "LanguageCode": 1033}]},
             "DefaultValue": True,
             "OptionSet": {
+                "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+                "OptionSetType": "Boolean",
                 "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
                 "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
             },
@@ -436,6 +459,8 @@ COLUMNS = {
             "Description": {"LocalizedLabels": [{"Label": "Whether the Entra group has mailEnabled at admission time. Mail-enabled distribution groups are rejected.", "LanguageCode": 1033}]},
             "DefaultValue": False,
             "OptionSet": {
+                "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+                "OptionSetType": "Boolean",
                 "TrueOption": {"Value": 1, "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]}},
                 "FalseOption": {"Value": 0, "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]}},
             },
@@ -618,6 +643,62 @@ def generate_schema_docs() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Deployment helpers
+# ---------------------------------------------------------------------------
+
+# CreateEntity / CreateAttribute require the AttributeType + AttributeTypeName
+# members in addition to the @odata.type discriminator; without them Dataverse
+# rejects the attribute payload. Derive them from the @odata.type so the column
+# dicts stay compact. (Mirrors the proven agent-intake schema helpers.)
+_ATTRIBUTE_TYPE_NAMES = {
+    "Microsoft.Dynamics.CRM.StringAttributeMetadata": ("String", "StringType"),
+    "Microsoft.Dynamics.CRM.MemoAttributeMetadata": ("Memo", "MemoType"),
+    "Microsoft.Dynamics.CRM.PicklistAttributeMetadata": ("Picklist", "PicklistType"),
+    "Microsoft.Dynamics.CRM.BooleanAttributeMetadata": ("Boolean", "BooleanType"),
+    "Microsoft.Dynamics.CRM.DateTimeAttributeMetadata": ("DateTime", "DateTimeType"),
+    "Microsoft.Dynamics.CRM.IntegerAttributeMetadata": ("Integer", "IntegerType"),
+}
+
+
+def _normalize_attribute(attr: dict) -> dict:
+    """Inject AttributeType/AttributeTypeName (required by CreateAttribute) from
+    the @odata.type discriminator when absent. Mutates and returns the dict."""
+    pair = _ATTRIBUTE_TYPE_NAMES.get(attr.get("@odata.type", ""))
+    if pair and "AttributeTypeName" not in attr:
+        attr.setdefault("AttributeType", pair[0])
+        attr["AttributeTypeName"] = {"Value": pair[1]}
+    return attr
+
+
+def _resolve_picklist_bind(client: DataverseClient, attr: dict, cache: dict) -> dict:
+    """Rewrite a Picklist column's GlobalOptionSet@odata.bind from a Name='...'
+    reference to the MetadataId GUID form Dataverse requires.
+
+    The compact column definitions bind by name for readability, but Dataverse
+    only accepts a MetadataId GUID on the @odata.bind reference at create time
+    (a Name key is rejected -- surfacing as 'Guid should contain 32 digits' /
+    repeated HTTP 5xx). Resolve the id via a live GET (cached per option set).
+    """
+    bind_key = "GlobalOptionSet@odata.bind"
+    bind_value = attr.get(bind_key, "")
+    if "Name='" not in bind_value:
+        return attr
+    name = bind_value.split("Name='", 1)[1].split("'", 1)[0]
+    metadata_id = cache.get(name)
+    if not metadata_id:
+        definition = client.get_global_optionset(name)
+        if not definition or not definition.get("MetadataId"):
+            raise RuntimeError(
+                f"Picklist column {attr.get('SchemaName', '?')} references "
+                f"unknown or unresolved global option set '{name}'"
+            )
+        metadata_id = definition["MetadataId"]
+        cache[name] = metadata_id
+    attr[bind_key] = f"/GlobalOptionSetDefinitions({metadata_id})"
+    return attr
+
+
+# ---------------------------------------------------------------------------
 # Deployment functions
 # ---------------------------------------------------------------------------
 
@@ -635,15 +716,30 @@ def create_optionsets(client: DataverseClient, dry_run: bool) -> dict:
     created = 0
     skipped = 0
 
-    print("\nShared option sets (reused from ACV):")
-    for name, metadata in SHARED_OPTIONSETS.items():
+    # Shared option sets are owned by the ACV solution. ASARD reuses them by
+    # name and never recreates them: if fsi_acv_zone is missing at deploy time,
+    # creating a local copy would diverge from the canonical 100000000-based zone
+    # integers the scan and remediation rely on. Fail fast so the operator
+    # deploys ACV (or imports the shared option set) before ASARD instead of
+    # forking the schema. In --dry-run the existence probe is stubbed to None, so
+    # advise rather than raise.
+    print("\nShared option sets (reused from ACV -- bind only, never recreated):")
+    for name in SHARED_OPTIONSETS:
+        if dry_run:
+            print(f"  {name}: [DRY RUN] required shared set -- presence verified at live deploy")
+            skipped += 1
+            continue
         if client.get_global_optionset(name):
             print(f"  {name}: Already exists (reusing)")
             skipped += 1
         else:
-            print(f"  {name}: Creating")
-            client.create_option_set(metadata)
-            created += 1
+            raise RuntimeError(
+                f"Required shared global option set '{name}' is not present in "
+                f"this environment. It is owned by the ACV solution; ASARD binds "
+                f"to it by name and will not recreate it (a local copy would "
+                f"diverge from the canonical 100000000-based zone integers). "
+                f"Deploy ACV or import the shared '{name}' option set, then re-run."
+            )
 
     print("\nASARD-specific option sets:")
     for name, metadata in OPTIONSETS.items():
@@ -678,6 +774,12 @@ def create_tables(client: DataverseClient, dry_run: bool) -> dict:
             skipped += 1
         else:
             print(f"  {table_name}: Creating")
+            metadata.setdefault("@odata.type", "Microsoft.Dynamics.CRM.EntityMetadata")
+            primary = str(metadata.get("PrimaryNameAttribute", "")).lower()
+            for attr in metadata.get("Attributes", []):
+                _normalize_attribute(attr)
+                if str(attr.get("SchemaName", "")).lower() == primary:
+                    attr["IsPrimaryName"] = True
             client.create_table(metadata)
             created += 1
     return {"created": created, "skipped": skipped}
@@ -691,6 +793,7 @@ def create_columns(client: DataverseClient, dry_run: bool) -> None:
         dry_run: If True, preview changes without creating.
     """
     print("\n=== Creating Columns ===")
+    optionset_id_cache: dict = {}
     for table_logical_name, columns in COLUMNS.items():
         print(f"\n{table_logical_name}:")
         for column_metadata in columns:
@@ -700,7 +803,10 @@ def create_columns(client: DataverseClient, dry_run: bool) -> None:
                 print(f"  {schema_name}: Already exists")
             else:
                 print(f"  {schema_name}: Creating")
-                client.create_column(table_logical_name, column_metadata)
+                metadata = _resolve_picklist_bind(
+                    client, _normalize_attribute(column_metadata), optionset_id_cache
+                )
+                client.create_column(table_logical_name, metadata)
 
 
 def create_schema(client: DataverseClient, dry_run: bool) -> dict:
@@ -735,7 +841,7 @@ Tables created:
   - fsi_ApprovedSecurityGroupPolicy (OrganizationOwned)
 
 Option sets:
-  - fsi_acv_zone (shared, reused if present)
+  - fsi_acv_zone (shared from ACV -- required; bound by name, never recreated)
   - fsi_ASARD_compliancestatus
   - fsi_ASARD_remediationstatus
 

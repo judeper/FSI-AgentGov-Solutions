@@ -1,0 +1,35 @@
+id: work-iq-usage-detection
+name: Work IQ Usage Detection
+description: Two-tier (configuration + telemetry) detection of Microsoft 365 Work IQ usage by Copilot Studio and Copilot agents, classifying every agent into a canonical four-state observed-usage model for per-zone feature-enablement governance and usage analytics.
+version: 0.1.0-preview
+status: preview
+domain: monitoring-analytics
+tier: '2'
+controls:
+- '2.24'
+- '3.2'
+- '2.9'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/work-iq-usage-detection/
+prerequisites:
+  power-platform-admin: Power Platform Admin tenant role and a Dataverse environment with the fsi publisher prefix, for reading botcomponent / aipluginoperation metadata (Tier-A) and writing fsi_wiqstate / fsi_wiqkpi.
+  security-admin: Security Admin for Microsoft Defender XDR Advanced Hunting (CloudAppEvents, AgentsInfo) and Purview Audit (CopilotInteraction, AIPluginOperation) access used by the Tier-B telemetry queries.
+  log-analytics-reader: Reader on the Copilot Studio Application Insights resource for the Tier-B customEvents invocation query.
+verification: Run the nightly classify flow (or Get-WorkIqConfigState.ps1 joined with the Tier-B queries) and confirm one fsi_wiqstate row per agent is written with a populated observedstatus, plus an fsi_wiqkpi rollup row.
+dependencies:
+- copilot-agent-inventory
+
+# Microsoft platform dependency maturity (rendered in README header).
+# ASSUMPTION (flagged in README): Work IQ GA is 2026-06-16; the use-work-iq
+# capability is still preview at scaffold time. Build GA-ready and gate the
+# preview behaviour behind a short-lived feature flag (WorkIqGa20260616).
+upstreamDependency:
+  status: preview
+  note: "Work IQ GA June 16 2026; the use-work-iq capability is still preview at scaffold time. Build GA-ready; the WorkIqGa20260616 feature flag is a short-lived preview-to-GA toggle removed after GA."
+
+# zones/dataClassification ASSUMED 2026-Q2 (pending Jude ratification):
+#   Work IQ feature-enablement governance and usage analytics apply in
+#   multi-user team/enterprise governance zones.
+zones:
+- team
+- enterprise
+dataClassification: internal

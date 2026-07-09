@@ -225,8 +225,8 @@ function Get-AgentActionSettings {
         .SYNOPSIS
             Extracts action invocation nodes and confirmation status from bot topic definitions.
         .DESCRIPTION
-            Queries botcomponent filtered by _botid_value for topic definitions (componenttype 12),
-            parses content JSON for action invocation nodes (connector calls, cloud flow calls,
+            Queries botcomponent filtered by _parentbotid_value for topic definitions (componenttype 12),
+            parses content (YAML or JSON) for action invocation nodes (connector calls, cloud flow calls,
             plugin invocations, HTTP requests), and checks for preceding confirmation/approval
             patterns. Conservative parsing returns 'Unable to Determine' for unrecognized structures.
         #>
@@ -243,6 +243,10 @@ function Get-AgentActionSettings {
 
         $actions = [System.Collections.Generic.List[PSCustomObject]]::new()
 
+        # Fail-closed marker: set when a component's content is empty or unparseable so the agent
+        # is never scored Compliant on content we could not actually read.
+        $unassessableContentSeen = $false
+
         $baseUrl = $EnvDataverseUrl.TrimEnd('/')
         $headers = @{
             'Authorization'    = "Bearer $EnvToken"
@@ -256,63 +260,70 @@ function Get-AgentActionSettings {
         try {
             # componenttype 12 = Topic, componenttype 2 = Dialog/Skill
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_botid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
+                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
                 "`$select=name,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
 
             if ($componentsResponse.value) {
                 foreach ($component in $componentsResponse.value) {
-                    if (-not $component.content) { continue }
-
                     $topicName = $component.name
                     $topicId = $component.botcomponentid
-                    $contentStr = $component.content
 
-                    try {
-                        $contentStr | ConvertFrom-Json -ErrorAction Stop | Out-Null
-                    } catch {
-                        Write-Verbose "Failed to parse botcomponent content for '$topicName' in bot '$($Bot.name)'"
+                    # Empty content cannot be assessed for action/confirmation posture. Track it so
+                    # the agent is never scored falsely Compliant on content we never actually saw.
+                    if (-not $component.content) {
+                        $unassessableContentSeen = $true
+                        Write-Verbose "Empty botcomponent content for '$topicName' in bot '$($Bot.name)' -- cannot assess"
                         continue
                     }
 
-                    # Detect action invocation nodes
+                    $contentStr = $component.content
+
+                    # Copilot Studio topics are authored as YAML; exported/legacy components may be
+                    # JSON. Determine a parse format defensively. A failed parse must NOT silently
+                    # skip the component (that reads as Compliant); it is flagged Indeterminate below.
+                    $contentFormat = 'Unparseable'
+                    try {
+                        $contentStr | ConvertFrom-Json -ErrorAction Stop | Out-Null
+                        $contentFormat = 'Json'
+                    } catch {
+                        if (Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue) {
+                            try {
+                                $contentStr | ConvertFrom-Yaml -ErrorAction Stop | Out-Null
+                                $contentFormat = 'Yaml'
+                            } catch {
+                                $contentFormat = 'Unparseable'
+                            }
+                        }
+                    }
+
+                    # Detect action invocation nodes. Patterns match BOTH JSON ("kind": "X") and
+                    # YAML (kind: X) node shapes so real YAML topics are not silently skipped.
                     $actionNodes = @()
-
-                    # Pattern: InvokeFlowAction (Cloud Flow calls)
-                    $flowMatches = [regex]::Matches($contentStr, '"kind"\s*:\s*"InvokeFlowAction"')
-                    foreach ($match in $flowMatches) {
-                        $actionNodes += @{ Kind = 'InvokeFlowAction'; ActionType = 'CloudFlowAction'; Position = $match.Index }
+                    $kindMap = [ordered]@{
+                        'InvokeFlowAction'      = 'CloudFlowAction'
+                        'InvokeConnectorAction' = 'ConnectorAction'
+                        'InvokeSkillAction'     = 'PluginAction'
+                        'HttpRequest'           = 'HttpRequest'
+                        'InvokePlugin'          = 'PluginAction'
+                        'InvokeCustomAction'    = 'CustomAction'
+                    }
+                    foreach ($kind in $kindMap.Keys) {
+                        $kindPattern = '["'']?kind["'']?\s*:\s*["'']?' + [regex]::Escape($kind) + '\b'
+                        foreach ($match in [regex]::Matches($contentStr, $kindPattern)) {
+                            $actionNodes += @{ Kind = $kind; ActionType = $kindMap[$kind]; Position = $match.Index }
+                        }
                     }
 
-                    # Pattern: InvokeConnectorAction (Connector calls)
-                    $connectorMatches = [regex]::Matches($contentStr, '"kind"\s*:\s*"InvokeConnectorAction"')
-                    foreach ($match in $connectorMatches) {
-                        $actionNodes += @{ Kind = 'InvokeConnectorAction'; ActionType = 'ConnectorAction'; Position = $match.Index }
-                    }
-
-                    # Pattern: InvokeSkillAction (Plugin/Skill calls)
-                    $skillMatches = [regex]::Matches($contentStr, '"kind"\s*:\s*"InvokeSkillAction"')
-                    foreach ($match in $skillMatches) {
-                        $actionNodes += @{ Kind = 'InvokeSkillAction'; ActionType = 'PluginAction'; Position = $match.Index }
-                    }
-
-                    # Pattern: HttpRequest
-                    $httpMatches = [regex]::Matches($contentStr, '"kind"\s*:\s*"HttpRequest"')
-                    foreach ($match in $httpMatches) {
-                        $actionNodes += @{ Kind = 'HttpRequest'; ActionType = 'HttpRequest'; Position = $match.Index }
-                    }
-
-                    # Pattern: plugin references (alternative format)
-                    $pluginMatches = [regex]::Matches($contentStr, '"kind"\s*:\s*"InvokePlugin"')
-                    foreach ($match in $pluginMatches) {
-                        $actionNodes += @{ Kind = 'InvokePlugin'; ActionType = 'PluginAction'; Position = $match.Index }
-                    }
-
-                    # Pattern: CustomAction
-                    $customMatches = [regex]::Matches($contentStr, '"kind"\s*:\s*"InvokeCustomAction"')
-                    foreach ($match in $customMatches) {
-                        $actionNodes += @{ Kind = 'InvokeCustomAction'; ActionType = 'CustomAction'; Position = $match.Index }
+                    # Non-empty content that no parser could read AND that exposes no recognizable
+                    # action node is genuinely indeterminate. Skip scoring it as an action but record
+                    # that we saw unassessable content so the agent fails closed (never Compliant by
+                    # omission) via the marker emitted after the component loop.
+                    if ($contentFormat -eq 'Unparseable' -and $actionNodes.Count -eq 0) {
+                        $unassessableContentSeen = $true
+                        Write-Verbose "Unparseable botcomponent content for '$topicName' in bot '$($Bot.name)' -- marking Indeterminate"
+                        continue
                     }
 
                     # For each action node, determine action name, connector, HTTP method, confirmation status
@@ -322,55 +333,56 @@ function Get-AgentActionSettings {
                         $httpMethod = $null
         $confirmationStatus = 'UnableToDetermine'
 
-                        # Try to extract action name from nearby JSON context
+                        # Try to extract action name from nearby JSON/YAML context
                         # Look backwards from the action position for a name field
                         $contextStart = [Math]::Max(0, $actionNode.Position - 500)
                         $contextEnd = [Math]::Min($contentStr.Length, $actionNode.Position + 1000)
                         $contextWindow = $contentStr.Substring($contextStart, $contextEnd - $contextStart)
 
-                        # Extract action/flow name
-                        $nameMatch = [regex]::Match($contextWindow, '"(?:actionName|flowName|skillName|pluginName|name)"\s*:\s*"([^"]+)"')
+                        # Extract action/flow name (JSON "name": "X" or YAML name: X)
+                        $nameMatch = [regex]::Match($contextWindow, '["'']?(?:actionName|flowName|skillName|pluginName|name)["'']?\s*:\s*["'']?([^"''\r\n,}]+)')
                         if ($nameMatch.Success) {
-                            $actionName = $nameMatch.Groups[1].Value
+                            $actionName = $nameMatch.Groups[1].Value.Trim()
                         }
 
                         # Extract connector name for connector actions
                         if ($actionNode.ActionType -eq 'ConnectorAction') {
-                            $connMatch = [regex]::Match($contextWindow, '"(?:connectorName|connectorId|connector)"\s*:\s*"([^"]+)"')
+                            $connMatch = [regex]::Match($contextWindow, '["'']?(?:connectorName|connectorId|connector)["'']?\s*:\s*["'']?([^"''\r\n,}]+)')
                             if ($connMatch.Success) {
-                                $connectorName = $connMatch.Groups[1].Value
+                                $connectorName = $connMatch.Groups[1].Value.Trim()
                             }
                         }
 
                         # Extract HTTP method for HTTP requests
                         if ($actionNode.ActionType -eq 'HttpRequest') {
-                            $methodMatch = [regex]::Match($contextWindow, '"(?:method|httpMethod)"\s*:\s*"([^"]+)"')
+                            $methodMatch = [regex]::Match($contextWindow, '["'']?(?:method|httpMethod)["'']?\s*:\s*["'']?([^"''\r\n,}]+)')
                             if ($methodMatch.Success) {
-                                $httpMethod = $methodMatch.Groups[1].Value.ToUpper()
+                                $httpMethod = $methodMatch.Groups[1].Value.Trim().ToUpper()
                             }
                         }
 
                         # Check for confirmation/approval patterns BEFORE the action node
-                        # Look for confirmation patterns in the preceding 2000 characters
+                        # Look for confirmation patterns in the preceding 2000 characters.
+                        # Node patterns match both JSON ("kind": "X") and YAML (kind: X) shapes.
                         $lookbackStart = [Math]::Max(0, $actionNode.Position - 2000)
                         $precedingWindow = $contentStr.Substring($lookbackStart, $actionNode.Position - $lookbackStart)
 
                         # Confirmation pattern: Question or Message nodes with confirm/approve text
-                        $hasQuestionConfirm = $precedingWindow -match '"kind"\s*:\s*"Question"' -and
+                        $hasQuestionConfirm = $precedingWindow -match '["'']?kind["'']?\s*:\s*["'']?Question\b' -and
                             ($precedingWindow -match '(?i)(confirm|approve|proceed|are you sure|do you want|shall I|would you like|verify|authorization)')
 
-                        $hasMessageConfirm = $precedingWindow -match '"kind"\s*:\s*"Message"' -and
+                        $hasMessageConfirm = $precedingWindow -match '["'']?kind["'']?\s*:\s*["'']?Message\b' -and
                             ($precedingWindow -match '(?i)(confirm|approve|proceed|are you sure|do you want|shall I|would you like|verify|authorization)')
 
                         # Confirmation pattern: Condition branches (yes/no branching)
-                        $hasConditionBranch = $precedingWindow -match '"kind"\s*:\s*"ConditionBranch"' -and
+                        $hasConditionBranch = $precedingWindow -match '["'']?kind["'']?\s*:\s*["'']?ConditionBranch\b' -and
                             ($precedingWindow -match '(?i)(confirm|approve|yes|proceed)')
 
                         # Confirmation pattern: Approval action nodes
-                        $hasApprovalAction = $precedingWindow -match '(?i)"kind"\s*:\s*"(StartApproval|WaitForApproval|ApprovalAction)"'
+                        $hasApprovalAction = $precedingWindow -match '(?i)["'']?kind["'']?\s*:\s*["'']?(StartApproval|WaitForApproval|ApprovalAction)\b'
 
                         # Confirmation pattern: Adaptive Card with submit action (common confirmation UI)
-                        $hasAdaptiveCardConfirm = $precedingWindow -match '"kind"\s*:\s*"SendAdaptiveCard"' -and
+                        $hasAdaptiveCardConfirm = $precedingWindow -match '["'']?kind["'']?\s*:\s*["'']?SendAdaptiveCard\b' -and
                             ($precedingWindow -match '(?i)(confirm|approve|submit|Action\.Submit)')
 
                         if ($hasQuestionConfirm -or $hasApprovalAction -or $hasAdaptiveCardConfirm) {
@@ -379,7 +391,7 @@ function Get-AgentActionSettings {
                             $confirmationStatus = 'Partial'
                         } else {
                             # Check if the action is the very first node (no preceding nodes at all)
-                            $hasPrecedingNodes = $precedingWindow -match '"kind"\s*:\s*"(Question|Message|ConditionBranch|SendAdaptiveCard)"'
+                            $hasPrecedingNodes = $precedingWindow -match '["'']?kind["'']?\s*:\s*["'']?(Question|Message|ConditionBranch|SendAdaptiveCard)\b'
                             if (-not $hasPrecedingNodes) {
                                 # No recognizable preceding conversation nodes -- likely auto-triggered
                                 $confirmationStatus = 'Missing'
@@ -403,6 +415,24 @@ function Get-AgentActionSettings {
             }
         } catch {
             Write-Verbose "botcomponent query failed for $($Bot.name): $($_.Exception.Message)"
+            # A failed component query means we could not read this agent's topics at all.
+            $unassessableContentSeen = $true
+        }
+
+        # Fail-closed: if we saw content we could not assess (empty, unparseable, or a failed
+        # query) and detected no actions at all, surface a single Indeterminate marker so the
+        # agent is never scored Compliant by omission. Real YAML detection is best-effort; this
+        # guarantees unseen content reads as UnableToDetermine, not as silent compliance.
+        if ($actions.Count -eq 0 -and $unassessableContentSeen) {
+            $actions.Add([PSCustomObject]@{
+                ActionName         = 'IndeterminateContent'
+                ActionType         = 'Unknown'
+                ConnectorName      = $null
+                HttpMethod         = $null
+                ConfirmationStatus = 'UnableToDetermine'
+                TopicName          = '(unparseable or empty topic content)'
+                TopicId            = $null
+            })
         }
 
         #endregion

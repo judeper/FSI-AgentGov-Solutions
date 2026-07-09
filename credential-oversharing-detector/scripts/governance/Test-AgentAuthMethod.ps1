@@ -259,6 +259,11 @@ function Test-AgentAuthMethod {
                         fsi_severity        = 100000000  # Critical
                         fsi_violationstatus = 100000000  # Open
                         fsi_description     = $result.Recommendation
+                        # Populate the timestamp so Export-CredentialEvidence.ps1
+                        # (which filters by fsi_detectedat date range) includes
+                        # these AUTH violations in auditor evidence. Mirrors the
+                        # v2.1.2 fix applied to Compare-OAuthScopeBaseline.ps1.
+                        fsi_detectedat      = (Get-Date).ToUniversalTime().ToString('o')
                     } | ConvertTo-Json
 
                     try {

@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0-preview",
+  "lastUpdated": "2026-06-30",
+  "domainFacts": [
+    "The validation result table is fsi_ervalidationresult; scripts target the default plural entity set fsi_ervalidationresults when writing Dataverse rows.",
+    "fsi_erv_testtype and fsi_erv_teststatus are global Picklist option sets using the standard Dataverse 100000000+ value range (FallbackCoverageCheck=100000000, ConnectorResilienceCheck=100000001, ErrorRecoveryCheck=100000002, EarlyReleaseReadinessCheck=100000003; Pass=100000000, Fail=100000001, Skipped=100000002). The PowerShell value maps in Invoke-EarlyReleaseValidation.ps1 must stay in sync with create_erv_dataverse_schema.py.",
+    "The three structural checks (FallbackCoverageCheck, ConnectorResilienceCheck, ErrorRecoveryCheck) are offline text/heuristic inspections of an unpacked solution; the detection markers are intentionally editable constants at the top of Invoke-EarlyReleaseValidation.ps1 because pac solution unpack node names vary by platform version.",
+    "Check 4 (EarlyReleaseReadinessCheck) live probe and create_erv_environment_variables.py are BLOCKED on MSCAT 'Building Enterprise AI Solutions' Part 2; the composite check reports Skipped and records fsi_promotionready=false until the probe is implemented. Tracking: JudeSquad issue #1266.",
+    "Invoke-EarlyReleaseValidation.ps1 and Export-ValidationEvidence.ps1 guard their main flow with `if ($MyInvocation.InvocationName -ne '.')` so the Pester tests can dot-source them to exercise helper functions without executing main."
+  ]
+}

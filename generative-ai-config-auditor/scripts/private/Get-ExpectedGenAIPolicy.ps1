@@ -7,17 +7,18 @@
     configuration for each governance zone, including per-feature policies,
     violation severities, and regulatory context.
 
-    Zone policies:
-    - Zone1: AOAI allowed, generative orchestration allowed, gen answers allowed,
-      AOAI whitelist advisory (Warning severity), Allow ungrounded responses allowed,
-      Work IQ (semantic search) allowed
+    Zone policies (canonical zone semantics: Zone 1 = Enterprise = MOST restrictive;
+    Zone 3 = Personal = LEAST restrictive):
+    - Zone1 (Enterprise/Regulated): AOAI explicit allowlist only, gen orch restricted (classic
+      unless exception), gen answers explicit allowlist per topic, AOAI whitelist enforced
+      (Critical severity), Allow ungrounded responses disabled, Work IQ (semantic search)
+      requires approval
     - Zone2: AOAI approved connections only, gen orch allowed with approval,
       gen answers allowed, AOAI whitelist enforced (High severity), Allow ungrounded
       responses requires approval, Work IQ (semantic search) allowed with logging
-    - Zone3: AOAI explicit allowlist only, gen orch restricted (classic unless
-      exception), gen answers explicit allowlist per topic, AOAI whitelist
-      enforced (Critical severity), Allow ungrounded responses disabled, Work IQ
-      (semantic search) requires approval
+    - Zone3 (Personal Productivity): AOAI allowed, generative orchestration allowed, gen answers
+      allowed, AOAI whitelist advisory (Warning severity), Allow ungrounded responses allowed,
+      Work IQ (semantic search) allowed
 
 .PARAMETER Zone
     The governance zone: Zone1, Zone2, Zone3, or Unknown.
@@ -26,12 +27,12 @@
     PSCustomObject with per-feature policies, violation severities, and regulatory context.
 
 .EXAMPLE
-    $policy = & ./Get-ExpectedGenAIPolicy.ps1 -Zone "Zone3"
+    $policy = & ./Get-ExpectedGenAIPolicy.ps1 -Zone "Zone1"
     $policy.AoaiPolicy                  # "ExplicitAllowlistOnly"
     $policy.AoaiViolationSeverity       # "Critical"
 
 .EXAMPLE
-    $policy = & ./Get-ExpectedGenAIPolicy.ps1 -Zone "Zone1"
+    $policy = & ./Get-ExpectedGenAIPolicy.ps1 -Zone "Zone3"
     $policy.OrchestrationPolicy         # "Allowed"
     $policy.WhitelistEnforcement        # "Advisory"
 
@@ -55,24 +56,24 @@ $zonePolicies = @{
     'Zone1' = [PSCustomObject]@{
         Zone                             = 'Zone1'
         # Feature policies
-        AoaiPolicy                       = 'Allowed'
-        OrchestrationPolicy              = 'Allowed'
-        GenAnswersPolicy                 = 'Allowed'
-        WhitelistEnforcement             = 'Advisory'
-        ModelKnowledgePolicy             = 'Allowed'
-        SemanticSearchPolicy             = 'Allowed'
+        AoaiPolicy                       = 'ExplicitAllowlistOnly'
+        OrchestrationPolicy              = 'Restricted'
+        GenAnswersPolicy                 = 'ExplicitAllowlistPerTopic'
+        WhitelistEnforcement             = 'Enforced'
+        ModelKnowledgePolicy             = 'Disabled'
+        SemanticSearchPolicy             = 'RequiresApproval'
         AoaiAllowed                      = $true
-        AllowedOrchestrationModes        = @('Classic', 'Generative')
-        GenerativeAnswersAllowed         = $true
+        AllowedOrchestrationModes        = @('Classic')
+        GenerativeAnswersAllowed         = $false
         # Violation severities per feature type
-        AoaiViolationSeverity            = 'Warning'
-        OrchestrationViolationSeverity   = 'Warning'
-        GenAnswersViolationSeverity      = 'Warning'
-        WhitelistViolationSeverity       = 'Warning'
-        ModelKnowledgeViolationSeverity  = 'Warning'
-        SemanticSearchViolationSeverity  = 'Warning'
+        AoaiViolationSeverity            = 'Critical'
+        OrchestrationViolationSeverity   = 'Critical'
+        GenAnswersViolationSeverity      = 'High'
+        WhitelistViolationSeverity       = 'Critical'
+        ModelKnowledgeViolationSeverity  = 'Critical'
+        SemanticSearchViolationSeverity  = 'High'
         # Regulatory context
-        RegulatoryContext                = 'Zone 1 (Personal Productivity) - Advisory monitoring, minimal restrictions on generative AI features'
+        RegulatoryContext                = 'Zone 1 (Enterprise/Regulated) - Explicit allowlist required, classic orchestration unless exception granted'
     }
 
     'Zone2' = [PSCustomObject]@{
@@ -101,24 +102,24 @@ $zonePolicies = @{
     'Zone3' = [PSCustomObject]@{
         Zone                             = 'Zone3'
         # Feature policies
-        AoaiPolicy                       = 'ExplicitAllowlistOnly'
-        OrchestrationPolicy              = 'Restricted'
-        GenAnswersPolicy                 = 'ExplicitAllowlistPerTopic'
-        WhitelistEnforcement             = 'Enforced'
-        ModelKnowledgePolicy             = 'Disabled'
-        SemanticSearchPolicy             = 'RequiresApproval'
+        AoaiPolicy                       = 'Allowed'
+        OrchestrationPolicy              = 'Allowed'
+        GenAnswersPolicy                 = 'Allowed'
+        WhitelistEnforcement             = 'Advisory'
+        ModelKnowledgePolicy             = 'Allowed'
+        SemanticSearchPolicy             = 'Allowed'
         AoaiAllowed                      = $true
-        AllowedOrchestrationModes        = @('Classic')
-        GenerativeAnswersAllowed         = $false
+        AllowedOrchestrationModes        = @('Classic', 'Generative')
+        GenerativeAnswersAllowed         = $true
         # Violation severities per feature type
-        AoaiViolationSeverity            = 'Critical'
-        OrchestrationViolationSeverity   = 'Critical'
-        GenAnswersViolationSeverity      = 'High'
-        WhitelistViolationSeverity       = 'Critical'
-        ModelKnowledgeViolationSeverity  = 'Critical'
-        SemanticSearchViolationSeverity  = 'High'
+        AoaiViolationSeverity            = 'Warning'
+        OrchestrationViolationSeverity   = 'Warning'
+        GenAnswersViolationSeverity      = 'Warning'
+        WhitelistViolationSeverity       = 'Warning'
+        ModelKnowledgeViolationSeverity  = 'Warning'
+        SemanticSearchViolationSeverity  = 'Warning'
         # Regulatory context
-        RegulatoryContext                = 'Zone 3 (Enterprise/Regulated) - Explicit allowlist required, classic orchestration unless exception granted'
+        RegulatoryContext                = 'Zone 3 (Personal Productivity) - Advisory monitoring, minimal restrictions on generative AI features'
     }
 
     'Unknown' = [PSCustomObject]@{

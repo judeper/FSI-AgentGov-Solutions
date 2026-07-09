@@ -1,0 +1,61 @@
+<!--
+  Agent Eligibility Gateway — APIM policy fragment: validate-jwt
+  ============================================================================
+  Azure API Management policy fragment (Azure infrastructure, NOT a Power
+  Platform flow artifact). Author this in API Management as a reusable policy
+  fragment named "aeg-validate-jwt", then reference it from an API/operation
+  <inbound> section with:
+
+      <include-fragment fragment-id="aeg-validate-jwt" />
+
+  Purpose: validate the caller's Microsoft Entra ID token against the tenant
+  OpenID configuration BEFORE the eligibility check runs. The validated token
+  is stored in the "jwt" context variable for aeg-eligibility-check to read.
+
+  Named values referenced (create under API Management > Named values):
+    aeg-tenant-id   Microsoft Entra tenant GUID
+    aeg-audience    Expected audience (the gateway API's Application ID URI or
+                    the protected agent API's client/app ID)
+
+  Failure here returns HTTP 401 (unauthenticated). The eligibility fragment
+  returns HTTP 403 (authenticated but not eligible). This split matches the
+  governed deny contract (401 for token problems, 403 for policy problems).
+
+  Reference: https://learn.microsoft.com/azure/api-management/validate-jwt-policy
+-->
+<fragment>
+  <validate-jwt header-name="Authorization"
+                require-scheme="Bearer"
+                failed-validation-httpcode="401"
+                failed-validation-error-message="Unauthorized. A valid Microsoft Entra ID bearer token is required to reach this agent."
+                output-token-variable-name="jwt"
+                require-expiration-time="true"
+                require-signed-tokens="true"
+                clock-skew="300">
+    <openid-config url="https://login.microsoftonline.com/{{aeg-tenant-id}}/v2.0/.well-known/openid-configuration" />
+    <audiences>
+      <audience>{{aeg-audience}}</audience>
+    </audiences>
+    <issuers>
+      <issuer>https://login.microsoftonline.com/{{aeg-tenant-id}}/v2.0</issuer>
+    </issuers>
+    <!--
+      Pin the token to this tenant (rejects guest/cross-tenant tokens issued by
+      another authority). Group / Viewers-membership and billing-cohort claims
+      are evaluated in aeg-eligibility-check, not here.
+
+      Build-time precondition (verified): the target agent must use Microsoft
+      Entra ID authentication (bot.authenticationmode = Integrated or Custom
+      Azure Active Directory) with require-users-to-sign-in ON
+      (bot.authenticationtrigger = Always). No-authentication and Generic OAuth2
+      agents do not emit the signed-in user context this gateway depends on.
+      Use Test-AgentEligibilityPrecondition.ps1 to assert this before onboarding
+      an agent to the gateway.
+    -->
+    <required-claims>
+      <claim name="tid" match="any">
+        <value>{{aeg-tenant-id}}</value>
+      </claim>
+    </required-claims>
+  </validate-jwt>
+</fragment>

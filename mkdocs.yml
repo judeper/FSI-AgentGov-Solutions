@@ -102,6 +102,12 @@ nav:
         - solutions/unrestricted-agent-sharing-detector/index.md
         - Dataverse Schema: solutions/unrestricted-agent-sharing-detector/dataverse-schema.md
         - Flow Configuration: solutions/unrestricted-agent-sharing-detector/flow-configuration.md
+      - Agent Eligibility Gateway:
+        - solutions/agent-eligibility-gateway/index.md
+        - Prerequisites: solutions/agent-eligibility-gateway/prerequisites.md
+        - Architecture: solutions/agent-eligibility-gateway/architecture.md
+        - APIM Gateway Setup: solutions/agent-eligibility-gateway/apim-gateway-setup.md
+        - Dataverse Schema: solutions/agent-eligibility-gateway/dataverse-schema.md
     - Content & Data Protection:
       - Content Moderation Monitor:
         - solutions/content-moderation-monitor/index.md
@@ -166,6 +172,14 @@ nav:
         - Dataverse Schema: solutions/segregation-detector/dataverse-schema.md
         - Conflict Rules: solutions/segregation-detector/conflict-rules.md
         - Troubleshooting: solutions/segregation-detector/troubleshooting.md
+      - Copilot Billing Governance:
+        - solutions/copilot-billing-governance/index.md
+        - Prerequisites: solutions/copilot-billing-governance/prerequisites.md
+        - Architecture: solutions/copilot-billing-governance/architecture.md
+        - Entitlement Contract: solutions/copilot-billing-governance/entitlement-contract.md
+        - Dataverse Schema: solutions/copilot-billing-governance/dataverse-schema.md
+        - Flow Configuration: solutions/copilot-billing-governance/flow-configuration.md
+        - Owner Attestation Workflow: solutions/copilot-billing-governance/owner-attestation-workflow.md
     - Monitoring & Analytics:
       - Agent Observability Foundation:
         - solutions/agent-observability-foundation/index.md
@@ -199,6 +213,19 @@ nav:
         - Pattern Analysis: solutions/hallucination-tracker/pattern-analysis.md
         - Source Configuration: solutions/hallucination-tracker/source-configuration.md
         - Troubleshooting: solutions/hallucination-tracker/troubleshooting.md
+      - Copilot Agent Inventory:
+        - solutions/copilot-agent-inventory/index.md
+        - Prerequisites: solutions/copilot-agent-inventory/prerequisites.md
+        - Architecture: solutions/copilot-agent-inventory/architecture.md
+        - Governance Platform Composition: solutions/copilot-agent-inventory/governance-platform-composition.md
+        - Dataverse Schema: solutions/copilot-agent-inventory/dataverse-schema.md
+        - Flow Configuration: solutions/copilot-agent-inventory/flow-configuration.md
+      - Work IQ Usage Detection:
+        - solutions/work-iq-usage-detection/index.md
+        - Prerequisites: solutions/work-iq-usage-detection/prerequisites.md
+        - Architecture: solutions/work-iq-usage-detection/architecture.md
+        - Dataverse Schema: solutions/work-iq-usage-detection/dataverse-schema.md
+        - Flow Configuration: solutions/work-iq-usage-detection/flow-configuration.md
     - Agent Configuration:
       - Generative AI Config Auditor:
         - solutions/generative-ai-config-auditor/index.md

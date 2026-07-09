@@ -20,7 +20,7 @@
 | fsi_AgentName | fsi_agentname | String | No | Display name of the agent |  |
 | fsi_EnvironmentId | fsi_environmentid | String | No | Power Platform environment identifier |  |
 | fsi_EnvironmentName | fsi_environmentname | String | No | Display name of the environment |  |
-| fsi_Zone | fsi_zone | Picklist | No | Governance zone classification | **fsi_acv_zone**: `0` = Unclassified, `1` = Zone 1, `2` = Zone 2, `3` = Zone 3 |
+| fsi_Zone | fsi_zone | Picklist | No | Governance zone classification | **fsi_acv_zone**: `100000000` = Unclassified, `100000001` = Zone 1, `100000002` = Zone 2, `100000003` = Zone 3 |
 | fsi_ComplianceStatus | fsi_compliancestatus | Picklist | Yes | Compliance status of agent sharing configuration | **fsi_ASARD_compliancestatus**: `100000000` = Compliant, `100000001` = NonCompliant, `100000002` = Exception, `100000003` = Error |
 | fsi_CurrentSharingPrincipals | fsi_currentsharingprincipals | Memo | No | JSON array of current sharing principals |  |
 | fsi_ApprovedSharingPrincipals | fsi_approvedsharingprincipals | Memo | No | JSON array of approved sharing principals |  |
@@ -47,7 +47,7 @@
 | SchemaName | Logical Name | Type | Required | Description | Option Set |
 |---|---|---|---|---|---|
 | fsi_PolicyName | fsi_policyname | String | Yes | Approved security group policy name |  |
-| fsi_Zone | fsi_zone | Picklist | Yes | Governance zone this policy applies to | **fsi_acv_zone**: `0` = Unclassified, `1` = Zone 1, `2` = Zone 2, `3` = Zone 3 |
+| fsi_Zone | fsi_zone | Picklist | Yes | Governance zone this policy applies to | **fsi_acv_zone**: `100000000` = Unclassified, `100000001` = Zone 1, `100000002` = Zone 2, `100000003` = Zone 3 |
 | fsi_SecurityGroupId | fsi_securitygroupid | String | Yes | Entra ID object ID of the approved security group |  |
 | fsi_SecurityGroupName | fsi_securitygroupname | String | No | Display name of the approved security group |  |
 | fsi_ApprovedBy | fsi_approvedby | String | No | UPN of the person who approved this policy |  |
@@ -68,10 +68,10 @@ Governance zone classification
 
 | Value | Label |
 |---|---|
-| 0 | Unclassified |
-| 1 | Zone 1 |
-| 2 | Zone 2 |
-| 3 | Zone 3 |
+| 100000000 | Unclassified |
+| 100000001 | Zone 1 |
+| 100000002 | Zone 2 |
+| 100000003 | Zone 3 |
 
 ### ASARD Option Sets
 

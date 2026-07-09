@@ -28,23 +28,21 @@ PUBLISHER_PREFIX = "fsi"
 SHARED_OPTIONSETS = {
     "fsi_acv_zone": {
         "name": "fsi_acv_zone",
+        # Canonical zone integers (100000000-based). Source of truth: agent-intake
+        # producing schema + live tenant set. Zone 1 (Enterprise) = most-restrictive.
+        # create_option_set is create-if-missing, so the live set wins where present;
+        # this declaration is reconciled to match it byte-for-byte.
         "options": [
-            ("Unclassified", 0),
-            ("Zone 1", 1),
-            ("Zone 2", 2),
-            ("Zone 3", 3),
+            ("Unclassified", 100000000),
+            ("Zone 1", 100000001),
+            ("Zone 2", 100000002),
+            ("Zone 3", 100000003),
         ],
     },
-    "fsi_acv_severity": {
-        "name": "fsi_acv_severity",
-        "options": [
-            ("Passed", 1),
-            ("Warning", 2),
-            ("GracePeriod", 3),
-            ("Failed", 4),
-            ("Error", 5),
-        ],
-    },
+    # NOTE: fsi_acv_severity is intentionally NOT declared or bound. The live
+    # fsi_acv_severity is a monitoring-RESULT set (Passed/Warning/GracePeriod/
+    # Failed/Error), not a severity rank; ACA writes fsi_Severity as a free
+    # String label (see column definitions), so no severity option set is needed.
 }
 
 # =============================================================================
@@ -217,7 +215,6 @@ def _picklist_col(
         "RequiredLevel": {
             "Value": "ApplicationRequired" if required else "None"
         },
-        "OptionSet": None,
         "GlobalOptionSet@odata.bind": (
             f"/GlobalOptionSetDefinitions(Name='{global_optionset_name}')"
         ),
@@ -572,6 +569,7 @@ def create_table_with_columns(
                     "RequiredLevel": {"Value": "ApplicationRequired"},
                     "MaxLength": 200,
                     "FormatName": {"Value": "Text"},
+                    "IsPrimaryName": True,
                 },
             ],
         }

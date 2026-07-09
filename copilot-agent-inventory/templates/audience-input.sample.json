@@ -1,0 +1,37 @@
+{
+  "_comment": "Sample INPUT for expand_audience_upns.py: a per-agent sharing posture mirroring fsi_caiauthshare. 'viewerGroups' mirrors fsi_viewergroups (security groups granted chat viewer access); 'editorPrincipals' mirrors fsi_editorprincipals (individual editors AND/OR security groups). Each ref may be a bare GUID string, a UPN string (editors), or an object with id/displayName/type. Set 'sharedWithEveryone': true (or include a group whose displayName is an 'Everyone in the organization' sentinel) to mark whole-tenant sharing; the tenant is NEVER enumerated. Pass this file to: python expand_audience_upns.py --input audience-input.sample.json --dry-run",
+  "agents": [
+    {
+      "fsi_agentid": "f3a8c1d2-4b5e-4f6a-9c7d-1e2f3a4b5c6d",
+      "fsi_agentname": "Wealth Advisory Assistant",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "viewerGroups": [
+        { "id": "11111111-1111-1111-1111-111111111111", "displayName": "Wealth Advisors", "type": "SecurityGroup" },
+        { "id": "22222222-2222-2222-2222-222222222222", "displayName": "Relationship Managers", "type": "SecurityGroup" }
+      ],
+      "editorPrincipals": [
+        { "upn": "ada.lovelace@contoso.com", "displayName": "Ada Lovelace", "type": "User" }
+      ],
+      "sharedWithEveryone": false
+    },
+    {
+      "fsi_agentid": "a1b2c3d4-5566-7788-99aa-bbccddeeff00",
+      "fsi_agentname": "Company Concierge",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "viewerGroups": [],
+      "editorPrincipals": [],
+      "sharedWithEveryone": true
+    },
+    {
+      "fsi_agentid": "c0ffee00-1234-5678-9abc-def012345678",
+      "fsi_agentname": "Loan Ops Helper",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "viewerGroups": [
+        "33333333-3333-3333-3333-333333333333"
+      ],
+      "editorPrincipals": [
+        { "id": "44444444-4444-4444-4444-444444444444", "displayName": "Loan Ops Leads", "type": "Group" }
+      ]
+    }
+  ]
+}

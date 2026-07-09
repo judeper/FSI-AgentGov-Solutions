@@ -2,9 +2,9 @@
   "schemaVersion": "1.5.0",
   "generatedBy": "scripts/build-manifest.py",
   "counts": {
-    "total": 36,
+    "total": 42,
     "live": 35,
-    "preview": 1
+    "preview": 7
   },
   "solutions": {
     "action-confirmation-auditor": {
@@ -65,7 +65,7 @@
     "agent-access-monitor": {
       "id": "agent-access-monitor",
       "name": "Agent Access Governance Monitor",
-      "version": "1.1.2",
+      "version": "1.2.0",
       "domain": "access-identity",
       "tier": "2",
       "status": "live",
@@ -108,6 +108,64 @@
         "enterprise"
       ],
       "dataClassification": "internal"
+    },
+    "agent-cost-reporting": {
+      "id": "agent-cost-reporting",
+      "name": "Agent Cost Reporting",
+      "version": "0.1.0-preview",
+      "domain": "monitoring-analytics",
+      "tier": "2",
+      "status": "preview",
+      "description": "Consolidated, on-demand, point-in-time cost and consumption evidence report for AI agents across Azure Cost Management, Microsoft Graph, the Power Platform API, and Purview audit logs. Decoupled ingestion to a normalized cost-fact dataset rendered as a self-contained HTML evidence artifact.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-cost-reporting/",
+      "controls": [
+        "1.7",
+        "3.1",
+        "3.2"
+      ],
+      "dependencies": [],
+      "prerequisites": {
+        "azure-cost-reader": "Cost Management Reader on the Azure subscriptions linked to Power Platform pay-as-you-go billing policies, for Azure Cost Management cost queries.",
+        "power-platform-admin": "Power Platform Admin to register a service principal with a Power Platform RBAC role (Reader) for the billing-policy and environment join (Power Platform API is delegated-only; managed identity is not supported).",
+        "m365-reports-reader": "Microsoft Graph app registration with Reports.Read.All and Organization.Read.All for Microsoft 365 Copilot usage reports and license inventory.",
+        "purview-compliance-admin": "Purview Compliance Admin with AuditLogsQuery.Read.All for the optional (beta) Copilot audit-interaction usage enrichment.",
+        "billing-admin": "Microsoft 365 Billing Admin to export the per-agent Copilot Credits CSV (manual placeholder; no supported API egress today)."
+      },
+      "verification": "Run the collectors and confirm cost_facts.jsonl, manifest.json, and sha256.txt are produced and that the HTML evidence report renders offline with the per-surface freshness table and control-limitation banner.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential",
+      "retention": "Evidence artifacts recommended to be retained per the organization's SEC 17a-4(f) schedule (commonly 6 years); verify against your records-management policy."
+    },
+    "agent-eligibility-gateway": {
+      "id": "agent-eligibility-gateway",
+      "name": "Agent Eligibility Gateway",
+      "version": "0.1.0-preview",
+      "domain": "access-identity",
+      "tier": "3",
+      "status": "preview",
+      "description": "Optional runtime allow/deny gateway (Azure API Management) for owned custom-web and Direct Line agent channels — validates Entra ID tokens, required claims, and the corrected billing entitlement contract before a request reaches the agent endpoint.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-eligibility-gateway/",
+      "controls": [
+        "1.1",
+        "1.18",
+        "3.8"
+      ],
+      "dependencies": [
+        "copilot-agent-inventory",
+        "copilot-billing-governance"
+      ],
+      "prerequisites": {
+        "azure-admin": "Azure contributor on the resource group that hosts the API Management instance, to deploy the gateway, named values, and policy fragments.",
+        "security-admin": "Microsoft Entra ID Security Administrator (or Application Administrator) to register the gateway app, configure the audience/Viewers security groups, and grant the gateway managed identity read access to the governance store."
+      },
+      "verification": "Send one authenticated request through the gateway and confirm a decision row is written to fsi_aegdecisionlog (or the configured telemetry sink); send a request from a user in no eligible cohort on a metered pathway and confirm a 403 governed-deny response.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
     },
     "agent-intake": {
       "id": "agent-intake",
@@ -387,6 +445,64 @@
       ],
       "dataClassification": "internal"
     },
+    "copilot-agent-inventory": {
+      "id": "copilot-agent-inventory",
+      "name": "Copilot Agent Inventory",
+      "version": "0.2.0-preview",
+      "domain": "monitoring-analytics",
+      "tier": "1",
+      "status": "preview",
+      "description": "Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-agent-inventory/",
+      "controls": [
+        "1.2",
+        "1.7",
+        "2.1",
+        "2.13"
+      ],
+      "dependencies": [],
+      "prerequisites": {
+        "power-platform-admin": "Power Platform Admin (or Dynamics 365 admin) for tenant-wide environment enumeration and Dataverse bot/botcomponent reads, plus the fsi publisher prefix in the governance environment.",
+        "security-admin": "Security Admin to provision the least-privilege scanner service principal and store its secret in Key Vault via managed identity."
+      },
+      "verification": "Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
+    },
+    "copilot-billing-governance": {
+      "id": "copilot-billing-governance",
+      "name": "Copilot Billing Governance",
+      "version": "0.1.0-preview",
+      "domain": "compliance-audit",
+      "tier": "2",
+      "status": "preview",
+      "description": "Governance for Copilot consumption billing — PAYG and prepaid credit policies, a switch-on-pathway entitlement engine, per-agent caps, and pre-enforcement coverage-gap analysis.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-billing-governance/",
+      "controls": [
+        "3.5",
+        "1.18",
+        "1.14"
+      ],
+      "dependencies": [
+        "copilot-agent-inventory",
+        "work-iq-usage-detection"
+      ],
+      "prerequisites": {
+        "m365-admin": "Microsoft 365 admin for Copilot billing and credit policy read/configuration in the Microsoft 365 admin center.",
+        "azure-admin": "Azure subscription Owner or Contributor for the pay-as-you-go (PAYG) billing subscription backing metered Copilot consumption.",
+        "security-admin": "Entra security-group administrator to register maker, audience, and billing groups in the admission-gated group registry.",
+        "power-platform-admin": "Power Platform Admin or System Administrator for Dataverse schema deployment and scheduled flows."
+      },
+      "verification": "Run the coverage-gap analysis in monitor-only mode and confirm per-agent rows are written to fsi_cbgcoveragegap.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
+    },
     "copilot-studio-analytics": {
       "id": "copilot-studio-analytics",
       "name": "Copilot Studio Analytics",
@@ -417,7 +533,7 @@
     "credential-oversharing-detector": {
       "id": "credential-oversharing-detector",
       "name": "Credential Oversharing Detector",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",
@@ -556,6 +672,32 @@
         "security-admin": "Entra app registration/admin consent and Dataverse system administrator access for evidence writes."
       },
       "verification": "Confirm Invoke-DRTest.ps1 inserts a fsi_drtestresult row and Export-DREvidence.ps1 packages the evidence.",
+      "zones": [
+        "enterprise"
+      ],
+      "dataClassification": "confidential"
+    },
+    "early-release-validation": {
+      "id": "early-release-validation",
+      "name": "Early-Release Validation",
+      "version": "0.1.0-preview",
+      "domain": "lifecycle-ops",
+      "tier": "2",
+      "status": "preview",
+      "description": "Pre-promotion resilience validation for Copilot Studio agents. Structural checks for fallback coverage, connector resilience, and error recovery before early-release-ring promotion, packaged as tamper-evident Dataverse evidence.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/early-release-validation/",
+      "controls": [
+        "2.1",
+        "2.4",
+        "2.8",
+        "1.9"
+      ],
+      "dependencies": [],
+      "prerequisites": {
+        "power-platform-admin": "Power Platform admin to export and unpack the target agent solution (PAC CLI) and to access the early-release ring environment.",
+        "security-admin": "Microsoft Entra app registration / admin consent and Dataverse system administrator access for evidence writes."
+      },
+      "verification": "Run Invoke-EarlyReleaseValidation.ps1 -CheckType AllStructural against an unpacked solution and confirm per-check results print; Export-ValidationEvidence.ps1 produces an fsi_ervalidationresult evidence JSON with a SHA-256 companion file.",
       "zones": [
         "enterprise"
       ],
@@ -987,6 +1129,35 @@
         "enterprise"
       ],
       "dataClassification": "confidential"
+    },
+    "work-iq-usage-detection": {
+      "id": "work-iq-usage-detection",
+      "name": "Work IQ Usage Detection",
+      "version": "0.1.0-preview",
+      "domain": "monitoring-analytics",
+      "tier": "2",
+      "status": "preview",
+      "description": "Two-tier (configuration + telemetry) detection of Microsoft 365 Work IQ usage by Copilot Studio and Copilot agents, classifying every agent into a canonical four-state observed-usage model for per-zone feature-enablement governance and usage analytics.",
+      "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/work-iq-usage-detection/",
+      "controls": [
+        "2.24",
+        "3.2",
+        "2.9"
+      ],
+      "dependencies": [
+        "copilot-agent-inventory"
+      ],
+      "prerequisites": {
+        "power-platform-admin": "Power Platform Admin tenant role and a Dataverse environment with the fsi publisher prefix, for reading botcomponent / aipluginoperation metadata (Tier-A) and writing fsi_wiqstate / fsi_wiqkpi.",
+        "security-admin": "Security Admin for Microsoft Defender XDR Advanced Hunting (CloudAppEvents, AgentsInfo) and Purview Audit (CopilotInteraction, AIPluginOperation) access used by the Tier-B telemetry queries.",
+        "log-analytics-reader": "Reader on the Copilot Studio Application Insights resource for the Tier-B customEvents invocation query."
+      },
+      "verification": "Run the nightly classify flow (or Get-WorkIqConfigState.ps1 joined with the Tier-B queries) and confirm one fsi_wiqstate row per agent is written with a populated observedstatus, plus an fsi_wiqkpi rollup row.",
+      "zones": [
+        "team",
+        "enterprise"
+      ],
+      "dataClassification": "internal"
     }
   }
 }

@@ -49,12 +49,12 @@ For automated or scheduled exports when managed identity or workload identity fe
 Export evidence for a specific governance zone only:
 
 ```powershell
-# Zone 3 (Enterprise Managed) agents only
+# Zone 1 (Enterprise Managed) agents only
 .\scripts\Export-ContentModerationEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
     -TenantId "your-tenant-id" `
     -OutputDirectory ".\exports" `
-    -Zone 3 `
+    -Zone 1 `
     -Interactive
 ```
 

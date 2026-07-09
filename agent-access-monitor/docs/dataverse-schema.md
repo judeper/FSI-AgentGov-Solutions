@@ -17,7 +17,7 @@ Stores captured access configuration snapshots for each Power Platform environme
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Governance zone (100000001, 100000002, or 100000003) |
 | `fsi_botlimitsharingmode` | String | Agent sharing limit setting at capture time |
 | `fsi_botauthoringsharingdisabled` | Boolean | Whether agent authoring sharing is disabled |
-| `fsi_botpublishedbotlimitsharingmode` | String | Published agent sharing limit at capture time |
+| `fsi_botmaxlimitusersharing` | String | Managed Environment `bot-maxLimitUserSharing` value at capture time (max individual users an agent may be shared with; `-1` = no limit; blank when the environment is not a Managed Environment) |
 | `fsi_capturedby` | String | UPN or service principal that captured the baseline |
 | `fsi_capturedat` | DateTime | Timestamp of baseline capture (UTC) |
 | `fsi_isactive` | Boolean | Whether this is the current active baseline |
@@ -25,7 +25,7 @@ Stores captured access configuration snapshots for each Power Platform environme
 
 ### fsi_accessvalidationhistory
 
-Immutable audit trail of validation run results. Each record represents one complete validation scan across all environments.
+Append-only validation audit log (by role design, not a native Dataverse feature). Each record represents one complete validation scan across all environments. The append-only behavior is achieved post-deployment by granting the AAM application user Create + Read only and denying Write/Delete on this table — Dataverse has no native column- or row-level immutability. See [role-design-append-only.md](role-design-append-only.md).
 
 | Column | Type | Description |
 |--------|------|-------------|

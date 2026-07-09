@@ -1,0 +1,29 @@
+id: agent-cost-reporting
+name: Agent Cost Reporting
+description: Consolidated, on-demand, point-in-time cost and consumption evidence report for AI agents across Azure Cost Management, Microsoft Graph, the Power Platform API, and Purview audit logs. Decoupled ingestion to a normalized cost-fact dataset rendered as a self-contained HTML evidence artifact.
+version: 0.1.0-preview
+status: preview
+domain: monitoring-analytics
+tier: '2'
+controls:
+- '1.7'
+- '3.1'
+- '3.2'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-cost-reporting/
+prerequisites:
+  azure-cost-reader: Cost Management Reader on the Azure subscriptions linked to Power Platform pay-as-you-go billing policies, for Azure Cost Management cost queries.
+  power-platform-admin: Power Platform Admin to register a service principal with a Power Platform RBAC role (Reader) for the billing-policy and environment join (Power Platform API is delegated-only; managed identity is not supported).
+  m365-reports-reader: Microsoft Graph app registration with Reports.Read.All and Organization.Read.All for Microsoft 365 Copilot usage reports and license inventory.
+  purview-compliance-admin: Purview Compliance Admin with AuditLogsQuery.Read.All for the optional (beta) Copilot audit-interaction usage enrichment.
+  billing-admin: Microsoft 365 Billing Admin to export the per-agent Copilot Credits CSV (manual placeholder; no supported API egress today).
+verification: Run the collectors and confirm cost_facts.jsonl, manifest.json, and sha256.txt are produced and that the HTML evidence report renders offline with the per-surface freshness table and control-limitation banner.
+
+# zones/dataClassification: cost/consumption governance and chargeback are org-scope concerns
+zones:
+- team
+- enterprise
+dataClassification: confidential
+retention: Evidence artifacts recommended to be retained per the organization's SEC 17a-4(f) schedule (commonly 6 years); verify against your records-management policy.
+upstreamDependency:
+  status: mixed
+  note: Azure Cost Management and Microsoft Graph usage/license APIs are GA; the Power Platform API is GA but delegated-only (service principal + RBAC, no managed identity); Power Platform capacity-allocation endpoints, the Purview audit-log query API, and Agent 365 APIs are preview/beta. Per-agent end-to-end USD is not attributable through supported public APIs today.

@@ -4,14 +4,24 @@
 
 Step-by-step guide for deploying the AAM daily agent access validation flow in Power Automate.
 
-This flow provides automated orchestration and alerting for the Agent Access Governance Monitor solution. It runs daily at 6:00 AM UTC, executes the Azure Automation runbook, detects drift from baseline configurations, and routes alerts to Microsoft Teams and email based on severity.
+This flow provides automated orchestration and alerting for the Agent Access Governance Monitor solution. It runs daily, surfaces drift from baseline configurations, and routes alerts to Microsoft Teams and email based on severity.
 
-**What this flow does:**
+> **Deferred Azure Automation (lab model).** For the lab, the validation runbook
+> (`Start-AccessValidationRunbook.ps1`) runs **standalone** on a workstation or build
+> agent (PowerShell 7.4 via Windows Task Scheduler) and writes results to Dataverse. No
+> Azure subscription, Automation Account, premium connector, or always-on service
+> principal is required. The daily Power Automate flow is reduced to a **Recurrence
+> trigger + a Dataverse read** of the validation-history and violation tables, plus
+> alert routing. The Azure Automation path described in some steps below is an
+> **optional production upgrade**, not a lab prerequisite — promoting to it later is a
+> packaging step, not a code change.
 
-- Triggers daily at 6:00 AM UTC (configurable)
-- Executes `Start-AccessValidationRunbook.ps1` in Azure Automation
-- Parses validation results including per-environment drift detection
-- Writes validation results to Dataverse immutable audit trail (all scans, not just failures)
+**What this flow does (lab model):**
+
+- Triggers daily on a Recurrence schedule (configurable)
+- Reads the latest validation-history and violation rows the standalone runbook wrote to Dataverse
+- Surfaces per-environment drift recorded by the runbook
+- Writes validation results to the Dataverse append-only audit log (by role design — all scans, not just failures; the runbook performs the write)
 - Posts adaptive card to Teams for Critical/Failed/Error severity
 - Sends email to distribution list for all drift alerts
 - Handles errors with CRITICAL email notification
@@ -22,19 +32,23 @@ This flow provides automated orchestration and alerting for the Agent Access Gov
 
 Before creating the flow, ensure you have:
 
-- [ ] **Azure Automation Account** with:
-  - `Start-AccessValidationRunbook.ps1` imported as a PowerShell 7.2 runbook
-  - Certificate uploaded (Certificates blade)
-  - Modules installed: MSAL.PS, Microsoft.PowerApps.Administration.PowerShell
-  - Application permissions granted as required by Power Platform admin APIs
+- [ ] **Standalone runbook host (lab default)**:
+  - PowerShell 7.4 on a workstation or build agent
+  - `Start-AccessValidationRunbook.ps1` scheduled via Windows Task Scheduler (`pwsh -File ...`)
+  - `Microsoft.PowerApps.Administration.PowerShell` module installed
+  - Modern OAuth app registration (public-client for `-Interactive` device-code, or a confidential app with a secret for unattended runs). Certificate-thumbprint auth is **not** used — it required the archived MSAL.PS module.
+  - Power Platform admin and Dataverse permissions granted to the app
+- [ ] **(Optional, production) Azure Automation Account** — only if promoting the runbook off the local host later:
+  - `Start-AccessValidationRunbook.ps1` imported as a PowerShell 7.4 runbook
+  - `Microsoft.PowerApps.Administration.PowerShell` module installed
+  - A managed identity (preferred) or service-principal secret for unattended auth
 - [ ] **Dataverse environment** with AAM schema deployed (run `python scripts/deploy.py`)
 - [ ] **Runbook identity** configured for Dataverse access:
-  - Prefer managed identity where your Power Platform/Dataverse automation supports it; otherwise use the certificate-based app identity configured for `Start-AccessValidationRunbook.ps1`.
+  - Prefer managed identity where your Power Platform/Dataverse automation supports it; otherwise use a service-principal secret (dev-only legacy fallback) configured for `Start-AccessValidationRunbook.ps1`.
   - The runbook identity has Create permission on the `fsi_accessvalidationhistory` table and Create permission on `fsi_accessviolations` when persisting violations.
   - Assign System Administrator, or a custom role with the required organization-level table privileges.
 - [ ] **Microsoft Teams** channel for alert notifications
 - [ ] **Email distribution list** for compliance alerts
-- [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Connection references** bound in Power Automate:
   - `fsi_cr_teams_accessmonitor` (Microsoft Teams)
   - `fsi_cr_office365_accessmonitor` (Office 365 Outlook)
@@ -61,16 +75,23 @@ Update these variables in the flow designer (Initialize Variable actions):
 
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
-| `DataverseUrl` | String | `https://governance.crm.dynamics.com` | Your Dataverse environment URL (where AAM schema is deployed) |
-| `TenantId` | String | `contoso.onmicrosoft.com` | Microsoft Entra ID tenant identifier |
-| `ClientId` | String | `your-client-id-here` | App registration client ID (same one used for certificate auth) |
-| `CertificateThumbprint` | String | `your-thumbprint` | Certificate thumbprint uploaded to Azure Automation |
-| `SubscriptionId` | String | `your-subscription-id-here` | Azure subscription containing Automation Account |
-| `ResourceGroup` | String | `rg-agent-access-monitor` | Resource group with Automation Account |
-| `AutomationAccount` | String | `aa-agent-access-monitor` | Azure Automation Account name |
+| `DataverseUrl` | String | `https://governance.crm.dynamics.com` | Your Dataverse environment URL (where AAM schema is deployed; the flow reads validation results from here) |
 | `TeamsGroupId` | String | `your-group-id-here` | Teams group (team) ID for drift alerts |
 | `TeamsChannelId` | String | `your-channel-id-here` | Teams channel ID for drift alerts (get from channel link) |
 | `ComplianceDistributionList` | String | `alerts@your-org.com` | Email distribution list for all alerts |
+
+> **Production-only (optional Azure Automation upgrade).** The variables below apply
+> **only** if you later trigger the runbook from Azure Automation instead of the local
+> Task Scheduler host. They are **not** needed for the lab model, where the standalone
+> runbook writes to Dataverse and the flow only reads.
+>
+> | Variable | Type | Description |
+> |----------|------|-------------|
+> | `TenantId` | String | Microsoft Entra ID tenant identifier |
+> | `ClientId` | String | App registration client ID for the runbook identity |
+> | `SubscriptionId` | String | Azure subscription containing the Automation Account |
+> | `ResourceGroup` | String | Resource group with the Automation Account |
+> | `AutomationAccount` | String | Azure Automation Account name |
 
 **How to get Teams Channel ID:**
 
@@ -92,15 +113,21 @@ Update these variables in the flow designer (Initialize Variable actions):
 
 ## Step 3: Bind Connection References
 
-The flow uses **three** connection references deployed during Phase 2 (Dataverse operations are handled by the runbook via `-PersistResults`, not by the flow directly):
+In the lab model the flow uses **three** connection references — the standalone runbook writes results to Dataverse, and the flow **reads** Dataverse and routes alerts:
 
 | Connection Reference | Service | Purpose |
 |---------------------|---------|---------|
-| `fsi_cr_azureautomation_accessmonitor` | Azure Automation | Trigger and monitor validation runbook jobs |
+| `fsi_cr_dataverse_accessmonitor` | Microsoft Dataverse | Read validation-history and violation rows the runbook wrote |
 | `fsi_cr_teams_accessmonitor` | Microsoft Teams | Post adaptive card alerts |
 | `fsi_cr_office365_accessmonitor` | Office 365 Outlook | Send email alerts |
 
-> **Note:** The `fsi_cr_azureautomation_accessmonitor` connection is configured manually in Power Automate when binding the Azure Automation actions. It is not created by the `create_connection_references.py` script.
+> **Production-only (optional Azure Automation upgrade).** If you trigger the runbook
+> from Azure Automation instead of the local host, add a third connection reference,
+> `fsi_cr_azureautomation_accessmonitor` (Azure Automation), to trigger and monitor
+> runbook jobs. It is configured manually in Power Automate when binding the Azure
+> Automation actions and is not created by the `create_connection_references.py`
+> script. This connection requires a Power Automate Premium license; the lab model does
+> not.
 
 **To bind connection references:**
 
@@ -116,7 +143,7 @@ The flow uses **three** connection references deployed during Phase 2 (Dataverse
 
 > **Why this step matters:** Every scan result is persisted to Dataverse for regulatory audit trail requirements (supports compliance with FINRA 4511, SEC 17a-3). Dataverse persistence is performed by the runbook (`Start-AccessValidationRunbook.ps1` via `-PersistResults`), **before** alerting, so alert delivery failures do not hide the write attempt.
 
-**Dataverse table:** `fsi_accessvalidationhistory` (OrganizationOwned, immutable)
+**Dataverse table:** `fsi_accessvalidationhistory` (OrganizationOwned; append-only by role design — see [role-design-append-only.md](role-design-append-only.md))
 
 **Connection reference:** `fsi_cr_dataverse_accessmonitor`
 
@@ -155,14 +182,18 @@ The flow uses **three** connection references deployed during Phase 2 (Dataverse
 
 Watch for these key actions to complete successfully:
 
-- **Create_Automation_Job**: Runbook job created (returns jobId)
-- **Wait_For_Job**: Job status polling (max 2 hours, 30-second intervals)
-- **Get_Job_Output**: JSON output retrieved from completed runbook
-- **Parse_Results**: JSON schema validation passes
-- **Dataverse persistence**: Handled by the runbook via `-PersistResults` (not a separate flow action)
-- **Check_Alert_Required**: Condition evaluates based on AlertRequired flag
+- **Recurrence**: Trigger fires on schedule
+- **List_Validation_History**: Latest validation-history rows retrieved from Dataverse (written by the standalone runbook)
+- **List_Violations**: Open violation rows retrieved from Dataverse
+- **Parse_Results**: Row data shaped for alert routing
+- **Check_Alert_Required**: Condition evaluates based on the latest run's severity
 - **Post_Teams_Card** (if Critical/Failed/Error): Adaptive card posted to Teams
 - **Send_Alert_Email** (if alert required): Email sent to distribution list
+
+> **Production-only (Azure Automation upgrade):** when triggering the runbook from
+> Azure Automation, the flow also includes **Create_Automation_Job** (returns jobId),
+> **Wait_For_Job** (status polling), and **Get_Job_Output** (retrieve JSON) ahead of
+> Parse_Results.
 
 ### 5.3 Expected Outcomes
 
@@ -171,8 +202,8 @@ Watch for these key actions to complete successfully:
 - Flow completes successfully
 - No Teams card posted
 - No email sent
-- Validation history record written to Dataverse
-- Check Azure Automation job output for `"OverallStatus": "Passed"`
+- Validation history record present in Dataverse (written by the runbook)
+- The latest `fsi_accessvalidationhistory` row shows `"OverallStatus": "Passed"`
 
 **If validation fails or drift detected:**
 
@@ -195,7 +226,7 @@ Watch for these key actions to complete successfully:
 After the flow is running, capture the initial baseline for drift detection:
 
 ```powershell
-# Run from PowerShell with MSAL.PS installed
+# Run from PowerShell 7.4 (modern OAuth via Get-AAMAccessToken; no MSAL.PS required)
 
 .\Invoke-AccessBaselineCapture.ps1 `
     -TenantId "your-tenant.onmicrosoft.com" `
@@ -243,12 +274,16 @@ After the flow is running, capture the initial baseline for drift detection:
 
 ## Troubleshooting
 
-### Azure Automation Job Failures
+### Runbook Execution Failures (local host)
 
-- **Job stuck in "Running"**: Check Azure Automation job logs; may be waiting for module install
-- **Job completes but output is empty**: Verify runbook parameters, check Write-Verbose output
-- **Authentication errors**: Verify certificate thumbprint, check certificate expiration
-- **Module not found**: Install MSAL.PS and Microsoft.PowerApps.Administration.PowerShell in Automation Account
+- **Scheduled task did not run**: Check Task Scheduler history; verify the `pwsh -File` action path and that the host was powered on at the scheduled time
+- **Run completes but output is empty**: Verify runbook parameters, check Write-Verbose output
+- **Authentication errors**: Re-run `-Interactive` to refresh the device-code sign-in, or verify the service-principal secret has not expired
+- **Module not found**: Install Microsoft.PowerApps.Administration.PowerShell (`Install-Module Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser`)
+
+> **Production-only:** when running under Azure Automation, check the Automation job
+> logs instead; a job stuck in "Running" may be waiting for a module install, and
+> authentication errors point at the managed identity or service-principal secret.
 
 ### Teams Channel Not Found
 

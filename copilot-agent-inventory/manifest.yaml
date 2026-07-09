@@ -1,0 +1,29 @@
+id: copilot-agent-inventory
+name: Copilot Agent Inventory
+description: Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent.
+version: 0.2.0-preview
+status: preview
+domain: monitoring-analytics
+tier: '1'
+controls:
+- '1.2'
+- '1.7'
+- '2.1'
+- '2.13'
+url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-agent-inventory/
+prerequisites:
+  power-platform-admin: Power Platform Admin (or Dynamics 365 admin) for tenant-wide environment enumeration and Dataverse bot/botcomponent reads, plus the fsi publisher prefix in the governance environment.
+  security-admin: Security Admin to provision the least-privilege scanner service principal and store its secret in Key Vault via managed identity.
+verification: Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`.
+
+# Microsoft platform dependency maturity (rendered in README header).
+upstreamDependency:
+  status: mixed
+  note: "ARG Power Platform Inventory GA Mar 31 2026; several agent-specific fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview."
+
+# zones/dataClassification ASSUMED 2026-Q2 (pending Jude ratification):
+#   foundation inventory applies in multi-user team/enterprise governance zones.
+zones:
+- team
+- enterprise
+dataClassification: internal

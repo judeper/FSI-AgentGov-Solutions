@@ -8,10 +8,10 @@
     Dataverse table, replacing the hardcoded zone-based policies in
     Get-ExpectedConfirmationPolicy.ps1.
 
-    v1.0 uses hardcoded zone policies in PowerShell:
-    - Zone 3: ALL actions require confirmation
+    v1.0 uses hardcoded zone policies in PowerShell (canonical: Zone 1 = Enterprise = strictest):
+    - Zone 1: ALL actions require confirmation
     - Zone 2: Write, delete, external transfer require confirmation
-    - Zone 1: Advisory only
+    - Zone 3: Advisory only
 
     v1.1 will add:
     - fsi_ActionRiskClassification table for rule-based classification

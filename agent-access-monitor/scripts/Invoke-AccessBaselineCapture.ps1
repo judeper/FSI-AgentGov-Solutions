@@ -1,5 +1,4 @@
-#Requires -Version 7.1
-#Requires -Modules MSAL.PS
+#Requires -Version 7.4
 
 <#
 .SYNOPSIS
@@ -15,11 +14,11 @@
 
     Key features:
     - Queries live Power Platform environment access settings via Get-EnvironmentAccessSettings
-    - Captures bot-limitSharingMode, bot-authoringSharingDisabled, bot-publishedBotLimitSharingMode
+    - Captures bot-limitSharingMode, bot-authoringSharingDisabled, bot-maxLimitUserSharing
     - Deactivates existing active baselines per environment (single active baseline per environment)
     - Writes new AccessBaseline records to Dataverse with fsi_isactive=true
     - Supports filtering by zone or specific environment GUID
-    - Supports both interactive and certificate-based authentication
+    - Supports device-code (interactive) and service-principal (client secret) authentication
     - WhatIf mode for safe preview without writing to Dataverse
 
 .PARAMETER TenantId
@@ -29,8 +28,9 @@
     Microsoft Entra ID application (client) ID. Required.
 
 .PARAMETER CertificateThumbprint
-    Certificate thumbprint for service principal authentication.
-    Required unless -Interactive is specified.
+    [DEPRECATED] Certificate-thumbprint authentication required the archived MSAL.PS
+    module. Passing this parameter now throws a terminating error. Use -Interactive
+    for device-code flow, or -ClientSecret for service-principal authentication.
 
 .PARAMETER DataverseUrl
     Dataverse environment URL where baselines are stored. Required.
@@ -51,17 +51,22 @@
     Operator identifier stored with the baseline. Defaults to current user UPN.
 
 .PARAMETER Interactive
-    Use interactive browser-based authentication instead of certificate.
-    Useful for manual baseline captures by operators.
+    Use device-code authentication. The user copies a one-time code into
+    https://microsoft.com/devicelogin. Recommended for manual operator captures.
+
+.PARAMETER ClientSecret
+    Service-principal client secret (SecureString) for unattended captures. Dev-only
+    legacy fallback; production should use a managed identity. Used when -Interactive
+    is omitted.
 
 .EXAMPLE
     .\Invoke-AccessBaselineCapture.ps1 `
         -TenantId "contoso.onmicrosoft.com" `
         -ClientId "12345-app-id" `
-        -CertificateThumbprint "ABCDEF123456" `
-        -DataverseUrl "https://governance.crm.dynamics.com"
+        -DataverseUrl "https://governance.crm.dynamics.com" `
+        -Interactive
 
-    Captures baselines for all environments using certificate authentication.
+    Captures baselines for all environments using device-code authentication.
 
 .EXAMPLE
     .\Invoke-AccessBaselineCapture.ps1 `
@@ -98,12 +103,11 @@
     - Environments: Array of captured environment summaries
 
 .NOTES
-    Version: 1.1.2
+    Version: 1.2.0
 
     Requires:
     - Microsoft.PowerApps.Administration.PowerShell module
-    - MSAL.PS module v4.37.0 or later (for Dataverse token)
-    - PowerShell 7.1 or later
+    - PowerShell 7.4 or later
     - Power Platform admin permissions
 
     Baseline management:
@@ -127,6 +131,9 @@ param(
 
     [Parameter()]
     [string]$CertificateThumbprint,
+
+    [Parameter()]
+    [securestring]$ClientSecret,
 
     [Parameter(Mandatory)]
     [string]$DataverseUrl,
@@ -156,8 +163,12 @@ try {
 
     #region Parameter Validation
 
-    if (-not $Interactive -and -not $CertificateThumbprint) {
-        throw "CertificateThumbprint is required when -Interactive is not specified."
+    if ($CertificateThumbprint) {
+        throw "CertificateThumbprint authentication was removed (it required the archived MSAL.PS module). Use -Interactive for device-code flow, or -ClientSecret for service-principal authentication."
+    }
+
+    if (-not $Interactive -and -not $ClientSecret) {
+        throw "Provide -Interactive for device-code authentication, or -ClientSecret for service-principal authentication."
     }
 
     if ($Zone -and $EnvironmentGuid) {
@@ -177,37 +188,23 @@ try {
 
     #endregion
 
-    #region Authenticate and acquire Dataverse token
+    #region Connect AAMClient and acquire Dataverse token
 
-    Write-Verbose "Acquiring Dataverse token..."
+    # Import the AAMClient module first so its modern-auth helper (Get-AAMAccessToken)
+    # is available. C2 remediation: the archived MSAL.PS module is no longer used.
+    Import-Module "$scriptRoot\private\AAMClient.psm1" -Force
 
-    Import-Module MSAL.PS -ErrorAction Stop
-
-    if ($Interactive) {
-        $tokenResult = Get-MsalToken `
-            -ClientId $ClientId `
-            -TenantId $TenantId `
-            -Scopes "$($DataverseUrl.TrimEnd('/'))/.default" `
-            -Interactive `
-            -ErrorAction Stop
-    } else {
-        $cert = Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint" -ErrorAction Stop
-        $tokenResult = Get-MsalToken `
-            -ClientId $ClientId `
-            -ClientCertificate $cert `
-            -TenantId $TenantId `
-            -Scopes "$($DataverseUrl.TrimEnd('/'))/.default" `
-            -ErrorAction Stop
+    Write-Verbose "Acquiring Dataverse token via modern OAuth 2.0 (Get-AAMAccessToken)"
+    $tokenParams = @{
+        TenantId = $TenantId
+        ClientId = $ClientId
+        Resource = $DataverseUrl
     }
-
-    $dataverseToken = $tokenResult.AccessToken
+    if ($Interactive)  { $tokenParams['Interactive']  = $true }
+    if ($ClientSecret) { $tokenParams['ClientSecret'] = $ClientSecret }
+    $dataverseToken = Get-AAMAccessToken @tokenParams
     Write-Verbose "Dataverse token acquired"
 
-    #endregion
-
-    #region Connect AAMClient to Dataverse
-
-    Import-Module "$scriptRoot\private\AAMClient.psm1" -Force
     Connect-AAMDataverse -DataverseUrl $DataverseUrl -AccessToken $dataverseToken
     Write-Verbose "AAMClient connected to Dataverse"
 
@@ -299,7 +296,7 @@ try {
             Write-Host "    Zone: $($env.Zone)" -ForegroundColor Gray
             Write-Host "    bot-limitSharingMode:           $($env.BotLimitSharingMode)" -ForegroundColor Gray
             Write-Host "    bot-authoringSharingDisabled:    $($env.BotAuthoringSharingDisabled)" -ForegroundColor Gray
-            Write-Host "    bot-publishedBotLimitSharingMode: $($env.BotPublishedLimitSharingMode)" -ForegroundColor Gray
+            Write-Host "    bot-maxLimitUserSharing:         $($env.BotMaxLimitUserSharing)" -ForegroundColor Gray
             Write-Host ""
         }
 
@@ -335,7 +332,7 @@ try {
         $rawJson = @{
             BotLimitSharingMode           = $env.BotLimitSharingMode
             BotAuthoringSharingDisabled    = $env.BotAuthoringSharingDisabled
-            BotPublishedLimitSharingMode   = $env.BotPublishedLimitSharingMode
+            BotMaxLimitUserSharing         = $env.BotMaxLimitUserSharing
             EnvironmentType               = $env.EnvironmentType
             EnvironmentGroupId            = $env.EnvironmentGroupId
             EnvironmentGroupName          = $env.EnvironmentGroupName
@@ -348,7 +345,7 @@ try {
         }
 
         $botLimitValue = if ($env.BotLimitSharingMode) { $env.BotLimitSharingMode } else { '' }
-        $botPublishedValue = if ($env.BotPublishedLimitSharingMode) { $env.BotPublishedLimitSharingMode } else { '' }
+        $botMaxLimitValue = if ($env.BotMaxLimitUserSharing) { $env.BotMaxLimitUserSharing } else { '' }
 
         $saveResult = Save-AAMBaseline `
             -EnvironmentGuid $envId `
@@ -356,7 +353,7 @@ try {
             -Zone $zoneNumber `
             -BotLimitSharingMode $botLimitValue `
             -BotAuthoringSharingDisabled $authoringSharingDisabled `
-            -BotPublishedBotLimitSharingMode $botPublishedValue `
+            -BotMaxLimitUserSharing $botMaxLimitValue `
             -CapturedBy $CapturedBy `
             -RawJson $rawJson
 

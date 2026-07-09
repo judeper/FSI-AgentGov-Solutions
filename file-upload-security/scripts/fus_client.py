@@ -61,6 +61,7 @@ class FUSClient:
         )
         self._token: Optional[str] = None
         self._token_expires: float = 0
+        self._optionset_id_cache: dict = {}
         self._session = requests.Session()
         retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
         adapter = HTTPAdapter(max_retries=retry_strategy)
@@ -157,9 +158,13 @@ class FUSClient:
     ) -> requests.Response:
         """Make authenticated request with error handling."""
         headers = self._headers()
+        # Entity/attribute metadata creation can run well past a short timeout;
+        # use a generous read ceiling so table provisioning doesn't spuriously
+        # time out mid-create (the POST may otherwise succeed server-side while
+        # the client errors). Normal data calls return far sooner.
         response = self._session.request(
             method, url, headers=headers,
-            json=data if data else None, timeout=30, **kwargs,
+            json=data if data else None, timeout=600, **kwargs,
         )
         if response.status_code >= 400:
             msg = f"{method} {url} returned {response.status_code}"
@@ -208,7 +213,7 @@ class FUSClient:
         try:
             url = (
                 f"{self.api_url}/EntityDefinitions"
-                f"(LogicalName='{logical_name}')?$select=LogicalName"
+                f"(LogicalName='{logical_name.lower()}')?$select=LogicalName"
             )
             self._request("GET", url)
             return True
@@ -224,13 +229,44 @@ class FUSClient:
         url = f"{self.api_url}/EntityDefinitions"
         self._request("POST", url, data=definition)
 
+    def _resolve_picklist_bind(self, definition: dict) -> None:
+        """Rewrite a Picklist column's GlobalOptionSet@odata.bind from a Name='...'
+        reference to the MetadataId GUID form Dataverse requires at create time.
+
+        A Name key is rejected on attribute creation (surfacing as 'Guid should
+        contain 32 digits' / repeated HTTP 5xx). The id is resolved via a live GET
+        and cached per option set; the shared set is bound, never recreated, so the
+        live MetadataId is authoritative. Mirrors the proven agent-access-monitor /
+        ASARD schema helpers."""
+        bind_key = "GlobalOptionSet@odata.bind"
+        bind_value = definition.get(bind_key, "")
+        if "Name='" not in bind_value:
+            return
+        name = bind_value.split("Name='", 1)[1].split("'", 1)[0]
+        metadata_id = self._optionset_id_cache.get(name)
+        if not metadata_id:
+            url = (
+                f"{self.api_url}/GlobalOptionSetDefinitions(Name='{name}')"
+                f"?$select=MetadataId"
+            )
+            metadata_id = self._request("GET", url).json().get("MetadataId")
+            if not metadata_id:
+                raise RuntimeError(
+                    f"Picklist column {definition.get('SchemaName', '?')} "
+                    f"references unknown or unresolved global option set "
+                    f"'{name}'. Deploy the shared option set before FUS; FUS "
+                    f"binds it, never recreates it."
+                )
+            self._optionset_id_cache[name] = metadata_id
+        definition[bind_key] = f"/GlobalOptionSetDefinitions({metadata_id})"
+
     def create_column(
         self, table_name: str, schema_name: str, col_type: str, definition: dict
     ) -> None:
         """Create a column on an existing table (idempotent)."""
         try:
             check_url = (
-                f"{self.api_url}/EntityDefinitions(LogicalName='{table_name}')"
+                f"{self.api_url}/EntityDefinitions(LogicalName='{table_name.lower()}')"
                 f"/Attributes(LogicalName='{schema_name.lower()}')"
                 f"?$select=LogicalName"
             )
@@ -244,8 +280,9 @@ class FUSClient:
             print(f"    [DRY RUN] Would create {schema_name} ({col_type})")
             return
 
+        self._resolve_picklist_bind(definition)
         url = (
-            f"{self.api_url}/EntityDefinitions(LogicalName='{table_name}')"
+            f"{self.api_url}/EntityDefinitions(LogicalName='{table_name.lower()}')"
             f"/Attributes"
         )
         self._request("POST", url, data=definition)

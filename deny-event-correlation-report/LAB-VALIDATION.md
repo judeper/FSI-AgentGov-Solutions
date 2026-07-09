@@ -85,8 +85,9 @@ March 31, 2026 date only as historical context. **No runtime code path changed**
 - **CopilotInteraction extractor** (`Export-CopilotDenyEvents.ps1`):
   `Search-UnifiedAuditLog -RecordType CopilotInteraction` is correct —
   `CopilotInteraction` (AuditLogRecordType 261) is a valid `AuditRecordType`
-  enum member. The Graph `/security/auditLog/queries` beta is accurately
-  described as a not-yet-production migration path.
+  enum member. The Graph `/security/auditLog/queries` endpoint is generally
+  available on the v1.0 endpoint and documented as a supported migration path
+  while `Search-UnifiedAuditLog` remains the production extractor.
 - **DLP Workload literals** `Copilot` / `MicrosoftCopilotStudio` are used consistently
   across script and KQL (the incorrect `MicrosoftCopilot` literal was already removed in
   v2.0.2).

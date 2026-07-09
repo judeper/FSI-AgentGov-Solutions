@@ -52,7 +52,7 @@ if ($DataverseUrl -and $AccessToken) {
         $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -ErrorAction Stop
         if ($response.value.Count -gt 0) {
             $zoneValue = $response.value[0].fsi_zone
-            $zoneNameMap = @{ 1 = 'Zone1'; 2 = 'Zone2'; 3 = 'Zone3' }
+            $zoneNameMap = @{ 100000001 = 'Zone1'; 100000002 = 'Zone2'; 100000003 = 'Zone3' }
             if ($zoneNameMap.ContainsKey([int]$zoneValue)) {
                 return $zoneNameMap[[int]$zoneValue]
             }
@@ -62,17 +62,18 @@ if ($DataverseUrl -and $AccessToken) {
     }
 }
 
-# Fallback: naming convention classification
+# Fallback: naming convention classification (canonical Option A:
+# enterprise/prod => Zone 1 most restrictive; personal/dev => Zone 3 least restrictive)
 if ($EnvironmentDisplayName) {
     $name = $EnvironmentDisplayName.ToLower()
-    if ($name -match '\bz3\b' -or $name -match 'zone.?3' -or $name -match 'enterprise') {
-        return 'Zone3'
+    if ($name -match '\bz1\b' -or $name -match 'zone.?1' -or $name -match 'enterprise|prod|production') {
+        return 'Zone1'
     }
     if ($name -match '\bz2\b' -or $name -match 'zone.?2' -or $name -match 'team') {
         return 'Zone2'
     }
-    if ($name -match '\bz1\b' -or $name -match 'zone.?1' -or $name -match 'personal') {
-        return 'Zone1'
+    if ($name -match '\bz3\b' -or $name -match 'zone.?3' -or $name -match 'personal|dev|sandbox') {
+        return 'Zone3'
     }
 }
 

@@ -204,7 +204,7 @@ function Get-GACValidationResults {
             # Optional zone filter (not applied when 'All')
             # fsi_zone is a Dataverse picklist (integer) column — do not quote the value
             if ($Zone -ne 'All') {
-                $zoneIntMap = @{ '1' = 1; '2' = 2; '3' = 3 }
+                $zoneIntMap = @{ '1' = 100000001; '2' = 100000002; '3' = 100000003 }
                 $zoneIntValue = $zoneIntMap[$Zone]
                 $violationFilters += "fsi_zone eq $zoneIntValue"
             }

@@ -115,6 +115,7 @@ function Compare-OAuthScopeBaseline {
         $headers = @{
             'Authorization' = "Bearer $dvAccessToken"
             'Accept'        = 'application/json'
+            'Content-Type'  = 'application/json'
             'OData-Version' = '4.0'
         }
 
@@ -179,6 +180,8 @@ function Compare-OAuthScopeBaseline {
                 AgentName        = $record.fsi_agentname
                 ConnectorName    = $record.fsi_connectorname
                 ScopeName        = $record.fsi_scopename
+                Approved         = $approved
+                Actual           = $actual
                 ApprovedCount    = $approved.Count
                 ActualCount      = $actual.Count
                 ExcessScopes     = ($excessScopes -join ', ')
@@ -215,6 +218,13 @@ function Compare-OAuthScopeBaseline {
                     }
                     fsi_violationstatus = 100000000  # Open
                     fsi_description     = $result.Recommendation
+                    # Populate the timestamp + the v2.1.1 scope columns so
+                    # Export-CredentialEvidence.ps1 (which filters by
+                    # fsi_detectedat date range) includes these violations,
+                    # and so the auditor JSON carries the baseline diff.
+                    fsi_detectedat      = (Get-Date).ToUniversalTime().ToString('o')
+                    fsi_approvedscopes  = ($result.Approved -join ' ')
+                    fsi_actualscopes    = ($result.Actual -join ' ')
                 } | ConvertTo-Json
 
                 try {

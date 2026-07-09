@@ -8,7 +8,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 |-------|-------|------------|
 | Tables not created | `deploy.py` did not complete | Re-run `python scripts/deploy.py` (full deployment is the default); check Dataverse System Administrator role |
 | Environment variables missing | Selective deployment skipped variables | Run `python scripts/deploy.py --vars-only` to deploy variables only |
-| Connection reference errors | Connector not available in environment | Verify Power Automate Premium license; check connector availability in target environment |
+| Connection reference errors | Connector not available in environment | Check connector availability in target environment; the optional Azure Automation connector requires a Power Automate Premium license (not needed for the lab model — Dataverse/Teams/Outlook are standard connectors) |
 | `deploy.py` authentication failure | Expired or invalid token | Prefer `python scripts/deploy.py --managed-identity` on Azure-hosted automation, or `--workload-identity --client-id <app-id>` for CI/CD. For manual runs, re-run `python scripts/deploy.py --interactive --client-id <app-id>` to refresh the MSAL token cache. The deployment does not use `az login`; verify tenant and environment URL. |
 | Schema version mismatch | Partial upgrade from earlier version | Re-run `python scripts/deploy.py` (full deployment is the default) to reconcile schema |
 
@@ -16,9 +16,9 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 
 | Issue | Cause | Resolution |
 |-------|-------|------------|
-| MSAL.PS module not found | Module not installed | Run `Install-Module MSAL.PS -Scope CurrentUser -Force` |
+| Modern OAuth token acquisition fails | `AAMClient.psm1` not imported, or app registration misconfigured | Ensure `scripts/private/AAMClient.psm1` is importable; verify the app registration allows public-client device-code flow (for `-Interactive`) or has a valid secret (for `-ClientSecret`) |
 | Interactive auth popup not appearing | Browser block or policy restriction | Try a different browser; check Conditional Access policies |
-| Certificate auth fails with 401 | Certificate not uploaded or expired | Verify certificate in Microsoft Entra ID app registration; check expiration date |
+| Service-principal auth fails with 401 | Client secret expired or wrong app permissions | Rotate the client secret; verify the app has the required Power Platform/Dataverse permissions. Certificate-thumbprint auth was removed (required the archived MSAL.PS module) |
 | Insufficient privileges | Missing Dataverse role | Assign Dataverse User role (minimum) or System Administrator for schema deployment |
 | Token expired during long export | Access token TTL exceeded | Re-run the export; token lifetime is typically 60 minutes |
 

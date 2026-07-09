@@ -1,0 +1,11 @@
+{
+  "_comment": "Sample CAI agent master export (fsi_copilotagent rows) in an OData { value: [...] } envelope. The FNF lens joins fsi_createdin (createdIn) onto each People-capable agent on fsi_agentid so the CBG engine's pathway classifier is accurate (createdIn 'Microsoft 365 Copilot Agent Builder' -> mcp-agentbuilder; 'Copilot Studio' -> mcp-cs). Logical names are all-lowercase with no inter-word underscores. Example identities only.",
+  "value": [
+    { "fsi_agentid": "11110000-0000-0000-0000-000000000001", "fsi_agentname": "Org Directory Helper", "fsi_createdin": "Microsoft 365 Copilot Agent Builder" },
+    { "fsi_agentid": "11110000-0000-0000-0000-000000000002", "fsi_agentname": "Company Concierge", "fsi_createdin": "Microsoft 365 Copilot Agent Builder" },
+    { "fsi_agentid": "11110000-0000-0000-0000-000000000003", "fsi_agentname": "Loan Ops People Finder", "fsi_createdin": "Copilot Studio" },
+    { "fsi_agentid": "11110000-0000-0000-0000-000000000004", "fsi_agentname": "Pilot People Bot", "fsi_createdin": "Microsoft 365 Copilot Agent Builder" },
+    { "fsi_agentid": "11110000-0000-0000-0000-000000000006", "fsi_agentname": "Branch Lookup Bot", "fsi_createdin": "Copilot Studio" },
+    { "fsi_agentid": "11110000-0000-0000-0000-000000000007", "fsi_agentname": "Mentor Match Bot", "fsi_createdin": "Microsoft 365 Copilot Agent Builder" }
+  ]
+}

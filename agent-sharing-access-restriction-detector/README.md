@@ -11,11 +11,11 @@ coe_function: govern
 > **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-06-09 — lab validation. Detection proven on a real Dataverse row with SHA-256 evidence; runtime enforcement proven at the data plane only (Flow B remediation runtime not yet exercised end-to-end). See [Scope and validation status](#scope-and-validation-status).
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 
-Continuous detection and restriction of agent sharing configurations exceeding zone-based access policies with approval workflows and exception management.
+Continuous detection of agent sharing configurations that exceed zone-based access policies on the runtime chat-ACL plane (plane #1), with approval-gated remediation and exception management. See [Scope and validation status](#scope-and-validation-status) for what is lab-proven versus staged.
 
 ## Overview
 
@@ -84,7 +84,7 @@ Operational caveats from Microsoft Learn:
 
 - Sharing limits are applied when users attempt new sharing changes; they do not remove users or groups that already had access before the rules were configured.
 - Enforcement can take up to one hour after settings are saved.
-- Sharing limits apply to agents that require authentication.
+- Sharing rules are evaluated against the agents that the configured sharing context targets; Microsoft Learn does not restrict the limits to agents that require authentication. Consult [agent sharing limits](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules) for the authoritative scope.
 - Dataverse for Teams environments have a publish-to-Team exception; limits apply when sharing outside the team bound to the environment.
 
 **Relationship to ASARD:** Managed Environment sharing limits provide the preventive control layer. ASARD provides zone-specific detective controls, validates `bot.accesscontrolpolicy` and `bot.authorizedsecuritygroupids` against approved group policy, manages time-bound exceptions with approval workflows, and generates evidence for review. FSI organizations should configure Managed Environment sharing limits as the primary preventive layer and use ASARD for granular zone-based compliance auditing and exception management.
@@ -144,17 +144,38 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 
 | Control | Description | Implementation Evidence |
 |---------|-------------|------------------------|
-| [1.18](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Application-Level Authorization and RBAC | Remediation approval workflow — Zone-based approved security group validation via `fsi_approvedsecuritygrouppolicies`; Dataverse bot-table PATCH updates `accesscontrolpolicy` and `authorizedsecuritygroupids` for approved remediation (see [flow configuration](docs/flow-configuration.md)) |
-| [2.8](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties/) | Access Control and Segregation of Duties | Remediation approval workflow — Governance lead approval required before remediation; zone classification determines allowed security groups; Exception review workflow — Time-bound exceptions with audit trail preservation (see [flow configuration](docs/flow-configuration.md)) |
+| [1.18](https://judeper.github.io/FSI-AgentGov/controls/pillar-1-security/1.18-application-level-authorization-and-role-based-access-control-rbac/) | Application-Level Authorization and RBAC | Remediation approval workflow — Zone-based approved security group validation via `fsi_approvedsecuritygrouppolicies`; Dataverse bot-table PATCH updates `accesscontrolpolicy` and `authorizedsecuritygroupids` for approved remediation (see [flow configuration](docs/flow-configuration.md)) _(Plane #1 chat-ACL detection lab-proven; Dataverse bot-table PATCH proven at the data plane only; Flow B remediation staged as Draft behind a human approval — see [Scope and validation status](#scope-and-validation-status).)_ |
+| [2.8](https://judeper.github.io/FSI-AgentGov/controls/pillar-2-management/2.8-access-control-and-segregation-of-duties/) | Access Control and Segregation of Duties | Remediation approval workflow — Governance lead approval required before remediation; zone classification determines allowed security groups; Exception review workflow — Time-bound exceptions with audit trail preservation (see [flow configuration](docs/flow-configuration.md)) _(Plane #1 chat-ACL only; approval-gated remediation staged behind a human approval, not exercised end-to-end — see [Scope and validation status](#scope-and-validation-status).)_ |
+
+### Scope and validation status
+
+> **Scope — plane #1 (chat ACL) only.** ASARD validates the runtime **chat-ACL** sharing plane
+> (`bot.accesscontrolpolicy` + `bot.authorizedsecuritygroupids`) — **one of three** Copilot Studio
+> agent-sharing planes. The **authoring share** (`PrincipalObjectAccess` Editor/Viewer rows, plane
+> #2) and the **M365 Copilot Agent Store** (plane #3) are **known gaps**, not covered by this
+> solution. See [LAB-VALIDATION.md → Sharing-Plane Coverage (Scope Honesty)](./LAB-VALIDATION.md#sharing-plane-coverage-scope-honesty)
+> and [`controls-covered.json`](./controls-covered.json) (both controls are `coverage: "partial"`).
+>
+> **What the 2026-06-09 lab validation proved.** *Detection* — the plane #1 detection →
+> persistence → tamper-evident-evidence path ran against a live environment: one real
+> non-compliant Dataverse row was detected, independently read-back-verified, and exported as
+> evidence with a SHA-256 hash verified three ways. *Runtime enforcement* — proven at the **data
+> plane only** (a combined `accesscontrolpolicy = 2` + approved-group-list write persisted and was
+> read back). The **Flow B remediation runtime is staged as Draft behind a human approval and was
+> not exercised end-to-end**; C2 runtime enforcement is recorded as a **documented design
+> boundary**, not an empirically measured result.
+>
+> ASARD **supports compliance with** the listed controls for plane #1; it does **not** by itself
+> satisfy any control in isolation, and does not provide full agent-sharing-governance coverage.
 
 ## Known Limitations
 
 - **28-day approval wait limit**: Microsoft Learn notes that an approval flow can wait for 28 days before the flow fails. The sequential approval loop (concurrency=1) with 7-day timeouts means more than four agents can exceed this limit. For environments with more than four non-compliant agents, consider batch approval or a child flow pattern.
-- **Rejection cooldown**: After remediation rejection, agents are excluded from re-query for 7 days (matching the default approval timeout) to prevent repeated approval requests to the same approver. Override by manually resetting `fsi_remediationstatus` in Dataverse.
+- **Rejection cooldown**: After remediation rejection, agents are excluded from re-query for 7 days (matching the default approval timeout) to avoid repeated approval requests to the same approver. Override by manually resetting `fsi_remediationstatus` in Dataverse.
 - **Adaptive card templates (remediation)**: `adaptive-card-asard-remediation-approval.json` and `adaptive-card-asard-remediation-result.json` are reference templates for external integrations (e.g., custom Power Apps, third-party dashboards). The remediation approval workflow uses inline Markdown for approval and notification messages — these templates are not loaded by the workflow at runtime.
-- **Template URL integrity (exception review)**: The exception review workflow loads adaptive card templates via HTTP GET from a configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`). No content hash or signature validation is performed. Ensure the URL points to a trusted, immutable source (e.g., GitHub release tag, Azure Blob Storage with SAS token).
+- **Template URL integrity (exception review)**: The exception review workflow loads adaptive card templates via HTTP GET from a configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`). No content hash or signature validation is performed. Verify the URL points to a trusted, immutable source (e.g., GitHub release tag, Azure Blob Storage with SAS token).
 - **Exception query pagination**: The exception review workflow retrieves up to 5,000 records per query (Dataverse maximum per request). Environments with >5,000 active exceptions should use Dataverse views or custom reporting for complete visibility.
-- **Per-agent approved groups query (N+1 pattern)**: The remediation workflow queries approved security groups per-agent inside the sequential loop. Agents in the same zone redundantly fetch the same approved groups. Pre-fetching approved groups for all 3 zones before the loop would eliminate redundant Dataverse API calls. This is a performance optimization — correctness is unaffected.
+- **Per-agent approved groups query (N+1 pattern)**: The remediation workflow queries approved security groups per-agent inside the sequential loop. Agents in the same zone redundantly fetch the same approved groups. Pre-fetching approved groups for all 3 zones before the loop would remove redundant Dataverse API calls. This is a performance optimization — correctness is unaffected.
 - **Dataverse pagination (remediation)**: The remediation workflow uses `$skip`-based pagination with `@odata.nextLink` absence detection. For deployments with >5,000 non-compliant agents, `$skip` offsets may produce inconsistent results due to server-side cursor resets. Consider reducing the query window or using Dataverse views for large-scale environments.
 
 ## License

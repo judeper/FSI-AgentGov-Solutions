@@ -150,7 +150,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "Zone 1 - Personal",
+                  "text": "Zone 1 - Enterprise",
                   "size": "Small"
                 }
               ]
@@ -226,7 +226,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "Zone 3 - Enterprise",
+                  "text": "Zone 3 - Personal",
                   "size": "Small"
                 }
               ]

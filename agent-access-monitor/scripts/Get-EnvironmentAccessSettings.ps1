@@ -59,17 +59,19 @@
     - EnvironmentType
     - CreatedTime
     - IsManaged
+    - IsManagedEnvironment
+    - Status
     - Zone
     - BotLimitSharingMode
     - BotAuthoringSharingDisabled
-    - BotPublishedLimitSharingMode
+    - BotMaxLimitUserSharing
     - EnvironmentGroupId
     - EnvironmentGroupName
     - RawSettings
 
 .NOTES
     File: Get-EnvironmentAccessSettings.ps1
-    Version: 1.1.2
+    Version: 1.2.0
     Requires: Microsoft.PowerApps.Administration.PowerShell module
 #>
 
@@ -310,12 +312,12 @@ foreach ($env in $environments) {
     } else {
         # Fallback: naming convention heuristic (no HTTP call needed)
         $name = $env.DisplayName
-        if ($name -match '(?i)(prod|production|enterprise|zone\s*3)') {
-            $zone = 'Zone3'
+        if ($name -match '(?i)(prod|production|enterprise|zone\s*1)') {
+            $zone = 'Zone1'
         } elseif ($name -match '(?i)(team|department|shared|zone\s*2)') {
             $zone = 'Zone2'
-        } elseif ($name -match '(?i)(personal|dev|sandbox|zone\s*1)') {
-            $zone = 'Zone1'
+        } elseif ($name -match '(?i)(personal|dev|sandbox|zone\s*3)') {
+            $zone = 'Zone3'
         } else {
             $zone = 'Unknown'
         }
@@ -323,11 +325,32 @@ foreach ($env in $environments) {
     
     Write-Verbose "Zone classification: $zone"
     
-    # Extract bot access settings
-    $botLimitSharingMode = Get-ExtendedSetting -Environment $env -SettingKey 'bot-limitSharingMode'
-    $botAuthoringSharingDisabled = Get-ExtendedSetting -Environment $env -SettingKey 'bot-authoringSharingDisabled'
-    $botPublishedLimitSharingMode = Get-ExtendedSetting -Environment $env -SettingKey 'bot-publishedBotLimitSharingMode'
-    
+    # Determine whether this is a Managed Environment. The authoritative signal for the
+    # agent-sharing controls is the presence of governanceConfiguration extended settings;
+    # a non-Managed environment exposes none. This is distinct from $isManaged below
+    # (which only indicates a linked Dataverse instance). H1: guard non-Managed
+    # environments so the controls are reported out-of-scope, not as a path bug.
+    $extendedSettings = $null
+    try {
+        $extendedSettings = $env.Internal.properties.governanceConfiguration.settings.extendedSettings
+    } catch {
+        Write-Verbose "No governanceConfiguration.settings.extendedSettings on: $($env.DisplayName)"
+    }
+    $isManagedEnvironment = $null -ne $extendedSettings
+    $envStatus = if ($isManagedEnvironment) { 'Managed' } else { 'NotManaged' }
+
+    # Extract bot access settings. For a non-Managed environment these controls do not
+    # apply, so the values stay $null and downstream compliance treats the environment
+    # as ScopeOutOfBand rather than emitting false violations.
+    $botLimitSharingMode = $null
+    $botAuthoringSharingDisabled = $null
+    $botMaxLimitUserSharing = $null
+    if ($isManagedEnvironment) {
+        $botLimitSharingMode = Get-ExtendedSetting -Environment $env -SettingKey 'bot-limitSharingMode'
+        $botAuthoringSharingDisabled = Get-ExtendedSetting -Environment $env -SettingKey 'bot-authoringSharingDisabled'
+        $botMaxLimitUserSharing = Get-ExtendedSetting -Environment $env -SettingKey 'bot-maxLimitUserSharing'
+    }
+
     # Get environment group info
     $groupId = $null
     $groupName = $null
@@ -339,22 +362,18 @@ foreach ($env in $environments) {
         }
     }
     
-    # Determine if environment is managed (has Microsoft Dataverse)
+    # Determine if environment has a linked Dataverse instance. NOTE: this is NOT the
+    # same as being a Managed Environment (see $isManagedEnvironment above).
     $isManaged = $null -ne $env.Internal.properties.linkedEnvironmentMetadata
     
     # Build raw settings for debugging
     $rawSettings = @{}
-    try {
-        $extendedSettings = $env.Internal.properties.governanceConfiguration.settings.extendedSettings
-        if ($extendedSettings) {
-            foreach ($prop in $extendedSettings.PSObject.Properties) {
-                if ($prop.Name -like 'bot-*') {
-                    $rawSettings[$prop.Name] = $prop.Value
-                }
+    if ($extendedSettings) {
+        foreach ($prop in $extendedSettings.PSObject.Properties) {
+            if ($prop.Name -like 'bot-*') {
+                $rawSettings[$prop.Name] = $prop.Value
             }
         }
-    } catch {
-        Write-Verbose "Could not extract raw settings for: $($env.DisplayName)"
     }
     
     # Build result object
@@ -364,10 +383,12 @@ foreach ($env in $environments) {
         EnvironmentType             = $env.EnvironmentType
         CreatedTime                 = $env.CreatedTime
         IsManaged                   = $isManaged
+        IsManagedEnvironment        = $isManagedEnvironment
+        Status                      = $envStatus
         Zone                        = $zone
         BotLimitSharingMode         = $botLimitSharingMode
         BotAuthoringSharingDisabled = $botAuthoringSharingDisabled
-        BotPublishedLimitSharingMode = $botPublishedLimitSharingMode
+        BotMaxLimitUserSharing      = $botMaxLimitUserSharing
         EnvironmentGroupId          = $groupId
         EnvironmentGroupName        = $groupName
         RawSettings                 = $rawSettings

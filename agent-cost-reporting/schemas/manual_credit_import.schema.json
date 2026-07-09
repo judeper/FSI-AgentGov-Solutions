@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/agent-cost-reporting/schemas/manual_credit_import.schema.json",
+  "title": "Manual Copilot Credits Import Row",
+  "description": "Schema for the manually exported per-agent Copilot Credits CSV (from the Microsoft 365 admin center or Power Platform admin center). There is no supported API egress for this data today; rows are imported with source_method=ui_export_csv and a SHA-256 of the source file. Column names vary across portal versions; the importer maps observed headers to these fields and rejects unmapped files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "export_timestamp_utc",
+    "agent_name",
+    "credits_or_messages_consumed",
+    "quantity_unit"
+  ],
+  "properties": {
+    "export_timestamp_utc": { "type": "string", "format": "date-time", "description": "When the admin exported the CSV." },
+    "agent_name": { "type": "string", "description": "Agent display name as shown in the portal." },
+    "agent_id": { "type": ["string", "null"], "description": "Agent id if the portal export includes it." },
+    "user_or_group_scope": { "type": ["string", "null"], "description": "User UPN, group, or scope the consumption is attributed to." },
+    "service": { "type": ["string", "null"], "description": "e.g. Copilot Studio, M365 Copilot Chat." },
+    "policy_or_environment_scope": { "type": ["string", "null"], "description": "Billing policy id/name or environment id/name." },
+    "credits_or_messages_consumed": { "type": "number", "minimum": 0 },
+    "quantity_unit": { "type": "string", "enum": ["credits", "messages"], "description": "Credits and messages are different units; record which the export used." },
+    "period_start_utc": { "type": ["string", "null"], "format": "date-time" },
+    "period_end_utc": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

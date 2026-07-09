@@ -182,7 +182,7 @@ $violationType = $null
 $regulatoryContext = $null
 
 if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
-    # Zone 3: file upload should be disabled but is enabled
+    # Zone 1: file upload should be disabled but is enabled
     $fileUploadCompliant = $false
 
     # Check moderation level too
@@ -190,11 +190,11 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
     if (-not $moderationSufficient) {
         $moderationCompliant = $false
         $severity = 'Critical'
-        $violationType = 'Zone3_FileUploadEnabled_InsufficientModeration'
+        $violationType = 'Zone1_FileUploadEnabled_InsufficientModeration'
         $regulatoryContext = "FINRA 4511, SEC 17a-3, GLBA 501(b) -- File upload enabled in $($zoneKey) (Enterprise Managed) without $($zonePolicy.minimumModerationLevel) content moderation; expands agent data intake beyond declared scope with insufficient content controls"
     } else {
         $severity = 'Critical'
-        $violationType = 'Zone3_FileUploadEnabled_NoApproval'
+        $violationType = 'Zone1_FileUploadEnabled_NoApproval'
         $regulatoryContext = "FINRA Regulatory Notice 25-07, FINRA Rule 4511, SEC Rule 17a-3, GLBA 501(b), 12 CFR 30 App. B -- File upload enabled in $($zoneKey) (Enterprise Managed) without documented governance approval; data minimization requirements indicate file upload should remain disabled unless explicitly authorized"
     }
 } elseif ($zonePolicy.fileUploadAllowed -and $zonePolicy.requiresApproval -and $isFileUploadEnabled) {
@@ -207,13 +207,13 @@ if (-not $zonePolicy.fileUploadAllowed -and $isFileUploadEnabled) {
         $regulatoryContext = "FINRA 4511, SEC 17a-3 -- File upload enabled in $($zoneKey) (Team Collaboration) without $($zonePolicy.minimumModerationLevel) content moderation minimum; user-uploaded content requires elevated content controls"
     }
     # Note: approval status cannot be verified programmatically -- flagged for governance review
-} elseif ($isFileUploadEnabled -and $zoneKey -eq 'Zone 1') {
-    # Zone 1: allowed, but check minimum moderation
+} elseif ($isFileUploadEnabled -and $zoneKey -eq 'Zone 3') {
+    # Zone 3: allowed, but check minimum moderation
     $moderationSufficient = Test-ModerationSufficient -Actual $ContentModerationLevel -Required $zonePolicy.minimumModerationLevel
     if (-not $moderationSufficient) {
         $moderationCompliant = $false
         $severity = 'Warning'
-        $violationType = 'Zone1_NoModeration'
+        $violationType = 'Zone3_NoModeration'
         $regulatoryContext = "FINRA Regulatory Notice 25-07 -- File upload enabled in $($zoneKey) (Personal Productivity) without content moderation configured; recommended for defense-in-depth"
     }
 }

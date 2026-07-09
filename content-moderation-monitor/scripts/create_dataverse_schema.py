@@ -34,16 +34,10 @@ SHARED_OPTIONSETS = {
             ("Zone 3", 100000003),
         ],
     },
-    "fsi_acv_severity": {
-        "name": "fsi_acv_severity",
-        "options": [
-            ("Passed", 100000000),
-            ("Warning", 100000001),
-            ("GracePeriod", 100000002),
-            ("Failed", 100000003),
-            ("Error", 100000004),
-        ],
-    },
+    # NOTE: fsi_acv_severity is intentionally NOT declared or bound. The live
+    # fsi_acv_severity is a monitoring-RESULT set (Passed/Warning/GracePeriod/
+    # Failed/Error), not a severity rank; CMM writes fsi_severity as a free
+    # String label (see column definitions), so no severity option set is needed.
 }
 
 
@@ -181,7 +175,6 @@ def _picklist_col(
         "RequiredLevel": {
             "Value": "ApplicationRequired" if required else "None"
         },
-        "OptionSet": None,
         "GlobalOptionSet@odata.bind": (
             f"/GlobalOptionSetDefinitions(Name='{global_optionset_name}')"
         ),
@@ -367,6 +360,7 @@ def create_table_with_columns(
                         "#Microsoft.Dynamics.CRM.StringAttributeMetadata"
                     ),
                     "SchemaName": "fsi_Name",
+                    "IsPrimaryName": True,
                     "DisplayName": _label(
                         f"{table_def['display']} ID"
                     ),

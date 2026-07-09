@@ -63,11 +63,14 @@
     Retrieves all validation results for a specific validation run across all zones.
 
 .EXAMPLE
-    # Using current Graph context token
-    Connect-MgGraph -Scopes "https://contoso.crm.dynamics.com/.default"
-    Get-SSCValidationResults -DataverseUrl "https://contoso.crm.dynamics.com" -Zone "2"
+    # Acquire a Dataverse-scoped token. Connect-MgGraph only issues Microsoft Graph-audience
+    # tokens, which the Dataverse Web API rejects; Get-AzAccessToken targets the Dataverse
+    # resource directly. Get-AzAccessToken returns a SecureString by default (Az.Accounts 5.x).
+    $token = (Get-AzAccessToken -ResourceUrl "https://contoso.crm.dynamics.com").Token |
+        ConvertFrom-SecureString -AsPlainText
+    Get-SSCValidationResults -DataverseUrl "https://contoso.crm.dynamics.com" -AccessToken $token -Zone "2"
 
-    Retrieves Zone 2 validation results from the past 30 days using current Graph context.
+    Retrieves Zone 2 validation results from the past 30 days using a Dataverse-scoped token.
 
 .OUTPUTS
     Array of PSCustomObjects containing validation result records. Each object

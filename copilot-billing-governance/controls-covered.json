@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/build-manifest.py",
+  "solutionId": "copilot-billing-governance",
+  "solutionName": "Copilot Billing Governance",
+  "solutionVersion": "0.1.0-preview",
+  "status": "preview",
+  "controls": [
+    {
+      "id": "3.5",
+      "coverage": "full"
+    },
+    {
+      "id": "1.18",
+      "coverage": "partial"
+    },
+    {
+      "id": "1.14",
+      "coverage": "partial"
+    }
+  ],
+  "controlCount": 3
+}

@@ -78,14 +78,14 @@
         -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "contoso.onmicrosoft.com" `
         -OutputDirectory "C:\compliance\evidence" `
-        -Zone "3" `
+        -Zone "1" `
         -IncludeExceptions `
         -FromDate (Get-Date).AddDays(-90) `
         -ToDate (Get-Date) `
         -ClientId "12345..." `
         -CertificateThumbprint "ABCDEF..."
 
-    Exports 90 days of Zone 3 violations with exceptions using service principal
+    Exports 90 days of Zone 1 (Enterprise) violations with exceptions using service principal
     authentication.
 
 .EXAMPLE
@@ -359,7 +359,18 @@ if ($RunId) {
     $violationFilter += " and fsi_runid eq '$RunId'"
 }
 if ($Zone -ne 'All') {
-    $violationFilter += " and fsi_zone eq $Zone"
+    # Canonical fsi_acv_zone integers are 100000000-based on the live tenant
+    # (Zone 1 = 100000001 ... Zone 3 = 100000003). Map the friendly 1/2/3 filter
+    # to the canonical option-set value before querying.
+    $zoneFilterInt = switch ($Zone) {
+        '1'     { 100000001 }
+        '2'     { 100000002 }
+        '3'     { 100000003 }
+        default { $null }
+    }
+    if ($null -ne $zoneFilterInt) {
+        $violationFilter += " and fsi_zone eq $zoneFilterInt"
+    }
 }
 
 try {

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/agent-cost-reporting/schemas/cost_fact.schema.json",
+  "title": "Agent Cost Fact",
+  "description": "One normalized fact row per source record per period per subject. The durable, renderer-independent dataset assembled from all collected surfaces. Monetary facts and usage/metadata facts coexist, differentiated by fact_type.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "fact_id",
+    "snapshot_id",
+    "tenant_id",
+    "fact_type",
+    "source_surface",
+    "source_method",
+    "confidence_class",
+    "attribution_status",
+    "join_strategy",
+    "period_start_utc",
+    "period_end_utc"
+  ],
+  "properties": {
+    "fact_id": {
+      "type": "string",
+      "description": "Deterministic UUIDv5 over source_surface + source_record_id + period_start_utc + fact_type."
+    },
+    "snapshot_id": {
+      "type": "string",
+      "description": "Point-in-time collection identifier; identical across all rows in one run."
+    },
+    "tenant_id": { "type": ["string", "null"], "description": "Canonical tenant join key across all surfaces." },
+    "fact_type": {
+      "type": "string",
+      "enum": [
+        "azure_cost",
+        "copilot_usage",
+        "license_inventory",
+        "billing_policy_map",
+        "audit_interaction",
+        "manual_credit_consumption"
+      ]
+    },
+    "source_surface": {
+      "type": "string",
+      "enum": [
+        "azure_cost_management",
+        "graph_reports",
+        "graph_licenses",
+        "powerplatform_api",
+        "purview_audit_beta",
+        "manual_csv"
+      ]
+    },
+    "source_endpoint": { "type": ["string", "null"], "description": "Exact method+path template used to collect the row." },
+    "source_method": { "type": "string", "enum": ["api", "ui_export_csv", "audit_log", "manual_override"] },
+    "source_record_id": { "type": ["string", "null"], "description": "Native record id if present; else a stable hash of the native row." },
+    "collection_started_utc": { "type": ["string", "null"], "format": "date-time" },
+    "collection_completed_utc": { "type": ["string", "null"], "format": "date-time" },
+    "data_freshness_utc": { "type": ["string", "null"], "format": "date-time", "description": "Best-known source data currency time." },
+    "freshness_note": { "type": ["string", "null"] },
+    "confidence_class": {
+      "type": "string",
+      "enum": ["authoritative_api", "authoritative_admin_export", "supplementary_audit", "heuristic_join", "manual"]
+    },
+    "confidence_score": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "attribution_status": {
+      "type": "string",
+      "enum": ["deterministic", "partially_deterministic", "heuristic", "unattributable"]
+    },
+    "join_strategy": {
+      "type": "string",
+      "enum": ["native_id", "foreign_key", "inferred_name_owner_env", "none"]
+    },
+    "join_evidence": { "type": ["string", "null"], "description": "JSON string documenting keys used for the join." },
+    "period_start_utc": { "type": "string", "format": "date-time" },
+    "period_end_utc": { "type": "string", "format": "date-time" },
+    "currency_code": { "type": ["string", "null"], "description": "USD for monetary facts; null for usage-only facts." },
+    "amount": { "type": ["number", "null"], "description": "Monetary amount for authoritative or estimated cost facts only." },
+    "quantity": { "type": ["number", "null"], "description": "Usage quantity: credits, messages, interactions, seats, hours, requests." },
+    "quantity_unit": { "type": ["string", "null"], "enum": ["credits", "messages", "interactions", "seats", "hours", "requests", null] },
+    "payment_model": { "type": ["string", "null"], "enum": ["payg", "prepaid", "seat", "included", "unknown", null] },
+    "azure_scope": { "type": ["string", "null"] },
+    "azure_subscription_id": { "type": ["string", "null"] },
+    "azure_resource_group": { "type": ["string", "null"] },
+    "billing_policy_id": { "type": ["string", "null"] },
+    "environment_id": { "type": ["string", "null"] },
+    "environment_name": { "type": ["string", "null"], "description": "Human-readable convenience only; never a sole join key." },
+    "agent_platform": { "type": ["string", "null"], "enum": ["copilot_studio", "m365_copilot", "cowork", "work_iq_api", "agent_365", "unknown", null] },
+    "agent_id": { "type": ["string", "null"], "description": "Canonical normalized agent id if deterministically known." },
+    "bot_id": { "type": ["string", "null"] },
+    "entra_agent_id": { "type": ["string", "null"] },
+    "copilot_package_id": { "type": ["string", "null"] },
+    "user_id": { "type": ["string", "null"], "description": "Entra object id when present." },
+    "user_upn": { "type": ["string", "null"], "description": "Secondary correlation only." },
+    "sku_id": { "type": ["string", "null"] },
+    "sku_part_number": { "type": ["string", "null"] },
+    "meter_id": { "type": ["string", "null"] },
+    "meter_name": { "type": ["string", "null"], "description": "Volatile across time; discover dynamically." },
+    "meter_category": { "type": ["string", "null"] },
+    "manual_artifact_name": { "type": ["string", "null"] },
+    "manual_artifact_sha256": { "type": ["string", "null"] },
+    "row_note": { "type": ["string", "null"] }
+  }
+}

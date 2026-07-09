@@ -53,7 +53,7 @@
 
 .EXAMPLE
     .\Invoke-FileUploadBaselineCapture.ps1 -TenantId $tid -DataverseUrl $url -Zone Zone3
-    Capture baselines for Zone 3 (Enterprise) agents only.
+    Capture baselines for Zone 3 (Personal) agents only.
 
 .EXAMPLE
     .\Invoke-FileUploadBaselineCapture.ps1 -TenantId $tid -DataverseUrl $url -OverwriteExisting

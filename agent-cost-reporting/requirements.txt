@@ -1,0 +1,8 @@
+# Python dependencies for Agent Cost Reporting.
+# Pin in your environment as appropriate; versions left open for the preview scaffold.
+
+azure-identity>=1.16
+msal>=1.28
+requests>=2.31
+jinja2>=3.1
+jsonschema>=4.21

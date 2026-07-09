@@ -52,14 +52,16 @@ ACA supports compliance with these regulations by providing auditable evidence t
 
 ## Zone Requirements
 
-Action confirmation requirements vary by governance zone:
+Action confirmation requirements vary by governance zone. Per canonical zone
+semantics, **Zone 1 (Enterprise) is the most-restrictive/highest-risk tier and Zone 3
+(Personal) is the least-restrictive**:
 
 | Action Category | Zone 1 | Zone 2 | Zone 3 |
 |----------------|--------|--------|--------|
-| Write/Delete Actions | Advisory | Confirmation required (High) | Confirmation required (Critical) |
-| Read Actions | Advisory | Advisory | Confirmation required (High) |
-| External Transfer | Advisory | Confirmation required (Medium) | Confirmation required (Critical) |
-| All Other Actions | Advisory | Advisory | Confirmation required (High) |
+| Write/Delete Actions | Confirmation required (Critical) | Confirmation required (High) | Advisory |
+| Read Actions | Confirmation required (High) | Advisory | Advisory |
+| External Transfer | Confirmation required (Critical) | Confirmation required (Medium) | Advisory |
+| All Other Actions | Confirmation required (High) | Advisory | Advisory |
 
 ## Violation Severity Matrix
 
@@ -67,15 +69,15 @@ When a required confirmation is missing, severity is classified as:
 
 | Missing Confirmation | Zone 1 | Zone 2 | Zone 3 |
 |---------------------|--------|--------|--------|
-| Write/Delete action | Low | High | Critical |
-| Read action | Low | Low | High |
-| External transfer | Low | Medium | Critical |
-| Other action | Low | Low | High |
+| Write/Delete action | Critical | High | Low |
+| Read action | High | Low | Low |
+| External transfer | Critical | Medium | Low |
+| Other action | High | Low | Low |
 
 ## Features
 
 - **Per-Action Validation** -- Inspects each action node in agent topics for confirmation steps
-- **User-Defined Action Messages** -- Validates that agents have user-defined action messages configured per zone policy (Zone 3 required, Zone 2 recommended, Zone 1 optional)
+- **User-Defined Action Messages** -- Validates that agents have user-defined action messages configured per zone policy (Zone 1 required, Zone 2 recommended, Zone 3 optional)
 - **Zone Compliance** -- Applies zone-specific confirmation requirements using ELM zone classification
 - **Exception Management** -- Approval workflow for legitimate confirmation bypasses
 - **Multiple Output Formats** -- Console and JSON evidence export

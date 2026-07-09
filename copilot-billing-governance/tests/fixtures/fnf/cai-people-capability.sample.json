@@ -1,0 +1,112 @@
+{
+  "_comment": "Sample CAI People-capability detection artifact (detect_people_capability.py --output). Used by the FNF People-Sweep lens fixtures. 'features[]' are fsi_caiagentfeature rows; fsi_featuretype carries the option-set LABEL. Note: one feature is a NON-People type (filtered out by SEAM 1), one People feature is PROVISIONAL (fsi_agentrefprovisional=true, stem id 'declarativeAgent'), and one People feature is fsi_isenabled=false (declared but not effective). Example identities only.",
+  "schemaVersion": "0.2.0-preview",
+  "summary": {
+    "runId": "cai-people-1781290000",
+    "detectionSource": "local-package",
+    "manifestsScanned": 6,
+    "peopleDetected": 5,
+    "provisionalAgentIds": 1,
+    "manifestsFailed": 0,
+    "scanStatus": "Complete"
+  },
+  "agents": [
+    { "agentId": "11110000-0000-0000-0000-000000000001", "agentName": "Org Directory Helper", "agentIdProvisional": false, "locator": "OrgDirectoryHelper.zip!declarativeAgent.json", "manifestVersion": "1.7", "includeRelatedContent": true },
+    { "agentId": "11110000-0000-0000-0000-000000000002", "agentName": "Company Concierge", "agentIdProvisional": false, "locator": "CompanyConcierge.zip!declarativeAgent.json", "manifestVersion": "1.7", "includeRelatedContent": true },
+    { "agentId": "11110000-0000-0000-0000-000000000003", "agentName": "Loan Ops People Finder", "agentIdProvisional": false, "locator": "LoanOpsPeopleFinder.zip!declarativeAgent.json", "manifestVersion": "1.6", "includeRelatedContent": false },
+    { "agentId": "declarativeAgent", "agentName": "Pilot People Bot", "agentIdProvisional": true, "locator": "PilotPeopleBot.zip!declarativeAgent.json", "manifestVersion": "1.7", "includeRelatedContent": true },
+    { "agentId": "11110000-0000-0000-0000-000000000005", "agentName": "Knowledge Base Bot", "agentIdProvisional": false, "locator": "KnowledgeBaseBot.zip!declarativeAgent.json", "manifestVersion": "1.7", "includeRelatedContent": false },
+    { "agentId": "11110000-0000-0000-0000-000000000006", "agentName": "Branch Lookup Bot", "agentIdProvisional": false, "locator": "BranchLookupBot.zip!declarativeAgent.json", "manifestVersion": "1.7", "includeRelatedContent": true },
+    { "agentId": "11110000-0000-0000-0000-000000000007", "agentName": "Mentor Match Bot", "agentIdProvisional": false, "locator": "MentorMatchBot.zip!declarativeAgent.json", "manifestVersion": "1.7", "includeRelatedContent": true }
+  ],
+  "features": [
+    {
+      "fsi_name": "People (Org Chart & Profile): Org Directory Helper",
+      "fsi_agentid": "11110000-0000-0000-0000-000000000001",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": false,
+      "fsi_isenabled": true,
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "fsi_name": "People (Org Chart & Profile): Company Concierge",
+      "fsi_agentid": "11110000-0000-0000-0000-000000000002",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": false,
+      "fsi_isenabled": true,
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "fsi_name": "People (Org Chart & Profile): Loan Ops People Finder",
+      "fsi_agentid": "11110000-0000-0000-0000-000000000003",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": false,
+      "fsi_isenabled": true,
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "fsi_name": "People (Org Chart & Profile): Pilot People Bot",
+      "fsi_agentid": "declarativeAgent",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": true,
+      "fsi_isenabled": true,
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "fsi_name": "People (Org Chart & Profile): Knowledge Base Bot (disabled)",
+      "fsi_agentid": "11110000-0000-0000-0000-000000000005",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": false,
+      "fsi_isenabled": false,
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "fsi_name": "People (Org Chart & Profile): Branch Lookup Bot",
+      "fsi_agentid": "11110000-0000-0000-0000-000000000006",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": false,
+      "fsi_isenabled": true,
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "fsi_name": "People (Org Chart & Profile): Mentor Match Bot",
+      "fsi_agentid": "11110000-0000-0000-0000-000000000007",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "People (Org Chart & Profile)",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": false,
+      "fsi_isenabled": true,
+      "fsi_runid": "cai-people-1781290000"
+    },
+    {
+      "fsi_name": "File Upload: Knowledge Base Bot",
+      "fsi_agentid": "11110000-0000-0000-0000-000000000005",
+      "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
+      "fsi_featuretype": "File Upload",
+      "fsi_detectionsource": "local-package",
+      "fsi_detectionconfidence": "Declared (manifest capability)",
+      "fsi_agentrefprovisional": false,
+      "fsi_isenabled": true,
+      "fsi_runid": "cai-people-1781290000"
+    }
+  ]
+}

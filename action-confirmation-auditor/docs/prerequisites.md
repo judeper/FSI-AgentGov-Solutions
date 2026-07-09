@@ -130,7 +130,7 @@ ACA uses zone classification from the Environment Lifecycle Management (ELM) sol
 - **Shared module:** `scripts/shared/Get-ZoneClassification.ps1` (repository root)
 - **Local wrapper:** `scripts/private/Get-ZoneClassification.ps1`
 
-If ELM is not deployed, zone classification defaults to Zone 3 (most restrictive) for all environments.
+If ELM is not deployed and the environment name matches no zone naming convention, zone classification resolves to `Unknown`. Under canonical zone semantics the most-restrictive tier is **Zone 1 (Enterprise)**; classify environments explicitly (ELM or naming convention) so the correct confirmation policy is applied.
 
 ---
 
@@ -169,7 +169,7 @@ Get-PurviewAIHubEvidence -DataverseUrl 'https://yourorg.crm.dynamics.com' -Lookb
 - [ ] Azure Automation account configured with runbook imported
 - [ ] Service principal has Dataverse read access to `bot` and `botcomponent` tables
 - [ ] Network connectivity to required endpoints verified
-- [ ] Zone classification source configured (ELM or default Zone 3)
+- [ ] Zone classification source configured (ELM or naming convention; unresolved resolves to `Unknown`)
 
 ---
 

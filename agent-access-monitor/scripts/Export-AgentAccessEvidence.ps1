@@ -1,5 +1,4 @@
-﻿#Requires -Version 7.0
-#Requires -Modules MSAL.PS
+﻿#Requires -Version 7.4
 
 <#
 .SYNOPSIS
@@ -49,13 +48,22 @@
     in the evidence export.
 
 .PARAMETER Interactive
-    Use interactive browser-based authentication instead of service principal.
+    Use device-code authentication. The user copies a one-time code into
+    https://microsoft.com/devicelogin. Recommended for interactive evidence exports.
 
 .PARAMETER CertificateThumbprint
-    Certificate thumbprint for service principal authentication.
+    [DEPRECATED] Certificate-thumbprint authentication required the archived MSAL.PS
+    module. Passing this parameter now throws a terminating error. Use -Interactive
+    for device-code flow, or -ClientSecret for service-principal authentication.
 
 .PARAMETER ClientId
-    Microsoft Entra ID application (client) ID for service principal authentication.
+    Microsoft Entra ID application (client) ID. Required for both -Interactive
+    (public-client app) and service-principal authentication.
+
+.PARAMETER ClientSecret
+    Service-principal client secret (SecureString) for unattended exports. Dev-only
+    legacy fallback; production should use a managed identity. Used when -Interactive
+    is omitted.
 
 .EXAMPLE
     .\Export-AgentAccessEvidence.ps1 `
@@ -68,6 +76,7 @@
     interactive authentication. Generates JSON evidence file and SHA-256 hash.
 
 .EXAMPLE
+    $secret = Read-Host -AsSecureString "Client secret"
     .\Export-AgentAccessEvidence.ps1 `
         -DataverseUrl "https://org.crm.dynamics.com" `
         -TenantId "contoso.onmicrosoft.com" `
@@ -77,10 +86,10 @@
         -FromDate (Get-Date).AddDays(-90) `
         -ToDate (Get-Date) `
         -ClientId "12345..." `
-        -CertificateThumbprint "ABCDEF..."
+        -ClientSecret $secret
 
     Exports 90 days of Zone 2 violations with baselines using service principal
-    authentication. Suitable for scheduled automation via Azure Automation.
+    authentication. Suitable for scheduled automation.
 
 .EXAMPLE
     .\Export-AgentAccessEvidence.ps1 `
@@ -103,12 +112,14 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.1.2
+    Version: 1.2.0
     Requires:
     - PowerShell 7.0 or later
-    - MSAL.PS module for Dataverse authentication
     - AAM Dataverse schema deployed (fsi_accessvalidationhistory, fsi_accessviolations,
       fsi_accessbaselines tables)
+
+    Authentication: modern OAuth 2.0 via Get-AAMAccessToken (device-code or
+    service-principal secret). The archived MSAL.PS module is no longer used.
 
     Evidence file naming convention:
     - aam-evidence-{zone}-{yyyyMMdd-HHmmss}.json
@@ -160,7 +171,10 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [string]$ClientId
+    [string]$ClientId,
+
+    [Parameter(Mandatory = $false)]
+    [securestring]$ClientSecret
 )
 
 $ErrorActionPreference = "Stop"
@@ -197,61 +211,32 @@ if (-not (Test-Path -Path $OutputDirectory)) {
 
 Write-Host "Authenticating to Dataverse..." -ForegroundColor Cyan
 
-$dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-
-if ($Interactive) {
-    # Interactive browser-based authentication via MSAL.PS
-    try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
-
-        $msalParams = @{
-            TenantId = $TenantId
-            Scopes   = @($dataverseScope)
-            Interactive = $true
-        }
-
-        if ($ClientId) {
-            $msalParams.ClientId = $ClientId
-        }
-
-        $authResult = Get-MsalToken @msalParams
-        $accessToken = $authResult.AccessToken
-    }
-    catch {
-        Write-Error "Interactive authentication failed: $($_.Exception.Message)"
-        throw
-    }
+# C2 remediation: modern OAuth 2.0 via Get-AAMAccessToken (from the AAMClient module
+# imported above). The archived MSAL.PS module is no longer used.
+if ($CertificateThumbprint) {
+    throw "CertificateThumbprint authentication was removed (it required the archived MSAL.PS module). Use -Interactive for device-code flow, or -ClientSecret for service-principal authentication."
 }
-else {
-    # Service principal authentication with certificate
-    if (-not $ClientId) {
-        throw "ClientId is required for service principal authentication. Use -Interactive for browser-based auth."
-    }
-    if (-not $CertificateThumbprint) {
-        throw "CertificateThumbprint is required for service principal authentication."
-    }
+if (-not $ClientId) {
+    throw "ClientId is required (for both -Interactive device-code flow and service-principal authentication)."
+}
+if (-not $Interactive -and -not $ClientSecret) {
+    throw "Provide -Interactive for device-code authentication, or -ClientSecret for service-principal authentication."
+}
 
-    try {
-        if (-not (Get-Module -ListAvailable -Name MSAL.PS)) {
-            throw "MSAL.PS module is required for authentication. Install with: Install-Module MSAL.PS -Scope CurrentUser"
-        }
-        Import-Module MSAL.PS -ErrorAction Stop
+$tokenParams = @{
+    TenantId = $TenantId
+    ClientId = $ClientId
+    Resource = $DataverseUrl
+}
+if ($Interactive)  { $tokenParams['Interactive']  = $true }
+if ($ClientSecret) { $tokenParams['ClientSecret'] = $ClientSecret }
 
-        $authResult = Get-MsalToken `
-            -TenantId $TenantId `
-            -ClientId $ClientId `
-            -ClientCertificate (Get-Item "Cert:\CurrentUser\My\$CertificateThumbprint") `
-            -Scopes @($dataverseScope)
-
-        $accessToken = $authResult.AccessToken
-    }
-    catch {
-        Write-Error "Service principal authentication failed: $($_.Exception.Message)"
-        throw
-    }
+try {
+    $accessToken = Get-AAMAccessToken @tokenParams
+}
+catch {
+    Write-Error "Authentication failed: $($_.Exception.Message)"
+    throw
 }
 
 Write-Host "Authentication successful." -ForegroundColor Green
@@ -385,7 +370,7 @@ if ($IncludeBaselines -and $baselines.Count -gt 0) {
             zone                           = $zoneText
             botLimitSharingMode            = $_.fsi_botlimitsharingmode
             botAuthoringSharingDisabled     = $_.fsi_botauthoringsharingdisabled
-            botPublishedLimitSharingMode   = $_.fsi_botpublishedbotlimitsharingmode
+            botMaxLimitUserSharing         = $_.fsi_botmaxlimitusersharing
             capturedBy                     = $_.fsi_capturedby
             capturedAt                     = $_.fsi_capturedat
             isActive                       = $_.fsi_isactive

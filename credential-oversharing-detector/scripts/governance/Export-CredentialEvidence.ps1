@@ -247,7 +247,11 @@ Write-Host "    Scan records retrieved: $($scans.Count)" -ForegroundColor Green
 Write-Host "  Querying violation records..." -ForegroundColor Cyan
 
 # Build violation filter based on scan run IDs
-$violationSelect = "fsi_violationid,fsi_scanrunid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_violationtype,fsi_severity,fsi_description,fsi_detectedat"
+# v2.1.1 lab-validation: include fsi_approvedscopes + fsi_actualscopes so the
+# auditor JSON carries the scope baseline diff for OAuth-scope violations
+# written by Compare-OAuthScopeBaseline.ps1 (otherwise the violation row in
+# evidence is missing the actual scope-level data the violation describes).
+$violationSelect = "fsi_violationid,fsi_scanrunid,fsi_agentid,fsi_agentname,fsi_environmentid,fsi_environmentname,fsi_zone,fsi_violationtype,fsi_severity,fsi_description,fsi_detectedat,fsi_approvedscopes,fsi_actualscopes"
 $violationFilter = "fsi_detectedat ge $fromDateStr and fsi_detectedat le $toDateStr"
 
 if ($Zone -ne 'All') {
