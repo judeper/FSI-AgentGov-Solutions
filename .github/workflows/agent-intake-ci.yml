@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 jobs:
-  python:
+  agent-intake-python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
         # see source drift without blocking unrelated CI fixes in this branch.
         run: python -m pytest agent-intake/tests/validators/test_validators_smoke.py -v
 
-  powershell:
+  agent-intake-powershell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -147,7 +147,7 @@ jobs:
             exit 1
           }
 
-  language-rules:
+  agent-intake-language-rules:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

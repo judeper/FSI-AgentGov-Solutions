@@ -1,0 +1,79 @@
+name: Docs Autonomy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-autonomy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout solutions
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: solutions
+
+      - name: Classify changed paths
+        id: changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            BASE_SHA=$(git -C solutions rev-list --max-parents=0 "$HEAD_SHA")
+          fi
+          git -C solutions diff --name-only --diff-filter=ACDMRT \
+            "$BASE_SHA" "$HEAD_SHA" > changed-files.txt
+          python solutions/scripts/docs_autonomy.py \
+            --changed-files changed-files.txt \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Non-doc shim
+        if: steps.changes.outputs.docs != 'true'
+        run: echo "No documentation-relevant changes; docs-autonomy succeeds."
+
+      - name: Checkout framework controls
+        if: steps.changes.outputs.docs == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: judeper/FSI-AgentGov
+          ref: ${{ vars.FRAMEWORK_REF || 'v1.4.0' }}
+          path: fsi-agentgov
+
+      - name: Set up Python
+        if: steps.changes.outputs.docs == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: solutions/requirements-docs.txt
+
+      - name: Install documentation validators
+        if: steps.changes.outputs.docs == 'true'
+        working-directory: solutions
+        run: pip install -r requirements-docs.txt jsonschema pyyaml
+
+      - name: Validate documentation, manifests, and language
+        if: steps.changes.outputs.docs == 'true'
+        working-directory: solutions
+        env:
+          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
+        run: |
+          python scripts/validate-language-rules.py
+          python scripts/verify_commercial_scope.py
+          python scripts/build-manifest.py
+          python scripts/build-manifest.py --check
+          python scripts/sync-agent-md-versions.py --check
+          python scripts/lint-version-drift.py --strict
+          python scripts/lint-optionset-values.py --strict
+          python -m mkdocs build --strict

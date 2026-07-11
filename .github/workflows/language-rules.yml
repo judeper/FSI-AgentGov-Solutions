@@ -25,69 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Banned compliance phrases
-        # Excludes files that DOCUMENT the rule (instruction files contain
-        # the banned phrases as examples), CHANGELOG history, and any
-        # `research/` subdirectory (preserved LLM outputs and meta-discussions
-        # of the rule itself).
-        run: |
-          set +e
-          patterns='ensures compliance|guarantees compliance|guarantee compliance|will prevent|eliminates risk'
-          hits=$(grep -rEn --include='*.md' \
-                   --exclude-dir='.git' \
-                   --exclude-dir='site' \
-                   --exclude-dir='site-docs' \
-                   --exclude-dir='.github' \
-                   --exclude-dir='research' \
-                   --exclude='AGENTS.md' \
-                   --exclude='CLAUDE.md' \
-                   --exclude='SECURITY.md' \
-                   --exclude='THREAT-MODEL.md' \
-                   --exclude='CHANGELOG.md' \
-                   --exclude='*/CHANGELOG.md' \
-                   "$patterns" . || true)
-          if [ -n "$hits" ]; then
-            echo "::error::Banned compliance phrases found:"
-            echo "$hits"
-            exit 1
-          fi
-          echo "OK: no banned compliance phrases."
-
-      - name: Banned product naming (Azure AD outside CHANGELOG/instructions)
-        run: |
-          set +e
-          hits=$(grep -rEn \
-                   --include='*.md' \
-                   --include='*.ps1' \
-                   --include='*.psm1' \
-                   --include='*.py' \
-                   --include='*.json' \
-                   --include='*.yaml' \
-                   --include='*.yml' \
-                   --include='*.kql' \
-                   --exclude-dir='.git' \
-                   --exclude-dir='site' \
-                   --exclude-dir='site-docs' \
-                   --exclude-dir='.github' \
-                   --exclude-dir='research' \
-                   --exclude-dir='files' \
-                   --exclude='AGENTS.md' \
-                   --exclude='CLAUDE.md' \
-                   --exclude='SECURITY.md' \
-                   --exclude='THREAT-MODEL.md' \
-                   --exclude='CHANGELOG.md' \
-                   --exclude='*/CHANGELOG.md' \
-                   '\bAzure AD\b' . || true)
-          # Path-based exclusion: ALG ralph-config intentionally preserves the legacy
-          # connector name as a runtime hint to agents. grep's --exclude only matches
-          # basename so we filter the full path here.
-          if [ -n "$hits" ]; then
-            hits=$(echo "$hits" | grep -vE 'agent-365-lifecycle-governance/\.ralph-config\.json' || true)
-          fi
-          if [ -n "$hits" ]; then
-            echo "::error::'Azure AD' found outside CHANGELOG/instruction files (use 'Microsoft Entra ID'):"
-            echo "$hits"
-            exit 1
-          fi
-          echo "OK: no 'Azure AD' references outside CHANGELOG/instructions."
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate language rules
+        run: python scripts/validate-language-rules.py

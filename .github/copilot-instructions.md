@@ -196,6 +196,18 @@ python scripts/build-manifest.py --check    # exits non-zero if drift exists
 python -m mkdocs build --strict             # fail on any broken link or missing nav file
 ```
 
+### Documentation autonomy protection
+
+- `.github/branch-protection.json` is the committed proposal for `main`; do not
+  apply live branch settings as part of documentation work.
+- The stable required context is `docs-autonomy`. It runs for every pull
+  request, validates manifest/schema determinism, language, commercial scope,
+  and the strict MkDocs build for relevant changes, and shim-succeeds for
+  non-documentation changes.
+- External network link checks remain non-required.
+- Run `python -m pytest scripts/tests/test_docs_autonomy_protection.py` after
+  changing the policy, workflow triggers, or documentation classifier.
+
 ## Validation
 
 ```bash
