@@ -14,7 +14,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | Solution | Version | Primary Controls | Description |
 |----------|---------|-----------------|-------------|
 | action-confirmation-auditor | v1.2.1 | 2.12, 1.10 | HITL confirmation step validation in Copilot Studio agent topics |
-| agent-intake | v1.0.0-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
+| agent-intake | v1.0.1-preview | 1.2, 1.7, 2.1, 2.13, 3.1 | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting |
 | agent-365-lifecycle-governance | v1.1.5 | 2.3, 1.2, 1.11, 2.1, 2.8, 2.12, 3.1 | Automated lifecycle governance for AI agents using Agent 365 and Entra ID Governance |
 | agent-access-monitor | v1.2.0 | 3.8 | Automated detection of overly permissive agent access configurations |
 | agent-communication-restriction-detector | v1.2.1 | 2.17 | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
@@ -87,7 +87,7 @@ Some solutions carry a per-solution `AGENTS.md` at their root (e.g., `agent-inta
 
 Active per-solution `AGENTS.md` files:
 
-- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.0-preview · merged via PR #142
+- [`agent-intake/AGENTS.md`](agent-intake/AGENTS.md) — v1.0.1-preview · merged via PR #142
 - [`message-center-monitor/AGENTS.md`](message-center-monitor/AGENTS.md) — v2.5.1 · merged via PR #141
 
 When you add a per-solution `AGENTS.md`, list it here and link to it from the solution's README.

@@ -1,6 +1,6 @@
 # Agent Intake
 
-> **Status:** Preview (v1.0.0-preview) — Express, Standard, and Full paths all ship. Suitable for pilot validation; not for broad production rollout without customer governance sign-off.
+> **Status:** Preview (v1.0.1-preview) — Express, Standard, and Full paths all ship. Suitable for pilot validation; not for broad production rollout without customer governance sign-off.
 
 A pre-build user intake workflow for AI agent requests. Captures business case, classifies risk into Express / Standard / Full paths, routes for sponsor or reviewer approval, and hands off to `agent-registry-automation` once approved.
 
@@ -17,9 +17,9 @@ Without a structured intake, those decisions can happen in chat threads, in tick
 
 ## Status and external next steps
 
-This solution is **self-deployable preview** content at v1.0.0-preview. It is suitable for pilot validation, not broad production rollout without customer governance sign-off.
+This solution is **self-deployable preview** content at v1.0.1-preview. It is suitable for pilot validation, not broad production rollout without customer governance sign-off.
 
-**What is shipped (v1.0.0-preview):**
+**What is shipped (v1.0.1-preview):**
 
 | Layer | Status |
 |---|---|
@@ -45,7 +45,7 @@ This solution is **self-deployable preview** content at v1.0.0-preview. It is su
 5. 30-day InfoSec sample-audit shows no undetected high-risk requests passed through Express.
 6. Live-tenant verification of the Microsoft Entra Agent ID `fsiReviewerAttestations` open-type field (carried over as a v1.1 closure item).
 
-## What v1.0.0-preview ships (Express, Standard, and Full paths)
+## What v1.0.1-preview ships (Express, Standard, and Full paths)
 
 The MVP supports three intake paths whose work effort is proportional to risk:
 
@@ -86,7 +86,7 @@ flowchart TD
 
 ## Zone applicability
 
-| Zone | Intake path coverage in v1.0.0-preview |
+| Zone | Intake path coverage in v1.0.1-preview |
 |------|-----------------------------------------|
 | Personal (Zone 3) | ✅ Express path — sponsor 1-click approval with FINRA 3110 attestation |
 | Team (Zone 2) | ✅ Standard path — 22-question catalog routed to a conditional reviewer |
@@ -168,7 +168,7 @@ See [`docs/pilot-deployment-runbook.md`](docs/pilot-deployment-runbook.md) for t
 
 ## Roadmap
 
-Express, Standard, and Full paths all ship in v1.0.0-preview. Forward-looking items:
+Express, Standard, and Full paths all ship in v1.0.1-preview. Forward-looking items:
 
 - **v1.1** — Convert `fsi_appealofid` to a self-lookup; live-tenant verification of the Microsoft Entra Agent ID `fsiReviewerAttestations` open-type field; Power Pages multistep form-binding automation once PAC CLI supports it.
 - **Post-v1.0** — M365 Copilot declarative agent surface (conversational intake); localization beyond en-US.

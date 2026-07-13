@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Solution** | agent-intake |
-| **Version** | v1.0.0-preview |
+| **Version** | v1.0.1-preview |
 | **Status** | Ready for customer pilot · merged to main via PR #142 |
 | **Owner** | judeper / FSI Agent Governance |
 

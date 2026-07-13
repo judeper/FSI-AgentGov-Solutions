@@ -1,7 +1,7 @@
 id: agent-intake
 name: Agent Intake
 description: "Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting"
-version: 1.0.0-preview
+version: 1.0.1-preview
 status: preview
 domain: lifecycle-ops
 tier: '1'
