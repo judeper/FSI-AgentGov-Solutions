@@ -21,6 +21,9 @@
 .PARAMETER SkipSmoke
     Override skipSmoke.
 
+.PARAMETER SkipPurviewLabel
+    Override skipPurviewLabel.
+
 .PARAMETER DryRun
     Passed through to deploy.ps1.
 
@@ -42,6 +45,7 @@ param(
     [switch]$SeedTestData,
     [switch]$NoSeedTestData,
     [switch]$SkipSmoke,
+    [switch]$SkipPurviewLabel,
     [switch]$DryRun,
     [string]$ConfigPath
 )
@@ -159,6 +163,15 @@ $shouldSkipSmoke = if ($PSBoundParameters.ContainsKey('SkipSmoke')) {
     $false
 }
 if ($shouldSkipSmoke) { $deployArgs.SkipSmoke = $true }
+
+$shouldSkipPurviewLabel = if ($PSBoundParameters.ContainsKey('SkipPurviewLabel')) {
+    [bool]$SkipPurviewLabel
+} elseif ($config.deploy -and $config.deploy.PSObject.Properties.Name -contains 'skipPurviewLabel') {
+    [bool]$config.deploy.skipPurviewLabel
+} else {
+    $false
+}
+if ($shouldSkipPurviewLabel) { $deployArgs.SkipPurviewLabel = $true }
 
 if ($Teardown) { $deployArgs.Teardown = $true }
 if ($DryRun)   { $deployArgs.DryRun   = $true }

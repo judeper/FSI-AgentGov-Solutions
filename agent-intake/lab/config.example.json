@@ -2,7 +2,7 @@
   "$schema": "./config.schema.json",
   "_comment": "Template for lab/config.local.json. Copy to config.local.json (gitignored) and fill in. Never commit secrets — auth tokens stay in az login / pac auth profile.",
   "environment": {
-    "url": "https://<org-id>.crm.dynamics.com/",
+    "url": "https://<your-env>.crm.dynamics.com/",
     "name": "FSI-AgentIntake-Lab",
     "tenantId": "00000000-0000-0000-0000-000000000000",
     "environmentId": "00000000-0000-0000-0000-000000000000",
@@ -21,6 +21,8 @@
   "deploy": {
     "seedTestData": true,
     "skipSmoke": false,
+    "skipPurviewLabel": false,
+    "_skipPurviewLabelNote": "Set true for unattended lab runs where the retention labels already exist, to skip the interactive Connect-IPPSSession path.",
     "pathScopeForSmoke": "All",
     "_pathScopeOptions": ["Express", "Standard", "Full", "All"]
   },
@@ -31,7 +33,7 @@
     "_note": "Power Platform PayAsYouGo billing policy that the lab env will be attached to so Copilot/AI Builder credits draw from your Azure subscription. Discover policies via GET https://api.powerplatform.com/licensing/billingPolicies?api-version=2022-03-01-preview. Trial/Developer/Teams envs cannot be attached — keep allowedEnvironmentType at 'Sandbox,Production' to fail fast on env-type mismatch."
   },
   "purview": {
-    "operatorUpn": "admin@<tenant>.onmicrosoft.com",
+    "operatorUpn": "admin@example.com",
     "_note": "Operator UPN must have Security & Compliance admin role for retention label creation."
   },
   "entraAgentId": {

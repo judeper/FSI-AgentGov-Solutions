@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [1.0.1-preview] - 2026-07-13
+
+### Added
+
+- Added lab functional-verification helpers for the validated Express/Standard surface: `scripts/New-IntakeSubmission.ps1`, `scripts/Get-IntakeFlowState.ps1`, and `scripts/Test-IntakeConnectionBinding.ps1`.
+- Added unattended lab preflight support with `lab/Test-LabAuthReadiness.ps1` and `deploy.skipPurviewLabel` wiring in `lab/Invoke-Deploy.ps1` and `lab/config.example.json`.
+- Added regression tests in `tests/test_skip_purview_label.py` and `tests/test_agent_intake_backport_regressions.py` to guard skip-label threading, bearer header construction, and connection-reference component handling.
+
+### Changed
+
+- Changed provisioning guidance in `docs/flow-build-prerequisites.md` to require binding existing `fsi_cr_*` connection references from the `FSIAgentIntake` solution and avoid duplicate maker-created references.
+- Changed placeholder examples in newly back-ported scripts/docs to reserved non-tenant values (`https://<your-env>.crm.dynamics.com`, `admin@example.com`, placeholder GUID formats).
+- Changed lab validation reporting in `LAB-VALIDATION.md` to document the pinned-source back-port scope (`625c762214fc11f588ada47a5ee1a85077927b2d`), sanitized evidence references, and explicit deferred extensions (F6/F7/F9/F10/F11).
+
+### Fixed
+
+- Fixed connection-reference solution membership handling in `scripts/provision_solution_shell.ps1` by using pac component type name `connectionreference` and adding a post-check (`Assert-ConnectionReferenceInSolution`) so references cannot remain silently in Default solution.
+- Fixed unattended deployment readiness behavior in `scripts/deploy.ps1` by adding `-SkipPurviewLabel`, making `ExchangeOnlineManagement` checks conditional, and requiring `powershell-yaml` for policy parsing.
+- Fixed Dataverse/Microsoft Graph verification calls in the back-ported readiness and helper scripts to use in-memory bearer authorization headers without persisting token values.
+
 ### Fixed
 
 - **Az.Accounts 5.0.0 SecureString token (fallback path):** `scripts/seed-test-data.ps1` and `scripts/smoke_test.ps1` passed `(Get-AzAccessToken -ResourceUrl ...).Token` straight into the `Bearer` Authorization header. Starting Az.Accounts 5.0.0 (Az 14.0.0), `Get-AzAccessToken` returns `.Token` as a `SecureString` by default, so on an Az-module-only host (no `az` CLI) the header degraded to `Bearer System.Security.SecureString` and every Dataverse call would 401. Both scripts now type-guard the token and convert via `ConvertFrom-SecureString -AsPlainText` when a `SecureString` is returned, remaining compatible with pre-5.0 String output. Verified against [Protect secrets in Azure PowerShell](https://learn.microsoft.com/powershell/azure/protect-secrets) and the [Get-AzAccessToken reference](https://learn.microsoft.com/powershell/module/az.accounts/get-azaccesstoken). (technical accuracy review)

@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "agent-intake",
   "solutionName": "Agent Intake",
-  "solutionVersion": "1.0.0-preview",
+  "solutionVersion": "1.0.1-preview",
   "status": "preview",
   "controls": [
     {

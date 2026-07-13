@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.0
-#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '2.0.0' }, @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.2.0' }
+#Requires -Modules @{ ModuleName = 'Az.Accounts'; ModuleVersion = '2.0.0' }, @{ ModuleName = 'powershell-yaml'; ModuleVersion = '0.4.0' }
 
 <#
 .SYNOPSIS
@@ -13,7 +13,7 @@
     against the same environment; each stage detects existing state and is additive.
 
 .PARAMETER EnvironmentUrl
-    The Power Platform environment URL (for example, https://contoso-dev.crm.dynamics.com).
+    The Power Platform environment URL (for example, https://<your-env>.crm.dynamics.com).
 
 .PARAMETER PolicyTablesPath
     Path to policy-lookup-tables.yaml. Defaults to ../templates/policy-lookup-tables.yaml.
@@ -26,6 +26,10 @@
 
 .PARAMETER SkipSmoke
     Skip the smoke test stages.
+
+.PARAMETER SkipPurviewLabel
+    Skip the Stage 3 Purview retention-label creation step (for unattended lab runs where the
+    retention labels already exist; avoids the interactive Connect-IPPSSession path).
 
 .PARAMETER DryRun
     Logs what would be done without making changes.
@@ -57,18 +61,18 @@
     cannot be attached to a billing policy). Set 'Any' to bypass the SKU guard for testing.
 
 .EXAMPLE
-    pwsh ./deploy.ps1 -EnvironmentUrl https://contoso-dev.crm.dynamics.com
+    pwsh ./deploy.ps1 -EnvironmentUrl https://<your-env>.crm.dynamics.com
 
 .EXAMPLE
-    pwsh ./deploy.ps1 -EnvironmentUrl https://contoso-dev.crm.dynamics.com -SeedTestData
+    pwsh ./deploy.ps1 -EnvironmentUrl https://<your-env>.crm.dynamics.com -SeedTestData
 
 .EXAMPLE
-    pwsh ./deploy.ps1 -EnvironmentUrl https://contoso-dev.crm.dynamics.com -Teardown
+    pwsh ./deploy.ps1 -EnvironmentUrl https://<your-env>.crm.dynamics.com -Teardown
 
 .EXAMPLE
     # Attach a billing policy in the same run (typical lab cycle)
     pwsh ./deploy.ps1 `
-        -EnvironmentUrl  https://contoso-dev.crm.dynamics.com `
+        -EnvironmentUrl  https://<your-env>.crm.dynamics.com `
         -EnvironmentId   00000000-0000-0000-0000-000000000000 `
         -BillingPolicyId 00000000-0000-0000-0000-000000000000
 #>
@@ -90,6 +94,8 @@ param(
     [switch]$SeedTestData,
 
     [switch]$SkipSmoke,
+
+    [switch]$SkipPurviewLabel,
 
     [switch]$DryRun,
 
@@ -1205,7 +1211,14 @@ function Test-PreflightStage {
     }
 
     $null = Test-ModuleVersion -ModuleName 'Az.Accounts' -MinimumVersion ([version]'2.0.0')
-    $null = Test-ModuleVersion -ModuleName 'ExchangeOnlineManagement' -MinimumVersion ([version]'3.2.0')
+    $null = Test-ModuleVersion -ModuleName 'powershell-yaml' -MinimumVersion ([version]'0.4.0')
+    
+    if (-not $SkipPurviewLabel) {
+        $null = Test-ModuleVersion -ModuleName 'ExchangeOnlineManagement' -MinimumVersion ([version]'3.2.0')
+    } else {
+        Write-Info 'ExchangeOnlineManagement module check skipped (Purview label creation disabled with -SkipPurviewLabel).'
+    }
+    
     $teamsModule = Test-ModuleVersion -ModuleName 'MicrosoftTeams' -MinimumVersion ([version]'5.0.0') -Optional
     if (-not $teamsModule.Present) {
         Write-WarnMessage 'MicrosoftTeams is optional. Teams-specific manual checks may be required if it is absent.'
@@ -1327,6 +1340,7 @@ function Test-SolutionShellStage {
 }
 
 function Test-IdentityStage {
+    $labelSkipped = $false
     $labelOutput = Get-StructuredOutputFile -Name 'retention-label.json'
     $blueprintOutput = Get-StructuredOutputFile -Name 'agent-blueprint.json'
     $consentOutput = Get-StructuredOutputFile -Name 'entra-agent-id-ready.json'
@@ -1337,26 +1351,40 @@ function Test-IdentityStage {
     $policy = Get-PolicyDocument
 
     if ($DryRun) {
-        foreach ($requiredScript in @($labelScript, $blueprintScript, $consentScript, $purviewProbe)) {
+        $requiredScripts = if ($SkipPurviewLabel) {
+            @($blueprintScript, $consentScript, $purviewProbe)
+        } else {
+            @($labelScript, $blueprintScript, $consentScript, $purviewProbe)
+        }
+        foreach ($requiredScript in $requiredScripts) {
             if (-not (Test-Path -LiteralPath $requiredScript)) {
                 throw "Required script was not found: $requiredScript"
             }
         }
+        $dryRunDetail = if ($SkipPurviewLabel) {
+            'Dry-run: would prepare blueprint output at {0}, consent output at {1} (Purview label skipped).' -f $blueprintOutput, $consentOutput
+        } else {
+            'Dry-run: would prepare Purview label output at {0}, blueprint output at {1}, and consent output at {2} for label {3}.' -f $labelOutput, $blueprintOutput, $consentOutput, [string]$policy.retention_labels.tier_1
+        }
         return [pscustomobject]@{
             Status = 'Success'
-            Detail = ('Dry-run: would prepare Purview label output at {0}, blueprint output at {1}, and consent output at {2} for label {3}.' -f $labelOutput, $blueprintOutput, $consentOutput, [string]$policy.retention_labels.tier_1)
+            Detail = $dryRunDetail
         }
     }
 
-    $labelArguments = @('--output', $labelOutput)
-    $adminUpn = Get-OverrideValue -Name 'AGENT_INTAKE_PURVIEW_ADMIN_UPN'
-    if (-not [string]::IsNullOrWhiteSpace($adminUpn)) {
-        $labelArguments += @('--admin-upn', $adminUpn)
+    if (-not $SkipPurviewLabel) {
+        $labelArguments = @('--output', $labelOutput)
+        $adminUpn = Get-OverrideValue -Name 'AGENT_INTAKE_PURVIEW_ADMIN_UPN'
+        if (-not [string]::IsNullOrWhiteSpace($adminUpn)) {
+            $labelArguments += @('--admin-upn', $adminUpn)
+        }
+        if ($DryRun) {
+            $labelArguments += '--dry-run'
+        }
+        $null = Invoke-PythonChildScript -ScriptPath $labelScript -Argument $labelArguments
+    } else {
+        $labelSkipped = $true
     }
-    if ($DryRun) {
-        $labelArguments += '--dry-run'
-    }
-    $null = Invoke-PythonChildScript -ScriptPath $labelScript -Argument $labelArguments
 
     $blueprintArguments = @('--token-source', (Get-PythonTokenSource), '--output', $blueprintOutput)
     $blueprintSponsor = Get-OverrideValue -Name 'AGENT_INTAKE_BLUEPRINT_SPONSOR_UPN'
@@ -1376,14 +1404,20 @@ function Test-IdentityStage {
 
     $status = 'Success'
     $detailParts = [System.Collections.Generic.List[string]]::new()
-    $detailParts.Add('Retention label workflow invoked.') | Out-Null
-    if ($purviewResult.ExitCode -eq 0) {
-        $detailParts.Add('Purview label verified.') | Out-Null
+    
+    if ($labelSkipped) {
+        $detailParts.Add('Purview retention label step skipped (-SkipPurviewLabel).') | Out-Null
+    } else {
+        $detailParts.Add('Retention label workflow invoked.') | Out-Null
+        if ($purviewResult.ExitCode -eq 0) {
+            $detailParts.Add('Purview label verified.') | Out-Null
+        }
+        else {
+            $status = 'Warning'
+            $detailParts.Add('Purview label could not be verified automatically; check delegated Purview permissions.') | Out-Null
+        }
     }
-    else {
-        $status = 'Warning'
-        $detailParts.Add('Purview label could not be verified automatically; check delegated Purview permissions.') | Out-Null
-    }
+    
     if ($blueprintResult.ExitCode -eq 0) {
         $detailParts.Add('Blueprint registration verified.') | Out-Null
     }
@@ -1527,7 +1561,7 @@ function Get-PolicyHydrationValueMap {
     }
     else {
         $manualNote.Add('fsi_intake_sponsorbackupgroup uses the documented lab placeholder until the customer backup group is confirmed.') | Out-Null
-        'agent-intake-sponsor-backups@contoso.com'
+        'agent-intake-sponsor-backups@example.com'
     }
 
     return [pscustomobject]@{

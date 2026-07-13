@@ -170,7 +170,7 @@
     "agent-intake": {
       "id": "agent-intake",
       "name": "Agent Intake",
-      "version": "1.0.0-preview",
+      "version": "1.0.1-preview",
       "domain": "lifecycle-ops",
       "tier": "1",
       "status": "preview",
