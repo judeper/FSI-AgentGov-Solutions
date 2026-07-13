@@ -1,4 +1,4 @@
-﻿﻿#Requires -Version 7.0
+﻿#Requires -Version 7.0
 
 <#
 .SYNOPSIS
@@ -52,6 +52,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $InformationPreference = 'Continue'
+
+. (Join-Path $PSScriptRoot 'private/PacFreshShellProbe.ps1')
 
 $script:WarningCount = 0
 $script:ErrorCount = 0
@@ -223,9 +225,10 @@ function Test-PacFreshShell {
         # NOTE: This probes the on-disk pac profile cache, not a truly "fresh" state.
         Write-Information "   Running 'pac auth who' in a fresh PowerShell process (30s timeout)..."
         
+        $probeScript = Join-Path $PSScriptRoot 'private/PacFreshShellProbe.ps1'
         $job = Start-Job -ScriptBlock {
-            # Redirect stdin from null to avoid interactive prompts
-            pwsh -NoProfile -Command "pac auth who < NUL" 2>&1
+            . $using:probeScript
+            Invoke-PacAuthWhoProbe
         }
         
         $completed = Wait-Job -Job $job -Timeout 30
@@ -236,15 +239,22 @@ function Test-PacFreshShell {
             Write-CheckWarn "PAC CLI fresh-shell test timed out after 30 seconds. This may indicate an interactive auth prompt (WAM/browser hang). Unattended runs may fail."
         }
         else {
-            $pacOutput = Receive-Job -Job $job
-            $pacExitCode = $job.State -eq 'Completed' ? 0 : 1
+            $probe = Receive-Job -Job $job -ErrorAction SilentlyContinue
+            $jobState = $job.State
             Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
-            
+
+            if ($jobState -ne 'Completed' -or $null -eq $probe) {
+                Write-CheckWarn "PAC CLI fresh-shell probe failed before returning an exit code."
+                return
+            }
+
+            $pacExitCode = [int]$probe.ExitCode
+            $outputStr = @($probe.Output) -join "`n"
+
             if ($pacExitCode -eq 0) {
                 Write-CheckPass "PAC CLI works in a fresh shell without cached env state."
             }
             else {
-                $outputStr = $pacOutput -join "`n"
                 if ($outputStr -match 'window handle|WAM|browser') {
                     Write-CheckWarn "PAC CLI appears to require interactive authentication (WAM/browser). This is the pac-1.30+ WAM-on-Windows behavior. Unattended runs may hang. Consider downgrading PAC CLI or using device-code flow with pre-authenticated tokens."
                 }

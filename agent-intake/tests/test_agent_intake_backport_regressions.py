@@ -21,6 +21,18 @@ def test_lab_preflight_uses_acquired_bearer_headers() -> None:
     assert 'Authorization=Bearer $($graphToken.accessToken)' in text
 
 
+def test_lab_preflight_uses_real_pac_exit_code() -> None:
+    """Fresh-shell PAC probe must classify the native command result, not job completion."""
+
+    text = _LAB_PREFLIGHT.read_text(encoding="utf-8")
+    assert "< NUL" not in text
+    assert "$job.State -eq 'Completed' ? 0 : 1" not in text
+    assert "$pacExitCode = [int]$probe.ExitCode" in text
+    raw = _LAB_PREFLIGHT.read_bytes()
+    assert raw.startswith(b"\xef\xbb\xbf#Requires")
+    assert not raw.startswith(b"\xef\xbb\xbf\xef\xbb\xbf")
+
+
 def test_backported_helpers_use_dataverse_bearer_headers() -> None:
     """Back-ported helper scripts must use bearer auth from token helpers."""
 

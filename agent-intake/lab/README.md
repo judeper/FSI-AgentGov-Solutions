@@ -89,7 +89,7 @@ This script performs 5 checks:
 |-------|------------------|-------|
 | **Conditional Access policies** | No CA policies block device-code flow or require re-auth every <2 hours | ⚠️ Warns if policies are too restrictive; exits 0 (non-fatal) |
 | **Token acquisition** | Dataverse + Microsoft Graph tokens can be acquired and verified | ❌ Exits non-zero on hard failure; required for proceeding |
-| **PAC fresh-shell test** | `pac org who` works without cached state (detects pac-1.30+ WAM trap) | ⚠️ Warns if PAC requires interactive browser auth on Windows |
+| **PAC fresh-shell test** | `pac auth who` works without cached state (detects pac-1.30+ WAM trap) | ⚠️ Warns if PAC requires interactive browser auth on Windows |
 | **Environment SKU report** | Detects Trial/Developer/Teams environment types | ⚠️ Warns that pay-as-you-go billing policies cannot attach to these types |
 | **ExchangeOnlineManagement module** | Checks for presence + version ≥ 3.2.0 (required for Purview label creation) | ⚠️ Skipped if `-SkipPurviewLabel` is set (see below) |
 
