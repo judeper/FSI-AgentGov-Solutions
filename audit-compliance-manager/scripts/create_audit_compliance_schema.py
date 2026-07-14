@@ -435,7 +435,14 @@ def create_columns(client: ALCAClient, dry_run: bool = False) -> dict:
     if not dry_run:
         client.publish_all_customizations()
         client.wait_for_entity_metadata_readiness(entity)
-    existing_columns = client.list_attribute_logical_names(entity)
+        existing_columns = client.list_attribute_logical_names(entity)
+    else:
+        # Avoid propagation retries when the table is only being previewed.
+        existing_columns = (
+            client.list_attribute_logical_names(entity)
+            if client.get_entity_metadata(entity) is not None
+            else set()
+        )
     for col in TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
         if col_name in existing_columns:

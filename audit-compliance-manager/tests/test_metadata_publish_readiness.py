@@ -7,7 +7,7 @@ import itertools
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 import requests
@@ -200,10 +200,13 @@ class ACVSchemaRecorder:
         self.calls: list[tuple[Any, ...]] = []
         self.inventory: dict[str, set[str]] = {}
         self.created_columns: list[tuple[str, str]] = []
+        # Maps entity logical name → metadata dict to return from get_entity_metadata.
+        # Absent key → returns None (entity does not exist). Default: all absent.
+        self.entity_data: dict[str, Any] = {}
 
-    def get_entity_metadata(self, logical_name: str) -> None:
+    def get_entity_metadata(self, logical_name: str) -> Optional[dict]:
         self.calls.append(("get_entity", logical_name))
-        return None
+        return self.entity_data.get(logical_name)
 
     def create_entity(self, entity_metadata: dict) -> dict:
         self.calls.append(("create_entity", entity_metadata["SchemaName"].lower()))
@@ -245,10 +248,13 @@ class ALCASchemaRecorder:
         self.calls: list[tuple[Any, ...]] = []
         self.inventory: dict[str, set[str]] = {}
         self.created_columns: list[tuple[str, str]] = []
+        # Maps entity logical name → metadata dict to return from get_entity_metadata.
+        # Absent key → returns None (entity does not exist). Default: all absent.
+        self.entity_data: dict[str, Any] = {}
 
-    def get_entity_metadata(self, logical_name: str) -> None:
+    def get_entity_metadata(self, logical_name: str) -> Optional[dict]:
         self.calls.append(("get_entity", logical_name))
-        return None
+        return self.entity_data.get(logical_name)
 
     def create_entity(self, entity_metadata: dict) -> dict:
         self.calls.append(("create_entity", entity_metadata["SchemaName"].lower()))
@@ -367,3 +373,118 @@ def test_alca_schema_publish_and_wait_order_for_table_and_columns(
         ("wait_attr", "fsi_auditenvironmentcompliance", "fsi_auditenabled"),
     ]
     assert client.created_columns == [("fsi_auditenvironmentcompliance", "fsi_auditenabled")]
+
+
+def test_acv_create_columns_dry_run_missing_entity_skips_inventory(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Dry-run + missing entity: list_attribute_logical_names must not be called."""
+    acv_schema = importlib.import_module("create_dataverse_schema")
+    monkeypatch.setattr(acv_schema, "HISTORY_TABLE_COLUMNS", [{"SchemaName": "fsi_RunId"}])
+    monkeypatch.setattr(acv_schema, "REGISTRY_TABLE_COLUMNS", [{"SchemaName": "fsi_EnvironmentId"}])
+
+    client = ACVSchemaRecorder()
+    # entity_data is empty: get_entity_metadata returns None for all entities
+
+    acv_schema.create_columns(client, dry_run=True)
+
+    list_calls = [t for t in client.calls if t[0] == "list_attrs"]
+    assert list_calls == [], (
+        "create_columns(dry_run=True) must not call list_attribute_logical_names "
+        "when the entity does not exist (would block on 404 for ~180 s)"
+    )
+    assert ("get_entity", "fsi_auditvalidationhistory") in client.calls
+    assert ("get_entity", "fsi_environmentregistry") in client.calls
+    assert client.created_columns == []
+    output = capsys.readouterr().out
+    assert "fsi_runid: would create" in output
+    assert "fsi_environmentid: would create" in output
+
+
+def test_acv_create_columns_dry_run_existing_entity_inventories_and_skips(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Dry-run + existing entity: inventory is called and existing columns are skipped."""
+    acv_schema = importlib.import_module("create_dataverse_schema")
+    monkeypatch.setattr(
+        acv_schema,
+        "HISTORY_TABLE_COLUMNS",
+        [{"SchemaName": "fsi_RunId"}, {"SchemaName": "fsi_Scope"}],
+    )
+    monkeypatch.setattr(acv_schema, "REGISTRY_TABLE_COLUMNS", [])
+
+    client = ACVSchemaRecorder()
+    client.entity_data = {"fsi_auditvalidationhistory": {"LogicalName": "fsi_auditvalidationhistory"}}
+    client.inventory = {"fsi_auditvalidationhistory": {"fsi_runid"}}
+
+    acv_schema.create_columns(client, dry_run=True)
+
+    assert ("list_attrs", "fsi_auditvalidationhistory") in client.calls
+    # registry entity absent from entity_data → no inventory call for it
+    assert ("list_attrs", "fsi_environmentregistry") not in client.calls
+    # dry-run: no actual creates
+    assert client.created_columns == []
+    output = capsys.readouterr().out
+    assert "fsi_runid: already exists" in output
+    assert "fsi_scope: would create" in output
+
+
+def test_alca_create_columns_dry_run_missing_entity_skips_inventory(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Dry-run + missing entity: list_attribute_logical_names must not be called (ALCA)."""
+    alca_schema = importlib.import_module("create_audit_compliance_schema")
+    monkeypatch.setattr(
+        alca_schema,
+        "TABLE_COLUMNS",
+        [{"SchemaName": "fsi_EnvironmentId", "@odata.type": "String"}],
+    )
+
+    client = ALCASchemaRecorder()
+    # entity_data is empty: get_entity_metadata returns None
+
+    alca_schema.create_columns(client, dry_run=True)
+
+    list_calls = [t for t in client.calls if t[0] == "list_attrs"]
+    assert list_calls == [], (
+        "create_columns(dry_run=True) must not call list_attribute_logical_names "
+        "when the entity does not exist (would block on 404 for ~180 s)"
+    )
+    assert ("get_entity", "fsi_auditenvironmentcompliance") in client.calls
+    assert client.created_columns == []
+    output = capsys.readouterr().out
+    assert "fsi_environmentid: would create" in output
+
+
+def test_alca_create_columns_dry_run_existing_entity_inventories_and_skips(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Dry-run + existing entity: inventory is called and existing columns are skipped (ALCA)."""
+    alca_schema = importlib.import_module("create_audit_compliance_schema")
+    monkeypatch.setattr(
+        alca_schema,
+        "TABLE_COLUMNS",
+        [
+            {"SchemaName": "fsi_EnvironmentId", "@odata.type": "String"},
+            {"SchemaName": "fsi_AuditEnabled", "@odata.type": "Boolean"},
+        ],
+    )
+
+    client = ALCASchemaRecorder()
+    client.entity_data = {
+        "fsi_auditenvironmentcompliance": {"LogicalName": "fsi_auditenvironmentcompliance"}
+    }
+    client.inventory = {"fsi_auditenvironmentcompliance": {"fsi_environmentid"}}
+
+    alca_schema.create_columns(client, dry_run=True)
+
+    assert ("list_attrs", "fsi_auditenvironmentcompliance") in client.calls
+    # dry-run: no actual creates
+    assert client.created_columns == []
+    output = capsys.readouterr().out
+    assert "fsi_environmentid: already exists" in output
+    assert "fsi_auditenabled: would create" in output

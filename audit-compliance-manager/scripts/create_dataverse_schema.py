@@ -410,7 +410,14 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
     if not dry_run:
         client.publish_all_customizations()
         client.wait_for_entity_metadata_readiness(history_entity)
-    existing_history_columns = client.list_attribute_logical_names(history_entity)
+        existing_history_columns = client.list_attribute_logical_names(history_entity)
+    else:
+        # Avoid propagation retries when the table is only being previewed.
+        existing_history_columns = (
+            client.list_attribute_logical_names(history_entity)
+            if client.get_entity_metadata(history_entity) is not None
+            else set()
+        )
     for col in HISTORY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
         if col_name in existing_history_columns:
@@ -430,7 +437,13 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
     if not dry_run:
         client.publish_all_customizations()
         client.wait_for_entity_metadata_readiness(registry_entity)
-    existing_registry_columns = client.list_attribute_logical_names(registry_entity)
+        existing_registry_columns = client.list_attribute_logical_names(registry_entity)
+    else:
+        existing_registry_columns = (
+            client.list_attribute_logical_names(registry_entity)
+            if client.get_entity_metadata(registry_entity) is not None
+            else set()
+        )
     for col in REGISTRY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
         if col_name in existing_registry_columns:

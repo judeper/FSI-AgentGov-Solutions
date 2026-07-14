@@ -74,6 +74,10 @@
     - Observed sequence: `wait_for_entity_metadata_readiness` succeeded on unprojected Attributes collection, then projected inventory query returned repeated transient 500s in the same service-principal session before later settling to 200. Equivalent calls with/without `Prefer: odata.include-annotations=*` both returned 200 after settling.
     - Disposition: moved ACV/ALCA attribute inventory to a bounded metadata-propagation loop owned by `list_attribute_logical_names` (timeout + poll interval constants, retries on 429/500/502/503/504 + propagation 404 + `RequestException`/`RetryError`, immediate 400/401/403 `RuntimeError`, pagination preserved, timeout reporting `last_status`/`attempts`/`last_error`) and routed inventory through a metadata-specific no-retry session to keep total wait bounded without nested adapter backoff inflation. Full canonical rerun remains pending.
 
+ 14. **Dry-run 404→TimeoutError: `create_columns` called `list_attribute_logical_names` unconditionally.**
+     - Observed sequence: in `--dry-run` against a fresh environment the entity was only previewed (not created), so `EntityDefinitions(...)/Attributes` returned 404. `list_attribute_logical_names` treated 404 as a post-publish propagation transient and polled for ~180 seconds before raising `TimeoutError`.
+     - Disposition: added entity-existence guard at the top of the dry-run branch in both `create_dataverse_schema.create_columns` and `create_audit_compliance_schema.create_columns`. In dry-run mode `get_entity_metadata` is called first (single GET; returns `None` on 404 immediately); if the entity already exists, `list_attribute_logical_names` is called normally so existing columns are skipped accurately; if the entity does not yet exist, an empty set is used and all custom columns are previewed. Non-dry-run call sequence is unchanged. Pytest regression tests added to `tests/test_metadata_publish_readiness.py` covering ACV and ALCA parity for both the missing-entity and existing-entity dry-run cases.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -125,6 +129,10 @@
   - `scripts/acv_client.py` (`list_attribute_logical_names` now owns bounded metadata retries, permanent-error fail-fast, timeout diagnostics, and metadata-specific no-retry request path)
   - `scripts/alca_client.py` (same bounded projected inventory behavior + no-retry metadata request path)
   - `tests/test_attribute_metadata_collection_lookup.py` (transient 500→200 retry, `RetryError`/connection exception retry, permanent 403 fail-fast, timeout diagnostics, pagination retention, ACV/ALCA parity)
+- Dry-run 404→TimeoutError fix for `create_columns` entity-existence guard:
+  - `scripts/create_dataverse_schema.py` (entity-existence guard in `create_columns` dry-run branch for both `fsi_auditvalidationhistory` and `fsi_environmentregistry`)
+  - `scripts/create_audit_compliance_schema.py` (same guard for `fsi_auditenvironmentcompliance`)
+  - `tests/test_metadata_publish_readiness.py` (extended `ACVSchemaRecorder`/`ALCASchemaRecorder` with configurable `entity_data`; added four regression tests covering ACV/ALCA dry-run missing-entity and existing-entity parity)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`
