@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/lab-harness/schema/ownership-cleanup.schema.json",
+  "title": "Resource Ownership and Cleanup Manifest",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "solution",
+    "resourceOwner",
+    "cleanupActions",
+    "rollbackActions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "solution": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "resourceOwner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cleanupActions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "resourceType",
+          "location",
+          "cleanupAdapter"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "resourceType": {
+            "type": "string",
+            "enum": [
+              "filesystem",
+              "service-config",
+              "human-review"
+            ]
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cleanupAdapter": {
+            "type": "string",
+            "enum": [
+              "manual-review-then-delete",
+              "scripted-delete",
+              "retention-policy"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rollbackActions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "description"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

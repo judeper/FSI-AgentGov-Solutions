@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-Q3 — Lab harness foundation
+
+### Added
+- Added `lab-harness/` one-time shared foundation for typed validation planning, runtime orchestration, Playwright portal smoke scaffolding, and evidence redaction/manifest tooling.
+- Added schemas and templates for plan validation (`solution-validation-plan.schema.json`), ownership/cleanup (`ownership-cleanup.schema.json`), and summary metadata (`evidence-summary.schema.json`) plus static `audit-compliance-manager` PlanOnly example manifests.
+- Added isolated Playwright package (`lab-harness/playwright`) with pinned dependencies, environment-driven `storageState`, fail-fast auth/account-picker helpers, and Node-based unit tests for config/helper behavior.
+- Added Pester tests for path confinement, adapter allow-list enforcement, PlanOnly semantics, redaction coverage, manifest hashing, and gitignore protections.
+- Added GitHub-hosted-only CI workflow `.github/workflows/lab-harness-ci.yml` scoped to harness files with no secret usage.
+
+### Changed
+- Hardened root `.gitignore` for lab harness auth state, transient Playwright outputs, and local evidence artifact folders while preserving tracked templates/schemas.
+
+### Notes
+- This foundation is public code only and does not provision tenant resources by itself.
+- Live `workflow_dispatch` and persistent self-hosted runner execution remain in private follow-up work under `judep_microsoft/FSI-AgentGov-Lab`.
+
+---
+
 ## [v1.7.2] - 2026-Q3 — CI fix (no functional change)
 
 Patch release ensuring the Release pipeline (CycloneDX SBOM + Sigstore signing + Dataverse plugin DLL) ships with the v1.7.0 H-item wave content. Tag v1.7.0 and v1.7.1 are unchanged but their Release pipeline runs failed with `MSB1008: Only one project can be specified` due to Git Bash on Windows runners stripping the leading `/` from `/p:TreatWarningsAsErrors=true` (MSYS path conversion). v1.7.2 ships the same content as v1.7.1 plus the workflow fix (`-p:` form), so the Release pipeline now succeeds and attaches signed plugin + SBOM artifacts.

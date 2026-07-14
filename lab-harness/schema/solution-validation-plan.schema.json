@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/lab-harness/schema/solution-validation-plan.schema.json",
+  "title": "Solution Validation Plan",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "solution",
+    "ownershipManifestPath",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "solution": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "ownershipManifestPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "title": "Runtime PowerShell Pester Step",
+            "type": "object",
+            "required": [
+              "id",
+              "channel",
+              "adapter",
+              "testPaths"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "channel": { "type": "string", "const": "runtime" },
+              "adapter": { "type": "string", "const": "runtime.powershell.pester" },
+              "testPaths": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          {
+            "title": "Runtime Python Pytest Step",
+            "type": "object",
+            "required": [
+              "id",
+              "channel",
+              "adapter",
+              "testPaths"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "channel": { "type": "string", "const": "runtime" },
+              "adapter": { "type": "string", "const": "runtime.python.pytest" },
+              "testPaths": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          },
+          {
+            "title": "Runtime PowerShell Script Step",
+            "type": "object",
+            "required": [
+              "id",
+              "channel",
+              "adapter",
+              "scriptPath"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "channel": { "type": "string", "const": "runtime" },
+              "adapter": { "type": "string", "const": "runtime.powershell.script" },
+              "scriptPath": { "type": "string", "minLength": 1 },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "integer",
+                    "boolean"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "title": "Playwright Portal Smoke Step",
+            "type": "object",
+            "required": [
+              "id",
+              "channel",
+              "adapter",
+              "packagePath",
+              "specPath"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "channel": { "type": "string", "const": "playwright" },
+              "adapter": { "type": "string", "const": "playwright.portal-smoke" },
+              "packagePath": { "type": "string", "minLength": 1 },
+              "specPath": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

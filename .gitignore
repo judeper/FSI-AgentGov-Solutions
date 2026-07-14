@@ -38,6 +38,18 @@ GAP_ANALYSIS_REPORT.md
 **/lab/.deploy-runtime/
 **/lab/*.log
 
+# Lab harness local runtime artifacts
+lab-harness/playwright/.auth/
+lab-harness/playwright/playwright-report/
+lab-harness/playwright/test-results/
+lab-harness/playwright/downloads/
+lab-harness/playwright/screenshots/
+lab-harness/playwright/traces/
+lab-harness/evidence/raw/
+lab-harness/evidence/redacted/
+lab-harness/evidence/manifests/*.generated.json
+lab-harness/tests/.tmp-*/
+
 # MkDocs build output
 site/
 
