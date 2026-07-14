@@ -247,6 +247,34 @@ class ALCAClient:
         )
         return metadata
 
+    def list_attribute_logical_names(self, entity_logical_name: str) -> set[str]:
+        """List existing attribute logical names for an entity."""
+        params = {"$select": "LogicalName"}
+        url = urljoin(
+            self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes"
+        )
+        headers = self._get_headers()
+        first_request = True
+        attribute_names: set[str] = set()
+
+        while url:
+            if first_request:
+                response = self._session.get(url, headers=headers, params=params)
+                first_request = False
+            else:
+                response = self._session.get(url, headers=headers)
+            if response.status_code == 404:
+                return set()
+            response.raise_for_status()
+            payload = response.json()
+            for value in payload.get("value", []):
+                logical_name = value.get("LogicalName")
+                if logical_name:
+                    attribute_names.add(str(logical_name).lower())
+            url = payload.get("@odata.nextLink")
+
+        return attribute_names
+
     def _query_attribute_metadata_collection(
         self,
         entity_logical_name: str,

@@ -406,38 +406,42 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
 
     # AuditValidationHistory columns
     print("  AuditValidationHistory columns:")
+    history_entity = "fsi_auditvalidationhistory"
     if not dry_run:
         client.publish_all_customizations()
-        client.wait_for_entity_metadata_readiness("fsi_auditvalidationhistory")
+        client.wait_for_entity_metadata_readiness(history_entity)
+    existing_history_columns = client.list_attribute_logical_names(history_entity)
     for col in HISTORY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
-        existing = client.get_attribute_metadata("fsi_auditvalidationhistory", col_name)
-        if existing:
+        if col_name in existing_history_columns:
             print(f"    {col_name}: already exists")
         elif dry_run:
             print(f"    {col_name}: would create")
         else:
-            client.create_attribute("fsi_auditvalidationhistory", col)
+            client.create_attribute(history_entity, col)
             client.publish_all_customizations()
-            client.wait_for_attribute_metadata_readiness("fsi_auditvalidationhistory", col_name)
+            client.wait_for_attribute_metadata_readiness(history_entity, col_name)
+            existing_history_columns.add(col_name)
             print(f"    {col_name}: created")
 
     # EnvironmentRegistry columns
     print("  EnvironmentRegistry columns:")
+    registry_entity = "fsi_environmentregistry"
     if not dry_run:
         client.publish_all_customizations()
-        client.wait_for_entity_metadata_readiness("fsi_environmentregistry")
+        client.wait_for_entity_metadata_readiness(registry_entity)
+    existing_registry_columns = client.list_attribute_logical_names(registry_entity)
     for col in REGISTRY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
-        existing = client.get_attribute_metadata("fsi_environmentregistry", col_name)
-        if existing:
+        if col_name in existing_registry_columns:
             print(f"    {col_name}: already exists")
         elif dry_run:
             print(f"    {col_name}: would create")
         else:
-            client.create_attribute("fsi_environmentregistry", col)
+            client.create_attribute(registry_entity, col)
             client.publish_all_customizations()
-            client.wait_for_attribute_metadata_readiness("fsi_environmentregistry", col_name)
+            client.wait_for_attribute_metadata_readiness(registry_entity, col_name)
+            existing_registry_columns.add(col_name)
             print(f"    {col_name}: created")
 
 

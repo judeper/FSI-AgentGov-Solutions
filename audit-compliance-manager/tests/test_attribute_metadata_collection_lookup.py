@@ -140,6 +140,61 @@ def test_attribute_lookup_escapes_single_quote_in_odata_filter(
 
 
 @pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])
+def test_attribute_inventory_lists_existing_names_with_single_get(
+    monkeypatch: pytest.MonkeyPatch, module_name: str
+) -> None:
+    session = QueueSession(
+        [
+            FakeResponse(
+                status_code=200,
+                json_body={"value": [{"LogicalName": "fsi_runid"}, {"LogicalName": "fsi_scope"}]},
+            )
+        ]
+    )
+    client = _build_client(monkeypatch, module_name, session)
+
+    names = client.list_attribute_logical_names("fsi_auditvalidationhistory")
+
+    assert names == {"fsi_runid", "fsi_scope"}
+    assert len(session.calls) == 1
+    request = session.calls[0]
+    assert request["url"].endswith(
+        "/api/data/v9.2/EntityDefinitions(LogicalName='fsi_auditvalidationhistory')/Attributes"
+    )
+    assert request["params"] == {"$select": "LogicalName"}
+
+
+@pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])
+def test_attribute_inventory_follows_nextlink_pagination(
+    monkeypatch: pytest.MonkeyPatch, module_name: str
+) -> None:
+    session = QueueSession(
+        [
+            FakeResponse(
+                status_code=200,
+                json_body={
+                    "value": [{"LogicalName": "fsi_runid"}],
+                    "@odata.nextLink": "https://contoso.crm.dynamics.com/api/data/v9.2/next-page",
+                },
+            ),
+            FakeResponse(
+                status_code=200,
+                json_body={"value": [{"LogicalName": "fsi_scope"}]},
+            ),
+        ]
+    )
+    client = _build_client(monkeypatch, module_name, session)
+
+    names = client.list_attribute_logical_names("fsi_auditvalidationhistory")
+
+    assert names == {"fsi_runid", "fsi_scope"}
+    assert len(session.calls) == 2
+    assert session.calls[0]["params"] == {"$select": "LogicalName"}
+    assert session.calls[1]["url"] == "https://contoso.crm.dynamics.com/api/data/v9.2/next-page"
+    assert session.calls[1]["params"] is None
+
+
+@pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])
 def test_attribute_readiness_wait_never_uses_alternate_key_endpoint(
     monkeypatch: pytest.MonkeyPatch, module_name: str
 ) -> None:

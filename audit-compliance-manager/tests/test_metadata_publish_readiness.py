@@ -198,6 +198,8 @@ class ACVSchemaRecorder:
 
     def __init__(self) -> None:
         self.calls: list[tuple[Any, ...]] = []
+        self.inventory: dict[str, set[str]] = {}
+        self.created_columns: list[tuple[str, str]] = []
 
     def get_entity_metadata(self, logical_name: str) -> None:
         self.calls.append(("get_entity", logical_name))
@@ -213,14 +215,21 @@ class ACVSchemaRecorder:
     def wait_for_entity_metadata_readiness(self, logical_name: str) -> None:
         self.calls.append(("wait_entity", logical_name))
 
+    def list_attribute_logical_names(self, entity_logical_name: str) -> set[str]:
+        self.calls.append(("list_attrs", entity_logical_name))
+        return set(self.inventory.get(entity_logical_name, set()))
+
     def get_attribute_metadata(self, entity_logical_name: str, attribute_logical_name: str) -> None:
-        self.calls.append(("get_attr", entity_logical_name, attribute_logical_name))
-        return None
+        raise AssertionError(
+            "create_columns should inventory once and must not call get_attribute_metadata"
+        )
 
     def create_attribute(self, entity_logical_name: str, attribute_metadata: dict) -> dict:
+        logical_name = attribute_metadata["SchemaName"].lower()
         self.calls.append(
-            ("create_attr", entity_logical_name, attribute_metadata["SchemaName"].lower())
+            ("create_attr", entity_logical_name, logical_name)
         )
+        self.created_columns.append((entity_logical_name, logical_name))
         return attribute_metadata
 
     def wait_for_attribute_metadata_readiness(
@@ -234,6 +243,8 @@ class ALCASchemaRecorder:
 
     def __init__(self) -> None:
         self.calls: list[tuple[Any, ...]] = []
+        self.inventory: dict[str, set[str]] = {}
+        self.created_columns: list[tuple[str, str]] = []
 
     def get_entity_metadata(self, logical_name: str) -> None:
         self.calls.append(("get_entity", logical_name))
@@ -249,14 +260,21 @@ class ALCASchemaRecorder:
     def wait_for_entity_metadata_readiness(self, logical_name: str) -> None:
         self.calls.append(("wait_entity", logical_name))
 
+    def list_attribute_logical_names(self, entity_logical_name: str) -> set[str]:
+        self.calls.append(("list_attrs", entity_logical_name))
+        return set(self.inventory.get(entity_logical_name, set()))
+
     def get_attribute_metadata(self, entity_logical_name: str, attribute_logical_name: str) -> None:
-        self.calls.append(("get_attr", entity_logical_name, attribute_logical_name))
-        return None
+        raise AssertionError(
+            "create_columns should inventory once and must not call get_attribute_metadata"
+        )
 
     def create_attribute(self, entity_logical_name: str, attribute_metadata: dict) -> dict:
+        logical_name = attribute_metadata["SchemaName"].lower()
         self.calls.append(
-            ("create_attr", entity_logical_name, attribute_metadata["SchemaName"].lower())
+            ("create_attr", entity_logical_name, logical_name)
         )
+        self.created_columns.append((entity_logical_name, logical_name))
         return attribute_metadata
 
     def wait_for_attribute_metadata_readiness(
@@ -286,26 +304,30 @@ def test_acv_schema_publish_and_wait_order_for_tables_and_columns(
     monkeypatch.setattr(
         acv_schema,
         "HISTORY_TABLE_COLUMNS",
-        [{"SchemaName": "fsi_RunId"}, {"SchemaName": "fsi_Scope"}],
+        [
+            {"SchemaName": "fsi_RunId"},
+            {"SchemaName": "fsi_Scope"},
+            {"SchemaName": "fsi_Scope"},
+        ],
     )
     monkeypatch.setattr(acv_schema, "REGISTRY_TABLE_COLUMNS", [])
+    client.inventory = {"fsi_auditvalidationhistory": {"fsi_runid"}}
     client.calls.clear()
+    client.created_columns.clear()
 
     acv_schema.create_columns(client, dry_run=False)
     assert client.calls == [
         ("publish",),
         ("wait_entity", "fsi_auditvalidationhistory"),
-        ("get_attr", "fsi_auditvalidationhistory", "fsi_runid"),
-        ("create_attr", "fsi_auditvalidationhistory", "fsi_runid"),
-        ("publish",),
-        ("wait_attr", "fsi_auditvalidationhistory", "fsi_runid"),
-        ("get_attr", "fsi_auditvalidationhistory", "fsi_scope"),
+        ("list_attrs", "fsi_auditvalidationhistory"),
         ("create_attr", "fsi_auditvalidationhistory", "fsi_scope"),
         ("publish",),
         ("wait_attr", "fsi_auditvalidationhistory", "fsi_scope"),
         ("publish",),
         ("wait_entity", "fsi_environmentregistry"),
+        ("list_attrs", "fsi_environmentregistry"),
     ]
+    assert client.created_columns == [("fsi_auditvalidationhistory", "fsi_scope")]
 
 
 def test_alca_schema_publish_and_wait_order_for_table_and_columns(
@@ -325,20 +347,23 @@ def test_alca_schema_publish_and_wait_order_for_table_and_columns(
     monkeypatch.setattr(
         alca_schema,
         "TABLE_COLUMNS",
-        [{"SchemaName": "fsi_EnvironmentId"}, {"SchemaName": "fsi_AuditEnabled"}],
+        [
+            {"SchemaName": "fsi_EnvironmentId"},
+            {"SchemaName": "fsi_AuditEnabled"},
+            {"SchemaName": "fsi_AuditEnabled"},
+        ],
     )
+    client.inventory = {"fsi_auditenvironmentcompliance": {"fsi_environmentid"}}
     client.calls.clear()
+    client.created_columns.clear()
 
     alca_schema.create_columns(client, dry_run=False)
     assert client.calls == [
         ("publish",),
         ("wait_entity", "fsi_auditenvironmentcompliance"),
-        ("get_attr", "fsi_auditenvironmentcompliance", "fsi_environmentid"),
-        ("create_attr", "fsi_auditenvironmentcompliance", "fsi_environmentid"),
-        ("publish",),
-        ("wait_attr", "fsi_auditenvironmentcompliance", "fsi_environmentid"),
-        ("get_attr", "fsi_auditenvironmentcompliance", "fsi_auditenabled"),
+        ("list_attrs", "fsi_auditenvironmentcompliance"),
         ("create_attr", "fsi_auditenvironmentcompliance", "fsi_auditenabled"),
         ("publish",),
         ("wait_attr", "fsi_auditenvironmentcompliance", "fsi_auditenabled"),
     ]
+    assert client.created_columns == [("fsi_auditenvironmentcompliance", "fsi_auditenabled")]

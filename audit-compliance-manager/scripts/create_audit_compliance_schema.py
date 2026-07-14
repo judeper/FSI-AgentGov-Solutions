@@ -435,10 +435,10 @@ def create_columns(client: ALCAClient, dry_run: bool = False) -> dict:
     if not dry_run:
         client.publish_all_customizations()
         client.wait_for_entity_metadata_readiness(entity)
+    existing_columns = client.list_attribute_logical_names(entity)
     for col in TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
-        existing = client.get_attribute_metadata(entity, col_name)
-        if existing:
+        if col_name in existing_columns:
             print(f"  {col_name}: already exists")
             counts["skipped"] += 1
         elif dry_run:
@@ -448,6 +448,7 @@ def create_columns(client: ALCAClient, dry_run: bool = False) -> dict:
             client.create_attribute(entity, col)
             client.publish_all_customizations()
             client.wait_for_attribute_metadata_readiness(entity, col_name)
+            existing_columns.add(col_name)
             print(f"  {col_name}: created")
             counts["created"] += 1
 
