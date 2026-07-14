@@ -212,7 +212,21 @@ Describe "ExchangeOnlineManagement compatibility bounds" {
 Describe "Helper script load and invocation contracts" {
     BeforeAll {
         $script:helperArtifactsDir = Join-Path $PSScriptRoot '.pester-artifacts'
+        $script:createdPowerAppsAccountStub = $false
         New-Item -ItemType Directory -Path $script:helperArtifactsDir -Force | Out-Null
+
+        if (-not (Get-Command Add-PowerAppsAccount -ErrorAction SilentlyContinue)) {
+            Set-Item -Path 'Function:\Add-PowerAppsAccount' -Value {
+                [CmdletBinding()]
+                param(
+                    [string]$TenantID,
+                    [string]$ApplicationId,
+                    [string]$ClientSecret,
+                    [string]$CertificateThumbprint
+                )
+            }
+            $script:createdPowerAppsAccountStub = $true
+        }
 
         function Get-SanitizedHelperScriptPath {
             param(
@@ -232,6 +246,9 @@ Describe "Helper script load and invocation contracts" {
 
     AfterAll {
         Remove-Item -LiteralPath $script:helperArtifactsDir -Recurse -Force -ErrorAction SilentlyContinue
+        if ($script:createdPowerAppsAccountStub) {
+            Remove-Item -LiteralPath 'Function:\Add-PowerAppsAccount' -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It "Connect-PowerPlatform helper dot-sources and returns a client-secret auth result" {
