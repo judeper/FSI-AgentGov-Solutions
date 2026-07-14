@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added explicit retention caveat that non-user audit records (service principal/system/application) have fixed one-year retention and are not controlled by custom retention policies.
 - Added required Dataverse metadata discriminators for ACM global option-set creation payloads (`@odata.type` root `OptionSetMetadata` and per-option `OptionMetadata`) in both ACV and ALCA schema scripts; added pytest guards confirming discriminator presence and client POST pass-through behavior.
 - Added idempotent Dataverse solution-context bootstrap in ACV/ALCA clients so publisher `FSIPublisher` (`fsi`, option prefix `10000`) and unmanaged solution `AuditComplianceManager` are created/reused before schema/component writes attach `MSCRM.SolutionUniqueName`, preventing 404 failures when canonical environments start without that solution shell.
+- Added `IsPrimaryName: true` to the primary-name `StringAttributeMetadata` in all ACM CreateEntity payloads (`AuditValidationHistory`, `EnvironmentRegistry`, `AuditEnvironmentCompliance`) after live Dataverse `0x80040203` failures (`Required field 'PrimaryAttribute' is missing for RequestName='CreateEntity'`); added pytest regression contracts asserting exactly one primary-name marker per entity factory and preserving the observed error-shape contract. Direct replay of the corrected AuditValidationHistory payload returned HTTP 204 in the ACM solution context; full end-to-end redeploy rerun remains pending.
 
 ## [1.0.5] - 2026-05-23
 

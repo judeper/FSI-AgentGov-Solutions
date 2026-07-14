@@ -55,6 +55,9 @@
 8. **Live blocker: canonical Dataverse environment missing `fsi` publisher and `AuditComplianceManager` solution shell, causing 404 on solution-scoped writes.**
    - Disposition: added idempotent ACV/ALCA solution-context bootstrap that reuses or creates publisher `FSIPublisher` (`customizationprefix=fsi`, `customizationoptionvalueprefix=10000`) and unmanaged solution `AuditComplianceManager` before write calls attach `MSCRM.SolutionUniqueName`.
 
+9. **Live blocker: Dataverse CreateEntity returned `0x80040203` (`Required field 'PrimaryAttribute' is missing for RequestName='CreateEntity'`) after option-set + solution bootstrap fixes.**
+   - Disposition: updated all ACM CreateEntity payloads to mark the primary name column inline in `Attributes` via `IsPrimaryName: true` (`AuditValidationHistory`, `EnvironmentRegistry`, `AuditEnvironmentCompliance`) while preserving `PrimaryNameAttribute` values. Direct live replay of corrected AuditValidationHistory payload returned HTTP 204 in the ACM solution context.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -81,6 +84,10 @@
   - `scripts/acv_client.py`
   - `scripts/alca_client.py`
   - `tests/test_solution_context_bootstrap.py` (publisher/solution no-op/create-order/header/404-contract guards)
+- Dataverse CreateEntity primary-name metadata fix for live `0x80040203` blocker:
+  - `scripts/create_dataverse_schema.py` (`AuditValidationHistory`, `EnvironmentRegistry`)
+  - `scripts/create_audit_compliance_schema.py` (`AuditEnvironmentCompliance`)
+  - `tests/test_entity_primary_attributes.py` (all entity-factory primary-name guard + live `0x80040203` error-shape regression contract)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`
@@ -125,6 +132,7 @@
 - [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
 - [ ] ACV and ALCA global option-set POST calls succeed in canonical Dataverse environment with discriminator-enriched payloads
 - [ ] ACV and ALCA writes succeed in canonical Dataverse environment when `FSIPublisher` and `AuditComplianceManager` are absent initially (bootstrap creates/reuses shell without pre-solution `MSCRM.SolutionUniqueName` headers)
+- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName` CreateEntity fix (single-table live replay returned HTTP 204; complete deployment pass still pending)
 - [ ] `Search-UnifiedAuditLog` and canary retrieval checks in target tenant
 - [ ] Purview retention validation with actual policy set and licensing context
 - [ ] Portal smoke artifacts (Playwright channel) attached separately from runtime evidence

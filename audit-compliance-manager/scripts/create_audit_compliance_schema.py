@@ -188,6 +188,7 @@ def get_audit_environment_compliance_entity() -> dict:
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "MaxLength": 200,
                 "FormatName": {"Value": "Text"},
+                "IsPrimaryName": True,
             },
         ],
     }

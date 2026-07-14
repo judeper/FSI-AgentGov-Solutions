@@ -130,6 +130,7 @@ def get_audit_validation_history_entity() -> dict:
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "MaxLength": 200,
                 "FormatName": {"Value": "Text"},
+                "IsPrimaryName": True,
             },
         ],
     }
@@ -158,6 +159,7 @@ def get_environment_registry_entity() -> dict:
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "MaxLength": 200,
                 "FormatName": {"Value": "Text"},
+                "IsPrimaryName": True,
             },
         ],
     }
