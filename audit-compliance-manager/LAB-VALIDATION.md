@@ -83,6 +83,11 @@
      - Authoritative source: Microsoft Learn "Create a choice column using a global option set" — the current published contract requires `"AttributeType": "Picklist"`, `"AttributeTypeName": {"Value": "PicklistType"}`, and `"SourceTypeMask": 0` alongside the `GlobalOptionSet@odata.bind` Name-key binding. The Name-key binding form itself is explicitly supported per the same doc.
      - Disposition: added the three missing contract fields to all six `PicklistAttributeMetadata` column definitions across `scripts/create_dataverse_schema.py` (`fsi_Scope`, both `fsi_Zone` definitions, `fsi_Severity`, `fsi_EnvironmentType`) and `scripts/create_audit_compliance_schema.py` (`fsi_ComplianceStatus`). Added pytest regression coverage in `tests/test_picklist_attribute_contract.py` that enumerates all six current Picklist definitions and asserts their full three-field contract and expected global option-set bindings. Full canonical deployment rerun remains pending.
 
+ 16. **Live blocker: corrected `PicklistAttributeMetadata` POST returned HTTP 500 "Guid should contain 32 digits with 4 dashes" — `GlobalOptionSet@odata.bind` Name alternate-key form rejected by create-attribute endpoint.**
+     - Observed sequence: one-shot service-principal POST with the fully corrected payload (including `AttributeType`, `AttributeTypeName`, `SourceTypeMask`) returned HTTP 500 with response body `{"error":{"code":"0x0","message":"Guid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)."}}`. The payload contained no GUID-shaped property other than the `GlobalOptionSet@odata.bind = "/GlobalOptionSetDefinitions(Name='fsi_acv_scope')"` value. Microsoft Learn documents the Name alternate-key form but uses the MetadataId GUID form (`/GlobalOptionSetDefinitions(<guid>)`) in its primary create-column request; the canonical environment rejected the Name form on this create-attribute POST.
+     - Authoritative source: https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-optionsets#create-a-choice-column-using-a-global-option-set
+     - Disposition: added `_resolve_global_optionset_binding` to both `ACVClient` and `ALCAClient`. Before any non-dry-run `create_attribute` POST, the method detects the Name alternate-key form, resolves the option set via `get_global_optionset(name)`, requires a valid UUID `MetadataId`, deep-copies the payload, and rewrites the binding to `/GlobalOptionSetDefinitions(<normalized-uuid>)`. Missing option sets and malformed bindings fail before POST. Non-choice attributes, valid MetadataId bindings, and dry-run behavior remain unchanged. Added pytest regression coverage in `tests/test_global_optionset_bind_resolution.py`. Full canonical deployment rerun remains pending.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -141,7 +146,11 @@
 - `PicklistAttributeMetadata` create-contract fix for live HTTP 500 on `fsi_scope` column creation:
   - `scripts/create_dataverse_schema.py` (added `AttributeType`, `AttributeTypeName`, `SourceTypeMask` to `fsi_Scope`, both `fsi_Zone` definitions, `fsi_Severity`, `fsi_EnvironmentType`)
   - `scripts/create_audit_compliance_schema.py` (same three fields added to `fsi_ComplianceStatus`)
-  - `tests/test_picklist_attribute_contract.py` (new: full-contract + expected-binding + non-picklist-unaffected regression guards for all Picklist columns in ACV and ALCA column lists)
+  - `tests/test_picklist_attribute_contract.py` (new: full-contract and expected-binding regression guards for all six Picklist definitions)
+- GlobalOptionSet Name-key → MetadataId binding resolution fix for live HTTP 500 "Guid should contain 32 digits with 4 dashes" on corrected PicklistAttributeMetadata POST:
+  - `scripts/acv_client.py` (`_resolve_global_optionset_binding` helper; `create_attribute` rewrites Name binding to MetadataId GUID form before POST)
+  - `scripts/alca_client.py` (identical behavior)
+  - `tests/test_global_optionset_bind_resolution.py` (new: ACV/ALCA parity for Name binding resolution, POST payload rewrite, original dict immutability, missing option set, absent MetadataId, invalid MetadataId UUID, existing GUID pass-through, non-choice pass-through, dry-run no-op)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`

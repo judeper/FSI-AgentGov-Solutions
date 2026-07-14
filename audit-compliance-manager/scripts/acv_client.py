@@ -7,9 +7,12 @@ Includes retry logic and dry-run mode for safe deployments.
 """
 
 import argparse
+import copy
 import os
+import re
 import sys
 import time
+import uuid
 from typing import Optional
 from urllib.parse import urljoin, urlparse
 
@@ -19,6 +22,13 @@ from requests.adapters import HTTPAdapter, Retry
 from solution_context_bootstrap import (
     DEFAULT_SOLUTION_BOOTSTRAP_CONFIG,
     SolutionContextBootstrapper,
+)
+
+_OPTIONSET_NAME_BIND_RE = re.compile(
+    r"^/GlobalOptionSetDefinitions\(Name='([^']+)'\)$"
+)
+_OPTIONSET_ID_BIND_RE = re.compile(
+    r"^/GlobalOptionSetDefinitions\(([^)]+)\)$"
 )
 
 
@@ -337,6 +347,51 @@ class ACVClient:
                 return get_response.json()
         return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
 
+    def _resolve_global_optionset_binding(self, attribute_metadata: dict) -> dict:
+        """Resolve a Name-keyed global choice binding to a MetadataId binding."""
+        bind_value = attribute_metadata.get("GlobalOptionSet@odata.bind", "")
+        if not bind_value:
+            return attribute_metadata
+
+        name_match = _OPTIONSET_NAME_BIND_RE.match(bind_value)
+        if name_match is None:
+            id_match = _OPTIONSET_ID_BIND_RE.match(bind_value)
+            if id_match is None:
+                raise RuntimeError(
+                    f"Unsupported GlobalOptionSet@odata.bind format: {bind_value!r}."
+                )
+            try:
+                uuid.UUID(id_match.group(1))
+            except ValueError as exc:
+                raise RuntimeError(
+                    f"GlobalOptionSet@odata.bind contains an invalid MetadataId: "
+                    f"{bind_value!r}."
+                ) from exc
+            return attribute_metadata
+
+        optionset_name = name_match.group(1)
+        optionset = self.get_global_optionset(optionset_name)
+        if optionset is None:
+            raise RuntimeError(
+                f"GlobalOptionSet '{optionset_name}' not found in Dataverse; "
+                "cannot resolve Name binding to MetadataId for create_attribute POST. "
+                "Deploy the global option set before deploying the column."
+            )
+
+        raw_id = optionset.get("MetadataId", "")
+        try:
+            normalized = str(uuid.UUID(str(raw_id)))
+        except (ValueError, AttributeError) as exc:
+            raise RuntimeError(
+                f"GlobalOptionSet '{optionset_name}' returned MetadataId={raw_id!r} "
+                "which is not a valid UUID; cannot rewrite GlobalOptionSet@odata.bind. "
+                "Verify the option set exists and has a valid MetadataId in the target environment."
+            ) from exc
+
+        payload = copy.deepcopy(attribute_metadata)
+        payload["GlobalOptionSet@odata.bind"] = f"/GlobalOptionSetDefinitions({normalized})"
+        return payload
+
     def create_attribute(self, entity_logical_name: str, attribute_metadata: dict) -> dict:
         """
         Create a new attribute (column) on an entity.
@@ -353,13 +408,14 @@ class ACVClient:
             print(f"  [DRY RUN] Would create column: {entity_logical_name}.{col_name}")
             return attribute_metadata
 
+        payload = self._resolve_global_optionset_binding(attribute_metadata)
         response = self._session.post(
             urljoin(
                 self.api_url,
                 f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes",
             ),
             headers=self._get_write_headers(),
-            json=attribute_metadata,
+            json=payload,
         )
         response.raise_for_status()
         return attribute_metadata
