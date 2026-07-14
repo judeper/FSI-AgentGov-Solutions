@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Fixed
 
-- _No unreleased changes currently._
+- Replaced ACV/ALCA attribute metadata alternate-key lookups (`.../Attributes(LogicalName='...')`) with service-principal-stable collection queries (`.../Attributes?$select=LogicalName,MetadataId&$filter=LogicalName eq '...'`) that return the first match or `None`, preserve headers/pagination semantics, and escape single quotes in logical names for OData safety.
+- Updated metadata-readiness polling and schema idempotency attribute checks to use the same collection-query contract, avoiding retry loops around brittle alternate-key probes while preserving permanent-error surfacing (no retry broadening or masking).
 
 ## [1.0.6] - 2026-07-14
 

@@ -62,6 +62,10 @@
     - Observed sequence: table create succeeded, first column `fsi_runid` created, then `GET EntityDefinitions(LogicalName='fsi_auditvalidationhistory')/Attributes` exhausted retry (`total=3`, `backoff_factor=1`) on repeated HTTP 500. Manual `POST /PublishAllXml` returned HTTP 204; after ~30 seconds the same metadata GET returned HTTP 200.
     - Disposition: added explicit `publish_all_customizations()` and bounded metadata-readiness polling in ACV/ALCA clients; schema scripts now publish + wait after table creation and after each column creation before the next metadata mutation.
 
+11. **Live blocker: service-principal attribute existence probe exhausted retryable 500s on alternate-key lookup endpoint.**
+    - Observed sequence: after metadata publication/readiness improvements, deployment progressed to column probes, found existing `fsi_runid`, then `GET EntityDefinitions(LogicalName='...')/Attributes(LogicalName='fsi_scope')` repeatedly returned HTTP 500 under service-principal auth. Admin comparison showed missing-attribute alternate-key probe can return 404 while the collection query `.../Attributes?$select=...&$filter=LogicalName eq 'fsi_scope'` returns stable HTTP 200 with empty `value`.
+    - Disposition: replaced ACV/ALCA `get_attribute_metadata` and attribute-readiness polling with filtered Attributes collection queries (escaped OData string literal, minimal `$select`, first match/`None` contract), added pytest regression coverage for existing/missing/escaped names, and asserted that no `Attributes(LogicalName='...')` URL is generated. Full canonical deployment rerun remains pending.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -98,6 +102,10 @@
   - `scripts/create_dataverse_schema.py` (publish + wait after table creation; publish + attribute readiness wait after each column)
   - `scripts/create_audit_compliance_schema.py` (publish + wait after table creation; publish + attribute readiness wait after each column)
   - `tests/test_metadata_publish_readiness.py` (transient 500 readiness sequence, publish header behavior, timeout contract, ACV/ALCA create-order gating)
+- Dataverse attribute metadata existence/readiness contract fix for service-principal stability:
+  - `scripts/acv_client.py` (`get_attribute_metadata` + `wait_for_attribute_metadata_readiness` now use filtered Attributes collection query with OData quote escaping)
+  - `scripts/alca_client.py` (`get_attribute_metadata` + `wait_for_attribute_metadata_readiness` now use filtered Attributes collection query with OData quote escaping)
+  - `tests/test_attribute_metadata_collection_lookup.py` (existing match, missing empty collection, quote escaping, and regression guard that no alternate-key Attributes URL is generated)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`
@@ -142,7 +150,7 @@
 - [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
 - [ ] ACV and ALCA global option-set POST calls succeed in canonical Dataverse environment with discriminator-enriched payloads
 - [ ] ACV and ALCA writes succeed in canonical Dataverse environment when `FSIPublisher` and `AuditComplianceManager` are absent initially (bootstrap creates/reuses shell without pre-solution `MSCRM.SolutionUniqueName` headers)
-- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName` and metadata-publication/readiness gating fixes (single-table live replay returned HTTP 204; metadata GET 500→manual `PublishAllXml`→200 sequence reproduced; complete deployment pass still pending)
+- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName`, metadata-publication/readiness, and filtered Attributes collection-lookup fixes (single-table live replay returned HTTP 204; metadata GET 500→manual `PublishAllXml`→200 sequence reproduced; service-principal alternate-key attribute probe 500 behavior reproduced; complete deployment pass still pending)
 - [ ] `Search-UnifiedAuditLog` and canary retrieval checks in target tenant
 - [ ] Purview retention validation with actual policy set and licensing context
 - [ ] Portal smoke artifacts (Playwright channel) attached separately from runtime evidence

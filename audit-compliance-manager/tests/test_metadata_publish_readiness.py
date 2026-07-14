@@ -157,7 +157,9 @@ def test_attribute_readiness_wait_tolerates_transient_500_until_success(
         [
             FakeResponse(status_code=500),
             FakeResponse(status_code=500),
-            FakeResponse(status_code=200, json_body={"LogicalName": "fsi_runid"}),
+            FakeResponse(
+                status_code=200, json_body={"value": [{"LogicalName": "fsi_runid"}]}
+            ),
         ]
     )
     client, _module = _build_client(monkeypatch, module_name, session)

@@ -27,6 +27,11 @@ class ALCAClient:
     DEFAULT_METADATA_TIMEOUT_SECONDS = 180.0
     DEFAULT_METADATA_POLL_INTERVAL_SECONDS = 5.0
 
+    @staticmethod
+    def _escape_odata_string_literal(value: str) -> str:
+        """Escape single quotes for OData string literals."""
+        return value.replace("'", "''")
+
     def __init__(
         self,
         tenant_id: str,
@@ -236,23 +241,47 @@ class ALCAClient:
         self, entity_logical_name: str, attribute_logical_name: str
     ) -> Optional[dict]:
         """Get attribute metadata. Returns None if not found."""
-        try:
-            response = self._session.get(
-                urljoin(
-                    self.api_url,
-                    f"EntityDefinitions(LogicalName='{entity_logical_name}')"
-                    f"/Attributes(LogicalName='{attribute_logical_name}')",
-                ),
-                headers=self._get_headers(),
-            )
+        metadata, _status = self._query_attribute_metadata_collection(
+            entity_logical_name,
+            attribute_logical_name,
+        )
+        return metadata
+
+    def _query_attribute_metadata_collection(
+        self,
+        entity_logical_name: str,
+        attribute_logical_name: str,
+    ) -> tuple[Optional[dict], Optional[int]]:
+        """Query attribute metadata collection and return first match + last status."""
+        escaped_name = self._escape_odata_string_literal(attribute_logical_name)
+        params = {
+            "$select": "LogicalName,MetadataId",
+            "$filter": f"LogicalName eq '{escaped_name}'",
+        }
+        url = urljoin(
+            self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes"
+        )
+        headers = self._get_headers()
+        first_request = True
+        last_status: Optional[int] = None
+
+        while url:
+            if first_request:
+                response = self._session.get(url, headers=headers, params=params)
+                first_request = False
+            else:
+                response = self._session.get(url, headers=headers)
+            last_status = response.status_code
             if response.status_code == 404:
-                return None
+                return None, response.status_code
             response.raise_for_status()
-            return response.json()
-        except requests.HTTPError as e:
-            if e.response.status_code == 404:
-                return None
-            raise
+            payload = response.json()
+            values = payload.get("value", [])
+            if values:
+                return values[0], response.status_code
+            url = payload.get("@odata.nextLink")
+
+        return None, last_status
 
     def create_global_optionset(self, optionset_metadata: dict) -> dict:
         """Create a global option set (choice)."""
@@ -361,22 +390,53 @@ class ALCAClient:
         timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
         poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
     ) -> dict:
-        """Wait until the specific attribute metadata endpoint is readable."""
-        return self._wait_for_metadata_readable(
-            urljoin(
-                self.api_url,
-                (
-                    f"EntityDefinitions(LogicalName='{entity_logical_name}')/"
-                    f"Attributes(LogicalName='{attribute_logical_name}')"
-                ),
-            ),
-            (
-                f"attribute '{attribute_logical_name}' on entity "
-                f"'{entity_logical_name}'"
-            ),
-            timeout_seconds=timeout_seconds,
-            poll_interval_seconds=poll_interval_seconds,
-        )
+        """Wait until the specific attribute metadata is queryable by collection filter."""
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be greater than 0")
+        if poll_interval_seconds < 0:
+            raise ValueError("poll_interval_seconds must be >= 0")
+
+        deadline = time.monotonic() + timeout_seconds
+        attempts = 0
+        last_status: Optional[int] = None
+        last_error = "no response received"
+
+        while True:
+            attempts += 1
+            try:
+                metadata, status = self._query_attribute_metadata_collection(
+                    entity_logical_name,
+                    attribute_logical_name,
+                )
+                last_status = status
+                if metadata is not None:
+                    return metadata
+                last_error = (
+                    f"HTTP {status}" if status == 404 else "HTTP 200 (empty result set)"
+                )
+            except requests.HTTPError as exc:
+                status = exc.response.status_code if exc.response is not None else None
+                if status in self.METADATA_TRANSIENT_STATUS_CODES:
+                    last_status = status
+                    last_error = f"HTTP {status}"
+                else:
+                    raise RuntimeError(
+                        "Metadata readiness check failed for attribute "
+                        f"'{attribute_logical_name}' on entity '{entity_logical_name}': {exc}"
+                    ) from exc
+            except requests.RequestException as exc:
+                last_error = f"{exc.__class__.__name__}: {exc}"
+
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"Timed out after {timeout_seconds:.1f}s waiting for attribute "
+                    f"'{attribute_logical_name}' on entity '{entity_logical_name}' "
+                    f"metadata readiness (last_status={last_status}, attempts={attempts}, "
+                    f"last_error={last_error})."
+                )
+
+            if poll_interval_seconds > 0:
+                time.sleep(poll_interval_seconds)
 
     def get_global_optionset(self, name: str) -> Optional[dict]:
         """Get global option set by name. Returns None if not found."""
