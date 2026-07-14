@@ -224,6 +224,8 @@ Describe "Helper script load and invocation contracts" {
                     [string]$ClientSecret,
                     [string]$CertificateThumbprint
                 )
+
+                $null = $TenantID, $ApplicationId, $ClientSecret, $CertificateThumbprint
             }
             $script:createdPowerAppsAccountStub = $true
         }
