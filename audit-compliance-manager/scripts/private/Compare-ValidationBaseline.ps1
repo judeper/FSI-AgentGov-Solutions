@@ -82,7 +82,7 @@
     - IsFirstRun: Boolean indicating if no baseline exists
 
 .NOTES
-    Version: 1.0.3
+    Version: 1.0.4
 
     Dataverse schema reference:
     - Table: fsi_auditvalidationhistory
@@ -90,6 +90,8 @@
     - Scope field: fsi_scope (option set: Tenant=100000000, Environment=100000001)
     - ValidationType field: fsi_validationtype (text)
     - EnvironmentId field: fsi_environmentid (text)
+    - fsi_severity values from Dataverse may deserialize as Int64 or numeric strings;
+      normalize to Int32 before hashtable key lookup and severity comparison.
 
     On error, this function fails open (returns DriftDetected=$true) to avoid
     silently suppressing alerts when baseline query fails.
@@ -250,7 +252,7 @@ function Compare-ValidationBaseline {
         }
         else {
             # Baseline exists - compare severities
-            $baselineSeverity = $baseline.fsi_severity
+            $baselineSeverityRaw = $baseline.fsi_severity
             $baselineDate = if ($baseline.fsi_timestamp) {
                 $baseline.fsi_timestamp
             }
@@ -269,6 +271,18 @@ function Compare-ValidationBaseline {
                 100000003 = "Failed"
                 100000004 = "Error"
             }
+
+            [int]$baselineSeverity = 0
+            if (-not [int]::TryParse([string]$baselineSeverityRaw, [ref]$baselineSeverity)) {
+                $rawType = if ($null -eq $baselineSeverityRaw) { 'null' } else { $baselineSeverityRaw.GetType().FullName }
+                $rawValue = if ($null -eq $baselineSeverityRaw) { '<null>' } else { [string]$baselineSeverityRaw }
+                throw "Baseline severity '$rawValue' ($rawType) is not a valid integer option-set value."
+            }
+
+            if (-not $reverseSeverityMap.ContainsKey($baselineSeverity)) {
+                throw "Baseline severity '$baselineSeverity' is not a recognized fsi_severity option-set value."
+            }
+
             $baselineStatus = $reverseSeverityMap[$baselineSeverity]
 
             # Drift detected if current severity is worse (higher number) than baseline

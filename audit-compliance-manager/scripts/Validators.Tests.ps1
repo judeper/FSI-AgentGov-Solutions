@@ -650,7 +650,7 @@ Describe "Helper script load and invocation contracts" {
             @{
                 value = @(
                     [PSCustomObject]@{
-                        fsi_severity  = 100000000
+                        fsi_severity  = [long]100000000
                         fsi_timestamp = '2026-07-14T12:00:00Z'
                     }
                 )
@@ -684,7 +684,7 @@ Describe "Helper script load and invocation contracts" {
             @{
                 value = @(
                     [PSCustomObject]@{
-                        fsi_severity  = 100000000
+                        fsi_severity  = '100000000'
                         fsi_timestamp = '2026-07-14T12:00:00Z'
                     }
                 )
@@ -701,6 +701,50 @@ Describe "Helper script load and invocation contracts" {
         $result.IsFirstRun | Should -BeFalse
         $result.DriftDetected | Should -BeFalse
         $result.BaselineSeverity | Should -Be 100000000
+        $result.BaselineStatus | Should -Be 'Passed'
+        Should -Invoke Invoke-RestMethod -Times 1
+    }
+
+    It "Compare-ValidationBaseline fails open for invalid baseline severity values" -ForEach @(
+        @{
+            InputSeverity = [long]100000999
+            ExpectedError = "recognized fsi_severity option-set value"
+        }
+        @{
+            InputSeverity = "not-a-number"
+            ExpectedError = "not a valid integer option-set value"
+        }
+    ) {
+        $compareHelperPath = Join-Path $PSScriptRoot 'private\Compare-ValidationBaseline.ps1'
+        if (Get-Command Compare-ValidationBaseline -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Compare-ValidationBaseline' -Force
+        }
+
+        $sanitizedCompareHelperPath = Get-SanitizedHelperScriptPath -SourcePath $compareHelperPath
+        . $sanitizedCompareHelperPath
+
+        Mock Invoke-RestMethod {
+            @{
+                value = @(
+                    [PSCustomObject]@{
+                        fsi_severity  = $InputSeverity
+                        fsi_timestamp = '2026-07-14T12:00:00Z'
+                    }
+                )
+            }
+        } -Verifiable
+
+        $result = Compare-ValidationBaseline `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -DataverseToken 'token' `
+            -Scope 'Tenant' `
+            -CurrentStatus 'Passed' `
+            -CurrentRunId 'run-invalid'
+
+        $result.DriftDetected | Should -BeTrue
+        $result.BaselineStatus | Should -BeNullOrEmpty
+        $result.BaselineSeverity | Should -BeNullOrEmpty
+        $result.Error | Should -Match $ExpectedError
         Should -Invoke Invoke-RestMethod -Times 1
     }
 

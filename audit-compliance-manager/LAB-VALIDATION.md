@@ -109,6 +109,11 @@
     - Observed sequence (public source `b02bc38`): certificate-wrapper setup and both environment validator API query paths completed, but all three Dataverse history writes failed with `Cannot bind argument to parameter 'RunId' because it is an empty string.` Because validator writes run inside `try` blocks, those write failures pushed `AuditStatus`/`RetentionStatus` to `Error` even when API checks had already completed. Root cause: `Invoke-EnvironmentAuditValidation.ps1` created local `$runId` before dot-sourcing `private/Write-ValidationResult.ps1`; PowerShell variable names are case-insensitive, so the helper's script-scope `$RunId` parameter overwrite flowed back into the orchestrator local variable.
     - Disposition (static fix applied; live revalidation pending): moved `$runId = [Guid]::NewGuid()` and timestamp generation/printing in `Invoke-EnvironmentAuditValidation.ps1` to immediately after the final dot-source restore loop and before authentication/results initialization, matching the already-safe `Invoke-TenantAuditValidation.ps1` ordering. Kept one shared RunId for results and all three environment write parameter sets. Added `RunId = $validationResults.RunId` to `Start-TenantValidationRunbook.ps1` final output for wrapper parity and evidence correlation. Extended `scripts/Validators.Tests.ps1` with source contracts for ordering and RunId propagation.
 
+22. **Live evidence finding: persisted three-leg cycle returned correct booleans, but baseline status mapping dropped to null on regression/restoration legs.**
+    - Observed sequence (public source `767115e`): Dataverse persisted Environment records in a unique Passed → Failed → Passed cycle; `Compare-ValidationBaseline` returned correct drift booleans for first run (`IsFirstRun=true`, `Drift=false`), regression (`IsFirstRun=false`, `Drift=true`), and restoration (`Drift=false`), but `Regression.BaselineStatus` and `Restoration.BaselineStatus` were null despite baseline `fsi_severity` equal to the Dataverse `Passed` option-set value.
+    - Root cause: Dataverse JSON deserialized baseline `fsi_severity` as `System.Int64`; `Compare-ValidationBaseline.ps1` reverse-map literal keys are `System.Int32`, and PowerShell hashtable lookup is type-sensitive, so reverse lookup missed and returned null baseline status.
+    - Disposition (static fix applied; live revalidation pending): `Compare-ValidationBaseline.ps1` now normalizes `baseline.fsi_severity` to `[int]` before reverse lookup and numeric comparison, preserving valid Int64/numeric-string option-set values. Invalid/non-numeric or unknown option-set values now raise precise errors and flow through the existing fail-open path (`DriftDetected = $true`, `Error` populated) without silent status fallback. Added targeted `scripts/Validators.Tests.ps1` mocks for `[long]100000000`, `'100000000'`, and invalid values.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -132,6 +137,9 @@
   - `scripts/Invoke-TenantAuditValidation.ps1` (exposes `RunId` in orchestrator output)
   - `scripts/Start-TenantValidationRunbook.ps1` (passes `CurrentRunId` at overall and per-validator compare sites)
   - `scripts/Validators.Tests.ps1` (URI contract, first-run, drift regression/restoration, and wrapper wiring tests)
+- Drift baseline severity-type normalization fix (finding 22):
+  - `scripts/private/Compare-ValidationBaseline.ps1` (`fsi_severity` normalization to `[int]` before reverse-map lookup/comparison; precise errors for non-convertible and unknown values)
+  - `scripts/Validators.Tests.ps1` (behavioral mocks covering Int64, numeric-string, and invalid baseline severity values with fail-open assertions)
 - Dot-source parameter-preservation fix for helper clobbering in runbook/orchestrator/validator callers:
   - `scripts/Export-AuditValidationEvidence.ps1`
   - `scripts/Invoke-EnvironmentAuditValidation.ps1`
