@@ -105,6 +105,10 @@
     - Observed sequence (public source `8185a56`): `Start-EnvironmentValidationRunbook` preserved inputs and invoked `Invoke-EnvironmentAuditValidation`, orchestration began, then validator load failed with `Cannot process command because of one or more missing mandatory parameters: EnvironmentUrl AccessToken.` Root cause: `Test-EnvironmentAudit.ps1` and `Test-EnvironmentRetention.ps1` declared mandatory script-scope params and were dot-sourced without arguments before function definitions loaded.
     - Disposition (static fix applied; live revalidation pending): made script-scope parameters optional in both environment validators (`EnvironmentUrl`/`AccessToken` for audit; `EnvironmentUrl`/`AccessToken`/`DataverseUrl`/`CentralAccessToken`/`Zone` for retention) while preserving mandatory function-scope contracts and `@PSBoundParameters` direct invocation behavior. Extended `scripts/Validators.Tests.ps1` with direct-invocation block coverage for both scripts and a behavioral sanitized-dot-source test proving no-arg load succeeds while function-level mandatory parameters remain required.
 
+21. **Live blocker: environment orchestrator run ID was generated before helper dot-sourcing and then clobbered by `Write-ValidationResult.ps1` script-scope `RunId` parameter.**
+    - Observed sequence (public source `b02bc38`): certificate-wrapper setup and both environment validator API query paths completed, but all three Dataverse history writes failed with `Cannot bind argument to parameter 'RunId' because it is an empty string.` Because validator writes run inside `try` blocks, those write failures pushed `AuditStatus`/`RetentionStatus` to `Error` even when API checks had already completed. Root cause: `Invoke-EnvironmentAuditValidation.ps1` created local `$runId` before dot-sourcing `private/Write-ValidationResult.ps1`; PowerShell variable names are case-insensitive, so the helper's script-scope `$RunId` parameter overwrite flowed back into the orchestrator local variable.
+    - Disposition (static fix applied; live revalidation pending): moved `$runId = [Guid]::NewGuid()` and timestamp generation/printing in `Invoke-EnvironmentAuditValidation.ps1` to immediately after the final dot-source restore loop and before authentication/results initialization, matching the already-safe `Invoke-TenantAuditValidation.ps1` ordering. Kept one shared RunId for results and all three environment write parameter sets. Added `RunId = $validationResults.RunId` to `Start-TenantValidationRunbook.ps1` final output for wrapper parity and evidence correlation. Extended `scripts/Validators.Tests.ps1` with source contracts for ordering and RunId propagation.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -143,6 +147,10 @@
   - `scripts/Test-EnvironmentAudit.ps1` (script-scope `EnvironmentUrl`/`AccessToken` optional; function-scope mandatory unchanged)
   - `scripts/Test-EnvironmentRetention.ps1` (script-scope `EnvironmentUrl`/`AccessToken`/`DataverseUrl`/`CentralAccessToken`/`Zone` optional; function-scope mandatory unchanged)
   - `scripts/Validators.Tests.ps1` (direct-invocation contract coverage for both environment validators + no-arg sanitized dot-source behavioral and mandatory-function-parameter assertions)
+- Run-ID lifetime ordering fix for environment orchestration and tenant wrapper output parity:
+  - `scripts/Invoke-EnvironmentAuditValidation.ps1` (moved local RunId/timestamp generation to post-dot-source restore, pre-auth/results initialization)
+  - `scripts/Start-TenantValidationRunbook.ps1` (added `RunId` to final output object)
+  - `scripts/Validators.Tests.ps1` (source contracts for environment RunId ordering, results/write propagation, and tenant output RunId exposure)
 - Option-set metadata payload fix for live Dataverse compatibility:
   - `scripts/create_dataverse_schema.py` (ACV global option sets)
   - `scripts/create_audit_compliance_schema.py` (ALCA global option set)

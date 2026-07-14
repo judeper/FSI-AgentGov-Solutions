@@ -315,6 +315,65 @@ Describe "Drift baseline wrapper wiring contracts" {
     }
 }
 
+Describe "RunId source contracts" {
+    It "Invoke-EnvironmentAuditValidation generates RunId after restore and before results initialization and first write" {
+        $path = Join-Path $PSScriptRoot "Invoke-EnvironmentAuditValidation.ps1"
+        $path | Should -Exist
+        $content = Get-Content -LiteralPath $path -Raw
+
+        $restoreMatch = [regex]::Match($content, 'foreach\s*\(\s*\$name\s+in\s+\$dotSourceSafeVars\.Keys\s*\)\s*\{')
+        $runIdMatch = [regex]::Match($content, '\$runId\s*=\s*\[Guid\]::NewGuid\(\)')
+        $timestampMatch = [regex]::Match($content, '\$timestamp\s*=\s*Get-Date\s+-AsUTC\s+-Format\s+"o"')
+        $resultsMatch = [regex]::Match($content, '\$results\s*=\s*\[PSCustomObject\]\s*@\{')
+        $firstWriteMatch = [regex]::Match($content, 'Write-ValidationResult\s+@(?:writeParams|orchParams)')
+
+        $restoreMatch.Success | Should -BeTrue -Because "Environment orchestrator must restore script-scope params after dot-sourcing."
+        $runIdMatch.Success | Should -BeTrue -Because "Environment orchestrator must generate a RunId."
+        $timestampMatch.Success | Should -BeTrue -Because "Environment orchestrator must stamp a UTC timestamp alongside RunId."
+        $resultsMatch.Success | Should -BeTrue -Because "Environment orchestrator must initialize a results object."
+        $firstWriteMatch.Success | Should -BeTrue -Because "Environment orchestrator must persist validation rows."
+
+        $runIdMatch.Index | Should -BeGreaterThan $restoreMatch.Index -Because "RunId generation must occur after the final dot-source restore loop."
+        $timestampMatch.Index | Should -BeGreaterThan $runIdMatch.Index -Because "Timestamp must be generated after RunId to keep correlated banner order."
+        $runIdMatch.Index | Should -BeLessThan $resultsMatch.Index -Because "RunId generation must occur before results initialization."
+        $runIdMatch.Index | Should -BeLessThan $firstWriteMatch.Index -Because "RunId must exist before first Write-ValidationResult call."
+    }
+
+    It "Invoke-EnvironmentAuditValidation results and all Write-ValidationResult parameter sets retain RunId wiring" {
+        $path = Join-Path $PSScriptRoot "Invoke-EnvironmentAuditValidation.ps1"
+        $path | Should -Exist
+        $content = Get-Content -LiteralPath $path -Raw
+
+        $resultsBlock = [regex]::Match($content, '\$results\s*=\s*\[PSCustomObject\]\s*@\{(?<Body>.*?)\}\s*', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $resultsBlock.Success | Should -BeTrue -Because "Environment orchestrator should initialize a results object."
+        ($resultsBlock.Groups['Body'].Value -cmatch 'RunId\s*=\s*\$runId') | Should -BeTrue -Because "Environment results object must expose RunId."
+
+        $writeParamBlocks = [regex]::Matches($content, '\$writeParams\s*=\s*@\{(?<Body>.*?)\}\s*Write-ValidationResult\s+@writeParams', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $writeParamBlocks.Count | Should -Be 2 -Because "Environment orchestrator should keep both validator Write-ValidationResult writeParams blocks."
+        foreach ($block in $writeParamBlocks) {
+            ($block.Groups['Body'].Value -cmatch 'RunId\s*=\s*\$runId') | Should -BeTrue -Because "Each validator writeParams block must pass the shared RunId."
+        }
+
+        $orchBlock = [regex]::Match($content, '\$orchParams\s*=\s*@\{(?<Body>.*?)\}\s*Write-ValidationResult\s+@orchParams', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $orchBlock.Success | Should -BeTrue -Because "Environment orchestrator should keep the per-environment orchestrator Write-ValidationResult block."
+        ($orchBlock.Groups['Body'].Value -cmatch 'RunId\s*=\s*\$runId') | Should -BeTrue -Because "Orchestrator write parameter set must pass the shared RunId."
+
+        $writeInvocationCount = [regex]::Matches($content, 'Write-ValidationResult\s+@(?:writeParams|orchParams)').Count
+        $writeInvocationCount | Should -Be 3 -Because "Environment orchestrator should continue writing two validator rows plus one orchestrator row per environment."
+    }
+
+    It "Start-TenantValidationRunbook final output includes RunId" {
+        $path = Join-Path $PSScriptRoot "Start-TenantValidationRunbook.ps1"
+        $path | Should -Exist
+        $content = Get-Content -LiteralPath $path -Raw
+
+        $outputBlock = [regex]::Match($content, '\$output\s*=\s*\[PSCustomObject\]\s*@\{(?<Body>.*?)\}\s*', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $outputBlock.Success | Should -BeTrue -Because "Tenant runbook should build a final output object."
+        ($outputBlock.Groups['Body'].Value -cmatch 'RunType\s*=\s*"TenantValidation"') | Should -BeTrue -Because "Test should target tenant runbook final output object."
+        ($outputBlock.Groups['Body'].Value -cmatch 'RunId\s*=\s*\$validationResults\.RunId') | Should -BeTrue -Because "Tenant runbook output must expose RunId for evidence correlation parity."
+    }
+}
+
 Describe "Dot-source parameter-preservation source contracts" {
     It "<Name> snapshots and restores script-scope params around dot-sources" -ForEach $sourceContractMatrix {
         $Path | Should -Exist -Because "$Name should exist"

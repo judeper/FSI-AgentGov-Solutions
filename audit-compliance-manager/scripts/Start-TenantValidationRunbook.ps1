@@ -248,6 +248,7 @@ try {
     # Build output object with drift info and alert flags
     $output = [PSCustomObject]@{
         RunType           = "TenantValidation"
+        RunId             = $validationResults.RunId
         Timestamp         = $validationResults.Timestamp
         Zone              = $validationResults.Zone
         OverallStatus     = $validationResults.OverallStatus

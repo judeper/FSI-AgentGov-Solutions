@@ -176,14 +176,6 @@ Write-Host "║  FSI-AgentGov Control 1.7                        ║" -Foregroun
 Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-# Generate RunId for correlated validation records
-$runId = [Guid]::NewGuid()
-$timestamp = Get-Date -AsUTC -Format "o"
-
-Write-Host "Run ID:    $runId" -ForegroundColor Cyan
-Write-Host "Timestamp: $timestamp" -ForegroundColor Cyan
-Write-Host ""
-
 # Dot-source required scripts
 $scriptRoot = $PSScriptRoot
 $dotSourceSafeVars = @{
@@ -225,6 +217,14 @@ foreach ($script in $requiredScripts) {
 foreach ($name in $dotSourceSafeVars.Keys) {
     Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
 }
+
+# Generate RunId for correlated validation records after helper/validator dot-sourcing.
+$runId = [Guid]::NewGuid()
+$timestamp = Get-Date -AsUTC -Format "o"
+
+Write-Host "Run ID:    $runId" -ForegroundColor Cyan
+Write-Host "Timestamp: $timestamp" -ForegroundColor Cyan
+Write-Host ""
 
 # Build authentication parameter hashtable
 $authParams = @{
