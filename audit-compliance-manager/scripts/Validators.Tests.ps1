@@ -428,6 +428,10 @@ Describe "Dot-source parameter-preservation source contracts" {
 Describe "Nested dot-source snapshot collision behavior" {
     It "unique caller-owned snapshot survives nested child clobber of dotSourceSafeVars and Zone" {
         function Invoke-SharedSnapshotCollisionProbe {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+                'PSUseDeclaredVarsMoreThanAssignments', '',
+                Justification = 'This probe intentionally demonstrates that a nested dot-source overwrites shared snapshot and Zone variables.'
+            )]
             param(
                 [Parameter(Mandatory = $true)]
                 [string]$Zone
@@ -456,6 +460,10 @@ Describe "Nested dot-source snapshot collision behavior" {
         }
 
         function Invoke-UniqueSnapshotCollisionProbe {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+                'PSUseDeclaredVarsMoreThanAssignments', '',
+                Justification = 'This probe intentionally demonstrates nested variable clobbering before restoring from a uniquely named snapshot.'
+            )]
             param(
                 [Parameter(Mandatory = $true)]
                 [string]$Zone
@@ -578,6 +586,10 @@ Describe "Helper script load and invocation contracts" {
         }
 
         function New-SanitizedValidatorHarness {
+            [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+                'PSUseShouldProcessForStateChangingFunctions', '',
+                Justification = 'Test-only helper creates disposable files under the Pester artifact directory and is not a public state-changing command.'
+            )]
             param(
                 [Parameter(Mandatory = $true)]
                 [string]$SourcePath,
@@ -801,7 +813,7 @@ Describe "Helper script load and invocation contracts" {
             }
         }
 
-        $global:lastConnectParams = $null
+        $script:lastConnectParams = $null
         Mock Connect-AuditServices {
             param(
                 [string]$TenantId,
@@ -813,7 +825,7 @@ Describe "Helper script load and invocation contracts" {
                 [switch]$ExchangeOnly
             )
 
-            $global:lastConnectParams = @{
+            $script:lastConnectParams = @{
                 TenantId              = $TenantId
                 ClientId              = $ClientId
                 CertificateThumbprint = $CertificateThumbprint
@@ -828,10 +840,10 @@ Describe "Helper script load and invocation contracts" {
                 AdminAuditLogEnabled            = $true
             }
         } -Verifiable
-        $global:lastCanaryMailboxIdentity = $null
+        $script:lastCanaryMailboxIdentity = $null
         Mock New-CanaryEvent {
             param([string]$MailboxIdentity)
-            $global:lastCanaryMailboxIdentity = $MailboxIdentity
+            $script:lastCanaryMailboxIdentity = $MailboxIdentity
             [PSCustomObject]@{
                 Status       = 'Success'
                 CanaryId     = 'canary-123'
@@ -852,13 +864,13 @@ Describe "Helper script load and invocation contracts" {
 
         $result.OverallStatus | Should -Be 'Passed'
         Should -Invoke Connect-AuditServices -Times 1
-        $global:lastConnectParams.ExchangeOnly | Should -BeTrue
-        $global:lastConnectParams.InteractiveIsPresent | Should -BeFalse -Because 'Interactive must not be passed when false.'
-        $global:lastConnectParams.TenantId | Should -Be 'contoso.onmicrosoft.com'
-        $global:lastConnectParams.ClientId | Should -Be 'app-id'
-        $global:lastConnectParams.CertificateThumbprint | Should -Be 'thumb'
+        $script:lastConnectParams.ExchangeOnly | Should -BeTrue
+        $script:lastConnectParams.InteractiveIsPresent | Should -BeFalse -Because 'Interactive must not be passed when false.'
+        $script:lastConnectParams.TenantId | Should -Be 'contoso.onmicrosoft.com'
+        $script:lastConnectParams.ClientId | Should -Be 'app-id'
+        $script:lastConnectParams.CertificateThumbprint | Should -Be 'thumb'
         Should -Invoke New-CanaryEvent -Times 1
-        $global:lastCanaryMailboxIdentity | Should -Be $mailboxIdentity
+        $script:lastCanaryMailboxIdentity | Should -Be $mailboxIdentity
     }
 
     It "Test-UnifiedAuditLog service-principal branch without mailbox skips canary generation and returns clear warning" {
