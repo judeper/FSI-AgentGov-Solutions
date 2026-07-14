@@ -196,7 +196,8 @@ try {
         -DataverseUrl $DataverseUrl `
         -DataverseToken $dataverseToken `
         -Scope "Tenant" `
-        -CurrentStatus $validationResults.OverallStatus
+        -CurrentStatus $validationResults.OverallStatus `
+        -CurrentRunId $validationResults.RunId
 
     Write-Verbose "Overall drift detected: $($overallDrift.DriftDetected)"
 
@@ -223,6 +224,7 @@ try {
                 -DataverseToken $dataverseToken `
                 -Scope "Tenant" `
                 -CurrentStatus $validatorStatus `
+                -CurrentRunId $validationResults.RunId `
                 -ValidationType $validatorName
 
             $perValidatorDrift[$validatorName] = $validatorDrift

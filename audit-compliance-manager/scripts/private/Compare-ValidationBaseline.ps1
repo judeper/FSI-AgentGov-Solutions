@@ -45,6 +45,10 @@
 .PARAMETER EnvironmentId
     Power Platform environment GUID. Required when Scope is "Environment".
 
+.PARAMETER CurrentRunId
+    Optional current validation run GUID. When provided, the baseline query excludes
+    records with this run ID to avoid selecting the current in-flight run as baseline.
+
 .EXAMPLE
     $drift = Compare-ValidationBaseline `
         -DataverseUrl "https://governance.crm.dynamics.com" `
@@ -78,7 +82,7 @@
     - IsFirstRun: Boolean indicating if no baseline exists
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.3
 
     Dataverse schema reference:
     - Table: fsi_auditvalidationhistory
@@ -115,7 +119,10 @@ param(
     [string]$ValidationType,
 
     [Parameter(Mandatory = $false)]
-    [string]$EnvironmentId
+    [string]$EnvironmentId,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CurrentRunId
 )
 
 $ErrorActionPreference = "Stop"
@@ -141,7 +148,10 @@ function Compare-ValidationBaseline {
         [string]$ValidationType,
 
         [Parameter(Mandatory = $false)]
-        [string]$EnvironmentId
+        [string]$EnvironmentId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CurrentRunId
     )
 
     try {
@@ -188,6 +198,11 @@ function Compare-ValidationBaseline {
         elseif ($ValidationType) {
             # For tenant scope, filter by ValidationType if provided
             $filter += " and fsi_validationtype eq '$ValidationType'"
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($CurrentRunId)) {
+            $escapedCurrentRunId = $CurrentRunId.Replace("'", "''")
+            $filter += " and fsi_runid ne '$escapedCurrentRunId'"
         }
 
         # Construct API URL with OData query

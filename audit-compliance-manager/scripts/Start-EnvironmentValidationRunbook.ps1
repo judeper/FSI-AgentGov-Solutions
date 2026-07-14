@@ -223,6 +223,7 @@ try {
                 -DataverseToken $dataverseToken `
                 -Scope "Environment" `
                 -CurrentStatus $envStatus `
+                -CurrentRunId $validationResults.RunId `
                 -EnvironmentId $envId `
                 -ValidationType "Orchestrator"
 

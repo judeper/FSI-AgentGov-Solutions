@@ -93,6 +93,10 @@
      - Authoritative source: https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-column-definitions-using-web-api#create-a-boolean-column
      - Disposition: added the full Boolean-column create contract to all three `BooleanAttributeMetadata` column definitions — `"AttributeType": "Boolean"`, `"AttributeTypeName": {"Value": "BooleanType"}`, and `"OptionSet"` containing `BooleanOptionSetMetadata` with `OptionSetType=Boolean`, `TrueOption Value=1 / "Yes"`, and `FalseOption Value=0 / "No"`. Added a private `_boolean_optionset()` helper in each script that returns a fresh dict per call to prevent shared mutable state across column definitions. Existing `DefaultValue: False` values are preserved on all three columns. Added pytest regression coverage in `tests/test_boolean_attribute_contract.py`. Full canonical deployment rerun remains pending.
 
+ 18. **Static drift-sequencing defect: wrappers selected the current Passed row as baseline in first-run paths.**
+     - Observed sequence: `Invoke-EnvironmentAuditValidation.ps1` and `Invoke-TenantAuditValidation.ps1` write the current run's orchestrator/validator records before wrapper-level drift comparisons execute. Baseline queries in `Compare-ValidationBaseline.ps1` selected the newest Passed row without excluding the current `fsi_runid`, so successful first runs could be classified as non-first-run.
+     - Disposition (static fix applied; live revalidation pending): added optional `CurrentRunId` to `Compare-ValidationBaseline.ps1` (script + function scope) and appended `and fsi_runid ne '<escaped>'` when non-empty, with OData single-quote escaping. `Start-EnvironmentValidationRunbook.ps1` now passes `-CurrentRunId $validationResults.RunId`; `Invoke-TenantAuditValidation.ps1` now exposes `RunId`; and `Start-TenantValidationRunbook.ps1` passes `CurrentRunId` at both overall and per-validator compare call sites. Added targeted Pester coverage in `scripts/Validators.Tests.ps1` for URI contract and drift behavior.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -110,6 +114,12 @@
 - `scripts/Start-EnvironmentValidationRunbook.ps1`
   - Removed `MSAL.PS` dependency and `Get-MsalToken`
   - Added `Connect-PowerPlatform` helper usage for Dataverse drift token
+- Drift baseline current-run exclusion fix:
+  - `scripts/private/Compare-ValidationBaseline.ps1` (optional `CurrentRunId`, OData-escaped `fsi_runid ne` clause, helper version bump)
+  - `scripts/Start-EnvironmentValidationRunbook.ps1` (passes `-CurrentRunId $validationResults.RunId`)
+  - `scripts/Invoke-TenantAuditValidation.ps1` (exposes `RunId` in orchestrator output)
+  - `scripts/Start-TenantValidationRunbook.ps1` (passes `CurrentRunId` at overall and per-validator compare sites)
+  - `scripts/Validators.Tests.ps1` (URI contract, first-run, drift regression/restoration, and wrapper wiring tests)
 - Option-set metadata payload fix for live Dataverse compatibility:
   - `scripts/create_dataverse_schema.py` (ACV global option sets)
   - `scripts/create_audit_compliance_schema.py` (ALCA global option set)

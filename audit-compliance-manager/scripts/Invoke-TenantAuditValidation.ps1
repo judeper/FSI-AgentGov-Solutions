@@ -243,6 +243,7 @@ if ($CertificateFilePath) { $authParams.CertificateFilePath = $CertificateFilePa
 
 # Initialize results object
 $results = @{
+    RunId = $runId
     Timestamp = (Get-Date -Format "o")
     Zone = $Zone
     Validators = @{}

@@ -200,6 +200,33 @@ Describe "Runbook wrapper auth currency" {
     }
 }
 
+Describe "Drift baseline wrapper wiring contracts" {
+    It "Start-EnvironmentValidationRunbook passes CurrentRunId to Compare-ValidationBaseline" {
+        $path = Join-Path $PSScriptRoot "Start-EnvironmentValidationRunbook.ps1"
+        $path | Should -Exist
+        $content = Get-Content -LiteralPath $path -Raw
+
+        ($content -cmatch '-CurrentRunId\s+\$validationResults\.RunId') | Should -BeTrue -Because "Environment drift detection must exclude the current run ID from baseline selection."
+    }
+
+    It "Start-TenantValidationRunbook passes CurrentRunId to both Compare-ValidationBaseline call sites" {
+        $path = Join-Path $PSScriptRoot "Start-TenantValidationRunbook.ps1"
+        $path | Should -Exist
+        $content = Get-Content -LiteralPath $path -Raw
+        $currentRunIdMatches = [regex]::Matches($content, '-CurrentRunId\s+\$validationResults\.RunId')
+
+        $currentRunIdMatches.Count | Should -Be 2 -Because "Tenant runbook must pass current run ID in both overall and per-validator drift checks."
+    }
+
+    It "Invoke-TenantAuditValidation exposes RunId in orchestrator output" {
+        $path = Join-Path $PSScriptRoot "Invoke-TenantAuditValidation.ps1"
+        $path | Should -Exist
+        $content = Get-Content -LiteralPath $path -Raw
+
+        ($content -cmatch 'RunId\s*=\s*\$runId') | Should -BeTrue -Because "Tenant orchestrator output must expose RunId for downstream drift exclusion."
+    }
+}
+
 Describe "ExchangeOnlineManagement compatibility bounds" {
     It "<Name> caps ExchangeOnlineManagement at 3.9.2 for current runtime compatibility" -ForEach $exchangeBoundedScripts {
         $Path | Should -Exist -Because "$Name should exist"
@@ -283,7 +310,7 @@ Describe "Helper script load and invocation contracts" {
         }
     }
 
-    It "Compare-ValidationBaseline helper dot-sources and handles first-run responses" {
+    It "Compare-ValidationBaseline escapes CurrentRunId in URI and treats empty baseline as first run" {
         $compareHelperPath = Join-Path $PSScriptRoot 'private\Compare-ValidationBaseline.ps1'
         if (Get-Command Compare-ValidationBaseline -CommandType Function -ErrorAction SilentlyContinue) {
             Remove-Item -LiteralPath 'Function:\Compare-ValidationBaseline' -Force
@@ -292,16 +319,140 @@ Describe "Helper script load and invocation contracts" {
         $sanitizedCompareHelperPath = Get-SanitizedHelperScriptPath -SourcePath $compareHelperPath
         . $sanitizedCompareHelperPath
 
-        Mock Invoke-RestMethod { @{ value = @() } } -Verifiable
+        $script:lastBaselineUri = $null
+        Mock Invoke-RestMethod {
+            $script:lastBaselineUri = $Uri
+            @{ value = @() }
+        } -Verifiable
 
         $result = Compare-ValidationBaseline `
             -DataverseUrl 'https://org.crm.dynamics.com' `
             -DataverseToken 'token' `
             -Scope 'Tenant' `
-            -CurrentStatus 'Passed'
+            -CurrentStatus 'Passed' `
+            -CurrentRunId "run'id-123"
 
+        $script:lastBaselineUri | Should -Match "fsi_runid ne 'run''id-123'"
         $result.IsFirstRun | Should -BeTrue
         $result.DriftDetected | Should -BeFalse
+        Should -Invoke Invoke-RestMethod -Times 1
+    }
+
+    It "Compare-ValidationBaseline omits CurrentRunId filter when CurrentRunId is not provided" {
+        $compareHelperPath = Join-Path $PSScriptRoot 'private\Compare-ValidationBaseline.ps1'
+        if (Get-Command Compare-ValidationBaseline -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Compare-ValidationBaseline' -Force
+        }
+
+        $sanitizedCompareHelperPath = Get-SanitizedHelperScriptPath -SourcePath $compareHelperPath
+        . $sanitizedCompareHelperPath
+
+        $script:lastBaselineUri = $null
+        Mock Invoke-RestMethod {
+            $script:lastBaselineUri = $Uri
+            @{ value = @() }
+        } -Verifiable
+
+        $null = Compare-ValidationBaseline `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -DataverseToken 'token' `
+            -Scope 'Tenant' `
+            -CurrentStatus 'Passed'
+
+        $script:lastBaselineUri | Should -Not -Match "fsi_runid ne"
+        Should -Invoke Invoke-RestMethod -Times 1
+    }
+
+    It "Compare-ValidationBaseline omits CurrentRunId filter when CurrentRunId is whitespace" {
+        $compareHelperPath = Join-Path $PSScriptRoot 'private\Compare-ValidationBaseline.ps1'
+        if (Get-Command Compare-ValidationBaseline -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Compare-ValidationBaseline' -Force
+        }
+
+        $sanitizedCompareHelperPath = Get-SanitizedHelperScriptPath -SourcePath $compareHelperPath
+        . $sanitizedCompareHelperPath
+
+        $script:lastBaselineUri = $null
+        Mock Invoke-RestMethod {
+            $script:lastBaselineUri = $Uri
+            @{ value = @() }
+        } -Verifiable
+
+        $null = Compare-ValidationBaseline `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -DataverseToken 'token' `
+            -Scope 'Tenant' `
+            -CurrentStatus 'Passed' `
+            -CurrentRunId "  `t  "
+
+        $script:lastBaselineUri | Should -Not -Match "fsi_runid ne"
+        Should -Invoke Invoke-RestMethod -Times 1
+    }
+
+    It "Compare-ValidationBaseline detects drift for Failed current status against prior Passed baseline" {
+        $compareHelperPath = Join-Path $PSScriptRoot 'private\Compare-ValidationBaseline.ps1'
+        if (Get-Command Compare-ValidationBaseline -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Compare-ValidationBaseline' -Force
+        }
+
+        $sanitizedCompareHelperPath = Get-SanitizedHelperScriptPath -SourcePath $compareHelperPath
+        . $sanitizedCompareHelperPath
+
+        Mock Invoke-RestMethod {
+            @{
+                value = @(
+                    [PSCustomObject]@{
+                        fsi_severity  = 100000000
+                        fsi_timestamp = '2026-07-14T12:00:00Z'
+                    }
+                )
+            }
+        } -Verifiable
+
+        $result = Compare-ValidationBaseline `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -DataverseToken 'token' `
+            -Scope 'Tenant' `
+            -CurrentStatus 'Failed' `
+            -CurrentRunId 'run-456'
+
+        $result.IsFirstRun | Should -BeFalse
+        $result.DriftDetected | Should -BeTrue
+        $result.BaselineSeverity | Should -Be 100000000
+        $result.BaselineStatus | Should -Be 'Passed'
+        Should -Invoke Invoke-RestMethod -Times 1
+    }
+
+    It "Compare-ValidationBaseline reports no drift for Passed current status against prior Passed baseline" {
+        $compareHelperPath = Join-Path $PSScriptRoot 'private\Compare-ValidationBaseline.ps1'
+        if (Get-Command Compare-ValidationBaseline -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Compare-ValidationBaseline' -Force
+        }
+
+        $sanitizedCompareHelperPath = Get-SanitizedHelperScriptPath -SourcePath $compareHelperPath
+        . $sanitizedCompareHelperPath
+
+        Mock Invoke-RestMethod {
+            @{
+                value = @(
+                    [PSCustomObject]@{
+                        fsi_severity  = 100000000
+                        fsi_timestamp = '2026-07-14T12:00:00Z'
+                    }
+                )
+            }
+        } -Verifiable
+
+        $result = Compare-ValidationBaseline `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -DataverseToken 'token' `
+            -Scope 'Tenant' `
+            -CurrentStatus 'Passed' `
+            -CurrentRunId 'run-789'
+
+        $result.IsFirstRun | Should -BeFalse
+        $result.DriftDetected | Should -BeFalse
+        $result.BaselineSeverity | Should -Be 100000000
         Should -Invoke Invoke-RestMethod -Times 1
     }
 
