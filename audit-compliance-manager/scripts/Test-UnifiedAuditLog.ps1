@@ -1,5 +1,5 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0"; MaximumVersion="3.9.2" }
 
 <#
 .SYNOPSIS
@@ -51,6 +51,10 @@
 
 .PARAMETER CertificateFilePath
     Path to certificate file (.pfx) for service principal authentication.
+
+.PARAMETER CanaryMailboxIdentity
+    Mailbox identity used for canary event generation (UPN, email, alias, or shared mailbox).
+    Required and recommended for service-principal canary validation; interactive runs may omit it.
 
 .EXAMPLE
     .\Test-UnifiedAuditLog.ps1 -Interactive
@@ -120,12 +124,27 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [string]$CertificateFilePath
+    [string]$CertificateFilePath,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CanaryMailboxIdentity
 )
 
 $ErrorActionPreference = "Stop"
 
 #region Dot-source private helpers
+
+$dotSourceSafeVars = @{
+    SkipCanaryValidation  = $SkipCanaryValidation
+    GracePeriodHours      = $GracePeriodHours
+    CanaryWaitSeconds     = $CanaryWaitSeconds
+    Interactive           = $Interactive
+    TenantId              = $TenantId
+    ClientId              = $ClientId
+    CertificateThumbprint = $CertificateThumbprint
+    CertificateFilePath   = $CertificateFilePath
+    CanaryMailboxIdentity = $CanaryMailboxIdentity
+}
 
 $privatePath = Join-Path $PSScriptRoot 'private'
 $requiredHelpers = @(
@@ -138,6 +157,9 @@ foreach ($helper in $requiredHelpers) {
         throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
     }
     . $helperPath
+}
+foreach ($name in $dotSourceSafeVars.Keys) {
+    Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
 }
 
 #endregion
@@ -169,7 +191,10 @@ function Test-UnifiedAuditLog {
         [string]$CertificateThumbprint,
 
         [Parameter(Mandatory = $false)]
-        [string]$CertificateFilePath
+        [string]$CertificateFilePath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CanaryMailboxIdentity
     )
 
     $checks = @()
@@ -187,8 +212,8 @@ function Test-UnifiedAuditLog {
 
         $connectParams = @{
             ExchangeOnly = $true
-            Interactive = $Interactive
         }
+        if ($Interactive) { $connectParams.Interactive = $true }
         if ($TenantId) { $connectParams.TenantId = $TenantId }
         if ($ClientId) { $connectParams.ClientId = $ClientId }
         if ($CertificateThumbprint) { $connectParams.CertificateThumbprint = $CertificateThumbprint }
@@ -282,110 +307,132 @@ function Test-UnifiedAuditLog {
         }
         else {
             Write-Host "[Step 4/4] Performing canary event validation..." -ForegroundColor Yellow
+            $isServicePrincipalAuth = (-not $Interactive) -and $ClientId -and ($CertificateThumbprint -or $CertificateFilePath)
+            $hasCanaryMailboxIdentity = -not [string]::IsNullOrWhiteSpace($CanaryMailboxIdentity)
 
-            # Generate canary event
-            Write-Host "Generating canary event..." -ForegroundColor Cyan
-            $canary = New-CanaryEvent -ErrorAction Stop
-
-            if ($canary.Status -ne "Success") {
-                Write-Host "WARNING: Canary event generation failed: $($canary.ErrorMessage)" -ForegroundColor Yellow
+            if ($isServicePrincipalAuth -and -not $hasCanaryMailboxIdentity) {
+                $canaryReason = "CanaryMailboxIdentity is required for service-principal canary validation. Provide a real mailbox identity (user or shared mailbox)."
+                Write-Host "WARNING: $canaryReason`n" -ForegroundColor Yellow
 
                 $checks += @{
                     Name = "CanaryEventValidation"
                     Status = "Warning"
-                    CanaryId = $canary.CanaryId
+                    CanaryId = $null
                     WaitSeconds = 0
-                    Reason = "Canary generation failed: $($canary.ErrorMessage)"
+                    Reason = $canaryReason
                 }
 
                 $overallStatus = "Warning"
                 $confidence = "Medium"
-                $reason = "Cmdlet reports enabled but canary generation failed. Manual verification recommended."
+                $reason = "Cmdlet reports enabled, but canary validation needs an explicit mailbox identity for service-principal authentication."
             }
             else {
-                Write-Host "Canary event generated successfully." -ForegroundColor Green
-                Write-Host "Canary ID: $($canary.CanaryId)" -ForegroundColor Gray
-                Write-Host "Waiting $CanaryWaitSeconds seconds for audit ingestion..." -ForegroundColor Cyan
+                # Generate canary event
+                Write-Host "Generating canary event..." -ForegroundColor Cyan
+                $canaryParams = @{}
+                if ($hasCanaryMailboxIdentity) { $canaryParams.MailboxIdentity = $CanaryMailboxIdentity }
+                $canary = New-CanaryEvent @canaryParams -ErrorAction Stop
 
-                # Wait for audit ingestion
-                Start-Sleep -Seconds $CanaryWaitSeconds
-
-                # Search for canary event
-                Write-Host "Searching for canary event in Unified Audit Log..." -ForegroundColor Cyan
-
-                $startDate = (Get-Date).AddHours(-1)
-                $endDate = Get-Date
-
-                $canaryEvent = Search-UnifiedAuditLog `
-                    -StartDate $startDate `
-                    -EndDate $endDate `
-                    -FreeText $canary.CanaryId `
-                    -ResultSize 1 `
-                    -ErrorAction SilentlyContinue
-
-                if ($canaryEvent) {
-                    Write-Host "SUCCESS: Canary event found in Unified Audit Log!" -ForegroundColor Green
-                    Write-Host "Audit log ingestion is confirmed working.`n" -ForegroundColor Green
+                if ($canary.Status -ne "Success") {
+                    Write-Host "WARNING: Canary event generation failed: $($canary.ErrorMessage)" -ForegroundColor Yellow
 
                     $checks += @{
                         Name = "CanaryEventValidation"
-                        Status = "Passed"
+                        Status = "Warning"
                         CanaryId = $canary.CanaryId
-                        WaitSeconds = $CanaryWaitSeconds
-                        Reason = "Canary event successfully retrieved"
+                        WaitSeconds = 0
+                        Reason = "Canary generation failed: $($canary.ErrorMessage)"
                     }
 
-                    $overallStatus = "Passed"
-                    $confidence = "High"
-                    $reason = "Cmdlet enabled AND canary event retrieved. Audit log ingestion confirmed working."
+                    $overallStatus = "Warning"
+                    $confidence = "Medium"
+                    $reason = "Cmdlet reports enabled but canary generation failed. Manual verification recommended."
                 }
                 else {
-                    # Canary not found - check if we're in grace period
-                    Write-Host "Canary event not found after $CanaryWaitSeconds seconds." -ForegroundColor Yellow
+                    Write-Host "Canary event generated successfully." -ForegroundColor Green
+                    Write-Host "Canary ID: $($canary.CanaryId)" -ForegroundColor Gray
+                    Write-Host "Waiting $CanaryWaitSeconds seconds for audit ingestion..." -ForegroundColor Cyan
 
-                    # Check if audit was recently enabled (within grace period)
-                    # Look for any recent audit events to determine if we're in grace period
-                    Write-Host "Checking for recent audit activity (grace period check)..." -ForegroundColor Cyan
+                    # Wait for audit ingestion
+                    Start-Sleep -Seconds $CanaryWaitSeconds
 
-                    $recentEvents = Search-UnifiedAuditLog `
-                        -StartDate (Get-Date).AddHours(-$GracePeriodHours) `
-                        -EndDate (Get-Date) `
+                    # Search for canary event
+                    Write-Host "Searching for canary event in Unified Audit Log..." -ForegroundColor Cyan
+
+                    $startDate = (Get-Date).AddHours(-1)
+                    $endDate = Get-Date
+
+                    $canaryEvent = Search-UnifiedAuditLog `
+                        -StartDate $startDate `
+                        -EndDate $endDate `
+                        -FreeText $canary.CanaryId `
                         -ResultSize 1 `
                         -ErrorAction SilentlyContinue
 
-                    if (-not $recentEvents) {
-                        # No events in grace period window - likely newly enabled
-                        Write-Host "No audit events found in past $GracePeriodHours hours." -ForegroundColor Yellow
-                        Write-Host "Audit may have been recently enabled (within grace period).`n" -ForegroundColor Yellow
+                    if ($canaryEvent) {
+                        Write-Host "SUCCESS: Canary event found in Unified Audit Log!" -ForegroundColor Green
+                        Write-Host "Audit log ingestion is confirmed working.`n" -ForegroundColor Green
 
                         $checks += @{
                             Name = "CanaryEventValidation"
-                            Status = "GracePeriod"
+                            Status = "Passed"
                             CanaryId = $canary.CanaryId
                             WaitSeconds = $CanaryWaitSeconds
-                            Reason = "No events found within $GracePeriodHours-hour grace period. Audit may be newly enabled."
+                            Reason = "Canary event successfully retrieved"
                         }
 
-                        $overallStatus = "GracePeriod"
-                        $confidence = "Medium"
-                        $reason = "Cmdlet reports enabled but no audit events in past $GracePeriodHours hours. Audit ingestion lag expected for newly-enabled tenants."
+                        $overallStatus = "Passed"
+                        $confidence = "High"
+                        $reason = "Cmdlet enabled AND canary event retrieved. Audit log ingestion confirmed working."
                     }
                     else {
-                        # Events exist but canary not found - possible ingestion issue
-                        Write-Host "Other audit events found, but canary event not retrieved." -ForegroundColor Yellow
-                        Write-Host "Possible audit ingestion delay or configuration issue.`n" -ForegroundColor Yellow
+                        # Canary not found - check if we're in grace period
+                        Write-Host "Canary event not found after $CanaryWaitSeconds seconds." -ForegroundColor Yellow
 
-                        $checks += @{
-                            Name = "CanaryEventValidation"
-                            Status = "Warning"
-                            CanaryId = $canary.CanaryId
-                            WaitSeconds = $CanaryWaitSeconds
-                            Reason = "Cmdlet reports enabled and other events exist, but canary not found after $CanaryWaitSeconds seconds"
+                        # Check if audit was recently enabled (within grace period)
+                        # Look for any recent audit events to determine if we're in grace period
+                        Write-Host "Checking for recent audit activity (grace period check)..." -ForegroundColor Cyan
+
+                        $recentEvents = Search-UnifiedAuditLog `
+                            -StartDate (Get-Date).AddHours(-$GracePeriodHours) `
+                            -EndDate (Get-Date) `
+                            -ResultSize 1 `
+                            -ErrorAction SilentlyContinue
+
+                        if (-not $recentEvents) {
+                            # No events in grace period window - likely newly enabled
+                            Write-Host "No audit events found in past $GracePeriodHours hours." -ForegroundColor Yellow
+                            Write-Host "Audit may have been recently enabled (within grace period).`n" -ForegroundColor Yellow
+
+                            $checks += @{
+                                Name = "CanaryEventValidation"
+                                Status = "GracePeriod"
+                                CanaryId = $canary.CanaryId
+                                WaitSeconds = $CanaryWaitSeconds
+                                Reason = "No events found within $GracePeriodHours-hour grace period. Audit may be newly enabled."
+                            }
+
+                            $overallStatus = "GracePeriod"
+                            $confidence = "Medium"
+                            $reason = "Cmdlet reports enabled but no audit events in past $GracePeriodHours hours. Audit ingestion lag expected for newly-enabled tenants."
                         }
+                        else {
+                            # Events exist but canary not found - possible ingestion issue
+                            Write-Host "Other audit events found, but canary event not retrieved." -ForegroundColor Yellow
+                            Write-Host "Possible audit ingestion delay or configuration issue.`n" -ForegroundColor Yellow
 
-                        $overallStatus = "Warning"
-                        $confidence = "Medium"
-                        $reason = "Cmdlet reports enabled and audit events exist, but canary event not found. May indicate ingestion delay or search indexing lag."
+                            $checks += @{
+                                Name = "CanaryEventValidation"
+                                Status = "Warning"
+                                CanaryId = $canary.CanaryId
+                                WaitSeconds = $CanaryWaitSeconds
+                                Reason = "Cmdlet reports enabled and other events exist, but canary not found after $CanaryWaitSeconds seconds"
+                            }
+
+                            $overallStatus = "Warning"
+                            $confidence = "Medium"
+                            $reason = "Cmdlet reports enabled and audit events exist, but canary event not found. May indicate ingestion delay or search indexing lag."
+                        }
                     }
                 }
             }
@@ -430,15 +477,19 @@ function Test-UnifiedAuditLog {
 
 # Execute validation when run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
-    $result = Test-UnifiedAuditLog `
-        -SkipCanaryValidation:$SkipCanaryValidation `
-        -GracePeriodHours $GracePeriodHours `
-        -CanaryWaitSeconds $CanaryWaitSeconds `
-        -Interactive:$Interactive `
-        -TenantId $TenantId `
-        -ClientId $ClientId `
-        -CertificateThumbprint $CertificateThumbprint `
-        -CertificateFilePath $CertificateFilePath
+    $execParams = @{
+        SkipCanaryValidation = $SkipCanaryValidation
+        GracePeriodHours     = $GracePeriodHours
+        CanaryWaitSeconds    = $CanaryWaitSeconds
+    }
+    if ($Interactive) { $execParams.Interactive = $true }
+    if ($TenantId) { $execParams.TenantId = $TenantId }
+    if ($ClientId) { $execParams.ClientId = $ClientId }
+    if ($CertificateThumbprint) { $execParams.CertificateThumbprint = $CertificateThumbprint }
+    if ($CertificateFilePath) { $execParams.CertificateFilePath = $CertificateFilePath }
+    if (-not [string]::IsNullOrWhiteSpace($CanaryMailboxIdentity)) { $execParams.CanaryMailboxIdentity = $CanaryMailboxIdentity }
+
+    $result = Test-UnifiedAuditLog @execParams
 
     # Display result
     Write-Host "`n=== Validation Result ===" -ForegroundColor Cyan

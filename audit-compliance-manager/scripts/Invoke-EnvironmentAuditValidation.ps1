@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.2
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180"; MaximumVersion="2.0.180" }
 
 <#
 .SYNOPSIS
@@ -113,7 +113,7 @@
 .NOTES
     Version: 1.0.2
     Requires:
-    - Microsoft.PowerApps.Administration.PowerShell module v2.0 or later
+    - Microsoft.PowerApps.Administration.PowerShell module 2.0.180 (current ACM known-good pin; app-secret Add-PowerAppsAccount validation on 2.0.217 failed with AADSTS7000215)
     - PowerShell 7.0 or later
     - Power Platform Admin or Entra Global Admin role
     - System Administrator role in central Dataverse environment
@@ -176,16 +176,20 @@ Write-Host "║  FSI-AgentGov Control 1.7                        ║" -Foregroun
 Write-Host "╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-# Generate RunId for correlated validation records
-$runId = [Guid]::NewGuid()
-$timestamp = Get-Date -AsUTC -Format "o"
-
-Write-Host "Run ID:    $runId" -ForegroundColor Cyan
-Write-Host "Timestamp: $timestamp" -ForegroundColor Cyan
-Write-Host ""
-
 # Dot-source required scripts
 $scriptRoot = $PSScriptRoot
+$dotSourceSafeVars = @{
+    TenantId              = $TenantId
+    DataverseUrl          = $DataverseUrl
+    ClientId              = $ClientId
+    ClientSecret          = $ClientSecret
+    CertificateThumbprint = $CertificateThumbprint
+    Interactive           = $Interactive
+    IncludeTrialDev       = $IncludeTrialDev
+    GracePeriodHours      = $GracePeriodHours
+    OutputPath            = $OutputPath
+    SkipDiscovery         = $SkipDiscovery
+}
 $privatePath = Join-Path $PSScriptRoot 'private'
 $requiredHelpers = @(
     'Connect-PowerPlatform.ps1',
@@ -210,6 +214,17 @@ foreach ($script in $requiredScripts) {
     }
     . $scriptPath
 }
+foreach ($name in $dotSourceSafeVars.Keys) {
+    Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
+}
+
+# Generate RunId for correlated validation records after helper/validator dot-sourcing.
+$runId = [Guid]::NewGuid()
+$timestamp = Get-Date -AsUTC -Format "o"
+
+Write-Host "Run ID:    $runId" -ForegroundColor Cyan
+Write-Host "Timestamp: $timestamp" -ForegroundColor Cyan
+Write-Host ""
 
 # Build authentication parameter hashtable
 $authParams = @{

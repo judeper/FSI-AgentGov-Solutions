@@ -21,57 +21,61 @@ PUBLISHER_PREFIX = "fsi"
 
 OPTIONSETS = {
     "fsi_acv_severity": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_severity",
         "DisplayName": {"LocalizedLabels": [{"Label": "Validation Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Validation result severity", "LanguageCode": 1033}]},
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Passed", "LanguageCode": 1033}]}},
-            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Warning", "LanguageCode": 1033}]}},
-            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "GracePeriod", "LanguageCode": 1033}]}},
-            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Failed", "LanguageCode": 1033}]}},
-            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Error", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Passed", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Warning", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "GracePeriod", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Failed", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Error", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_acv_scope": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_scope",
         "DisplayName": {"LocalizedLabels": [{"Label": "Validation Scope", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Scope of validation (tenant or environment)", "LanguageCode": 1033}]},
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Tenant", "LanguageCode": 1033}]}},
-            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Environment", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Tenant", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Environment", "LanguageCode": 1033}]}},
         ],
     },
     "fsi_acv_zone": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_zone",
         "DisplayName": {"LocalizedLabels": [{"Label": "Governance Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Governance zone classification", "LanguageCode": 1033}]},
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
-            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
-            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
-            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Unclassified", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Zone 1", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Zone 2", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Zone 3", "LanguageCode": 1033}]}},
         ],
     },
     # Note: fsi_Status uses IntegerAttributeMetadata (1=Active, 2=Inactive) instead of a global option set.
     # No global option set is needed for binary status values.
     "fsi_acv_environmenttype": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_acv_environmenttype",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment Type", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Power Platform environment type", "LanguageCode": 1033}]},
         "OptionSetType": "Picklist",
         "IsGlobal": True,
         "Options": [
-            {"Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Production", "LanguageCode": 1033}]}},
-            {"Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Sandbox", "LanguageCode": 1033}]}},
-            {"Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Developer", "LanguageCode": 1033}]}},
-            {"Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Trial", "LanguageCode": 1033}]}},
-            {"Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Default", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000000, "Label": {"LocalizedLabels": [{"Label": "Production", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000001, "Label": {"LocalizedLabels": [{"Label": "Sandbox", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000002, "Label": {"LocalizedLabels": [{"Label": "Developer", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000003, "Label": {"LocalizedLabels": [{"Label": "Trial", "LanguageCode": 1033}]}},
+            {"@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata", "Value": 100000004, "Label": {"LocalizedLabels": [{"Label": "Default", "LanguageCode": 1033}]}},
         ],
     },
 }
@@ -126,6 +130,7 @@ def get_audit_validation_history_entity() -> dict:
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "MaxLength": 200,
                 "FormatName": {"Value": "Text"},
+                "IsPrimaryName": True,
             },
         ],
     }
@@ -154,6 +159,7 @@ def get_environment_registry_entity() -> dict:
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "MaxLength": 200,
                 "FormatName": {"Value": "Text"},
+                "IsPrimaryName": True,
             },
         ],
     }
@@ -162,6 +168,23 @@ def get_environment_registry_entity() -> dict:
 # ============================================================================
 # Column Definitions
 # ============================================================================
+
+
+def _boolean_optionset() -> dict:
+    """Return a fresh Dataverse Boolean option-set definition."""
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+        "OptionSetType": "Boolean",
+        "TrueOption": {
+            "Value": 1,
+            "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]},
+        },
+        "FalseOption": {
+            "Value": 0,
+            "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]},
+        },
+    }
+
 
 HISTORY_TABLE_COLUMNS = [
     # Correlation and Scope
@@ -179,6 +202,9 @@ HISTORY_TABLE_COLUMNS = [
         "SchemaName": "fsi_Scope",
         "DisplayName": {"LocalizedLabels": [{"Label": "Scope", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_scope')",
     },
     # Environment Context (optional for tenant-scope validations)
@@ -207,6 +233,9 @@ HISTORY_TABLE_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Zone at time of validation (denormalized)", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_zone')",
     },
     # Validation Result
@@ -216,6 +245,9 @@ HISTORY_TABLE_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Overall validation result", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_severity')",
     },
     {
@@ -293,6 +325,9 @@ REGISTRY_TABLE_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Assigned governance zone (Unclassified triggers alert)", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_zone')",
     },
     # Environment Metadata
@@ -310,6 +345,9 @@ REGISTRY_TABLE_COLUMNS = [
         "SchemaName": "fsi_EnvironmentType",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment Type", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_environmenttype')",
     },
     {
@@ -341,11 +379,14 @@ REGISTRY_TABLE_COLUMNS = [
     # Admin Override
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": "fsi_OverrideInclude",
         "DisplayName": {"LocalizedLabels": [{"Label": "Override Include", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Admin override to include Trial/Dev environments", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "DefaultValue": False,
+        "OptionSet": _boolean_optionset(),
     },
     # Notes
     {
@@ -373,6 +414,10 @@ def create_tables(client: ACVClient, dry_run: bool = False) -> None:
     else:
         client.create_entity(get_audit_validation_history_entity())
         print(f"  {history_logical_name}: created")
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(history_logical_name)
+        print(f"  {history_logical_name}: metadata ready")
 
     # Create EnvironmentRegistry table
     registry_logical_name = "fsi_environmentregistry"
@@ -384,6 +429,10 @@ def create_tables(client: ACVClient, dry_run: bool = False) -> None:
     else:
         client.create_entity(get_environment_registry_entity())
         print(f"  {registry_logical_name}: created")
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(registry_logical_name)
+        print(f"  {registry_logical_name}: metadata ready")
 
 
 def create_columns(client: ACVClient, dry_run: bool = False) -> None:
@@ -392,28 +441,55 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
 
     # AuditValidationHistory columns
     print("  AuditValidationHistory columns:")
+    history_entity = "fsi_auditvalidationhistory"
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(history_entity)
+        existing_history_columns = client.list_attribute_logical_names(history_entity)
+    else:
+        # Avoid propagation retries when the table is only being previewed.
+        existing_history_columns = (
+            client.list_attribute_logical_names(history_entity)
+            if client.get_entity_metadata(history_entity) is not None
+            else set()
+        )
     for col in HISTORY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
-        existing = client.get_attribute_metadata("fsi_auditvalidationhistory", col_name)
-        if existing:
+        if col_name in existing_history_columns:
             print(f"    {col_name}: already exists")
         elif dry_run:
             print(f"    {col_name}: would create")
         else:
-            client.create_attribute("fsi_auditvalidationhistory", col)
+            client.create_attribute(history_entity, col)
+            client.publish_all_customizations()
+            client.wait_for_attribute_metadata_readiness(history_entity, col_name)
+            existing_history_columns.add(col_name)
             print(f"    {col_name}: created")
 
     # EnvironmentRegistry columns
     print("  EnvironmentRegistry columns:")
+    registry_entity = "fsi_environmentregistry"
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(registry_entity)
+        existing_registry_columns = client.list_attribute_logical_names(registry_entity)
+    else:
+        existing_registry_columns = (
+            client.list_attribute_logical_names(registry_entity)
+            if client.get_entity_metadata(registry_entity) is not None
+            else set()
+        )
     for col in REGISTRY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
-        existing = client.get_attribute_metadata("fsi_environmentregistry", col_name)
-        if existing:
+        if col_name in existing_registry_columns:
             print(f"    {col_name}: already exists")
         elif dry_run:
             print(f"    {col_name}: would create")
         else:
-            client.create_attribute("fsi_environmentregistry", col)
+            client.create_attribute(registry_entity, col)
+            client.publish_all_customizations()
+            client.wait_for_attribute_metadata_readiness(registry_entity, col_name)
+            existing_registry_columns.add(col_name)
             print(f"    {col_name}: created")
 
 

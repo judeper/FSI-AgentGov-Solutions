@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0"; MaximumVersion="3.9.2" }
 
 <#
 .SYNOPSIS
@@ -107,7 +107,9 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing by orchestrators.
+    # Required by Test-PurviewRetention function and direct execution.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Zone1", "Zone2", "Zone3")]
     [string]$Zone,
 
@@ -131,6 +133,15 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Dot-source the authentication helper
+$dotSourceSafeVars = @{
+    Zone                  = $Zone
+    Interactive           = $Interactive
+    TenantId              = $TenantId
+    ClientId              = $ClientId
+    CertificateThumbprint = $CertificateThumbprint
+    CertificateFilePath   = $CertificateFilePath
+}
+
 $privatePath = Join-Path $PSScriptRoot 'private'
 $requiredHelpers = @(
     'Connect-AuditServices.ps1'
@@ -141,6 +152,9 @@ foreach ($helper in $requiredHelpers) {
         throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
     }
     . $helperPath
+}
+foreach ($name in $dotSourceSafeVars.Keys) {
+    Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
 }
 
 function Test-PurviewRetention {

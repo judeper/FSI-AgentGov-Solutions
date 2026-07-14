@@ -49,6 +49,7 @@ PUBLISHER_PREFIX = "fsi"
 
 OPTIONSETS = {
     "fsi_alca_compliancestatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_alca_compliancestatus",
         "DisplayName": {
             "LocalizedLabels": [
@@ -67,6 +68,7 @@ OPTIONSETS = {
         "IsGlobal": True,
         "Options": [
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000000,
                 "Label": {
                     "LocalizedLabels": [
@@ -75,6 +77,7 @@ OPTIONSETS = {
                 },
             },
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000001,
                 "Label": {
                     "LocalizedLabels": [
@@ -83,6 +86,7 @@ OPTIONSETS = {
                 },
             },
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000002,
                 "Label": {
                     "LocalizedLabels": [
@@ -91,6 +95,7 @@ OPTIONSETS = {
                 },
             },
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000003,
                 "Label": {
                     "LocalizedLabels": [
@@ -183,6 +188,7 @@ def get_audit_environment_compliance_entity() -> dict:
                 "RequiredLevel": {"Value": "ApplicationRequired"},
                 "MaxLength": 200,
                 "FormatName": {"Value": "Text"},
+                "IsPrimaryName": True,
             },
         ],
     }
@@ -191,6 +197,23 @@ def get_audit_environment_compliance_entity() -> dict:
 # ============================================================================
 # Column Definitions
 # ============================================================================
+
+
+def _boolean_optionset() -> dict:
+    """Return a fresh Dataverse Boolean option-set definition."""
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+        "OptionSetType": "Boolean",
+        "TrueOption": {
+            "Value": 1,
+            "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]},
+        },
+        "FalseOption": {
+            "Value": 0,
+            "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]},
+        },
+    }
+
 
 TABLE_COLUMNS = [
     # Environment identification (upsert key)
@@ -217,6 +240,8 @@ TABLE_COLUMNS = [
     # Purview unified audit status
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": "fsi_AuditEnabled",
         "DisplayName": {
             "LocalizedLabels": [
@@ -233,10 +258,13 @@ TABLE_COLUMNS = [
         },
         "RequiredLevel": {"Value": "None"},
         "DefaultValue": False,
+        "OptionSet": _boolean_optionset(),
     },
     # Dataverse audit status
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": "fsi_DataverseAuditEnabled",
         "DisplayName": {
             "LocalizedLabels": [
@@ -253,6 +281,7 @@ TABLE_COLUMNS = [
         },
         "RequiredLevel": {"Value": "None"},
         "DefaultValue": False,
+        "OptionSet": _boolean_optionset(),
     },
     # Last compliance check timestamp
     {
@@ -292,6 +321,9 @@ TABLE_COLUMNS = [
             ]
         },
         "RequiredLevel": {"Value": "None"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_alca_compliancestatus')",
     },
     # Remediation tracking
@@ -412,6 +444,10 @@ def create_table(client: ALCAClient, dry_run: bool = False) -> dict:
         client.create_entity(get_audit_environment_compliance_entity())
         print(f"  {logical_name}: created")
         counts["created"] += 1
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(logical_name)
+        print(f"  {logical_name}: metadata ready")
 
     return counts
 
@@ -422,10 +458,20 @@ def create_columns(client: ALCAClient, dry_run: bool = False) -> dict:
     counts = {"created": 0, "skipped": 0}
 
     entity = "fsi_auditenvironmentcompliance"
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(entity)
+        existing_columns = client.list_attribute_logical_names(entity)
+    else:
+        # Avoid propagation retries when the table is only being previewed.
+        existing_columns = (
+            client.list_attribute_logical_names(entity)
+            if client.get_entity_metadata(entity) is not None
+            else set()
+        )
     for col in TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
-        existing = client.get_attribute_metadata(entity, col_name)
-        if existing:
+        if col_name in existing_columns:
             print(f"  {col_name}: already exists")
             counts["skipped"] += 1
         elif dry_run:
@@ -433,6 +479,9 @@ def create_columns(client: ALCAClient, dry_run: bool = False) -> dict:
             print(f"  {col_name}: would create ({odata_type})")
         else:
             client.create_attribute(entity, col)
+            client.publish_all_customizations()
+            client.wait_for_attribute_metadata_readiness(entity, col_name)
+            existing_columns.add(col_name)
             print(f"  {col_name}: created")
             counts["created"] += 1
 

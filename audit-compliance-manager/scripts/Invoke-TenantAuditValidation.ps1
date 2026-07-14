@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0"; MaximumVersion="3.9.2" }
 
 <#
 .SYNOPSIS
@@ -55,6 +55,10 @@
     Seconds to wait after generating canary event before searching for it.
     Default: 300 (5 minutes). Increase if audit ingestion is consistently slow
     in your environment.
+
+.PARAMETER CanaryMailboxIdentity
+    Mailbox identity used for canary event generation when explicit mailbox targeting is required.
+    Recommended for service-principal runs; interactive runs may omit it.
 
 .PARAMETER Interactive
     Use interactive browser-based authentication instead of service principal.
@@ -165,7 +169,10 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [string]$CertificateFilePath
+    [string]$CertificateFilePath,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CanaryMailboxIdentity
 )
 
 $ErrorActionPreference = "Stop"
@@ -185,6 +192,21 @@ if (-not (Test-Path $modulePath)) {
     throw "Required module not found: $modulePath. Ensure the solution is installed correctly."
 }
 Import-Module $modulePath -Force -ErrorAction Stop
+
+$tenantOrchestratorSafeVars = @{
+    Zone                  = $Zone
+    OutputPath            = $OutputPath
+    SkipCanaryValidation  = $SkipCanaryValidation
+    GracePeriodHours      = $GracePeriodHours
+    CanaryWaitSeconds     = $CanaryWaitSeconds
+    DataverseUrl          = $DataverseUrl
+    Interactive           = $Interactive
+    TenantId              = $TenantId
+    ClientId              = $ClientId
+    CertificateThumbprint = $CertificateThumbprint
+    CertificateFilePath   = $CertificateFilePath
+    CanaryMailboxIdentity = $CanaryMailboxIdentity
+}
 
 $privatePath = Join-Path $PSScriptRoot 'private'
 $requiredHelpers = @(
@@ -210,6 +232,9 @@ foreach ($script in $requiredScripts) {
         throw "Required script not found: $scriptPath. Ensure the solution is installed correctly."
     }
     . $scriptPath
+}
+foreach ($name in $tenantOrchestratorSafeVars.Keys) {
+    Set-Variable -Name $name -Value $tenantOrchestratorSafeVars[$name] -Scope Local
 }
 
 # Generate RunId for correlated validation records
@@ -243,6 +268,7 @@ if ($CertificateFilePath) { $authParams.CertificateFilePath = $CertificateFilePa
 
 # Initialize results object
 $results = @{
+    RunId = $runId
     Timestamp = (Get-Date -Format "o")
     Zone = $Zone
     Validators = @{}
@@ -279,6 +305,7 @@ try {
     }
     $ualParams.GracePeriodHours = $GracePeriodHours
     $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds
+    if (-not [string]::IsNullOrWhiteSpace($CanaryMailboxIdentity)) { $ualParams.CanaryMailboxIdentity = $CanaryMailboxIdentity }
 
     # Execute validator
     $results.Validators.UnifiedAuditLog = Test-UnifiedAuditLog @ualParams

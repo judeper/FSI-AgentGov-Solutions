@@ -69,13 +69,16 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Get-ValidationResults function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseUrl,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Get-ValidationResults function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$AccessToken,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Get-ValidationResults function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Tenant", "Environment")]
     [string]$Scope,
 
@@ -207,6 +210,15 @@ function Get-ValidationResults {
 
 # Execute function if script is run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
+    $missingDirectParams = @()
+    if ([string]::IsNullOrWhiteSpace($DataverseUrl)) { $missingDirectParams += 'DataverseUrl' }
+    if ([string]::IsNullOrWhiteSpace($AccessToken)) { $missingDirectParams += 'AccessToken' }
+    if ([string]::IsNullOrWhiteSpace($Scope)) { $missingDirectParams += 'Scope' }
+
+    if ($missingDirectParams.Count -gt 0) {
+        throw "Missing required parameter(s) for direct invocation: $($missingDirectParams -join ', '). Dot-source this helper to load the Get-ValidationResults function, or pass the required parameters when invoking the script directly."
+    }
+
     $results = Get-ValidationResults @PSBoundParameters
     Write-Host "Retrieved $($results.Count) validation records" -ForegroundColor Green
     return $results

@@ -1,7 +1,5 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
-# NOTE: MSAL.PS is archived and no longer maintained. Plan migration to
-# Az.Accounts (Get-AzAccessToken) or Microsoft.Identity.Client.
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0"; MaximumVersion="3.9.2" }, Az.Accounts
 
 <#
 .SYNOPSIS
@@ -60,6 +58,10 @@
 .PARAMETER CanaryWaitSeconds
     Seconds to wait after generating canary event before searching for it. Default: 300.
 
+.PARAMETER CanaryMailboxIdentity
+    Mailbox identity used for canary event generation when service-principal runs need explicit mailbox targeting.
+    Recommended for service-principal validation; interactive runs may omit it.
+
 .EXAMPLE
     Start-TenantValidationRunbook `
         -Zone "Zone3" `
@@ -89,7 +91,7 @@
     Azure Automation setup:
     1. Import this script as a runbook
     2. Upload certificate to Automation Account > Certificates
-    3. Install required modules: ExchangeOnlineManagement, MSAL.PS
+    3. Install required modules: ExchangeOnlineManagement (3.0.0-3.9.2), Az.Accounts
     4. Grant application permissions:
        - Exchange.ManageAsApp
        - SecurityEvents.Read.All (for Purview)
@@ -125,7 +127,10 @@ param(
     [switch]$SkipCanaryValidation,
 
     [Parameter(Mandatory = $false)]
-    [int]$CanaryWaitSeconds = 300
+    [int]$CanaryWaitSeconds = 300,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CanaryMailboxIdentity
 )
 
 $ErrorActionPreference = "Stop"
@@ -139,9 +144,21 @@ try {
     $scriptRoot = $PSScriptRoot
     Write-Verbose "Script root: $scriptRoot"
 
+    $dotSourceSafeVars = @{
+        Zone                  = $Zone
+        DataverseUrl          = $DataverseUrl
+        TenantId              = $TenantId
+        ClientId              = $ClientId
+        CertificateThumbprint = $CertificateThumbprint
+        SkipCanaryValidation  = $SkipCanaryValidation
+        CanaryWaitSeconds     = $CanaryWaitSeconds
+        CanaryMailboxIdentity = $CanaryMailboxIdentity
+    }
+
     $privatePath = Join-Path $PSScriptRoot 'private'
     $requiredHelpers = @(
         'Compare-ValidationBaseline.ps1'
+        'Connect-PowerPlatform.ps1'
     )
     foreach ($helper in $requiredHelpers) {
         $helperPath = Join-Path $privatePath $helper
@@ -150,20 +167,27 @@ try {
         }
         . $helperPath
     }
+    foreach ($name in $dotSourceSafeVars.Keys) {
+        Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
+    }
 
     Write-Verbose "Scripts loaded successfully"
 
     # Build parameters for Invoke-TenantAuditValidation
     # Do NOT pass -Interactive or -OutputPath (not suitable for runbook context)
     $ualParams = @{
-        Zone = $Zone
+        Zone         = $Zone
+        DataverseUrl = $DataverseUrl
     }
 
     if ($TenantId) { $ualParams.TenantId = $TenantId }
     if ($ClientId) { $ualParams.ClientId = $ClientId }
     if ($CertificateThumbprint) { $ualParams.CertificateThumbprint = $CertificateThumbprint }
     if ($SkipCanaryValidation) { $ualParams.SkipCanaryValidation = $true }
-    if ($CanaryWaitSeconds) { $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds }
+    if ($PSBoundParameters.ContainsKey('CanaryWaitSeconds')) {
+        $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds
+    }
+    if (-not [string]::IsNullOrWhiteSpace($CanaryMailboxIdentity)) { $ualParams.CanaryMailboxIdentity = $CanaryMailboxIdentity }
 
     Write-Verbose "Invoking Invoke-TenantAuditValidation with parameters: $($ualParams.Keys -join ', ')"
 
@@ -173,25 +197,22 @@ try {
     Write-Verbose "Validation complete. Overall status: $($validationResults.OverallStatus)"
 
     # Acquire Dataverse token for drift detection
-    Write-Verbose "Acquiring Dataverse token for drift detection"
+    Write-Verbose "Acquiring Dataverse token for drift detection via Connect-PowerPlatform"
 
-    # Import MSAL.PS module
-    Import-Module MSAL.PS -ErrorAction Stop
+    if (-not $TenantId -or -not $ClientId -or -not $CertificateThumbprint) {
+        throw "TenantId, ClientId, and CertificateThumbprint are required for Dataverse drift detection in this runbook."
+    }
 
-    # Get certificate for authentication
-    $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
-    Write-Verbose "Certificate found: $($cert.Subject)"
-
-    # Acquire token
-    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-    $tokenResult = Get-MsalToken `
-        -ClientId $ClientId `
-        -ClientCertificate $cert `
+    $authResult = Connect-PowerPlatform `
         -TenantId $TenantId `
-        -Scopes $dataverseScope `
-        -ErrorAction Stop
+        -DataverseUrl $DataverseUrl `
+        -ClientId $ClientId `
+        -CertificateThumbprint $CertificateThumbprint
 
-    $dataverseToken = $tokenResult.AccessToken
+    $dataverseToken = $authResult.DataverseAccessToken
+    if (-not $dataverseToken) {
+        throw "Failed to acquire Dataverse access token for drift detection."
+    }
     Write-Verbose "Dataverse token acquired"
 
     # Run overall drift detection
@@ -200,7 +221,8 @@ try {
         -DataverseUrl $DataverseUrl `
         -DataverseToken $dataverseToken `
         -Scope "Tenant" `
-        -CurrentStatus $validationResults.OverallStatus
+        -CurrentStatus $validationResults.OverallStatus `
+        -CurrentRunId $validationResults.RunId
 
     Write-Verbose "Overall drift detected: $($overallDrift.DriftDetected)"
 
@@ -227,6 +249,7 @@ try {
                 -DataverseToken $dataverseToken `
                 -Scope "Tenant" `
                 -CurrentStatus $validatorStatus `
+                -CurrentRunId $validationResults.RunId `
                 -ValidationType $validatorName
 
             $perValidatorDrift[$validatorName] = $validatorDrift
@@ -237,6 +260,7 @@ try {
     # Build output object with drift info and alert flags
     $output = [PSCustomObject]@{
         RunType           = "TenantValidation"
+        RunId             = $validationResults.RunId
         Timestamp         = $validationResults.Timestamp
         Zone              = $validationResults.Zone
         OverallStatus     = $validationResults.OverallStatus

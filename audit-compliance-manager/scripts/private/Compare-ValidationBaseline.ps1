@@ -45,6 +45,10 @@
 .PARAMETER EnvironmentId
     Power Platform environment GUID. Required when Scope is "Environment".
 
+.PARAMETER CurrentRunId
+    Optional current validation run GUID. When provided, the baseline query excludes
+    records with this run ID to avoid selecting the current in-flight run as baseline.
+
 .EXAMPLE
     $drift = Compare-ValidationBaseline `
         -DataverseUrl "https://governance.crm.dynamics.com" `
@@ -78,7 +82,7 @@
     - IsFirstRun: Boolean indicating if no baseline exists
 
 .NOTES
-    Version: 1.0.2
+    Version: 1.0.4
 
     Dataverse schema reference:
     - Table: fsi_auditvalidationhistory
@@ -86,6 +90,8 @@
     - Scope field: fsi_scope (option set: Tenant=100000000, Environment=100000001)
     - ValidationType field: fsi_validationtype (text)
     - EnvironmentId field: fsi_environmentid (text)
+    - fsi_severity values from Dataverse may deserialize as Int64 or numeric strings;
+      normalize to Int32 before hashtable key lookup and severity comparison.
 
     On error, this function fails open (returns DriftDetected=$true) to avoid
     silently suppressing alerts when baseline query fails.
@@ -93,17 +99,21 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseUrl,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseToken,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Tenant", "Environment")]
     [string]$Scope,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Passed", "Warning", "GracePeriod", "Failed", "Error")]
     [string]$CurrentStatus,
 
@@ -111,7 +121,10 @@ param(
     [string]$ValidationType,
 
     [Parameter(Mandatory = $false)]
-    [string]$EnvironmentId
+    [string]$EnvironmentId,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CurrentRunId
 )
 
 $ErrorActionPreference = "Stop"
@@ -137,7 +150,10 @@ function Compare-ValidationBaseline {
         [string]$ValidationType,
 
         [Parameter(Mandatory = $false)]
-        [string]$EnvironmentId
+        [string]$EnvironmentId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CurrentRunId
     )
 
     try {
@@ -186,6 +202,11 @@ function Compare-ValidationBaseline {
             $filter += " and fsi_validationtype eq '$ValidationType'"
         }
 
+        if (-not [string]::IsNullOrWhiteSpace($CurrentRunId)) {
+            $escapedCurrentRunId = $CurrentRunId.Replace("'", "''")
+            $filter += " and fsi_runid ne '$escapedCurrentRunId'"
+        }
+
         # Construct API URL with OData query
         $apiUrl = "$DataverseUrl/api/data/v9.2/fsi_auditvalidationhistories"
         $apiUrl += "?`$filter=$filter"
@@ -231,7 +252,7 @@ function Compare-ValidationBaseline {
         }
         else {
             # Baseline exists - compare severities
-            $baselineSeverity = $baseline.fsi_severity
+            $baselineSeverityRaw = $baseline.fsi_severity
             $baselineDate = if ($baseline.fsi_timestamp) {
                 $baseline.fsi_timestamp
             }
@@ -250,6 +271,18 @@ function Compare-ValidationBaseline {
                 100000003 = "Failed"
                 100000004 = "Error"
             }
+
+            [int]$baselineSeverity = 0
+            if (-not [int]::TryParse([string]$baselineSeverityRaw, [ref]$baselineSeverity)) {
+                $rawType = if ($null -eq $baselineSeverityRaw) { 'null' } else { $baselineSeverityRaw.GetType().FullName }
+                $rawValue = if ($null -eq $baselineSeverityRaw) { '<null>' } else { [string]$baselineSeverityRaw }
+                throw "Baseline severity '$rawValue' ($rawType) is not a valid integer option-set value."
+            }
+
+            if (-not $reverseSeverityMap.ContainsKey($baselineSeverity)) {
+                throw "Baseline severity '$baselineSeverity' is not a recognized fsi_severity option-set value."
+            }
+
             $baselineStatus = $reverseSeverityMap[$baselineSeverity]
 
             # Drift detected if current severity is worse (higher number) than baseline
@@ -290,6 +323,16 @@ function Compare-ValidationBaseline {
 
 # Execute function if script is run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
+    $missingDirectParams = @()
+    if ([string]::IsNullOrWhiteSpace($DataverseUrl)) { $missingDirectParams += 'DataverseUrl' }
+    if ([string]::IsNullOrWhiteSpace($DataverseToken)) { $missingDirectParams += 'DataverseToken' }
+    if ([string]::IsNullOrWhiteSpace($Scope)) { $missingDirectParams += 'Scope' }
+    if ([string]::IsNullOrWhiteSpace($CurrentStatus)) { $missingDirectParams += 'CurrentStatus' }
+
+    if ($missingDirectParams.Count -gt 0) {
+        throw "Missing required parameter(s) for direct invocation: $($missingDirectParams -join ', '). Dot-source this helper to load the Compare-ValidationBaseline function, or pass the required parameters when invoking the script directly."
+    }
+
     $result = Compare-ValidationBaseline @PSBoundParameters
     return $result
 }

@@ -7,20 +7,43 @@ Includes retry logic and dry-run mode for safe deployments.
 """
 
 import argparse
+import copy
 import os
+import re
 import sys
+import time
+import uuid
 from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 import msal
 import requests
 from requests.adapters import HTTPAdapter, Retry
+from solution_context_bootstrap import (
+    DEFAULT_SOLUTION_BOOTSTRAP_CONFIG,
+    SolutionContextBootstrapper,
+)
+
+_OPTIONSET_NAME_BIND_RE = re.compile(
+    r"^/GlobalOptionSetDefinitions\(Name='([^']+)'\)$"
+)
+_OPTIONSET_ID_BIND_RE = re.compile(
+    r"^/GlobalOptionSetDefinitions\(([^)]+)\)$"
+)
 
 
 class ACVClient:
     """Dataverse Web API client with MSAL authentication and retry logic."""
 
     API_VERSION = "v9.2"
+    METADATA_TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
+    DEFAULT_METADATA_TIMEOUT_SECONDS = 180.0
+    DEFAULT_METADATA_POLL_INTERVAL_SECONDS = 5.0
+
+    @staticmethod
+    def _escape_odata_string_literal(value: str) -> str:
+        """Escape single quotes for OData string literals."""
+        return value.replace("'", "''")
 
     def __init__(
         self,
@@ -86,6 +109,18 @@ class ACVClient:
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
+        self._metadata_session = requests.Session()
+        metadata_adapter = HTTPAdapter(
+            max_retries=Retry(total=0, connect=0, read=0, redirect=0, status=0)
+        )
+        self._metadata_session.mount("https://", metadata_adapter)
+        self._solution_context_bootstrapper = SolutionContextBootstrapper(
+            session=self._session,
+            api_url=self.api_url,
+            get_headers=self._get_headers,
+            solution_name=self.solution_name,
+            config=DEFAULT_SOLUTION_BOOTSTRAP_CONFIG,
+        )
 
         if interactive:
             # Public client for interactive auth
@@ -145,6 +180,8 @@ class ACVClient:
 
     def _get_write_headers(self) -> dict:
         """Get HTTP headers for write operations, including solution context."""
+        if self.solution_name:
+            self._solution_context_bootstrapper.ensure()
         headers = self._get_headers()
         if self.solution_name:
             headers["MSCRM.SolutionUniqueName"] = self.solution_name
@@ -310,6 +347,51 @@ class ACVClient:
                 return get_response.json()
         return {"LogicalName": entity_metadata.get("SchemaName", "").lower()}
 
+    def _resolve_global_optionset_binding(self, attribute_metadata: dict) -> dict:
+        """Resolve a Name-keyed global choice binding to a MetadataId binding."""
+        bind_value = attribute_metadata.get("GlobalOptionSet@odata.bind", "")
+        if not bind_value:
+            return attribute_metadata
+
+        name_match = _OPTIONSET_NAME_BIND_RE.match(bind_value)
+        if name_match is None:
+            id_match = _OPTIONSET_ID_BIND_RE.match(bind_value)
+            if id_match is None:
+                raise RuntimeError(
+                    f"Unsupported GlobalOptionSet@odata.bind format: {bind_value!r}."
+                )
+            try:
+                uuid.UUID(id_match.group(1))
+            except ValueError as exc:
+                raise RuntimeError(
+                    f"GlobalOptionSet@odata.bind contains an invalid MetadataId: "
+                    f"{bind_value!r}."
+                ) from exc
+            return attribute_metadata
+
+        optionset_name = name_match.group(1)
+        optionset = self.get_global_optionset(optionset_name)
+        if optionset is None:
+            raise RuntimeError(
+                f"GlobalOptionSet '{optionset_name}' not found in Dataverse; "
+                "cannot resolve Name binding to MetadataId for create_attribute POST. "
+                "Deploy the global option set before deploying the column."
+            )
+
+        raw_id = optionset.get("MetadataId", "")
+        try:
+            normalized = str(uuid.UUID(str(raw_id)))
+        except (ValueError, AttributeError) as exc:
+            raise RuntimeError(
+                f"GlobalOptionSet '{optionset_name}' returned MetadataId={raw_id!r} "
+                "which is not a valid UUID; cannot rewrite GlobalOptionSet@odata.bind. "
+                "Verify the option set exists and has a valid MetadataId in the target environment."
+            ) from exc
+
+        payload = copy.deepcopy(attribute_metadata)
+        payload["GlobalOptionSet@odata.bind"] = f"/GlobalOptionSetDefinitions({normalized})"
+        return payload
+
     def create_attribute(self, entity_logical_name: str, attribute_metadata: dict) -> dict:
         """
         Create a new attribute (column) on an entity.
@@ -326,13 +408,14 @@ class ACVClient:
             print(f"  [DRY RUN] Would create column: {entity_logical_name}.{col_name}")
             return attribute_metadata
 
+        payload = self._resolve_global_optionset_binding(attribute_metadata)
         response = self._session.post(
             urljoin(
                 self.api_url,
                 f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes",
             ),
             headers=self._get_write_headers(),
-            json=attribute_metadata,
+            json=payload,
         )
         response.raise_for_status()
         return attribute_metadata
@@ -350,23 +433,135 @@ class ACVClient:
         Returns:
             Attribute metadata or None if not found
         """
-        try:
-            response = self._session.get(
-                urljoin(
-                    self.api_url,
-                    f"EntityDefinitions(LogicalName='{entity_logical_name}')"
-                    f"/Attributes(LogicalName='{attribute_logical_name}')",
-                ),
-                headers=self._get_headers(),
-            )
+        metadata, _status = self._query_attribute_metadata_collection(
+            entity_logical_name,
+            attribute_logical_name,
+        )
+        return metadata
+
+    def list_attribute_logical_names(
+        self,
+        entity_logical_name: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> set[str]:
+        """List existing attribute logical names for an entity with bounded retries."""
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be greater than 0")
+        if poll_interval_seconds < 0:
+            raise ValueError("poll_interval_seconds must be >= 0")
+
+        params = {"$select": "LogicalName"}
+        url = urljoin(
+            self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes"
+        )
+        headers = self._get_headers()
+        first_request = True
+        attribute_names: set[str] = set()
+        deadline = time.monotonic() + timeout_seconds
+        attempts = 0
+        last_status: Optional[int] = None
+        last_error = "no response received"
+        permanent_status_codes = {400, 401, 403}
+
+        while url:
+            payload: Optional[dict] = None
+            while payload is None:
+                attempts += 1
+                try:
+                    if first_request:
+                        response = self._metadata_session.get(url, headers=headers, params=params)
+                    else:
+                        response = self._metadata_session.get(url, headers=headers)
+
+                    last_status = response.status_code
+                    if response.status_code in permanent_status_codes:
+                        raise RuntimeError(
+                            "Attribute inventory query failed for entity "
+                            f"'{entity_logical_name}' with permanent HTTP {response.status_code}."
+                        )
+                    if (
+                        response.status_code == 404
+                        or response.status_code in self.METADATA_TRANSIENT_STATUS_CODES
+                    ):
+                        last_error = f"HTTP {response.status_code}"
+                    else:
+                        response.raise_for_status()
+                        payload = response.json()
+                except requests.HTTPError as exc:
+                    status = exc.response.status_code if exc.response is not None else None
+                    if status in permanent_status_codes:
+                        raise RuntimeError(
+                            "Attribute inventory query failed for entity "
+                            f"'{entity_logical_name}' with permanent HTTP {status}."
+                        ) from exc
+                    if status == 404 or status in self.METADATA_TRANSIENT_STATUS_CODES:
+                        last_status = status
+                        last_error = f"HTTP {status}"
+                    else:
+                        raise RuntimeError(
+                            "Attribute inventory query failed for entity "
+                            f"'{entity_logical_name}': {exc}"
+                        ) from exc
+                except requests.RequestException as exc:
+                    last_error = f"{exc.__class__.__name__}: {exc}"
+
+                if payload is not None:
+                    break
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(
+                        f"Timed out after {timeout_seconds:.1f}s waiting for attribute inventory "
+                        f"metadata on entity '{entity_logical_name}' "
+                        f"(last_status={last_status}, attempts={attempts}, "
+                        f"last_error={last_error})."
+                    )
+                if poll_interval_seconds > 0:
+                    time.sleep(poll_interval_seconds)
+
+            for value in payload.get("value", []):
+                logical_name = value.get("LogicalName")
+                if logical_name:
+                    attribute_names.add(str(logical_name).lower())
+            url = payload.get("@odata.nextLink")
+            first_request = False
+
+        return attribute_names
+
+    def _query_attribute_metadata_collection(
+        self,
+        entity_logical_name: str,
+        attribute_logical_name: str,
+    ) -> tuple[Optional[dict], Optional[int]]:
+        """Query attribute metadata collection and return first match + last status."""
+        escaped_name = self._escape_odata_string_literal(attribute_logical_name)
+        params = {
+            "$select": "LogicalName,MetadataId",
+            "$filter": f"LogicalName eq '{escaped_name}'",
+        }
+        url = urljoin(
+            self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes"
+        )
+        headers = self._get_headers()
+        first_request = True
+        last_status: Optional[int] = None
+
+        while url:
+            if first_request:
+                response = self._session.get(url, headers=headers, params=params)
+                first_request = False
+            else:
+                response = self._session.get(url, headers=headers)
+            last_status = response.status_code
             if response.status_code == 404:
-                return None
+                return None, response.status_code
             response.raise_for_status()
-            return response.json()
-        except requests.HTTPError as e:
-            if e.response.status_code == 404:
-                return None
-            raise
+            payload = response.json()
+            values = payload.get("value", [])
+            if values:
+                return values[0], response.status_code
+            url = payload.get("@odata.nextLink")
+
+        return None, last_status
 
     def create_global_optionset(self, optionset_metadata: dict) -> dict:
         """
@@ -390,6 +585,146 @@ class ACVClient:
         )
         response.raise_for_status()
         return optionset_metadata
+
+    def publish_all_customizations(self) -> None:
+        """Publish Dataverse customizations (solution header intentionally omitted)."""
+        if self.dry_run:
+            print("  [DRY RUN] Would publish all customizations")
+            return
+
+        response = self._session.post(
+            urljoin(self.api_url, "PublishAllXml"),
+            headers=self._get_headers(),
+            json={},
+        )
+        response.raise_for_status()
+
+    def _wait_for_metadata_readable(
+        self,
+        metadata_url: str,
+        description: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> dict:
+        """Poll metadata endpoint until readable, tolerating transient Dataverse failures."""
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be greater than 0")
+        if poll_interval_seconds < 0:
+            raise ValueError("poll_interval_seconds must be >= 0")
+
+        deadline = time.monotonic() + timeout_seconds
+        attempts = 0
+        last_status: Optional[int] = None
+        last_error = "no response received"
+
+        while True:
+            attempts += 1
+            try:
+                response = self._session.get(metadata_url, headers=self._get_headers())
+                last_status = response.status_code
+                if response.status_code == 404:
+                    last_error = "HTTP 404"
+                elif response.status_code in self.METADATA_TRANSIENT_STATUS_CODES:
+                    last_error = f"HTTP {response.status_code}"
+                else:
+                    response.raise_for_status()
+                    return response.json()
+            except requests.HTTPError as exc:
+                status = exc.response.status_code if exc.response is not None else None
+                if status in self.METADATA_TRANSIENT_STATUS_CODES:
+                    last_status = status
+                    last_error = f"HTTP {status}"
+                else:
+                    raise RuntimeError(
+                        f"Metadata readiness check failed for {description}: {exc}"
+                    ) from exc
+            except requests.RequestException as exc:
+                last_error = f"{exc.__class__.__name__}: {exc}"
+
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"Timed out after {timeout_seconds:.1f}s waiting for {description} "
+                    f"metadata readiness (last_status={last_status}, attempts={attempts}, "
+                    f"last_error={last_error})."
+                )
+
+            if poll_interval_seconds > 0:
+                time.sleep(poll_interval_seconds)
+
+    def wait_for_entity_metadata_readiness(
+        self,
+        logical_name: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> None:
+        """Wait until entity metadata and the entity Attributes collection are readable."""
+        self._wait_for_metadata_readable(
+            urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')"),
+            f"entity '{logical_name}'",
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        self._wait_for_metadata_readable(
+            urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')/Attributes"),
+            f"attribute collection for entity '{logical_name}'",
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+
+    def wait_for_attribute_metadata_readiness(
+        self,
+        entity_logical_name: str,
+        attribute_logical_name: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> dict:
+        """Wait until the specific attribute metadata is queryable by collection filter."""
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be greater than 0")
+        if poll_interval_seconds < 0:
+            raise ValueError("poll_interval_seconds must be >= 0")
+
+        deadline = time.monotonic() + timeout_seconds
+        attempts = 0
+        last_status: Optional[int] = None
+        last_error = "no response received"
+
+        while True:
+            attempts += 1
+            try:
+                metadata, status = self._query_attribute_metadata_collection(
+                    entity_logical_name,
+                    attribute_logical_name,
+                )
+                last_status = status
+                if metadata is not None:
+                    return metadata
+                last_error = (
+                    f"HTTP {status}" if status == 404 else "HTTP 200 (empty result set)"
+                )
+            except requests.HTTPError as exc:
+                status = exc.response.status_code if exc.response is not None else None
+                if status in self.METADATA_TRANSIENT_STATUS_CODES:
+                    last_status = status
+                    last_error = f"HTTP {status}"
+                else:
+                    raise RuntimeError(
+                        "Metadata readiness check failed for attribute "
+                        f"'{attribute_logical_name}' on entity '{entity_logical_name}': {exc}"
+                    ) from exc
+            except requests.RequestException as exc:
+                last_error = f"{exc.__class__.__name__}: {exc}"
+
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"Timed out after {timeout_seconds:.1f}s waiting for attribute "
+                    f"'{attribute_logical_name}' on entity '{entity_logical_name}' "
+                    f"metadata readiness (last_status={last_status}, attempts={attempts}, "
+                    f"last_error={last_error})."
+                )
+
+            if poll_interval_seconds > 0:
+                time.sleep(poll_interval_seconds)
 
     def get_global_optionset(self, name: str) -> Optional[dict]:
         """

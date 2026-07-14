@@ -1,6 +1,6 @@
 ﻿#Requires -Version 7.2
-#Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0.180' }
-#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0.0' }
+#Requires -Modules @{ ModuleName = 'Microsoft.PowerApps.Administration.PowerShell'; ModuleVersion = '2.0.180'; MaximumVersion = '2.0.180' }
+#Requires -Modules @{ ModuleName = 'ExchangeOnlineManagement'; ModuleVersion = '3.0.0'; MaximumVersion = '3.9.2' }
 
 <#
 .SYNOPSIS
@@ -45,7 +45,7 @@
 .NOTES
     Version: 1.0.4
     Requires: PowerShell 7.2+, Azure Automation with System-Assigned MI
-    Modules: Microsoft.PowerApps.Administration.PowerShell 2.0+, ExchangeOnlineManagement 3.0+
+    Modules: Microsoft.PowerApps.Administration.PowerShell 2.0.180 (ACM known-good pin; app-secret Add-PowerAppsAccount validation on 2.0.217 failed with AADSTS7000215), ExchangeOnlineManagement 3.0.0-3.9.2
     ALCA Solution: Audit Logging Compliance Automation
 
 .EXAMPLE

@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "audit-compliance-manager",
   "solutionName": "Audit Compliance Manager",
-  "solutionVersion": "1.0.5",
+  "solutionVersion": "1.0.6",
   "status": "live",
   "controls": [
     {

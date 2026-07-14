@@ -103,30 +103,38 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseUrl,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$AccessToken,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$RunId,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Tenant", "Environment")]
     [string]$Scope,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Passed", "Warning", "GracePeriod", "Failed", "Error")]
     [string]$Severity,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$ValidationType,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$RawValue,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Write-ValidationResult function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$Reason,
 
     [Parameter(Mandatory = $false)]
@@ -305,6 +313,20 @@ function Write-ValidationResult {
 
 # Execute function if script is run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
+    $missingDirectParams = @()
+    if ([string]::IsNullOrWhiteSpace($DataverseUrl)) { $missingDirectParams += 'DataverseUrl' }
+    if ([string]::IsNullOrWhiteSpace($AccessToken)) { $missingDirectParams += 'AccessToken' }
+    if ([string]::IsNullOrWhiteSpace($RunId)) { $missingDirectParams += 'RunId' }
+    if ([string]::IsNullOrWhiteSpace($Scope)) { $missingDirectParams += 'Scope' }
+    if ([string]::IsNullOrWhiteSpace($Severity)) { $missingDirectParams += 'Severity' }
+    if ([string]::IsNullOrWhiteSpace($ValidationType)) { $missingDirectParams += 'ValidationType' }
+    if ([string]::IsNullOrWhiteSpace($RawValue)) { $missingDirectParams += 'RawValue' }
+    if ([string]::IsNullOrWhiteSpace($Reason)) { $missingDirectParams += 'Reason' }
+
+    if ($missingDirectParams.Count -gt 0) {
+        throw "Missing required parameter(s) for direct invocation: $($missingDirectParams -join ', '). Dot-source this helper to load the Write-ValidationResult function, or pass the required parameters when invoking the script directly."
+    }
+
     $recordId = Write-ValidationResult @PSBoundParameters
     Write-Host "Record created: $recordId" -ForegroundColor Green
     return $recordId

@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Audit Compliance Manager (ACM)
 
-> **Version:** v1.0.5
+> **Version:** v1.0.6
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
@@ -52,19 +52,24 @@ pip install -r scripts/requirements.txt
 
 | Component | Version |
 |-----------|---------|
-| PowerShell | 7.2+ |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ |
-| ExchangeOnlineManagement | 3.0+ |
-| Azure Automation Runtime | 7.2 (for ALCA remediation runbooks) |
-| MSAL.PS | 4.37.0 (pinned — see deprecation note below) |
+| PowerShell | 7.2+ (local execution) |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.180 (pinned) |
+| ExchangeOnlineManagement | 3.0.0–3.9.2 |
+| Az.Accounts | 5.0+ |
+| Azure Automation Runtime | 7.4 |
 
-> **MSAL.PS deprecation notice:** Microsoft has archived the `MSAL.PS` PowerShell
-> module. It still works for current Dataverse token acquisition but is no longer
-> receiving updates or security patches. Pin to the known-good version `4.37.0`
-> for now; track migration to `Az.Accounts` (`Get-AzAccessToken`) or
-> `Microsoft.Identity.Client` for a future minor release. Where Managed Identity
-> is available (Azure Automation runbooks), the `AuditComplianceHelpers.psm1`
-> Managed Identity path already bypasses MSAL.PS.
+> **ExchangeOnlineManagement compatibility note:** ExchangeOnlineManagement
+> `3.10.0` raised the PowerShell 7 minimum to `7.6`. Azure Automation currently
+> supports PowerShell `7.4` for this solution's runbook path. ACM therefore pins
+> ExchangeOnlineManagement to `3.0.0–3.9.2` for now and tracks the `3.10+`
+> upgrade as a monitor/evaluate item for a future runtime refresh.
+>
+> **Power Apps module compatibility note:** ACM currently pins
+> `Microsoft.PowerApps.Administration.PowerShell` to `2.0.180` as the known-good
+> version for the validated legacy app-secret fallback path. In ACM lab evidence,
+> `2.0.217` failed `Add-PowerAppsAccount` on that app-secret path with
+> `AADSTS7000215`, while the same short-lived secret succeeded on `2.0.180`.
+> Certificate-based validation on `2.0.217` succeeded in the same evidence set.
 
 ## What This Solution Does
 
@@ -173,12 +178,19 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
    - Mail.Send (Microsoft Graph API permission — admin consent required)
    - Dataverse Application User with System Administrator role (per environment)
 3. **Import PowerShell modules** into the Automation Account:
-   - `Microsoft.PowerApps.Administration.PowerShell` (2.0+)
-   - `ExchangeOnlineManagement` (3.0+)
+   - `Microsoft.PowerApps.Administration.PowerShell` (2.0.180 pinned known-good for ACM app-secret fallback)
+   - `ExchangeOnlineManagement` (3.0.0-3.9.2 for the current PowerShell 7.4 runtime path)
    - `AuditComplianceHelpers` (custom module — ZIP and upload `.psm1` + `.psd1`)
 4. **Create and publish runbooks** from the ALCA scripts (see [docs/deployment-guide.md](./docs/deployment-guide.md) for detailed steps)
 
 > **Note:** ALCA scripts use Managed Identity authentication automatically when running inside Azure Automation. No certificates or client secrets are needed for the ALCA detection/remediation runbooks.
+
+### Optional integration: Agent Observability Foundation (AOF)
+
+ACM does not require `agent-observability-foundation` for deployment, validation,
+or evidence export. If your operating model already uses AOF, you can optionally
+join ACM evidence with AOF telemetry for broader operational reporting. This is
+an integration choice, not a runtime prerequisite.
 
 ### Step 5: Run Compliance Detection (ALCA)
 
@@ -228,7 +240,7 @@ Zone classification determines minimum audit retention thresholds:
 | Zone 2 | 365 days | Team Collaboration | Department applications, team agents |
 | Zone 3 | 730 days (target) | Enterprise Managed | Production agents, customer-facing AI |
 
-> **Retention reality check:** The thresholds above are FSI Agent Governance Framework *targets*. Microsoft Purview Audit (Standard) retains audit records for 180 days for records generated on or after 2023-10-17 (older records kept the prior 90-day lifetime). Audit Premium/E5 keeps Microsoft Entra ID, Exchange, OneDrive, and SharePoint audit records for 1 year by default and supports custom retention policies; 10-year retention requires the add-on license. This solution validates configured retention against zone thresholds and flags shortfalls — it does not change license-bounded retention.
+> **Retention reality check:** The thresholds above are FSI Agent Governance Framework *targets*. Microsoft Purview Audit (Standard) retains audit records for 180 days for records generated on or after 2023-10-17 (older records kept the prior 90-day lifetime). Audit Premium/E5 keeps Microsoft Entra ID, Exchange, OneDrive, and SharePoint audit records for 1 year by default and supports custom retention policies; 10-year retention requires the add-on license. Audit records generated by non-user entities (for example, service principal actions, system events, and application activities) are retained for a fixed one-year period and custom retention policies don't apply to those records. This solution validates configured retention against zone thresholds and flags shortfalls — it does not change license-bounded retention.
 
 Zone thresholds are configurable via Dataverse environment variables:
 - `fsi_ACV_Zone1RetentionDays` (default: 180)
@@ -312,7 +324,7 @@ Microsoft has expanded the [Power Platform REST API](https://learn.microsoft.com
 ### Audit log access: Exchange Online cmdlet vs Microsoft Graph Audit Query API
 
 This solution reads the unified audit log through Exchange Online PowerShell
-([`Search-UnifiedAuditLog`](https://learn.microsoft.com/powershell/module/exchangepowershell/search-unifiedauditlog))
+([`Search-UnifiedAuditLog`](https://learn.microsoft.com/en-us/powershell/module/exchangepowershell/search-unifiedauditlog?view=exchange-ps))
 and checks enablement with
 [`Get-AdminAuditLogConfig`](https://learn.microsoft.com/purview/audit-log-enable-disable).
 Two related platform changes are worth tracking:
@@ -321,7 +333,7 @@ Two related platform changes are worth tracking:
   retirement of `Search-MailboxAuditLog` and `New-MailboxAuditLogSearch`. This
   solution does **not** use those cmdlets — `Search-UnifiedAuditLog` is the
   supported replacement and remains current. See the
-  [Search-UnifiedAuditLog reference](https://learn.microsoft.com/powershell/module/exchangepowershell/search-unifiedauditlog).
+  [Search-UnifiedAuditLog reference](https://learn.microsoft.com/en-us/powershell/module/exchangepowershell/search-unifiedauditlog?view=exchange-ps).
 - **The Microsoft Graph Audit Query API is the modern programmatic path.** The
   [`auditLogQuery` API](https://learn.microsoft.com/graph/api/resources/security-auditlogquery)
   (under `/security/auditLog/queries`) is generally available and offers

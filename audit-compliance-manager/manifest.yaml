@@ -1,7 +1,7 @@
 id: audit-compliance-manager
 name: Audit Compliance Manager
 description: Unified audit compliance solution for Microsoft 365 and Power Platform environments. Consolidates the ACV and ALCA capabilities into one solution that validates audit configurations, detects gaps, and remediates non-compliant environments.
-version: 1.0.5
+version: 1.0.6
 status: live
 domain: compliance-audit
 tier: '2'
@@ -12,8 +12,6 @@ prerequisites:
   power-platform-admin: "Power Platform admin tenant role and Dataverse System Administrator access in the target environment with the fsi publisher prefix."
   compliance-admin: "Purview Compliance Admin role for audit log review, retention policy checks, and evidence export."
 verification: "Verify rows land in AuditValidationHistory and EnvironmentRegistry in Dataverse after a validation run, and confirm the audit dashboard reflects the latest tenant or environment status."
-dependencies:
-- agent-observability-foundation
 
 # zones/dataClassification CONFIRMED 2026-Q2 (issue #37):
 #   audit governance; team + enterprise scope

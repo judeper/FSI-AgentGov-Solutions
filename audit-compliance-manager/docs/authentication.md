@@ -168,6 +168,20 @@ python scripts/deploy.py \
 
 > **Security Warning:** Never commit client secrets to source control. Client-secret examples are for development only; use managed identity or certificate-based app-only authentication for production deployments.
 
+### 4.3 Power Apps Module Compatibility Pin (PowerShell app-secret fallback path)
+
+For ACM PowerShell paths that still use legacy dev-only app-secret fallback
+(`Add-PowerAppsAccount`), install `Microsoft.PowerApps.Administration.PowerShell`
+with `RequiredVersion 2.0.180`:
+
+```powershell
+Install-Module Microsoft.PowerApps.Administration.PowerShell -RequiredVersion 2.0.180 -Scope CurrentUser
+```
+
+ACM evidence showed `2.0.217` failed the validated app-secret path with
+`AADSTS7000215`, while the same short-lived secret succeeded on `2.0.180`.
+Certificate-based validation on `2.0.217` succeeded in the same evidence set.
+
 ## 5. Managed Identity Setup for Azure Automation
 
 The ALCA component (detection and remediation runbooks) uses System-Assigned Managed Identity for authentication. This is the recommended production authentication method because there are no certificates or secrets to manage.

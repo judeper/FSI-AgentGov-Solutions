@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.2
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180"; MaximumVersion="2.0.180" }
 #Requires -Modules Az.Accounts
 
 <#
@@ -53,7 +53,9 @@
 
 .NOTES
     Version: 1.0.2
-    Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
+    Requires Microsoft.PowerApps.Administration.PowerShell module 2.0.180.
+    ACM currently pins to 2.0.180 as known-good for the legacy app-secret fallback path:
+    Add-PowerAppsAccount validation on 2.0.217 failed with AADSTS7000215 in ACM evidence.
     Requires Az.Accounts module for Dataverse token acquisition.
 
     IMPORTANT: Power Platform Admin or Entra Global Admin role is required
@@ -74,10 +76,12 @@
 )]
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Connect-PowerPlatform function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$TenantId,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Connect-PowerPlatform function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseUrl,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'ServicePrincipalSecret')]
@@ -301,7 +305,7 @@ function Connect-PowerPlatform {
     catch [System.Management.Automation.CommandNotFoundException] {
         $missingCommand = $_.Exception.Message
         if ($missingCommand -like "*Add-PowerAppsAccount*") {
-            throw "Microsoft.PowerApps.Administration.PowerShell module not found. Install with: Install-Module Microsoft.PowerApps.Administration.PowerShell -MinimumVersion 2.0"
+            throw "Microsoft.PowerApps.Administration.PowerShell module not found. Install with: Install-Module Microsoft.PowerApps.Administration.PowerShell -RequiredVersion 2.0.180"
         }
         elseif ($missingCommand -like "*Get-AzAccessToken*" -or $missingCommand -like "*Connect-AzAccount*") {
             throw "Az.Accounts module not found. Install with: Install-Module Az.Accounts -Scope CurrentUser"
@@ -318,6 +322,14 @@ function Connect-PowerPlatform {
 
 # Execute function if script is run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
+    $missingDirectParams = @()
+    if ([string]::IsNullOrWhiteSpace($TenantId)) { $missingDirectParams += 'TenantId' }
+    if ([string]::IsNullOrWhiteSpace($DataverseUrl)) { $missingDirectParams += 'DataverseUrl' }
+
+    if ($missingDirectParams.Count -gt 0) {
+        throw "Missing required parameter(s) for direct invocation: $($missingDirectParams -join ', '). Dot-source this helper to load the Connect-PowerPlatform function, or pass the required parameters when invoking the script directly."
+    }
+
     $authResult = Connect-PowerPlatform @PSBoundParameters
     return $authResult
 }
