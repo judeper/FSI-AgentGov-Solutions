@@ -89,6 +89,11 @@ class ALCAClient:
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
+        self._metadata_session = requests.Session()
+        metadata_adapter = HTTPAdapter(
+            max_retries=Retry(total=0, connect=0, read=0, redirect=0, status=0)
+        )
+        self._metadata_session.mount("https://", metadata_adapter)
         self._solution_context_bootstrapper = SolutionContextBootstrapper(
             session=self._session,
             api_url=self.api_url,
@@ -247,8 +252,18 @@ class ALCAClient:
         )
         return metadata
 
-    def list_attribute_logical_names(self, entity_logical_name: str) -> set[str]:
-        """List existing attribute logical names for an entity."""
+    def list_attribute_logical_names(
+        self,
+        entity_logical_name: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> set[str]:
+        """List existing attribute logical names for an entity with bounded retries."""
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be greater than 0")
+        if poll_interval_seconds < 0:
+            raise ValueError("poll_interval_seconds must be >= 0")
+
         params = {"$select": "LogicalName"}
         url = urljoin(
             self.api_url, f"EntityDefinitions(LogicalName='{entity_logical_name}')/Attributes"
@@ -256,22 +271,72 @@ class ALCAClient:
         headers = self._get_headers()
         first_request = True
         attribute_names: set[str] = set()
+        deadline = time.monotonic() + timeout_seconds
+        attempts = 0
+        last_status: Optional[int] = None
+        last_error = "no response received"
+        permanent_status_codes = {400, 401, 403}
 
         while url:
-            if first_request:
-                response = self._session.get(url, headers=headers, params=params)
-                first_request = False
-            else:
-                response = self._session.get(url, headers=headers)
-            if response.status_code == 404:
-                return set()
-            response.raise_for_status()
-            payload = response.json()
+            payload: Optional[dict] = None
+            while payload is None:
+                attempts += 1
+                try:
+                    if first_request:
+                        response = self._metadata_session.get(url, headers=headers, params=params)
+                    else:
+                        response = self._metadata_session.get(url, headers=headers)
+
+                    last_status = response.status_code
+                    if response.status_code in permanent_status_codes:
+                        raise RuntimeError(
+                            "Attribute inventory query failed for entity "
+                            f"'{entity_logical_name}' with permanent HTTP {response.status_code}."
+                        )
+                    if (
+                        response.status_code == 404
+                        or response.status_code in self.METADATA_TRANSIENT_STATUS_CODES
+                    ):
+                        last_error = f"HTTP {response.status_code}"
+                    else:
+                        response.raise_for_status()
+                        payload = response.json()
+                except requests.HTTPError as exc:
+                    status = exc.response.status_code if exc.response is not None else None
+                    if status in permanent_status_codes:
+                        raise RuntimeError(
+                            "Attribute inventory query failed for entity "
+                            f"'{entity_logical_name}' with permanent HTTP {status}."
+                        ) from exc
+                    if status == 404 or status in self.METADATA_TRANSIENT_STATUS_CODES:
+                        last_status = status
+                        last_error = f"HTTP {status}"
+                    else:
+                        raise RuntimeError(
+                            "Attribute inventory query failed for entity "
+                            f"'{entity_logical_name}': {exc}"
+                        ) from exc
+                except requests.RequestException as exc:
+                    last_error = f"{exc.__class__.__name__}: {exc}"
+
+                if payload is not None:
+                    break
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(
+                        f"Timed out after {timeout_seconds:.1f}s waiting for attribute inventory "
+                        f"metadata on entity '{entity_logical_name}' "
+                        f"(last_status={last_status}, attempts={attempts}, "
+                        f"last_error={last_error})."
+                    )
+                if poll_interval_seconds > 0:
+                    time.sleep(poll_interval_seconds)
+
             for value in payload.get("value", []):
                 logical_name = value.get("LogicalName")
                 if logical_name:
                     attribute_names.add(str(logical_name).lower())
             url = payload.get("@odata.nextLink")
+            first_request = False
 
         return attribute_names
 

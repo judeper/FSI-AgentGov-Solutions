@@ -70,6 +70,10 @@
     - Observed sequence: table/Attributes readiness returned 200 and existing `fsi_runid` lookup succeeded, but the next missing-column filtered query still hit repeated transient 500s under service-principal auth. A later probe showed the same missing filtered query returning 200, indicating immediate post-publish brittleness rather than a permanent absence/read failure.
     - Disposition: added ACV/ALCA attribute inventory via full Attributes collection (`$select=LogicalName` with `@odata.nextLink` handling) and changed `create_columns` to read existing names once per entity, skip from that set, create missing columns, wait for exact created-column readiness, then update the local name set. Added pytest coverage for single inventory GET usage, pagination, skip/create sequencing, name-set update behavior, ACV/ALCA parity, and regression guard preventing missing-column filtered lookup calls before create.
 
+13. **Live blocker: projected Attributes inventory query itself (`Attributes?$select=LogicalName`) remained transiently unstable immediately after metadata readiness 200s.**
+    - Observed sequence: `wait_for_entity_metadata_readiness` succeeded on unprojected Attributes collection, then projected inventory query returned repeated transient 500s in the same service-principal session before later settling to 200. Equivalent calls with/without `Prefer: odata.include-annotations=*` both returned 200 after settling.
+    - Disposition: moved ACV/ALCA attribute inventory to a bounded metadata-propagation loop owned by `list_attribute_logical_names` (timeout + poll interval constants, retries on 429/500/502/503/504 + propagation 404 + `RequestException`/`RetryError`, immediate 400/401/403 `RuntimeError`, pagination preserved, timeout reporting `last_status`/`attempts`/`last_error`) and routed inventory through a metadata-specific no-retry session to keep total wait bounded without nested adapter backoff inflation. Full canonical rerun remains pending.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -117,6 +121,10 @@
   - `scripts/create_audit_compliance_schema.py` (one-time inventory set + skip/create/update-set flow in `create_columns`)
   - `tests/test_attribute_metadata_collection_lookup.py` (single inventory GET and pagination coverage for ACV/ALCA)
   - `tests/test_metadata_publish_readiness.py` (skip/create ordering, no per-column filtered metadata lookup before create, and in-memory set update behavior for ACV/ALCA)
+- Dataverse projected-attribute inventory reliability fix for service-principal transient propagation:
+  - `scripts/acv_client.py` (`list_attribute_logical_names` now owns bounded metadata retries, permanent-error fail-fast, timeout diagnostics, and metadata-specific no-retry request path)
+  - `scripts/alca_client.py` (same bounded projected inventory behavior + no-retry metadata request path)
+  - `tests/test_attribute_metadata_collection_lookup.py` (transient 500→200 retry, `RetryError`/connection exception retry, permanent 403 fail-fast, timeout diagnostics, pagination retention, ACV/ALCA parity)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`
@@ -161,7 +169,7 @@
 - [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
 - [ ] ACV and ALCA global option-set POST calls succeed in canonical Dataverse environment with discriminator-enriched payloads
 - [ ] ACV and ALCA writes succeed in canonical Dataverse environment when `FSIPublisher` and `AuditComplianceManager` are absent initially (bootstrap creates/reuses shell without pre-solution `MSCRM.SolutionUniqueName` headers)
-- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName`, metadata-publication/readiness, filtered Attributes collection-lookup, and one-time full-collection attribute-inventory create-loop fixes (single-table live replay returned HTTP 204; metadata GET 500→manual `PublishAllXml`→200 sequence reproduced; service-principal missing-column filtered probe brittleness reproduced; complete deployment pass still pending)
+- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName`, metadata-publication/readiness, filtered Attributes collection-lookup, one-time full-collection attribute-inventory create-loop, and projected-collection bounded-retry inventory fixes (single-table live replay returned HTTP 204; metadata GET 500→manual `PublishAllXml`→200 sequence reproduced; projected inventory 500 bursts in same service-principal session reproduced; complete deployment pass still pending)
 - [ ] `Search-UnifiedAuditLog` and canary retrieval checks in target tenant
 - [ ] Purview retention validation with actual policy set and licensing context
 - [ ] Portal smoke artifacts (Playwright channel) attached separately from runtime evidence

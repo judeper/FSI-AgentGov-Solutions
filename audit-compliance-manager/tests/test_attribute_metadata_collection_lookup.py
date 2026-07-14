@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import itertools
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,7 +39,7 @@ class FakeResponse:
 class QueueSession:
     """Queue-backed fake session that records request details."""
 
-    def __init__(self, responses: list[FakeResponse]) -> None:
+    def __init__(self, responses: list[Any]) -> None:
         self._responses = responses
         self.calls: list[dict[str, Any]] = []
 
@@ -56,7 +57,32 @@ class QueueSession:
         )
         if not self._responses:
             raise AssertionError(f"Unexpected request: GET {url}")
-        return self._responses.pop(0)
+        item = self._responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+class AlwaysStatusSession:
+    """Session that always returns the same response status."""
+
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+        self.calls: list[dict[str, Any]] = []
+
+    def mount(self, *_args: Any, **_kwargs: Any) -> None:
+        return
+
+    def get(self, url: str, **kwargs: Any) -> FakeResponse:
+        self.calls.append(
+            {
+                "method": "GET",
+                "url": url,
+                "headers": kwargs.get("headers", {}),
+                "params": kwargs.get("params"),
+            }
+        )
+        return FakeResponse(status_code=self.status_code)
 
 
 class _DummyConfidentialClientApplication:
@@ -162,6 +188,90 @@ def test_attribute_inventory_lists_existing_names_with_single_get(
         "/api/data/v9.2/EntityDefinitions(LogicalName='fsi_auditvalidationhistory')/Attributes"
     )
     assert request["params"] == {"$select": "LogicalName"}
+
+
+@pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])
+def test_attribute_inventory_retries_transient_500_until_success(
+    monkeypatch: pytest.MonkeyPatch, module_name: str
+) -> None:
+    session = QueueSession(
+        [
+            FakeResponse(status_code=500),
+            FakeResponse(status_code=500),
+            FakeResponse(
+                status_code=200,
+                json_body={"value": [{"LogicalName": "fsi_runid"}, {"LogicalName": "fsi_scope"}]},
+            ),
+        ]
+    )
+    client = _build_client(monkeypatch, module_name, session)
+
+    names = client.list_attribute_logical_names(
+        "fsi_auditvalidationhistory",
+        timeout_seconds=10.0,
+        poll_interval_seconds=0.0,
+    )
+
+    assert names == {"fsi_runid", "fsi_scope"}
+    assert len(session.calls) == 3
+    assert session.calls[0]["params"] == {"$select": "LogicalName"}
+
+
+@pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])
+def test_attribute_inventory_retries_request_exceptions_until_success(
+    monkeypatch: pytest.MonkeyPatch, module_name: str
+) -> None:
+    session = QueueSession(
+        [
+            requests.exceptions.RetryError("retry exhausted"),
+            requests.exceptions.ConnectionError("connection reset"),
+            FakeResponse(status_code=200, json_body={"value": [{"LogicalName": "fsi_runid"}]}),
+        ]
+    )
+    client = _build_client(monkeypatch, module_name, session)
+
+    names = client.list_attribute_logical_names(
+        "fsi_auditvalidationhistory",
+        timeout_seconds=10.0,
+        poll_interval_seconds=0.0,
+    )
+
+    assert names == {"fsi_runid"}
+    assert len(session.calls) == 3
+
+
+@pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])
+def test_attribute_inventory_fails_fast_on_permanent_403(
+    monkeypatch: pytest.MonkeyPatch, module_name: str
+) -> None:
+    session = QueueSession([FakeResponse(status_code=403)])
+    client = _build_client(monkeypatch, module_name, session)
+
+    with pytest.raises(RuntimeError, match=r"permanent HTTP 403"):
+        client.list_attribute_logical_names(
+            "fsi_auditvalidationhistory",
+            timeout_seconds=10.0,
+            poll_interval_seconds=0.0,
+        )
+
+
+@pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])
+def test_attribute_inventory_times_out_with_last_status(
+    monkeypatch: pytest.MonkeyPatch, module_name: str
+) -> None:
+    session = AlwaysStatusSession(status_code=500)
+    client = _build_client(monkeypatch, module_name, session)
+    module = importlib.import_module(module_name)
+    monotonic_counter = itertools.count()
+    monkeypatch.setattr(module.time, "monotonic", lambda: float(next(monotonic_counter)))
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(TimeoutError, match=r"last_status=500.*attempts=2"):
+        client.list_attribute_logical_names(
+            "fsi_auditvalidationhistory",
+            timeout_seconds=2.0,
+            poll_interval_seconds=0.0,
+        )
 
 
 @pytest.mark.parametrize("module_name", ["acv_client", "alca_client"])

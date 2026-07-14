@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Replaced ACV/ALCA attribute metadata alternate-key lookups (`.../Attributes(LogicalName='...')`) with service-principal-stable collection queries (`.../Attributes?$select=LogicalName,MetadataId&$filter=LogicalName eq '...'`) that return the first match or `None`, preserve headers/pagination semantics, and escape single quotes in logical names for OData safety.
 - Updated metadata-readiness polling and schema idempotency attribute checks to use the same collection-query contract, avoiding retry loops around brittle alternate-key probes while preserving permanent-error surfacing (no retry broadening or masking).
-- Added ACV/ALCA full-collection attribute inventory (`$select=LogicalName` + `@odata.nextLink`) and changed schema column creation to fetch existing logical names once per entity, skip known columns from that set, create only missing columns, wait for created-column readiness, and then update the in-memory name set. This removes one-missing-column-per-query filtered probes during the create loop while preserving `get_attribute_metadata` filtered-query behavior for other callers.
+- Hardened ACV/ALCA `list_attribute_logical_names` with a bounded metadata-propagation loop around the exact projected query (`Attributes?$select=LogicalName`): retries now cover transient 429/500/502/503/504, propagation 404, and connection-level `RequestException` (including `RetryError`), while permanent 400/401/403 fail immediately with precise `RuntimeError`, pagination is preserved after first-page success, and timeout surfaces `last_status`, `attempts`, and `last_error`.
+- Added a metadata-specific no-retry session path for ACV/ALCA attribute inventory so bounded polling owns retry timing directly (avoids compounding nested HTTPAdapter backoff delays), and retained one-time per-table inventory usage in ACV/ALCA `create_columns`.
 
 ## [1.0.6] - 2026-07-14
 
