@@ -1,7 +1,5 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
-# NOTE: MSAL.PS is archived and no longer maintained. Plan migration to
-# Az.Accounts (Get-AzAccessToken) or Microsoft.Identity.Client.
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }, Az.Accounts
 
 <#
 .SYNOPSIS
@@ -80,7 +78,7 @@
     Azure Automation setup:
     1. Import this script as a runbook
     2. Upload certificate to Automation Account > Certificates (or store ClientSecret as encrypted variable)
-    3. Install required modules: Microsoft.PowerApps.Administration.PowerShell, MSAL.PS
+    3. Install required modules: Microsoft.PowerApps.Administration.PowerShell, Az.Accounts
     4. Grant application permissions:
        - Power Platform Admin role
        - Dataverse System Administrator role in central environment
@@ -141,6 +139,7 @@ try {
     $privatePath = Join-Path $PSScriptRoot 'private'
     $requiredHelpers = @(
         'Compare-ValidationBaseline.ps1'
+        'Connect-PowerPlatform.ps1'
     )
     foreach ($helper in $requiredHelpers) {
         $helperPath = Join-Path $privatePath $helper
@@ -163,9 +162,11 @@ try {
     if ($ClientId) { $envParams.ClientId = $ClientId }
     if ($CertificateThumbprint) { $envParams.CertificateThumbprint = $CertificateThumbprint }
 
+    $secureClientSecret = $null
     if ($ClientSecret) {
         # Convert plain text secret to SecureString
-        $envParams.ClientSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+        $secureClientSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+        $envParams.ClientSecret = $secureClientSecret
     }
 
     if ($IncludeTrialDev) { $envParams.IncludeTrialDev = $true }
@@ -180,42 +181,31 @@ try {
     Write-Verbose "Overall status: $($validationResults.OverallStatus)"
 
     # Acquire Dataverse token for drift detection
-    Write-Verbose "Acquiring Dataverse token for drift detection"
-
-    # Import MSAL.PS module
-    Import-Module MSAL.PS -ErrorAction Stop
-
-    # Acquire token based on authentication method
-    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-
-    if ($CertificateThumbprint) {
-        # Certificate authentication
-        $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
-        Write-Verbose "Certificate found: $($cert.Subject)"
-
-        $tokenResult = Get-MsalToken `
-            -ClientId $ClientId `
-            -ClientCertificate $cert `
-            -TenantId $TenantId `
-            -Scopes $dataverseScope `
-            -ErrorAction Stop
+    Write-Verbose "Acquiring Dataverse token for drift detection via Connect-PowerPlatform"
+    if (-not $ClientId) {
+        throw "ClientId is required for Dataverse drift detection in this runbook."
     }
-    elseif ($ClientSecret) {
-        # Client secret authentication
-        $secureSecret = ConvertTo-SecureString $ClientSecret -AsPlainText -Force
+    if (-not $CertificateThumbprint -and -not $secureClientSecret) {
+        throw "Either CertificateThumbprint or ClientSecret must be provided for Dataverse drift detection in this runbook."
+    }
 
-        $tokenResult = Get-MsalToken `
-            -ClientId $ClientId `
-            -ClientSecret $secureSecret `
-            -TenantId $TenantId `
-            -Scopes $dataverseScope `
-            -ErrorAction Stop
+    $authParams = @{
+        TenantId     = $TenantId
+        DataverseUrl = $DataverseUrl
+        ClientId     = $ClientId
+    }
+    if ($CertificateThumbprint) {
+        $authParams.CertificateThumbprint = $CertificateThumbprint
     }
     else {
-        throw "Either CertificateThumbprint or ClientSecret must be provided for authentication."
+        $authParams.ClientSecret = $secureClientSecret
     }
 
-    $dataverseToken = $tokenResult.AccessToken
+    $authResult = Connect-PowerPlatform @authParams
+    $dataverseToken = $authResult.DataverseAccessToken
+    if (-not $dataverseToken) {
+        throw "Failed to acquire Dataverse access token for drift detection."
+    }
     Write-Verbose "Dataverse token acquired"
 
     # Run drift detection for each environment

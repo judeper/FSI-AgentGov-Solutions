@@ -1,7 +1,5 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }, @{ ModuleName="MSAL.PS"; ModuleVersion="4.37.0" }
-# NOTE: MSAL.PS is archived and no longer maintained. Plan migration to
-# Az.Accounts (Get-AzAccessToken) or Microsoft.Identity.Client.
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0"; MaximumVersion="3.9.2" }, Az.Accounts
 
 <#
 .SYNOPSIS
@@ -89,7 +87,7 @@
     Azure Automation setup:
     1. Import this script as a runbook
     2. Upload certificate to Automation Account > Certificates
-    3. Install required modules: ExchangeOnlineManagement, MSAL.PS
+    3. Install required modules: ExchangeOnlineManagement (3.0.0-3.9.2), Az.Accounts
     4. Grant application permissions:
        - Exchange.ManageAsApp
        - SecurityEvents.Read.All (for Purview)
@@ -142,6 +140,7 @@ try {
     $privatePath = Join-Path $PSScriptRoot 'private'
     $requiredHelpers = @(
         'Compare-ValidationBaseline.ps1'
+        'Connect-PowerPlatform.ps1'
     )
     foreach ($helper in $requiredHelpers) {
         $helperPath = Join-Path $privatePath $helper
@@ -173,25 +172,22 @@ try {
     Write-Verbose "Validation complete. Overall status: $($validationResults.OverallStatus)"
 
     # Acquire Dataverse token for drift detection
-    Write-Verbose "Acquiring Dataverse token for drift detection"
+    Write-Verbose "Acquiring Dataverse token for drift detection via Connect-PowerPlatform"
 
-    # Import MSAL.PS module
-    Import-Module MSAL.PS -ErrorAction Stop
+    if (-not $TenantId -or -not $ClientId -or -not $CertificateThumbprint) {
+        throw "TenantId, ClientId, and CertificateThumbprint are required for Dataverse drift detection in this runbook."
+    }
 
-    # Get certificate for authentication
-    $cert = Get-Item "Cert:\*\$CertificateThumbprint" -ErrorAction Stop
-    Write-Verbose "Certificate found: $($cert.Subject)"
-
-    # Acquire token
-    $dataverseScope = "$($DataverseUrl.TrimEnd('/'))/.default"
-    $tokenResult = Get-MsalToken `
-        -ClientId $ClientId `
-        -ClientCertificate $cert `
+    $authResult = Connect-PowerPlatform `
         -TenantId $TenantId `
-        -Scopes $dataverseScope `
-        -ErrorAction Stop
+        -DataverseUrl $DataverseUrl `
+        -ClientId $ClientId `
+        -CertificateThumbprint $CertificateThumbprint
 
-    $dataverseToken = $tokenResult.AccessToken
+    $dataverseToken = $authResult.DataverseAccessToken
+    if (-not $dataverseToken) {
+        throw "Failed to acquire Dataverse access token for drift detection."
+    }
     Write-Verbose "Dataverse token acquired"
 
     # Run overall drift detection

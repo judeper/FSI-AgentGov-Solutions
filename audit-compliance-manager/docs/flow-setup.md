@@ -24,9 +24,9 @@ The validation flows execute Azure Automation runbooks, detect drift from baseli
 Before creating the flows, ensure you have:
 
 - [ ] **Azure subscription** with Automation Account containing:
-  - Start-TenantValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
-  - Start-EnvironmentValidationRunbook.ps1 (imported as PowerShell 7.2 runbook)
-  - Required PowerShell modules installed (MSAL.PS 4.37.0, ExchangeOnlineManagement 3.0+, Microsoft.PowerApps.Administration.PowerShell 2.0.180+)
+  - Start-TenantValidationRunbook.ps1 (imported as PowerShell 7.4 runbook)
+  - Start-EnvironmentValidationRunbook.ps1 (imported as PowerShell 7.4 runbook)
+  - Required PowerShell modules installed (Az.Accounts, ExchangeOnlineManagement 3.0.0-3.9.2, Microsoft.PowerApps.Administration.PowerShell 2.0.180+)
   - Certificate uploaded for service principal authentication
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Microsoft Teams** with Workflows app installed and channel created for alerts
@@ -82,8 +82,8 @@ Navigate to **Automation Account** > **Modules** > **Browse gallery** and import
 
 | Module | Version | Purpose |
 |--------|---------|---------|
-| MSAL.PS | 4.37.0 | Dataverse Web API token acquisition |
-| ExchangeOnlineManagement | 3.0+ | Tenant-level audit configuration checks |
+| Az.Accounts | 5.0+ | Dataverse Web API token acquisition for runbook drift checks |
+| ExchangeOnlineManagement | 3.0.0-3.9.2 | Tenant-level audit configuration checks on current PowerShell 7.4 runtime |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Environment discovery and validation |
 
 **Important:** Wait for each module to finish importing before starting the next one (status = "Available").
@@ -93,7 +93,7 @@ Navigate to **Automation Account** > **Modules** > **Browse gallery** and import
 1. Navigate to **Automation Account** > **Runbooks** > **Import a runbook**
 2. Upload **Start-TenantValidationRunbook.ps1**:
    - Runbook type: **PowerShell**
-   - Runtime version: **7.2**
+   - Runtime version: **7.4**
    - Name: `Start-TenantValidationRunbook`
 3. Click **Import**, then **Publish**
 4. Repeat for **Start-EnvironmentValidationRunbook.ps1**
@@ -563,9 +563,9 @@ This table defines the alert behavior based on validation status:
 
 1. Navigate to **Automation Account** > **Modules**
 2. Check module versions match requirements:
-   - MSAL.PS: 4.37.0
-   - ExchangeOnlineManagement: 3.0+
-   - Microsoft.PowerApps.Administration.PowerShell: 2.0.0
+   - Az.Accounts: 5.0+
+   - ExchangeOnlineManagement: 3.0.0-3.9.2
+   - Microsoft.PowerApps.Administration.PowerShell: 2.0.180+
 3. Update modules if needed (may require reimporting)
 
 ### 3. OData Filter Syntax

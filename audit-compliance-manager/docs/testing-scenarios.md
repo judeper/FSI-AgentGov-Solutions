@@ -273,7 +273,7 @@
 
 **Resolution:**
 1. Verify role: **Entra ID** → **Roles and administrators** → **Exchange Online Admin** → Check MI is listed
-2. Verify module: **Automation Account** → **Modules** → `ExchangeOnlineManagement` Status = Available on Runtime 7.2
+2. Verify module: **Automation Account** → **Modules** → `ExchangeOnlineManagement` Status = Available on Runtime 7.4
 3. Verify TenantDomain parameter matches `yourdomain.onmicrosoft.com` format
 
 ### Issue 3: Dataverse 401 Access Denied
@@ -371,10 +371,10 @@
 **Possible causes:**
 - ExchangeOnlineManagement module not imported
 - Exchange Online not connected before searching
-- Module version incompatible with PowerShell 7.2
+- Module version incompatible with PowerShell 7.4 (for example, ExchangeOnlineManagement 3.10+)
 
 **Resolution:**
-1. Verify module: **Automation Account** → **Modules** → `ExchangeOnlineManagement` Runtime 7.2 → Status: Available
+1. Verify module: **Automation Account** → **Modules** → `ExchangeOnlineManagement` Runtime 7.4 → Status: Available (recommended range: 3.0.0-3.9.2)
 2. Ensure `Connect-ExchangeOnline` succeeds before `Search-UnifiedAuditLog`
 3. Update module to latest version if Status shows issues
 

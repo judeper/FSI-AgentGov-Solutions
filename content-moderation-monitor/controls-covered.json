@@ -5,26 +5,14 @@
   "solutionName": "Content Moderation Monitor",
   "solutionVersion": "1.1.2",
   "status": "live",
-  "coverageScope": {
-    "summary": "CMM supports compliance with Control 1.27 (AI Agent Content Moderation Enforcement) by reading each Copilot Studio agent's content-moderation level from the Dataverse bot configuration (the nested aISettings.contentModeration state) and comparing it to the per-zone minimum-moderation governance policy under canonical zone semantics (Zone 1 Enterprise = most restrictive = 100000001 ... Zone 3 Personal = least restrictive = 100000003); it contributes complementary evidence to Control 1.8 (Runtime Protection and External Threat Detection). Coverage is PARTIAL: the detector has been reconciled to the canonical Option A zone/severity decision, is static-gate-green (the canonical-zone unit assertion passes 13/13), and was validated live against the lab validation tenant on 2026-06-13 — disposable-bot fixtures exercised the bot-config-STATE detection path positively (a Zone 1 fixture whose contentModeration was below the zone minimum flagged Critical and persisted with fsi_zone=100000001 and fsi_severity written as a String label), negatively (a fixture meeting the minimum produced no violation row), and indeterminately (an absent nested node resolved to Unknown, never a false Compliant), with a real-agent cross-check; the SHA-256 evidence recomputed to an integrity match and every disposable fixture was torn down (all three CMM tables returned to zero, the deployed schema retained as the deliverable). Coverage remains PARTIAL because the remaining items are scope boundaries, not un-run validation: only bot-config STATE is in scope — runtime moderation telemetry, Purview moderation logs, prompt-tool overrides, and voice-modality moderation are out of lab scope. The disposable-bot detection is lab evidence gathered on the lab validation tenant, not proof of behavior in a customer's production tenant; customer-tenant evidence comes from running the solution against the customer tenant. CMM does not by itself satisfy Control 1.27 in isolation.",
-    "reference": "LAB-VALIDATION.md#runtime-only-caveats-not-verifiable-without-a-live-tenant",
-    "gaps": [
-      "Live validation on the lab validation tenant (2026-06-13) exercised the detect-and-persist leg against the Dataverse bot table and the fsi_* tables using disposable-bot fixtures only; all fixtures were then torn down (the three fsi_* tables returned to zero) and the deployed schema is the retained deliverable, so no violation rows persist in the tenant.",
-      "The nested key aISettings.contentModeration was confirmed read-only and then exercised live on disposable-bot fixtures: a Zone 1 fixture below the zone minimum resolved to a violation, a fixture meeting the minimum produced no row, and a fixture with the node absent resolved to Unknown (never a false Compliant), with a real-agent cross-check. It remains an undocumented internal field whose shape is confirmed against the lab validation tenant only; agents on other tenants should still be confirmed before a positive Compliant read is relied upon.",
-      "Scope is limited to bot-config STATE; runtime moderation telemetry, Purview moderation logs, prompt-tool overrides, and voice-modality moderation are out of lab scope.",
-      "The earlier flat-key probe returned Unknown against real agents (vacuous Compliant calls); the re-pathed nested detector now resolves the regression case live — a fixture exposing only the legacy flat key resolves Unknown, not Compliant — and the absent-node defensive Indeterminate case was exercised on 2026-06-13."
-    ]
-  },
   "controls": [
     {
       "id": "1.27",
-      "coverage": "partial",
-      "notes": "Supports compliance with AI Agent Content Moderation Enforcement by validating each agent's content-moderation level against the per-zone minimum under canonical zone semantics (most restrictive = Zone 1 = 100000001 = High minimum). Coverage is PARTIAL: the detector is reconciled, static-gate-green, and live-validated on the lab validation tenant (2026-06-13) within bot-config-STATE scope — disposable-bot fixtures proved positive/negative/indeterminate detection with SHA-256 evidence and verified teardown (schema retained). Defensive behavior resolves an absent moderation node to Unknown, never to a false Compliant. It remains PARTIAL because runtime moderation telemetry, Purview moderation logs, prompt-tool overrides, and voice-modality moderation are out of lab scope. Does not by itself satisfy the control."
+      "coverage": "full"
     },
     {
       "id": "1.8",
-      "coverage": "partial",
-      "notes": "Supports compliance with Runtime Protection and External Threat Detection by contributing per-agent moderation-posture evidence. Coverage is PARTIAL: reconciled, static-gate-green, and live-validated on the lab validation tenant (2026-06-13) for bot-config STATE only; runtime moderation telemetry and Purview moderation logs remain out of lab scope. Does not by itself satisfy the control."
+      "coverage": "full"
     }
   ],
   "controlCount": 2

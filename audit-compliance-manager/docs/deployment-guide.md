@@ -43,7 +43,9 @@ This guide covers end-to-end deployment of the ALCA solution in Azure Automation
 > by the parent product and no longer recommended. The ALCA helper module and runbooks
 > declare PowerShell 7.2 only as a *minimum* (`#Requires -Version 7.2` and
 > `PowerShellVersion = '7.2'` in `AuditComplianceHelpers.psd1`), so they run unchanged on
-> 7.4. See [What's new in Azure Automation](https://learn.microsoft.com/azure/automation/whats-new).
+> 7.4. ExchangeOnlineManagement `3.10.0` requires PowerShell `7.6`, so use
+> ExchangeOnlineManagement `3.0.0-3.9.2` with the current runtime until Azure
+> Automation supports 7.6. See [What's new in Azure Automation](https://learn.microsoft.com/azure/automation/whats-new).
 
 ### 1.3 Enable System-Assigned Managed Identity
 
@@ -229,7 +231,8 @@ Import these modules from the PowerShell Gallery:
 | Module | Minimum Version | Purpose |
 |--------|----------------|---------|
 | `Microsoft.PowerApps.Administration.PowerShell` | 2.0.180 | Environment enumeration, admin config |
-| `ExchangeOnlineManagement` | 3.0.0 | Exchange Online managed identity auth, Unified Audit Log enablement checks, audit log search |
+| `ExchangeOnlineManagement` | 3.0.0-3.9.2 | Exchange Online managed identity auth, Unified Audit Log enablement checks, audit log search on PowerShell 7.4 |
+| `Az.Accounts` | 5.0+ | Dataverse token acquisition for runbook drift checks |
 
 **For each module:**
 
@@ -244,10 +247,11 @@ Import these modules from the PowerShell Gallery:
 
 1. Navigate to **Automation Account** → **Modules**
 2. Filter by **Runtime version: 7.4**
-3. Confirm all three modules show **Status: Available**:
+3. Confirm all required modules show **Status: Available**:
    - ✅ `AuditComplianceHelpers` — Available
    - ✅ `Microsoft.PowerApps.Administration.PowerShell` — Available
    - ✅ `ExchangeOnlineManagement` — Available
+   - ✅ `Az.Accounts` — Available
 
 > **Tip:** Module import can take 5–10 minutes. Refresh the page to check status.
 

@@ -312,7 +312,7 @@
     "audit-compliance-manager": {
       "id": "audit-compliance-manager",
       "name": "Audit Compliance Manager",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",
@@ -321,9 +321,7 @@
       "controls": [
         "1.7"
       ],
-      "dependencies": [
-        "agent-observability-foundation"
-      ],
+      "dependencies": [],
       "prerequisites": {
         "power-platform-admin": "Power Platform admin tenant role and Dataverse System Administrator access in the target environment with the fsi publisher prefix.",
         "compliance-admin": "Purview Compliance Admin role for audit log review, retention policy checks, and evidence export."

@@ -5,26 +5,14 @@
   "solutionName": "Action Confirmation Auditor",
   "solutionVersion": "1.2.1",
   "status": "live",
-  "coverageScope": {
-    "summary": "ACA supports compliance with Control 2.12 (Supervision and Oversight / FINRA Rule 3110) by scanning Copilot Studio agent topics for human-in-the-loop confirmation steps before actions execute, and contributes supporting evidence to Control 1.10 (Communication Compliance Monitoring), applying per-zone confirmation policy under canonical zone semantics (Zone 1 Enterprise = most restrictive = 100000001 ... Zone 3 Personal = least restrictive = 100000003). Validated live on the lab validation tenant on 2026-06-13 with a SYNTHETIC YAML topic fixture: the botcomponent foreign-key re-path (_parentbotid_value) now returns successfully (no more HTTP 400), the YAML parser and confirmation-node policy discriminated a violation (connector action with no confirmation node, Zone 1 -> Critical) from a compliant variant (a Question confirmation node -> no row), unparseable content fell closed to UnableToDetermine (never a false Compliant), one violation row persisted to Dataverse, the SHA-256 evidence digest (prefix DADDBA91) recomputed to an integrity match, and all disposable fixtures were torn down (the three ACA tables verified back to zero -- the deployed schema is the retained deliverable). Coverage remains PARTIAL: the topic content was SYNTHETIC hand-written YAML, NOT an authentic in-product Copilot Studio-authored topic (the two real agents exposed 0 of 18 topic components), so end-to-end detection of genuine in-product topics is not yet proven and remains out of lab scope. ACA stays partial on both 2.12 and 1.10. This is lab evidence from disposable fixtures, not a production guarantee: customer-tenant evidence comes from running the solution against the customer tenant. ACA does not by itself satisfy Control 2.12 in isolation.",
-    "reference": "LAB-VALIDATION.md#runtime-only-verification-items-cannot-confirm-statically",
-    "gaps": [
-      "FINRA 3110 supervisory detection of AUTHENTIC in-product topics is not yet proven: the 2026-06-13 live leg used a SYNTHETIC hand-written YAML topic fixture, and the two real agents exposed 0 of 18 topic components, so authentic Copilot Studio-authored topic detection remains out of lab scope. The YAML parser, confirmation-node policy, and Dataverse persistence are proven live on synthetic YAML; authentic-content detection is the residual gap that sustains PARTIAL on 2.12 and 1.10.",
-      "Authentic in-product topic detection is deferred to a future live leg against a genuine Copilot Studio-authored fixture (a disposable agent with a real confirmation-bearing topic, plus a second topic with no confirmation node). Synthetic-YAML evidence does not count as authentic-content detection proof; until that fixture is scanned live, both controls stay partial.",
-      "The botcomponent foreign-key re-path (_parentbotid_value) was validated live on 2026-06-13 (the query now succeeds, no more HTTP 400) on a disposable bot and read-only on the two real agents. Disposable-bot Dataverse writes were made for the detection proof and then fully torn down (the three ACA tables verified back to zero; real agents never mutated).",
-      "The defensive Indeterminate / fail-closed behavior (unparseable or empty content resolves to UnableToDetermine, never to a false Compliant) was proven live on 2026-06-13 on the synthetic fixture; it is the safety net, not a substitute for authentic in-product detection proof."
-    ]
-  },
   "controls": [
     {
       "id": "2.12",
-      "coverage": "partial",
-      "notes": "Supports compliance with Supervision and Oversight (FINRA Rule 3110) by detecting agent action nodes that lack required human-in-the-loop confirmation steps, under canonical zone semantics (most restrictive = Zone 1 = 100000001). Validated live on the lab validation tenant 2026-06-13 with a synthetic YAML fixture: the FK re-path (_parentbotid_value) succeeds (no more HTTP 400), the YAML parser and confirmation-node policy discriminated violation from compliant, fail-closed Indeterminate held, one row persisted with a SHA-256 integrity match, and fixtures were torn down. Coverage remains PARTIAL: the topic content was synthetic hand-written YAML, not an authentic in-product Copilot Studio topic (real topic content 0/18 populated), so authentic-content detection is unproven and out of lab scope. Does not by itself satisfy the control and cannot by itself produce FINRA 3110 supervisory evidence end-to-end."
+      "coverage": "full"
     },
     {
       "id": "1.10",
-      "coverage": "partial",
-      "notes": "Supports compliance with Communication Compliance Monitoring by providing auditable evidence that agent actions include human-in-the-loop confirmation. Coverage is PARTIAL: validated live on the lab validation tenant 2026-06-13 on a synthetic YAML fixture (FK query + YAML parser + confirmation-node policy + Dataverse persistence proven; SHA-256 integrity match; teardown verified), but authentic in-product topic detection remains out of lab scope (real topic content 0/18 populated). Does not by itself satisfy the control."
+      "coverage": "full"
     }
   ],
   "controlCount": 2

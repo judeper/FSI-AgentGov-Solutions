@@ -1,124 +1,130 @@
 # Lab Validation Report — Audit Compliance Manager (ACM)
 
-> **Solution:** audit-compliance-manager · **Version:** v1.0.5 (Unreleased changes pending)
-> **Primary control:** 1.7 (Audit logging) · **Tier:** 2
-> **Validation type:** Static (no live tenant) — parse-validity, authoritative-source verification, documentation completeness
-> **Date:** 2026-06-04
+> **Solution:** `audit-compliance-manager` · **Version under review:** v1.0.6 (static-review draft)
+>
+> **Date:** 2026-07-14
+>
+> **Validation state:** **Static review complete; private live validation pending**
 
-## Purpose and scope
+## Scope and guardrails used for this pass
 
-ACM is a unified audit-compliance solution merging the Audit Configuration
-Validator (ACV) and Audit Logging Compliance Automation (ALCA). It validates
-tenant- and environment-level audit configuration, detects compliance gaps,
-remediates non-compliant Power Platform environments by enabling Dataverse
-auditing, and exports SHA-256-hashed evidence. It supports compliance with
-FINRA Rule 4511, SEC Rule 17a-3/17a-4, GLBA 501(b), and SOX Section 404
-record-keeping requirements (no single control satisfies a regulation in
-isolation).
+- One solution at a time (`audit-compliance-manager` only)
+- Revalidated against current first-party Microsoft sources
+- No overclaiming: this report does **not** claim live-tenant success
+- Hybrid evidence model retained:
+  - `runtime` channel for script/API behavior
+  - `playwright` channel for portal/UI checks only
+- Keep one draft PR open until private harness evidence is attached
 
-This pass brought the solution to a lab-ready steady state through static
-validation against authoritative Microsoft sources. The solution had already
-passed several prior council reviews (see CHANGELOG v1.0.1–v1.0.5), so it
-entered this pass in strong shape; findings were limited to documentation drift
-and a forward-looking platform note.
+## Source revalidation table (first-party, checked 2026-07-14)
 
-## What was checked
+| Topic | Source URL | Last-updated metadata seen during review | Static finding |
+|---|---|---|---|
+| EXO module runtime compatibility | https://www.powershellgallery.com/packages/ExchangeOnlineManagement/3.10.0 | PSGallery release notes for v3.10.0 | `ExchangeOnlineManagement` 3.10.0 raises PS7 minimum to 7.6; ACM pinned to 3.0.0-3.9.2 for current Azure Automation PS 7.4 path |
+| Azure Automation PS runtime support | https://learn.microsoft.com/en-us/azure/automation/automation-runbook-types | `updated_at: 2026-06-29` | PS 7.4 is supported; 7.2 is no longer supported by parent PowerShell lifecycle |
+| Unified audit cmdlet guidance | https://learn.microsoft.com/en-us/powershell/module/exchangepowershell/search-unifiedauditlog?view=exchange-ps | `updated_at: 2026-06-01` | `Search-UnifiedAuditLog` remains supported; Microsoft recommends Management Activity API for scripted bulk download |
+| Mailbox cmdlet deprecation wording | https://learn.microsoft.com/en-us/powershell/module/exchangepowershell/search-mailboxauditlog?view=exchange-ps | `updated_at: 2026-02-27` | Deprecation is announced, but no fixed retirement date is stated |
+| Purview retention constraints | https://learn.microsoft.com/en-us/purview/audit-solutions-overview | `updated_at: 2026-07-08` | Non-user records are fixed at one-year retention; custom retention policies don't apply |
+| Purview retention policy mechanics | https://learn.microsoft.com/en-us/purview/audit-log-retention-policies | `updated_at: 2026-06-24` | Custom policy behavior and licensing constraints remain as documented |
+| Graph audit query API | https://learn.microsoft.com/en-us/graph/api/resources/security-auditlogquery | Current Learn endpoint | Graph `auditLogQuery` remains a valid modern alternative; monitor-only for ACM in this PR |
+| Dataverse auditing behavior | https://learn.microsoft.com/en-us/power-apps/developer/data-platform/configure-entity-auditing | Current Learn endpoint | Org/table audit checks used by ACM remain aligned with docs |
 
-| Area | Method | Result |
-|------|--------|--------|
-| PowerShell parse validity (changed `.ps1`) | `Parser::ParseFile` (0 errors) | Pass |
-| Python compile validity (`.py`) | `python -m py_compile` | Pass |
-| Language rules (no absolute compliance-guarantee phrasing) | grep across solution (excl. CHANGELOG history) | Pass — 0 hits |
-| Dataverse column naming (logical names, no inter-word underscores) | grep `fsi_*_*` + schema cross-check | Pass — all hits are option-set / connection-reference / alternate-key names or intentional "invalid" test fixtures |
-| Option-set values documented as `100000000+` (not `0/1/2`) | inspect `private/Get-ValidationResults.ps1`, `Write-ValidationResult.ps1` | Pass |
-| Audit cmdlet currency (`Search-UnifiedAuditLog`, `Get-AdminAuditLogConfig`) | Microsoft Learn | Pass — current |
-| Managed-identity-first auth + token audiences | inspect `AuditComplianceHelpers.psm1` | Pass |
-| Module version consistency (`ExchangeOnlineManagement`) | grep across solution | **Fixed** — drift `3.7.0` vs `3.0.0` |
-| Graph Audit Query API permission name | Microsoft Learn | **Corrected during drafting** — `AuditLogsQuery.Read.All` |
+## Findings and dispositions
 
-## Authoritative sources cited (exact URLs)
+1. **Manifest hard dependency on AOF was incorrect for ACM runtime.**
+   - Disposition: removed hard dependency from `manifest.yaml`; documented AOF as optional integration in README.
 
-- Turn auditing on or off (`Get-AdminAuditLogConfig | FL UnifiedAuditLogIngestionEnabled`, `Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true`, Audit Logs role requirement, on-by-default) — https://learn.microsoft.com/purview/audit-log-enable-disable
-- `Search-UnifiedAuditLog` reference (current cmdlet; replacement for retiring mailbox audit cmdlets) — https://learn.microsoft.com/powershell/module/exchangepowershell/search-unifiedauditlog
-- Microsoft Graph `auditLogQuery` resource + `List auditLogQueries` (permission `AuditLogsQuery.Read.All` and workload-scoped variants; `GET /security/auditLog/queries`) — https://learn.microsoft.com/graph/api/resources/security-auditlogquery
-- Azure Automation managed identity token endpoint (`IDENTITY_ENDPOINT` / `X-IDENTITY-HEADER`, `api-version=2019-08-01`) — https://learn.microsoft.com/azure/automation/enable-managed-identity-for-automation
-- Microsoft Graph `users: sendMail` (requires `Mail.Send`) — https://learn.microsoft.com/graph/api/user-sendmail
+2. **Runbook wrappers still used `MSAL.PS` despite migration claim in prior history.**
+   - Disposition: migrated both `Start-TenantValidationRunbook.ps1` and `Start-EnvironmentValidationRunbook.ps1` drift-token acquisition to `Connect-PowerPlatform` (`Az.Accounts` path), removed `Get-MsalToken` usage.
 
-All cited Learn URLs were confirmed to return HTTP 200 during this pass.
+3. **EXO module drift risk with Azure Automation runtime.**
+   - Disposition: bounded ExchangeOnlineManagement to `3.0.0-3.9.2` in script `#Requires` and documentation where runbook module requirements are defined.
 
-## Authoritative findings (verification detail)
+4. **Mailbox cmdlet retirement date language was overstated.**
+   - Disposition: removed fixed-date wording; retained deprecation-without-date wording.
 
-1. **`Search-UnifiedAuditLog` is current, not deprecated.** The "this cmdlet will
-   be deprecated" note in the Exchange audit docs refers to the mailbox-specific
-   cmdlets (`Search-MailboxAuditLog`, `New-MailboxAuditLogSearch`), which point
-   operators *to* `Search-UnifiedAuditLog`. ACM uses only
-   `Search-UnifiedAuditLog`, so it is unaffected. Mailbox-specific cmdlets are
-   retiring at the end of 2025.
-2. **`Get-AdminAuditLogConfig` remains the documented enablement check.** Microsoft
-   Learn still shows `Get-AdminAuditLogConfig | Format-List UnifiedAuditLogIngestionEnabled`
-   (Exchange Online PowerShell) as the verification method, and
-   `Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true` to enable —
-   matching the scripts. The script comment that the Security & Compliance
-   PowerShell variant returns `False` for this property is a correct, important
-   caveat.
-3. **Graph Audit Query API permission corrected.** The modern Graph audit path
-   uses `AuditLogsQuery.Read.All` (plus workload variants like
-   `AuditLogsQuery-Entra.Read.All`) — **not** `AuditLog.Read.All` (a distinct
-   directory-audit permission). The initial README draft was corrected before
-   commit.
-4. **Managed-identity auth verified.** `Get-ManagedIdentityToken` uses the Azure
-   Automation IMDS endpoint with `api-version=2019-08-01`; the Dataverse token
-   audience is the environment org URL and the Graph token audience is
-   `https://graph.microsoft.com` for `sendMail` — correct audiences per service.
+5. **Programmatic bulk-download guidance changed (cmdlet vs API).**
+   - Disposition: documented Management Activity API recommendation and Graph `auditLogQuery` as monitor/evaluate items; no migration in this PR.
 
-## Gaps found and fixes applied
+6. **Non-user record retention limit conflicts with Zone 3 target in some classes.**
+   - Disposition: documented limit and caveat in README/LAB narrative; no speculative code migration in this PR.
 
-### Fixed in this pass
+## Static changes implemented in this pass
 
-- **`ExchangeOnlineManagement` version drift (documentation/consistency).** Every
-  `#Requires` gate enforces `3.0.0` and the README runtime table says `3.0+`, but
-  NOTES prose, the install-hint error message in
-  `private/Connect-AuditServices.ps1`, `SOLUTION-DOCUMENTATION.md` (2 places), and
-  `docs/flow-setup.md` (3 places) said `3.7.0`. A lab operator following the error
-  message would install a stricter minimum than the code enforces. Aligned all
-  prose down to `3.0.0`/`3.0+` to match the authoritative `#Requires` gate. No
-  cmdlet/parameter used by ACM requires 3.7.0.
-- **Audit-access modernization note added.** New README "Platform Update Notes"
-  subsection records the `Search-UnifiedAuditLog` vs Graph `auditLogQuery`
-  distinction, the retiring mailbox cmdlets (not used here), and the recommended
-  future migration path — with authoritative citations.
+- `manifest.yaml`
+  - Version `1.0.5` → `1.0.6`
+  - Removed hard dependency on `agent-observability-foundation`
+- `README.md`
+  - Updated runtime/module guidance (Az.Accounts; EXO compatibility band)
+  - Added optional AOF integration note (non-prerequisite)
+  - Added non-user-record fixed-retention caveat
+  - Canonicalized Exchange PowerShell links with `?view=exchange-ps`
+- `scripts/Start-TenantValidationRunbook.ps1`
+  - Removed `MSAL.PS` dependency and `Get-MsalToken`
+  - Added `Connect-PowerPlatform` helper usage for Dataverse drift token
+  - Added explicit parameter guard for cert-based drift detection
+- `scripts/Start-EnvironmentValidationRunbook.ps1`
+  - Removed `MSAL.PS` dependency and `Get-MsalToken`
+  - Added `Connect-PowerPlatform` helper usage for Dataverse drift token
+- ExchangeOnlineManagement compatibility bounds added in scripts:
+  - `Enable-AuditLogging.ps1`
+  - `Invoke-TenantAuditValidation.ps1`
+  - `private/Connect-AuditServices.ps1`
+  - `Test-AuditLoggingCompliance.ps1`
+  - `Test-MailboxAudit.ps1`
+  - `Test-PurviewRetention.ps1`
+  - `Test-UnifiedAuditLog.ps1`
+  - `Start-TenantValidationRunbook.ps1`
+- Documentation sync updates:
+  - `docs/deployment-guide.md`
+  - `docs/flow-setup.md`
+  - `docs/evidence-export-guide.md`
+  - `docs/testing-scenarios.md`
 
-### Not changed (verified correct as-is)
+## Runtime vs Playwright check split (explicit)
 
-- Audit cmdlets and parameters, mailbox-audit inverted-logic handling
-  (`AuditDisabled`), canary-event dual-validation, Purview retention via
-  `Get-UnifiedAuditLogRetentionPolicy` / `New-UnifiedAuditLogRetentionPolicy`,
-  managed-identity-first auth, option-set values, Dataverse logical names, and
-  the documented certificate/MSAL.PS fallbacks (already flagged as
-  dev-only/legacy with a pinned `4.37.0` and deprecation note).
-- `manifest.yaml` was **not** modified.
+### Runtime channel (public/static verification completed here)
 
-## Runtime-only caveats (cannot be statically verified)
+- Script parse/compile checks
+- Pester + pytest static/contract checks
+- Manifest build/check and generated-artifact consistency
+- Language/commercial/docs-autonomy policy checks
+- MkDocs strict build
 
-- Live behavior of `Search-UnifiedAuditLog` canary retrieval depends on
-  tenant-specific audit ingestion lag (script allows a configurable grace period
-  up to 24h).
-- Actual unified audit log **retention** is license-bounded (Audit Standard
-  180 days for records on/after 2023-10-17; Audit Premium/E5 1 year default; 10
-  years with the add-on). The solution flags shortfalls but cannot extend
-  retention beyond licensing — documented accurately in README.
-- Managed-identity role assignments (Power Platform Admin, Exchange Online Admin,
-  `Mail.Send`, Dataverse application user) must exist in the target tenant;
-  presence cannot be confirmed without a live environment.
-- Dataverse table creation, alternate-key upsert behavior, and Power Automate
-  approval flows require a live environment to exercise end-to-end.
+### Playwright channel (private live harness only; pending)
 
-## Lab-readiness assessment
+- Portal reachability and auth UX checks only
+- No claim that Playwright validates backend runtime controls
 
-**Lab-ready.** All changed scripts parse cleanly, all Python compiles, there are
-zero regulatory-language violations, Dataverse naming and option-set values are
-correct, and the audit APIs/cmdlets/permissions in scripts and docs are verified
-against current authoritative Microsoft sources. The only corrections needed were
-documentation-level (module-version drift) plus an additive forward-looking
-platform note. Remaining unknowns are inherent runtime/tenant dependencies that
-require a live environment and are documented above.
+## Private harness lab prerequisites (not hardcoded with private values)
+
+1. Private lab repository with persistent runner registration
+2. Tenant-specific secure config present outside this public repo
+3. Runtime plan declaring separate `runtime` and `playwright` steps
+4. Evidence root outside Git; redaction and SHA-256 manifest generation enabled
+
+## Pending private live checks (required before readiness claim)
+
+- [ ] Tenant runbook execution in private lab (certificate path)
+- [ ] Environment runbook execution in private lab (certificate and legacy-secret fallback path)
+- [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
+- [ ] `Search-UnifiedAuditLog` and canary retrieval checks in target tenant
+- [ ] Purview retention validation with actual policy set and licensing context
+- [ ] Portal smoke artifacts (Playwright channel) attached separately from runtime evidence
+- [ ] Sanitized evidence summary + hash manifest attached to draft PR
+
+## Live evidence placeholder
+
+No private live evidence is attached in this public static pass.
+
+When private harness execution completes, append:
+
+- private run ID
+- runtime evidence summary path/hash
+- playwright evidence summary path/hash
+- disposition of pending checks above
+
+## Status statement
+
+**Static review/fix phase complete.**  
+**Live validation remains pending** until private harness runtime + portal evidence is attached to the draft PR.

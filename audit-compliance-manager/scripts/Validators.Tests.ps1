@@ -42,6 +42,14 @@
     'PSUseDeclaredVarsMoreThanAssignments', 'privateScripts',
     Justification = 'Variable feeds Pester -ForEach discovery at line 129; PSSA static analysis misses Pester discovery scriptblock reads.'
 )]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'runbookWrappers',
+    Justification = 'Variable feeds Pester -ForEach discovery for runbook currency checks; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'exchangeBoundedScripts',
+    Justification = 'Variable feeds Pester -ForEach discovery for ExchangeOnlineManagement version-bound checks; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
 param()
 
 BeforeDiscovery {
@@ -83,6 +91,22 @@ BeforeDiscovery {
         @{ Name = "Connect-AuditServices.ps1"; Path = Join-Path $privateRoot "Connect-AuditServices.ps1" }
         @{ Name = "Connect-PowerPlatform.ps1"; Path = Join-Path $privateRoot "Connect-PowerPlatform.ps1" }
         @{ Name = "Get-ValidationResults.ps1"; Path = Join-Path $privateRoot "Get-ValidationResults.ps1" }
+    )
+
+    $runbookWrappers = @(
+        @{ Name = "Start-TenantValidationRunbook.ps1"; Path = Join-Path $validatorRoot "Start-TenantValidationRunbook.ps1" }
+        @{ Name = "Start-EnvironmentValidationRunbook.ps1"; Path = Join-Path $validatorRoot "Start-EnvironmentValidationRunbook.ps1" }
+    )
+
+    $exchangeBoundedScripts = @(
+        @{ Name = "Enable-AuditLogging.ps1"; Path = Join-Path $validatorRoot "Enable-AuditLogging.ps1" }
+        @{ Name = "Invoke-TenantAuditValidation.ps1"; Path = Join-Path $validatorRoot "Invoke-TenantAuditValidation.ps1" }
+        @{ Name = "Start-TenantValidationRunbook.ps1"; Path = Join-Path $validatorRoot "Start-TenantValidationRunbook.ps1" }
+        @{ Name = "Test-AuditLoggingCompliance.ps1"; Path = Join-Path $validatorRoot "Test-AuditLoggingCompliance.ps1" }
+        @{ Name = "Test-MailboxAudit.ps1"; Path = Join-Path $validatorRoot "Test-MailboxAudit.ps1" }
+        @{ Name = "Test-PurviewRetention.ps1"; Path = Join-Path $validatorRoot "Test-PurviewRetention.ps1" }
+        @{ Name = "Test-UnifiedAuditLog.ps1"; Path = Join-Path $validatorRoot "Test-UnifiedAuditLog.ps1" }
+        @{ Name = "private\\Connect-AuditServices.ps1"; Path = Join-Path $privateRoot "Connect-AuditServices.ps1" }
     )
 }
 
@@ -161,5 +185,26 @@ Describe "Validator script direct-invocation blocks" {
         $content = Get-Content -LiteralPath $Path -Raw
 
         ($content -cmatch 'MyInvocation\.InvocationName\s+-ne\s+') | Should -BeTrue -Because "$Name should support direct invocation"
+    }
+}
+
+Describe "Runbook wrapper auth currency" {
+    It "<Name> uses Connect-PowerPlatform helper and avoids MSAL.PS" -ForEach $runbookWrappers {
+        $Path | Should -Exist -Because "$Name should exist"
+        $content = Get-Content -LiteralPath $Path -Raw
+
+        ($content -cmatch 'Connect-PowerPlatform\.ps1') | Should -BeTrue -Because "$Name should load the shared Connect-PowerPlatform helper"
+        ($content -cmatch '\bConnect-PowerPlatform\b') | Should -BeTrue -Because "$Name should acquire Dataverse drift tokens through Connect-PowerPlatform"
+        ($content -cnotmatch 'MSAL\.PS') | Should -BeTrue -Because "$Name should not require the archived MSAL.PS module"
+        ($content -cnotmatch 'Get-MsalToken') | Should -BeTrue -Because "$Name should not call Get-MsalToken"
+    }
+}
+
+Describe "ExchangeOnlineManagement compatibility bounds" {
+    It "<Name> caps ExchangeOnlineManagement at 3.9.2 for current runtime compatibility" -ForEach $exchangeBoundedScripts {
+        $Path | Should -Exist -Because "$Name should exist"
+        $content = Get-Content -LiteralPath $Path -Raw
+
+        ($content -cmatch 'ModuleName\s*=\s*["'']ExchangeOnlineManagement["''][^\r\n]*MaximumVersion\s*=\s*["'']3\.9\.2["'']') | Should -BeTrue -Because "$Name should bound ExchangeOnlineManagement to <=3.9.2 for PowerShell 7.4 compatibility"
     }
 }

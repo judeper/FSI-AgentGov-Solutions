@@ -1,5 +1,5 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0"; MaximumVersion="3.9.2" }
 
 <#
 .SYNOPSIS
@@ -53,7 +53,8 @@
 
 .NOTES
     Version: 1.0.4
-    Requires ExchangeOnlineManagement module v3.0.0 or later.
+    Requires ExchangeOnlineManagement module v3.0.0 through v3.9.2 when running
+    on PowerShell 7.2/7.4 Azure Automation runtimes.
 
     IMPORTANT: Get-AdminAuditLogConfig must be called via Exchange Online PowerShell,
     NOT Security & Compliance PowerShell. The UnifiedAuditLogIngestionEnabled property
@@ -161,7 +162,7 @@ function Connect-AuditServices {
         }
     }
     catch [System.Management.Automation.CommandNotFoundException] {
-        throw "ExchangeOnlineManagement module not found. Install with: Install-Module ExchangeOnlineManagement -MinimumVersion 3.0.0"
+        throw "ExchangeOnlineManagement module not found. Install with: Install-Module ExchangeOnlineManagement -MinimumVersion 3.0.0 -MaximumVersion 3.9.2"
     }
     catch {
         throw "Failed to connect to audit services: $($_.Exception.Message)"

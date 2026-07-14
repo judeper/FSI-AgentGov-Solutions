@@ -97,7 +97,7 @@
     Version: 1.0.2
     Requires:
     - PowerShell 7.0 or later
-    - MSAL.PS module for Dataverse authentication
+    - Az.Accounts module (used by Connect-PowerPlatform for Dataverse token acquisition)
     - Dataverse schema deployed (fsi_auditvalidationhistories table)
 
     Evidence file naming convention:
