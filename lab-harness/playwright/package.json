@@ -13,5 +13,8 @@
   "devDependencies": {
     "@playwright/test": "1.61.1",
     "tsx": "4.20.4"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
   }
 }
