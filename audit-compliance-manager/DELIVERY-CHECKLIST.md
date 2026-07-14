@@ -71,7 +71,7 @@ All files located in the `scripts/`, `templates/`, and `docs/` directories:
 **Option A: Create ZIP Archive**
 ```bash
 # From the audit-compliance-manager directory:
-zip -r ACM-Solution-v1.0.5.zip \
+zip -r ACM-Solution-v1.0.6.zip \
   SOLUTION-DOCUMENTATION.md \
   scripts/AuditComplianceHelpers.psm1 \
   scripts/AuditComplianceHelpers.psd1 \
@@ -115,7 +115,7 @@ zip -r ACM-Solution-v1.0.5.zip \
 
 **Option B: Create Structured Folder**
 ```
-ACM-Solution-v1.0.5/
+ACM-Solution-v1.0.6/
 ├── SOLUTION-DOCUMENTATION.md
 ├── PowerShell-Components/
 │   ├── ALCA/
@@ -166,14 +166,14 @@ ACM-Solution-v1.0.5/
 
 ### 4. Email Template
 
-**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.5
+**Subject:** Audit Compliance Manager (ACM) - Solution Delivery v1.0.6
 
 **Body:**
 
 ```
 Hi [Customer Name],
 
-Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.5.
+Please find attached the Audit Compliance Manager (ACM) solution package, version 1.0.6.
 
 This solution provides enterprise-grade automated detection and remediation of audit logging
 gaps across Microsoft 365 and Power Platform environments with Azure Automation and Managed
@@ -277,7 +277,7 @@ Before sending to customer, verify:
 - [ ] SOLUTION-DOCUMENTATION.md renders correctly in Markdown viewer
 - [ ] File sizes are reasonable (no files > 500KB except documentation)
 - [ ] No sensitive data in files (tenant IDs, email addresses should be placeholders like `example.com`)
-- [ ] Version numbers are consistent (v1.0.5) across all files
+- [ ] Version numbers are consistent (v1.0.6) across all files
 - [ ] Placeholder values documented clearly (see Configuration Placeholders section in README)
 
 ### 6. Files NOT to Include
@@ -419,6 +419,6 @@ Operational Readiness:
 
 ---
 
-**Package Version:** v1.0.5
+**Package Version:** v1.0.6
 **Release Date:** February 2026
 **Solution:** Audit Compliance Manager (ACM)

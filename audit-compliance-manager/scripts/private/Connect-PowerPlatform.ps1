@@ -74,10 +74,12 @@
 )]
 [CmdletBinding(DefaultParameterSetName = 'Interactive')]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Connect-PowerPlatform function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$TenantId,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Connect-PowerPlatform function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseUrl,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'ServicePrincipalSecret')]
@@ -318,6 +320,14 @@ function Connect-PowerPlatform {
 
 # Execute function if script is run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
+    $missingDirectParams = @()
+    if ([string]::IsNullOrWhiteSpace($TenantId)) { $missingDirectParams += 'TenantId' }
+    if ([string]::IsNullOrWhiteSpace($DataverseUrl)) { $missingDirectParams += 'DataverseUrl' }
+
+    if ($missingDirectParams.Count -gt 0) {
+        throw "Missing required parameter(s) for direct invocation: $($missingDirectParams -join ', '). Dot-source this helper to load the Connect-PowerPlatform function, or pass the required parameters when invoking the script directly."
+    }
+
     $authResult = Connect-PowerPlatform @PSBoundParameters
     return $authResult
 }

@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected `AuditLogRecordType` usage to the valid `PowerPlatformAdministratorActivity` enum member in tenant audit-validation paths.
+- Corrected `UnifiedAuditLogRetentionDuration` references and mappings to valid enum values (`ThreeMonths`, `SixMonths`, `NineMonths`, `TwelveMonths`, `TenYears`).
+- Replaced ineffective per-mailbox `AuditEnabled` override detection with `Get-MailboxAuditBypassAssociation` validation and remediation guidance.
+- Updated `Compare-ValidationBaseline.ps1` baseline detection to handle array-shaped Dataverse responses with `$null -eq` semantics.
 - Corrected stale migration language that still described `MSAL.PS` as an active runbook dependency after the Az migration.
 - Updated evidence export script notes and docs to match actual authentication behavior (`Connect-PowerPlatform` + `Az.Accounts`) instead of `MSAL.PS`.
 - Refreshed `LAB-VALIDATION.md` to an explicit static-only posture with source/date revalidation, runtime-vs-playwright split, private-live-check placeholders, and no live-success claim.

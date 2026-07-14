@@ -208,3 +208,151 @@ Describe "ExchangeOnlineManagement compatibility bounds" {
         ($content -cmatch 'ModuleName\s*=\s*["'']ExchangeOnlineManagement["''][^\r\n]*MaximumVersion\s*=\s*["'']3\.9\.2["'']') | Should -BeTrue -Because "$Name should bound ExchangeOnlineManagement to <=3.9.2 for PowerShell 7.4 compatibility"
     }
 }
+
+Describe "Helper script load and invocation contracts" {
+    BeforeAll {
+        $script:helperArtifactsDir = Join-Path $PSScriptRoot '.pester-artifacts'
+        New-Item -ItemType Directory -Path $script:helperArtifactsDir -Force | Out-Null
+
+        function Get-SanitizedHelperScriptPath {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$SourcePath
+            )
+
+            $fileName = Split-Path -Path $SourcePath -Leaf
+            $sanitizedPath = Join-Path $script:helperArtifactsDir "sanitized-$fileName"
+            $content = Get-Content -LiteralPath $SourcePath -Raw
+            $sanitizedContent = ($content -split "`r?`n" | Where-Object { $_ -notmatch '^\s*#Requires\s+-Modules\b' }) -join [Environment]::NewLine
+
+            Set-Content -LiteralPath $sanitizedPath -Value $sanitizedContent -Encoding UTF8
+            return $sanitizedPath
+        }
+    }
+
+    AfterAll {
+        Remove-Item -LiteralPath $script:helperArtifactsDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    It "Connect-PowerPlatform helper dot-sources and returns a client-secret auth result" {
+        $connectHelperPath = Join-Path $PSScriptRoot 'private\Connect-PowerPlatform.ps1'
+        if (Get-Command Connect-PowerPlatform -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Connect-PowerPlatform' -Force
+        }
+
+        $sanitizedConnectHelperPath = Get-SanitizedHelperScriptPath -SourcePath $connectHelperPath
+        . $sanitizedConnectHelperPath
+
+        Mock Add-PowerAppsAccount { } -Verifiable
+        Mock Invoke-RestMethod { @{ access_token = 'dataverse-token-123' } } -Verifiable
+
+        $clientSecret = [System.Security.SecureString]::new()
+        'dev-only-secret'.ToCharArray() | ForEach-Object { $clientSecret.AppendChar($_) }
+        $clientSecret.MakeReadOnly()
+        $result = Connect-PowerPlatform `
+            -TenantId 'contoso.onmicrosoft.com' `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -ClientId 'app-id' `
+            -ClientSecret $clientSecret
+
+        $result.PowerAppsAuthenticated | Should -BeTrue
+        $result.DataverseAccessToken | Should -Be 'dataverse-token-123'
+        $result.AuthMethod | Should -Be 'ServicePrincipal-Secret'
+        Should -Invoke Add-PowerAppsAccount -Times 1
+        Should -Invoke Invoke-RestMethod -Times 1 -ParameterFilter {
+            $Uri -eq 'https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/token' -and $Method -eq 'Post'
+        }
+    }
+
+    It "Compare-ValidationBaseline helper dot-sources and handles first-run responses" {
+        $compareHelperPath = Join-Path $PSScriptRoot 'private\Compare-ValidationBaseline.ps1'
+        if (Get-Command Compare-ValidationBaseline -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Compare-ValidationBaseline' -Force
+        }
+
+        $sanitizedCompareHelperPath = Get-SanitizedHelperScriptPath -SourcePath $compareHelperPath
+        . $sanitizedCompareHelperPath
+
+        Mock Invoke-RestMethod { @{ value = @() } } -Verifiable
+
+        $result = Compare-ValidationBaseline `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -DataverseToken 'token' `
+            -Scope 'Tenant' `
+            -CurrentStatus 'Passed'
+
+        $result.IsFirstRun | Should -BeTrue
+        $result.DriftDetected | Should -BeFalse
+        Should -Invoke Invoke-RestMethod -Times 1
+    }
+
+    It "Get-ValidationResults helper dot-sources and follows @odata.nextLink pagination" {
+        $getResultsHelperPath = Join-Path $PSScriptRoot 'private\Get-ValidationResults.ps1'
+        if (Get-Command Get-ValidationResults -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Get-ValidationResults' -Force
+        }
+
+        $sanitizedGetResultsHelperPath = Get-SanitizedHelperScriptPath -SourcePath $getResultsHelperPath
+        . $sanitizedGetResultsHelperPath
+
+        $script:pageCallCount = 0
+        Mock Invoke-RestMethod {
+            $script:pageCallCount++
+            if ($script:pageCallCount -eq 1) {
+                return @{
+                    value            = @([PSCustomObject]@{ fsi_name = 'page-1-row' })
+                    '@odata.nextLink' = 'https://org.crm.dynamics.com/api/data/v9.2/fsi_auditvalidationhistories?$skiptoken=abc'
+                }
+            }
+
+            return @{
+                value            = @([PSCustomObject]@{ fsi_name = 'page-2-row' })
+                '@odata.nextLink' = $null
+            }
+        } -Verifiable
+
+        $rows = Get-ValidationResults `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -AccessToken 'token' `
+            -Scope 'Tenant' `
+            -FromDate (Get-Date).AddDays(-1) `
+            -ToDate (Get-Date)
+
+        $rows.Count | Should -Be 2
+        $script:pageCallCount | Should -Be 2
+        Should -Invoke Invoke-RestMethod -Times 2
+    }
+
+    It "Write-ValidationResult helper dot-sources and maps severity/scope option sets" {
+        $writeResultHelperPath = Join-Path $PSScriptRoot 'private\Write-ValidationResult.ps1'
+        if (Get-Command Write-ValidationResult -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Write-ValidationResult' -Force
+        }
+
+        $sanitizedWriteResultHelperPath = Get-SanitizedHelperScriptPath -SourcePath $writeResultHelperPath
+        . $sanitizedWriteResultHelperPath
+
+        $script:capturedWriteBody = $null
+        Mock Invoke-RestMethod {
+            $script:capturedWriteBody = $Body
+            @{ fsi_auditvalidationhistoryid = 'record-123' }
+        } -Verifiable
+
+        $recordId = Write-ValidationResult `
+            -DataverseUrl 'https://org.crm.dynamics.com' `
+            -AccessToken 'token' `
+            -RunId 'run-123' `
+            -Scope 'Tenant' `
+            -Severity 'Passed' `
+            -ValidationType 'UnifiedAuditLog' `
+            -RawValue 'UnifiedAuditLogIngestionEnabled=True' `
+            -Reason 'Validated'
+
+        $recordId | Should -Be 'record-123'
+        $payload = $script:capturedWriteBody | ConvertFrom-Json
+        $payload.fsi_scope | Should -Be 100000000
+        $payload.fsi_severity | Should -Be 100000000
+        $payload.fsi_validationtype | Should -Be 'UnifiedAuditLog'
+        Should -Invoke Invoke-RestMethod -Times 1 -ParameterFilter { $Method -eq 'Post' }
+    }
+}

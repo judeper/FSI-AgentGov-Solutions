@@ -93,17 +93,21 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseUrl,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [string]$DataverseToken,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Tenant", "Environment")]
     [string]$Scope,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing; required by Compare-ValidationBaseline function and direct execution guard.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Passed", "Warning", "GracePeriod", "Failed", "Error")]
     [string]$CurrentStatus,
 
@@ -290,6 +294,16 @@ function Compare-ValidationBaseline {
 
 # Execute function if script is run directly (not dot-sourced)
 if ($MyInvocation.InvocationName -ne '.') {
+    $missingDirectParams = @()
+    if ([string]::IsNullOrWhiteSpace($DataverseUrl)) { $missingDirectParams += 'DataverseUrl' }
+    if ([string]::IsNullOrWhiteSpace($DataverseToken)) { $missingDirectParams += 'DataverseToken' }
+    if ([string]::IsNullOrWhiteSpace($Scope)) { $missingDirectParams += 'Scope' }
+    if ([string]::IsNullOrWhiteSpace($CurrentStatus)) { $missingDirectParams += 'CurrentStatus' }
+
+    if ($missingDirectParams.Count -gt 0) {
+        throw "Missing required parameter(s) for direct invocation: $($missingDirectParams -join ', '). Dot-source this helper to load the Compare-ValidationBaseline function, or pass the required parameters when invoking the script directly."
+    }
+
     $result = Compare-ValidationBaseline @PSBoundParameters
     return $result
 }

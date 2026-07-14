@@ -5,10 +5,22 @@
   "solutionName": "Agent Access Governance Monitor",
   "solutionVersion": "1.2.0",
   "status": "live",
+  "coverageScope": {
+    "summary": "AAM supports compliance with Control 3.8 by validating the three Managed-Environment agent-sharing settings (bot-limitSharingMode, bot-authoringSharingDisabled, bot-maxLimitUserSharing) against per-zone baselines, recording each scan to an append-only Dataverse audit log, and exporting SHA-256 tamper-evident evidence. Lab validation ran end-to-end against a live tenant whose target environment is NotManaged, so the run legitimately exercised the NotManaged -> ScopeOutOfBand branch; the Managed-key detect-and-persist path was evidenced read-only across the tenant's Managed environments and proven on a single disposable synthetic Managed environment. AAM does not by itself satisfy Control 3.8 in isolation.",
+    "reference": "LAB-VALIDATION.md#known-lab-scope-limitation",
+    "gaps": [
+      "Detection on the lab tenant resolved to NotManaged -> ScopeOutOfBand: the target environment exposes no governanceConfiguration.settings.extendedSettings. Positive observation of the three real bot- keys, and persistence of a true Managed 'Failed' row, require a Managed environment with environment-level sharing limits configured (deferred, out of lab scope).",
+      "Azure Automation portal hosting of the validator runbook is deferred (the AAM human boundary): the runbook was run as a standalone local PowerShell 7.4 process and the daily flow is a Recurrence trigger + Dataverse read. Always-on hosting is an optional production upgrade, not validated in the lab.",
+      "AAM evaluates only the three Managed-Environment extendedSettings keys. It does not enumerate individual Copilot Studio shares, PrincipalObjectAccess authoring shares, or Microsoft 365 Copilot package assignments. Sharing-limit changes can take up to an hour to enforce and do not revoke existing access.",
+      "Runtime Teams surfacing of violations was not exercised (empty Teams-target environment variables + zero live violations on the NotManaged target); the daily Recurrence flow is built and activated, but its end-to-end notification path is documented, not empirically measured.",
+      "Canonical-zone reconciliation (Coordinator Decision 'Option A', 2026-06-13): earlier AAM releases keyed governance policy off the environment-name string (enterprise -> Zone 3, personal -> Zone 1) and persisted the matching inverted integer/label (an enterprise/Managed environment recorded as fsi_zone=100000003, 'Zone 3 (Personal)'). The canonical agent-intake schema and the live lab-tenant fsi_acv_zone set define the opposite, now adopted portfolio-wide: Zone 1 (Enterprise)=100000001=most restrictive, Zone 2 (Team)=100000002, Zone 3 (Personal)=100000003=least restrictive, Unclassified=100000000. This release remaps the naming classifiers, the per-zone baseline, the zone-integer write-back, the console/README labels, and the evidence narrative to canonical, and locks a gated canonical-zone unit assertion (strictest policy <=> Zone 1 <=> 100000001). Pass/fail outcomes of prior validations were CORRECT (policy is name-keyed; an enterprise environment received most-restrictive policy regardless of the persisted integer); only the stored zone integer/label was inverted. This is a code-and-text-only remap and was NOT re-validated against a live tenant; correctness is established by (1) the canonical-zone unit assertion, (2) static gates (PowerShell parse + PSScriptAnalyzer + valid JSON), and (3) byte-for-byte alignment with the four lab-validated sibling solutions (FUS, CMM, GAC, ACA) flipped identically and live-validated on the lab validation tenant 2026-06-13. Historical fsi_zone rows from earlier releases carry pre-canonical integers/labels and are retained unaltered; operators should re-run the solution after upgrading to refresh persisted integers (no auto-migration of historical rows). AAM supports compliance with Control 3.8; it does not by itself ensure, guarantee, or eliminate regulatory risk."
+    ]
+  },
   "controls": [
     {
       "id": "3.8",
-      "coverage": "full"
+      "coverage": "partial",
+      "notes": "Supports compliance with Copilot Hub / Governance Dashboard agent-access expectations by validating the three Managed-Environment agent-sharing settings against per-zone baselines and recording an append-only, SHA-256-evidenced audit trail. Lab detection resolved to NotManaged -> ScopeOutOfBand on the target environment; the Managed-key detect-and-persist path was evidenced read-only across the tenant and on a disposable synthetic Managed environment. Azure Automation hosting is deferred. Does not by itself satisfy the control."
     }
   ],
   "controlCount": 1

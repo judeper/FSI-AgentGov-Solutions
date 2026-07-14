@@ -1,7 +1,7 @@
 # Automating Audit Logging Compliance for AI Agent Environments
 ## Audit Compliance Manager (ACM) — ALCA + ACV
 
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Solution Type:** Automated Detection and Remediation
 **Platform:** Azure Automation + Power Platform with Dataverse
 
@@ -1097,8 +1097,8 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 
 ## Support and Maintenance
 
-**Solution Version:** 1.0.4
-**Release Date:** April 2026
+**Solution Version:** 1.0.6
+**Release Date:** July 2026
 **License:** MIT License
 
 **Change Management:**
@@ -1113,7 +1113,8 @@ ALCA provides the detection and remediation runbooks (Azure Automation). ACV pro
 - **v1.0.2 (April 2026):** Token-cache and OData filter bug fixes
 - **v1.0.3 (April 2026):** AI Council technical-accuracy pass (Opus 4.7 + Goldeneye + GPT-5.4)
 - **v1.0.4 (May 2026):** Microsoft Learn 2026-Q2 refresh for Purview Audit retention, managed-identity-first authentication, and Power Platform/Dataverse audit terminology
-- **v1.0.5 (Unreleased):** Documentation drift cleanup (column MaxLength, choice option labels, version-string sync) and MSAL.PS deprecation notice (council review remediation)
+- **v1.0.5 (May 2026):** Documentation drift cleanup (column MaxLength, choice option labels, version-string sync) and MSAL.PS deprecation notice (council review remediation)
+- **v1.0.6 (July 2026):** Auth/runtime currency remediation (Az.Accounts drift-token path, ExchangeOnlineManagement compatibility bounds), dependency correction (AOF optional integration), and validation logic fixes for record-type, retention-duration, mailbox-bypass, and drift baseline handling.
 
 ---
 
