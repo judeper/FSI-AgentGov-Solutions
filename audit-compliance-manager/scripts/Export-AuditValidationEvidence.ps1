@@ -164,9 +164,24 @@ Write-Host ""
 
 # Dot-source required helper scripts
 $scriptRoot = $PSScriptRoot
+$dotSourceSafeVars = @{
+    DataverseUrl          = $DataverseUrl
+    TenantId              = $TenantId
+    Scope                 = $Scope
+    OutputDirectory       = $OutputDirectory
+    RunId                 = $RunId
+    FromDate              = $FromDate
+    ToDate                = $ToDate
+    Interactive           = $Interactive
+    CertificateThumbprint = $CertificateThumbprint
+    ClientId              = $ClientId
+}
 try {
     . "$scriptRoot\private\Connect-PowerPlatform.ps1"
     . "$scriptRoot\private\Get-ValidationResults.ps1"
+    foreach ($name in $dotSourceSafeVars.Keys) {
+        Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
+    }
 }
 catch {
     Write-Error "Failed to load helper scripts: $($_.Exception.Message)"

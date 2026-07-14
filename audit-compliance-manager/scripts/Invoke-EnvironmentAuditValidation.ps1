@@ -186,6 +186,18 @@ Write-Host ""
 
 # Dot-source required scripts
 $scriptRoot = $PSScriptRoot
+$dotSourceSafeVars = @{
+    TenantId              = $TenantId
+    DataverseUrl          = $DataverseUrl
+    ClientId              = $ClientId
+    ClientSecret          = $ClientSecret
+    CertificateThumbprint = $CertificateThumbprint
+    Interactive           = $Interactive
+    IncludeTrialDev       = $IncludeTrialDev
+    GracePeriodHours      = $GracePeriodHours
+    OutputPath            = $OutputPath
+    SkipDiscovery         = $SkipDiscovery
+}
 $privatePath = Join-Path $PSScriptRoot 'private'
 $requiredHelpers = @(
     'Connect-PowerPlatform.ps1',
@@ -209,6 +221,9 @@ foreach ($script in $requiredScripts) {
         throw "Required script not found: $scriptPath. Ensure the solution is installed correctly."
     }
     . $scriptPath
+}
+foreach ($name in $dotSourceSafeVars.Keys) {
+    Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
 }
 
 # Build authentication parameter hashtable

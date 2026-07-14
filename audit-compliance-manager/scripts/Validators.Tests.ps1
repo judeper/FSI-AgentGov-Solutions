@@ -50,6 +50,10 @@
     'PSUseDeclaredVarsMoreThanAssignments', 'exchangeBoundedScripts',
     Justification = 'Variable feeds Pester -ForEach discovery for ExchangeOnlineManagement version-bound checks; PSSA static analysis misses Pester discovery scriptblock reads.'
 )]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'sourceContractMatrix',
+    Justification = 'Variable feeds Pester -ForEach discovery for dot-source parameter preservation contracts; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
 param()
 
 BeforeDiscovery {
@@ -107,6 +111,63 @@ BeforeDiscovery {
         @{ Name = "Test-PurviewRetention.ps1"; Path = Join-Path $validatorRoot "Test-PurviewRetention.ps1" }
         @{ Name = "Test-UnifiedAuditLog.ps1"; Path = Join-Path $validatorRoot "Test-UnifiedAuditLog.ps1" }
         @{ Name = "private\\Connect-AuditServices.ps1"; Path = Join-Path $privateRoot "Connect-AuditServices.ps1" }
+    )
+
+    $sourceContractMatrix = @(
+        @{
+            Name             = 'Export-AuditValidationEvidence.ps1'
+            Path             = Join-Path $validatorRoot 'Export-AuditValidationEvidence.ps1'
+            ExpectedParams   = @('DataverseUrl', 'TenantId', 'Scope', 'OutputDirectory', 'RunId', 'FromDate', 'ToDate', 'Interactive', 'CertificateThumbprint', 'ClientId')
+            AuthAnchorPattern = 'if\s*\(-not\s*\(Test-Path\s+-Path\s+\$OutputDirectory\)\)'
+        }
+        @{
+            Name             = 'Invoke-EnvironmentAuditValidation.ps1'
+            Path             = Join-Path $validatorRoot 'Invoke-EnvironmentAuditValidation.ps1'
+            ExpectedParams   = @('TenantId', 'DataverseUrl', 'ClientId', 'ClientSecret', 'CertificateThumbprint', 'Interactive', 'IncludeTrialDev', 'GracePeriodHours', 'OutputPath', 'SkipDiscovery')
+            AuthAnchorPattern = '\$authParams\s*=\s*@\{'
+        }
+        @{
+            Name             = 'Invoke-TenantAuditValidation.ps1'
+            Path             = Join-Path $validatorRoot 'Invoke-TenantAuditValidation.ps1'
+            ExpectedParams   = @('Zone', 'OutputPath', 'SkipCanaryValidation', 'GracePeriodHours', 'CanaryWaitSeconds', 'DataverseUrl', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath')
+            AuthAnchorPattern = 'if\s*\(\$DataverseUrl\)'
+        }
+        @{
+            Name             = 'Start-EnvironmentValidationRunbook.ps1'
+            Path             = Join-Path $validatorRoot 'Start-EnvironmentValidationRunbook.ps1'
+            ExpectedParams   = @('TenantId', 'DataverseUrl', 'ClientId', 'CertificateThumbprint', 'ClientSecret', 'IncludeTrialDev', 'GracePeriodHours', 'SkipDiscovery')
+            AuthAnchorPattern = '\$envParams\s*=\s*@\{'
+        }
+        @{
+            Name             = 'Start-TenantValidationRunbook.ps1'
+            Path             = Join-Path $validatorRoot 'Start-TenantValidationRunbook.ps1'
+            ExpectedParams   = @('Zone', 'DataverseUrl', 'TenantId', 'ClientId', 'CertificateThumbprint', 'SkipCanaryValidation', 'CanaryWaitSeconds')
+            AuthAnchorPattern = '\$ualParams\s*=\s*@\{'
+        }
+        @{
+            Name             = 'Test-MailboxAudit.ps1'
+            Path             = Join-Path $validatorRoot 'Test-MailboxAudit.ps1'
+            ExpectedParams   = @('Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath')
+            AuthAnchorPattern = 'function\s+Test-MailboxAudit'
+        }
+        @{
+            Name             = 'Test-PurviewRetention.ps1'
+            Path             = Join-Path $validatorRoot 'Test-PurviewRetention.ps1'
+            ExpectedParams   = @('Zone', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath')
+            AuthAnchorPattern = 'function\s+Test-PurviewRetention'
+        }
+        @{
+            Name             = 'Test-UnifiedAuditLog.ps1'
+            Path             = Join-Path $validatorRoot 'Test-UnifiedAuditLog.ps1'
+            ExpectedParams   = @('SkipCanaryValidation', 'GracePeriodHours', 'CanaryWaitSeconds', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath')
+            AuthAnchorPattern = 'function\s+Test-UnifiedAuditLog'
+        }
+        @{
+            Name             = 'Invoke-EnvironmentDiscovery.ps1'
+            Path             = Join-Path $validatorRoot 'Invoke-EnvironmentDiscovery.ps1'
+            ExpectedParams   = @('TenantId', 'DataverseUrl', 'ClientId', 'ClientSecret', 'CertificateThumbprint', 'Interactive', 'IncludeTrialDev', 'OutputPath')
+            AuthAnchorPattern = 'function\s+Invoke-EnvironmentDiscovery'
+        }
     )
 }
 
@@ -227,6 +288,39 @@ Describe "Drift baseline wrapper wiring contracts" {
     }
 }
 
+Describe "Dot-source parameter-preservation source contracts" {
+    It "<Name> snapshots and restores script-scope params around dot-sources" -ForEach $sourceContractMatrix {
+        $Path | Should -Exist -Because "$Name should exist"
+        $content = Get-Content -LiteralPath $Path -Raw
+
+        $snapshotMatch = [regex]::Match($content, '\$dotSourceSafeVars\s*=\s*@\{(?<Body>.*?)\}\s*', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $snapshotMatch.Success | Should -BeTrue -Because "$Name must define a dot-source snapshot hashtable"
+
+        $snapshotIndex = $snapshotMatch.Index
+        $snapshotBody = $snapshotMatch.Groups['Body'].Value
+        $snapshotKeys = [regex]::Matches($snapshotBody, '(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=') | ForEach-Object { $_.Groups[1].Value }
+
+        ($snapshotKeys | Sort-Object -Unique) | Should -Be ($ExpectedParams | Sort-Object) -Because "$Name must snapshot the full script parameter set"
+
+        $dotSourceMatches = [regex]::Matches($content, '(?m)^\s*\.\s+.+$')
+        $dotSourceMatches.Count | Should -BeGreaterThan 0 -Because "$Name must dot-source helper or validator scripts"
+        $firstDotSourceIndex = $dotSourceMatches[0].Index
+        $lastDotSourceIndex = $dotSourceMatches[$dotSourceMatches.Count - 1].Index
+
+        $snapshotIndex | Should -BeLessThan $firstDotSourceIndex -Because "$Name snapshot block must appear before the first dot-source"
+
+        $restoreMatch = [regex]::Match($content, 'foreach\s*\(\s*\$name\s+in\s+\$dotSourceSafeVars\.Keys\s*\)\s*\{')
+        $restoreMatch.Success | Should -BeTrue -Because "$Name must restore script-scope params after dot-sourcing"
+        $restoreIndex = $restoreMatch.Index
+
+        $restoreIndex | Should -BeGreaterThan $lastDotSourceIndex -Because "$Name restore loop must run after the final dot-source"
+
+        $anchorMatch = [regex]::Match($content, $AuthAnchorPattern)
+        $anchorMatch.Success | Should -BeTrue -Because "$Name anchor pattern should exist to verify restore ordering"
+        $restoreIndex | Should -BeLessThan $anchorMatch.Index -Because "$Name restore loop must execute before parameter-dependent logic"
+    }
+}
+
 Describe "ExchangeOnlineManagement compatibility bounds" {
     It "<Name> caps ExchangeOnlineManagement at 3.9.2 for current runtime compatibility" -ForEach $exchangeBoundedScripts {
         $Path | Should -Exist -Because "$Name should exist"
@@ -308,6 +402,44 @@ Describe "Helper script load and invocation contracts" {
         Should -Invoke Invoke-RestMethod -Times 1 -ParameterFilter {
             $Uri -eq 'https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/token' -and $Method -eq 'Post'
         }
+    }
+
+    It "preserves non-empty DataverseUrl in local scope when restoring after helper dot-source" {
+        $connectHelperPath = Join-Path $PSScriptRoot 'private\Connect-PowerPlatform.ps1'
+        $sanitizedConnectHelperPath = Get-SanitizedHelperScriptPath -SourcePath $connectHelperPath
+
+        function Invoke-DotSourceRestoreProbe {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$DataverseUrl,
+
+                [Parameter(Mandatory = $true)]
+                [string]$HelperPath
+            )
+
+            $dotSourceSafeVars = @{
+                DataverseUrl = $DataverseUrl
+            }
+
+            . $HelperPath
+
+            foreach ($name in $dotSourceSafeVars.Keys) {
+                Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
+            }
+
+            [PSCustomObject]@{
+                DataverseUrlValue = $DataverseUrl
+                DataverseUrlType  = $DataverseUrl.GetType().FullName
+                Length            = $DataverseUrl.Length
+            }
+        }
+
+        $probeUrl = 'https://org.crm.dynamics.com'
+        $probeResult = Invoke-DotSourceRestoreProbe -DataverseUrl $probeUrl -HelperPath $sanitizedConnectHelperPath
+
+        $probeResult.DataverseUrlValue | Should -Be $probeUrl
+        $probeResult.DataverseUrlType | Should -Be 'System.String'
+        $probeResult.Length | Should -BeGreaterThan 0
     }
 
     It "Compare-ValidationBaseline escapes CurrentRunId in URI and treats empty baseline as first run" {

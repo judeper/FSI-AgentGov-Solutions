@@ -137,6 +137,16 @@ try {
     $scriptRoot = $PSScriptRoot
     Write-Verbose "Script root: $scriptRoot"
 
+    $dotSourceSafeVars = @{
+        Zone                  = $Zone
+        DataverseUrl          = $DataverseUrl
+        TenantId              = $TenantId
+        ClientId              = $ClientId
+        CertificateThumbprint = $CertificateThumbprint
+        SkipCanaryValidation  = $SkipCanaryValidation
+        CanaryWaitSeconds     = $CanaryWaitSeconds
+    }
+
     $privatePath = Join-Path $PSScriptRoot 'private'
     $requiredHelpers = @(
         'Compare-ValidationBaseline.ps1'
@@ -148,6 +158,9 @@ try {
             throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
         }
         . $helperPath
+    }
+    foreach ($name in $dotSourceSafeVars.Keys) {
+        Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
     }
 
     Write-Verbose "Scripts loaded successfully"

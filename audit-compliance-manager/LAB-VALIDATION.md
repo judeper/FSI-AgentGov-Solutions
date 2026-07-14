@@ -97,6 +97,10 @@
      - Observed sequence: `Invoke-EnvironmentAuditValidation.ps1` and `Invoke-TenantAuditValidation.ps1` write the current run's orchestrator/validator records before wrapper-level drift comparisons execute. Baseline queries in `Compare-ValidationBaseline.ps1` selected the newest Passed row without excluding the current `fsi_runid`, so successful first runs could be classified as non-first-run.
      - Disposition (static fix applied; live revalidation pending): added optional `CurrentRunId` to `Compare-ValidationBaseline.ps1` (script + function scope) and appended `and fsi_runid ne '<escaped>'` when non-empty, with OData single-quote escaping. `Start-EnvironmentValidationRunbook.ps1` now passes `-CurrentRunId $validationResults.RunId`; `Invoke-TenantAuditValidation.ps1` now exposes `RunId`; and `Start-TenantValidationRunbook.ps1` passes `CurrentRunId` at both overall and per-validator compare call sites. Added targeted Pester coverage in `scripts/Validators.Tests.ps1` for URI contract and drift behavior.
 
+19. **Live blocker: helper dot-sourcing clobbered wrapper/orchestrator script-scope parameters, including non-empty DataverseUrl in certificate-auth runbook paths.**
+    - Observed sequence (public commit `4d984f5`): `Start-EnvironmentValidationRunbook` received a non-empty `DataverseUrl` but downstream invocation failed with `Cannot bind argument to parameter 'DataverseUrl' because it is an empty string.` Dot-sourced helpers in this solution carry script-scope param blocks for direct execution support; loading those helpers after caller param binding overwrote caller values with helper defaults.
+    - Disposition (static fix applied; live revalidation pending): backported the private predecessor snapshot/restore pattern (`$dotSourceSafeVars` + `Set-Variable -Scope Local`) across all affected public callers: `Export-AuditValidationEvidence.ps1`, `Invoke-EnvironmentAuditValidation.ps1`, `Invoke-TenantAuditValidation.ps1`, `Start-EnvironmentValidationRunbook.ps1`, `Start-TenantValidationRunbook.ps1`, `Test-MailboxAudit.ps1`, `Test-PurviewRetention.ps1`, `Test-UnifiedAuditLog.ps1`, and additionally `Invoke-EnvironmentDiscovery.ps1`. Added a nine-file source-contract matrix and a behavioral helper dot-source probe in `scripts/Validators.Tests.ps1`.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -120,6 +124,17 @@
   - `scripts/Invoke-TenantAuditValidation.ps1` (exposes `RunId` in orchestrator output)
   - `scripts/Start-TenantValidationRunbook.ps1` (passes `CurrentRunId` at overall and per-validator compare sites)
   - `scripts/Validators.Tests.ps1` (URI contract, first-run, drift regression/restoration, and wrapper wiring tests)
+- Dot-source parameter-preservation fix for helper clobbering in runbook/orchestrator/validator callers:
+  - `scripts/Export-AuditValidationEvidence.ps1`
+  - `scripts/Invoke-EnvironmentAuditValidation.ps1`
+  - `scripts/Invoke-TenantAuditValidation.ps1`
+  - `scripts/Start-EnvironmentValidationRunbook.ps1`
+  - `scripts/Start-TenantValidationRunbook.ps1`
+  - `scripts/Test-MailboxAudit.ps1`
+  - `scripts/Test-PurviewRetention.ps1`
+  - `scripts/Test-UnifiedAuditLog.ps1`
+  - `scripts/Invoke-EnvironmentDiscovery.ps1` (additional uncovered caller)
+  - `scripts/Validators.Tests.ps1` (nine-file source-contract matrix + DataverseUrl behavioral restore probe)
 - Option-set metadata payload fix for live Dataverse compatibility:
   - `scripts/create_dataverse_schema.py` (ACV global option sets)
   - `scripts/create_audit_compliance_schema.py` (ALCA global option set)

@@ -186,6 +186,20 @@ if (-not (Test-Path $modulePath)) {
 }
 Import-Module $modulePath -Force -ErrorAction Stop
 
+$dotSourceSafeVars = @{
+    Zone                  = $Zone
+    OutputPath            = $OutputPath
+    SkipCanaryValidation  = $SkipCanaryValidation
+    GracePeriodHours      = $GracePeriodHours
+    CanaryWaitSeconds     = $CanaryWaitSeconds
+    DataverseUrl          = $DataverseUrl
+    Interactive           = $Interactive
+    TenantId              = $TenantId
+    ClientId              = $ClientId
+    CertificateThumbprint = $CertificateThumbprint
+    CertificateFilePath   = $CertificateFilePath
+}
+
 $privatePath = Join-Path $PSScriptRoot 'private'
 $requiredHelpers = @(
     'Connect-PowerPlatform.ps1',
@@ -210,6 +224,9 @@ foreach ($script in $requiredScripts) {
         throw "Required script not found: $scriptPath. Ensure the solution is installed correctly."
     }
     . $scriptPath
+}
+foreach ($name in $dotSourceSafeVars.Keys) {
+    Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
 }
 
 # Generate RunId for correlated validation records

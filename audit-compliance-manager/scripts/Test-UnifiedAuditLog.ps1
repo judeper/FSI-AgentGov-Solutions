@@ -127,6 +127,17 @@ $ErrorActionPreference = "Stop"
 
 #region Dot-source private helpers
 
+$dotSourceSafeVars = @{
+    SkipCanaryValidation  = $SkipCanaryValidation
+    GracePeriodHours      = $GracePeriodHours
+    CanaryWaitSeconds     = $CanaryWaitSeconds
+    Interactive           = $Interactive
+    TenantId              = $TenantId
+    ClientId              = $ClientId
+    CertificateThumbprint = $CertificateThumbprint
+    CertificateFilePath   = $CertificateFilePath
+}
+
 $privatePath = Join-Path $PSScriptRoot 'private'
 $requiredHelpers = @(
     'Connect-AuditServices.ps1',
@@ -138,6 +149,9 @@ foreach ($helper in $requiredHelpers) {
         throw "Required helper script not found: $helperPath. Ensure the solution is installed correctly."
     }
     . $helperPath
+}
+foreach ($name in $dotSourceSafeVars.Keys) {
+    Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
 }
 
 #endregion
