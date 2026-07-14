@@ -885,6 +885,7 @@ Describe "Helper script load and invocation contracts" {
         $validatorContent = Get-Content -LiteralPath $validatorPath -Raw
 
         ($startContent -cmatch '\[string\]\$CanaryMailboxIdentity') | Should -BeTrue
+        ($startContent -cmatch 'DataverseUrl\s*=\s*\$DataverseUrl') | Should -BeTrue -Because 'Tenant validator rows require the central Dataverse URL.'
         ($startContent -cmatch 'CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
         ($startContent -cmatch '\$ualParams\.CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
         ($startContent -cmatch '\$PSBoundParameters\.ContainsKey\(''CanaryWaitSeconds''\)') | Should -BeTrue -Because 'Explicit CanaryWaitSeconds=0 must be forwarded.'

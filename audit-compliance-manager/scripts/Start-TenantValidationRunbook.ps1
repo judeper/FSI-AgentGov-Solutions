@@ -176,7 +176,8 @@ try {
     # Build parameters for Invoke-TenantAuditValidation
     # Do NOT pass -Interactive or -OutputPath (not suitable for runbook context)
     $ualParams = @{
-        Zone = $Zone
+        Zone         = $Zone
+        DataverseUrl = $DataverseUrl
     }
 
     if ($TenantId) { $ualParams.TenantId = $TenantId }

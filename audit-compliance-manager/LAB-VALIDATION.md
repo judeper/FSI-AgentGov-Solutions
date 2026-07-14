@@ -130,6 +130,10 @@
     - Observed sequence (public source `acd8665`): the tenant wrapper received `-CanaryWaitSeconds 0`, but `if ($CanaryWaitSeconds)` evaluated false and omitted the value from the orchestrator parameter set, which then used its 300-second default.
     - Disposition: `Start-TenantValidationRunbook.ps1` now forwards the value when `$PSBoundParameters.ContainsKey('CanaryWaitSeconds')`, preserving explicit zero-second smoke runs while retaining the default when the caller omits the parameter.
 
+27. **Live blocker: tenant wrapper omitted `DataverseUrl` when invoking the tenant orchestrator, leaving tenant evidence exports empty.**
+    - Observed sequence (public source `99a7a52`): certificate tenant validation returned three validator results, drift output, and a correlated RunId, but the final tenant evidence export contained zero records. `Start-TenantValidationRunbook.ps1` used `DataverseUrl` for wrapper-level drift checks but did not include it in the parameter set passed to `Invoke-TenantAuditValidation.ps1`, so validator history writes were disabled.
+    - Disposition: added `DataverseUrl = $DataverseUrl` to the tenant orchestrator parameter set and added a wiring regression assertion in `scripts/Validators.Tests.ps1`.
+
 ## Static changes implemented in this pass
 
 - Canary mailbox and app-only parameter-set reliability updates:
