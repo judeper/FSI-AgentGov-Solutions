@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/lab-harness/schema/evidence-summary.schema.json",
+  "title": "Lab Harness Evidence Summary",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAtUtc",
+    "solution",
+    "executionMode",
+    "result",
+    "exitCode",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "generatedAtUtc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "solution": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "executionMode": {
+      "type": "string",
+      "enum": [
+        "PlanOnly",
+        "Execute"
+      ]
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "PlanValidatedNotExecuted",
+        "Succeeded",
+        "Failed"
+      ]
+    },
+    "exitCode": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "planPath": {
+      "type": "string"
+    },
+    "ownershipManifest": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "channel",
+          "adapter",
+          "status",
+          "startedAtUtc",
+          "durationSeconds"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "channel": { "type": "string", "enum": [ "runtime", "playwright" ] },
+          "adapter": { "type": "string" },
+          "status": { "type": "string" },
+          "startedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationSeconds": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

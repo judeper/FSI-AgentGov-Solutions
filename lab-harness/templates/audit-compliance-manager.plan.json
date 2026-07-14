@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "solution": "audit-compliance-manager",
+  "ownershipManifestPath": "lab-harness/templates/audit-compliance-manager.ownership.json",
+  "notes": "Static PlanOnly example for foundation validation. Contains no private tenant values.",
+  "steps": [
+    {
+      "id": "acm-runtime-pester-validators",
+      "channel": "runtime",
+      "adapter": "runtime.powershell.pester",
+      "description": "Validate ACM PowerShell unit coverage via existing Pester tests.",
+      "testPaths": [
+        "audit-compliance-manager/scripts/Validators.Tests.ps1"
+      ]
+    },
+    {
+      "id": "acm-playwright-portal-smoke-template",
+      "channel": "playwright",
+      "adapter": "playwright.portal-smoke",
+      "description": "Template smoke step. Runtime values come from environment variables only.",
+      "packagePath": "lab-harness/playwright",
+      "specPath": "lab-harness/playwright/tests/portal-smoke.spec.ts"
+    }
+  ]
+}

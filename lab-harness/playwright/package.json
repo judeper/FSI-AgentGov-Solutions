@@ -1,0 +1,17 @@
+{
+  "name": "@fsi/lab-harness-playwright",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20 <23"
+  },
+  "scripts": {
+    "test:node": "tsx --test tests/node/**/*.test.ts",
+    "test:smoke": "playwright test tests/portal-smoke.spec.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.54.2",
+    "tsx": "4.20.4"
+  }
+}

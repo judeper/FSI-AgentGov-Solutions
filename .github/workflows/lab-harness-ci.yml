@@ -1,0 +1,124 @@
+name: Lab Harness CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lab-harness/**'
+      - '.github/workflows/lab-harness-ci.yml'
+      - '.gitignore'
+  push:
+    branches: [main]
+    paths:
+      - 'lab-harness/**'
+      - '.github/workflows/lab-harness-ci.yml'
+      - '.gitignore'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lab-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: 'npm'
+          cache-dependency-path: 'lab-harness/playwright/package-lock.json'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+          Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Install Playwright package dependencies
+        run: npm ci --prefix lab-harness/playwright
+
+      - name: Run Node tests
+        run: npm --prefix lab-harness/playwright run test:node
+
+      - name: Parse-check lab harness PowerShell
+        shell: pwsh
+        run: |
+          $errors = 0
+          Get-ChildItem -Path lab-harness -Recurse -Include *.ps1,*.psm1 | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors.Count -gt 0) {
+              Write-Host "PARSE FAIL: $($_.FullName)"
+              $parseErrors | ForEach-Object { Write-Host "  $_" }
+              $errors++
+            }
+          }
+          if ($errors -gt 0) { exit 1 }
+
+      - name: PSScriptAnalyzer (lab-harness only)
+        shell: pwsh
+        run: |
+          $targets = @(
+            'lab-harness/runtime',
+            'lab-harness/evidence',
+            'lab-harness/tests'
+          )
+          $results = @()
+          foreach ($target in $targets) {
+            $results += Invoke-ScriptAnalyzer -Path $target -Recurse -Severity Error,Warning -Settings ./PSScriptAnalyzerSettings.psd1
+          }
+          $results | Format-Table -AutoSize
+          if ($results.Count -gt 0) {
+            Write-Host "::error::PSScriptAnalyzer reported $($results.Count) finding(s) in lab-harness."
+            exit 1
+          }
+
+      - name: Run Pester tests (lab-harness only)
+        shell: pwsh
+        run: |
+          $cfg = New-PesterConfiguration
+          $cfg.Run.Path = @('lab-harness/tests')
+          $cfg.Run.Exit = $true
+          $cfg.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $cfg
+
+      - name: Validate plan and evidence schemas/templates
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema pyyaml
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import validate
+          import yaml
+
+          root = Path('lab-harness')
+          schemas = {
+              "plan": json.loads((root / 'schema' / 'solution-validation-plan.schema.json').read_text(encoding='utf-8')),
+              "ownership": json.loads((root / 'schema' / 'ownership-cleanup.schema.json').read_text(encoding='utf-8')),
+              "summary": json.loads((root / 'schema' / 'evidence-summary.schema.json').read_text(encoding='utf-8')),
+          }
+          plan = json.loads((root / 'templates' / 'audit-compliance-manager.plan.json').read_text(encoding='utf-8'))
+          ownership = json.loads((root / 'templates' / 'audit-compliance-manager.ownership.json').read_text(encoding='utf-8'))
+          summary = json.loads((root / 'templates' / 'evidence-summary.example.json').read_text(encoding='utf-8'))
+
+          validate(instance=plan, schema=schemas["plan"])
+          validate(instance=ownership, schema=schemas["ownership"])
+          validate(instance=summary, schema=schemas["summary"])
+
+          workflow_path = Path('.github/workflows/lab-harness-ci.yml')
+          yaml.safe_load(workflow_path.read_text(encoding='utf-8'))
+
+          print('Schema/template validation passed.')
+          PY

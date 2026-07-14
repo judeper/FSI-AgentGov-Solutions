@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0.0",
+  "solution": "audit-compliance-manager",
+  "resourceOwner": "Power Platform Admin",
+  "cleanupActions": [
+    {
+      "id": "delete-redacted-artifacts-after-retention-window",
+      "resourceType": "filesystem",
+      "location": "lab-harness/evidence/redacted",
+      "cleanupAdapter": "manual-review-then-delete",
+      "notes": "Review and retain only approved sanitized artifacts before deletion."
+    },
+    {
+      "id": "delete-generated-summary-metadata",
+      "resourceType": "filesystem",
+      "location": "lab-harness/evidence/summary",
+      "cleanupAdapter": "scripted-delete",
+      "notes": "Delete generated run summaries as part of lab cleanup."
+    }
+  ],
+  "rollbackActions": [
+    {
+      "id": "revert-lab-harness-foundation-commit",
+      "description": "Use git revert for the foundation commit if rollback is required."
+    },
+    {
+      "id": "remove-local-evidence-root",
+      "description": "Delete non-git evidence folders (for example C:\\FSI-Lab-Evidence) through local runbook steps."
+    }
+  ]
+}
