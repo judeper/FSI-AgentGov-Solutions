@@ -79,10 +79,14 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing by orchestrators.
+    # Required by Test-EnvironmentAudit function and direct execution.
+    [Parameter(Mandatory = $false)]
     [string]$EnvironmentUrl,
 
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing by orchestrators.
+    # Required by Test-EnvironmentAudit function and direct execution.
+    [Parameter(Mandatory = $false)]
     [string]$AccessToken,
 
     [Parameter(Mandatory = $false)]

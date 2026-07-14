@@ -101,6 +101,10 @@
     - Observed sequence (public commit `4d984f5`): `Start-EnvironmentValidationRunbook` received a non-empty `DataverseUrl` but downstream invocation failed with `Cannot bind argument to parameter 'DataverseUrl' because it is an empty string.` Dot-sourced helpers in this solution carry script-scope param blocks for direct execution support; loading those helpers after caller param binding overwrote caller values with helper defaults.
     - Disposition (static fix applied; live revalidation pending): backported the private predecessor snapshot/restore pattern (`$dotSourceSafeVars` + `Set-Variable -Scope Local`) across all affected public callers: `Export-AuditValidationEvidence.ps1`, `Invoke-EnvironmentAuditValidation.ps1`, `Invoke-TenantAuditValidation.ps1`, `Start-EnvironmentValidationRunbook.ps1`, `Start-TenantValidationRunbook.ps1`, `Test-MailboxAudit.ps1`, `Test-PurviewRetention.ps1`, `Test-UnifiedAuditLog.ps1`, and additionally `Invoke-EnvironmentDiscovery.ps1`. Added a nine-file source-contract matrix and a behavioral helper dot-source probe in `scripts/Validators.Tests.ps1`.
 
+20. **Live blocker: mandatory script-scope parameters in environment validators prevented orchestrator dot-source loading.**
+    - Observed sequence (public source `8185a56`): `Start-EnvironmentValidationRunbook` preserved inputs and invoked `Invoke-EnvironmentAuditValidation`, orchestration began, then validator load failed with `Cannot process command because of one or more missing mandatory parameters: EnvironmentUrl AccessToken.` Root cause: `Test-EnvironmentAudit.ps1` and `Test-EnvironmentRetention.ps1` declared mandatory script-scope params and were dot-sourced without arguments before function definitions loaded.
+    - Disposition (static fix applied; live revalidation pending): made script-scope parameters optional in both environment validators (`EnvironmentUrl`/`AccessToken` for audit; `EnvironmentUrl`/`AccessToken`/`DataverseUrl`/`CentralAccessToken`/`Zone` for retention) while preserving mandatory function-scope contracts and `@PSBoundParameters` direct invocation behavior. Extended `scripts/Validators.Tests.ps1` with direct-invocation block coverage for both scripts and a behavioral sanitized-dot-source test proving no-arg load succeeds while function-level mandatory parameters remain required.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -135,6 +139,10 @@
   - `scripts/Test-UnifiedAuditLog.ps1`
   - `scripts/Invoke-EnvironmentDiscovery.ps1` (additional uncovered caller)
   - `scripts/Validators.Tests.ps1` (nine-file source-contract matrix + DataverseUrl behavioral restore probe)
+- Environment-validator script-scope parameter fix for orchestrator dot-source loading:
+  - `scripts/Test-EnvironmentAudit.ps1` (script-scope `EnvironmentUrl`/`AccessToken` optional; function-scope mandatory unchanged)
+  - `scripts/Test-EnvironmentRetention.ps1` (script-scope `EnvironmentUrl`/`AccessToken`/`DataverseUrl`/`CentralAccessToken`/`Zone` optional; function-scope mandatory unchanged)
+  - `scripts/Validators.Tests.ps1` (direct-invocation contract coverage for both environment validators + no-arg sanitized dot-source behavioral and mandatory-function-parameter assertions)
 - Option-set metadata payload fix for live Dataverse compatibility:
   - `scripts/create_dataverse_schema.py` (ACV global option sets)
   - `scripts/create_audit_compliance_schema.py` (ALCA global option set)

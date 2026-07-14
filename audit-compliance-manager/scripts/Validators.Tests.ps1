@@ -43,6 +43,10 @@
     Justification = 'Variable feeds Pester -ForEach discovery at line 129; PSSA static analysis misses Pester discovery scriptblock reads.'
 )]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'environmentValidatorScripts',
+    Justification = 'Variable feeds Pester -ForEach discovery for environment-validator direct-invocation and load-behavior checks; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     'PSUseDeclaredVarsMoreThanAssignments', 'runbookWrappers',
     Justification = 'Variable feeds Pester -ForEach discovery for runbook currency checks; PSSA static analysis misses Pester discovery scriptblock reads.'
 )]
@@ -95,6 +99,21 @@ BeforeDiscovery {
         @{ Name = "Connect-AuditServices.ps1"; Path = Join-Path $privateRoot "Connect-AuditServices.ps1" }
         @{ Name = "Connect-PowerPlatform.ps1"; Path = Join-Path $privateRoot "Connect-PowerPlatform.ps1" }
         @{ Name = "Get-ValidationResults.ps1"; Path = Join-Path $privateRoot "Get-ValidationResults.ps1" }
+    )
+
+    $environmentValidatorScripts = @(
+        @{
+            Name                = "Test-EnvironmentAudit.ps1"
+            Path                = Join-Path $validatorRoot "Test-EnvironmentAudit.ps1"
+            FunctionName        = "Test-EnvironmentAudit"
+            MandatoryParameters = @("EnvironmentUrl", "AccessToken")
+        }
+        @{
+            Name                = "Test-EnvironmentRetention.ps1"
+            Path                = Join-Path $validatorRoot "Test-EnvironmentRetention.ps1"
+            FunctionName        = "Test-EnvironmentRetention"
+            MandatoryParameters = @("EnvironmentUrl", "AccessToken", "DataverseUrl", "CentralAccessToken", "Zone")
+        }
     )
 
     $runbookWrappers = @(
@@ -246,6 +265,14 @@ Describe "Validator script direct-invocation blocks" {
         $content = Get-Content -LiteralPath $Path -Raw
 
         ($content -cmatch 'MyInvocation\.InvocationName\s+-ne\s+') | Should -BeTrue -Because "$Name should support direct invocation"
+    }
+
+    It "<Name> has a direct-invocation block" -ForEach $environmentValidatorScripts {
+        $Path | Should -Exist -Because "$Name should exist"
+        $content = Get-Content -LiteralPath $Path -Raw
+
+        ($content -cmatch 'MyInvocation\.InvocationName\s+-ne\s+') | Should -BeTrue -Because "$Name should support direct invocation"
+        ($content -cmatch '@PSBoundParameters') | Should -BeTrue -Because "$Name direct invocation should forward script inputs via @PSBoundParameters"
     }
 }
 
@@ -440,6 +467,36 @@ Describe "Helper script load and invocation contracts" {
         $probeResult.DataverseUrlValue | Should -Be $probeUrl
         $probeResult.DataverseUrlType | Should -Be 'System.String'
         $probeResult.Length | Should -BeGreaterThan 0
+    }
+
+    It "<Name> dot-sources with no args, loads <FunctionName>, and preserves mandatory function contracts" -ForEach $environmentValidatorScripts {
+        if (Get-Command $FunctionName -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath "Function:\$FunctionName" -Force
+        }
+
+        $sanitizedValidatorPath = Get-SanitizedHelperScriptPath -SourcePath $Path
+        $dotSourceError = $null
+        try {
+            . $sanitizedValidatorPath
+        } catch {
+            $dotSourceError = $_
+        }
+        $dotSourceError | Should -BeNullOrEmpty -Because "$Name should load by dot-sourcing with no script-scope arguments"
+
+        $loadedFunction = Get-Command $FunctionName -CommandType Function -ErrorAction SilentlyContinue
+        $loadedFunction | Should -Not -BeNullOrEmpty -Because "$FunctionName should be available after dot-sourcing $Name"
+
+        foreach ($parameterName in $MandatoryParameters) {
+            $parameterMetadata = $loadedFunction.Parameters[$parameterName]
+            $parameterMetadata | Should -Not -BeNullOrEmpty -Because "$FunctionName should include parameter '$parameterName'"
+
+            $parameterAttribute = $parameterMetadata.Attributes |
+                Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } |
+                Select-Object -First 1
+
+            $parameterAttribute | Should -Not -BeNullOrEmpty -Because "$FunctionName parameter '$parameterName' should include [Parameter()] metadata"
+            $parameterAttribute.Mandatory | Should -BeTrue -Because "$FunctionName parameter '$parameterName' should remain mandatory at function scope"
+        }
     }
 
     It "Compare-ValidationBaseline escapes CurrentRunId in URI and treats empty baseline as first run" {
