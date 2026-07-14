@@ -169,6 +169,23 @@ def get_environment_registry_entity() -> dict:
 # Column Definitions
 # ============================================================================
 
+
+def _boolean_optionset() -> dict:
+    """Return a fresh Dataverse Boolean option-set definition."""
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+        "OptionSetType": "Boolean",
+        "TrueOption": {
+            "Value": 1,
+            "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]},
+        },
+        "FalseOption": {
+            "Value": 0,
+            "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]},
+        },
+    }
+
+
 HISTORY_TABLE_COLUMNS = [
     # Correlation and Scope
     {
@@ -362,11 +379,14 @@ REGISTRY_TABLE_COLUMNS = [
     # Admin Override
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": "fsi_OverrideInclude",
         "DisplayName": {"LocalizedLabels": [{"Label": "Override Include", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Admin override to include Trial/Dev environments", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "None"},
         "DefaultValue": False,
+        "OptionSet": _boolean_optionset(),
     },
     # Notes
     {

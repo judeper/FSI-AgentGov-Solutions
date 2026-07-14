@@ -88,6 +88,11 @@
      - Authoritative source: https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-optionsets#create-a-choice-column-using-a-global-option-set
      - Disposition: added `_resolve_global_optionset_binding` to both `ACVClient` and `ALCAClient`. Before any non-dry-run `create_attribute` POST, the method detects the Name alternate-key form, resolves the option set via `get_global_optionset(name)`, requires a valid UUID `MetadataId`, deep-copies the payload, and rewrites the binding to `/GlobalOptionSetDefinitions(<normalized-uuid>)`. Missing option sets and malformed bindings fail before POST. Non-choice attributes, valid MetadataId bindings, and dry-run behavior remain unchanged. Added pytest regression coverage in `tests/test_global_optionset_bind_resolution.py`. Full canonical deployment rerun remains pending.
 
+ 17. **Live blocker: `BooleanAttributeMetadata` POST for `fsi_OverrideInclude` returned HTTP 400 — `OptionSet` with two options required by Dataverse Boolean-column create contract.**
+     - Observed sequence (commit 40f92ce): ACV had successfully created all AuditValidationHistory custom columns and EnvironmentRegistry columns through `fsi_lastvalidated`. The POST for the next column, `fsi_OverrideInclude` (`BooleanAttributeMetadata`), returned HTTP 400 with body `{"error":{"code":"0x80048403","message":"The option set for a Boolean attribute must have two options for true and false values."}}`. The existing payload included `@odata.type`, `SchemaName`, `DisplayName`/`Description` labels, `RequiredLevel`, and `DefaultValue` but omitted the required `OptionSet` key and its `BooleanOptionSetMetadata` contents. The same missing-`OptionSet` pattern was present in `fsi_AuditEnabled` and `fsi_DataverseAuditEnabled` in `create_audit_compliance_schema.py`. Additionally, `AttributeType` and `AttributeTypeName` were absent from all three columns, which the Dataverse Web API Boolean-column create contract also requires.
+     - Authoritative source: https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-column-definitions-using-web-api#create-a-boolean-column
+     - Disposition: added the full Boolean-column create contract to all three `BooleanAttributeMetadata` column definitions — `"AttributeType": "Boolean"`, `"AttributeTypeName": {"Value": "BooleanType"}`, and `"OptionSet"` containing `BooleanOptionSetMetadata` with `OptionSetType=Boolean`, `TrueOption Value=1 / "Yes"`, and `FalseOption Value=0 / "No"`. Added a private `_boolean_optionset()` helper in each script that returns a fresh dict per call to prevent shared mutable state across column definitions. Existing `DefaultValue: False` values are preserved on all three columns. Added pytest regression coverage in `tests/test_boolean_attribute_contract.py`. Full canonical deployment rerun remains pending.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -143,6 +148,10 @@
   - `scripts/create_dataverse_schema.py` (entity-existence guard in `create_columns` dry-run branch for both `fsi_auditvalidationhistory` and `fsi_environmentregistry`)
   - `scripts/create_audit_compliance_schema.py` (same guard for `fsi_auditenvironmentcompliance`)
   - `tests/test_metadata_publish_readiness.py` (extended `ACVSchemaRecorder`/`ALCASchemaRecorder` with configurable `entity_data`; added four regression tests covering ACV/ALCA dry-run missing-entity and existing-entity parity)
+- `BooleanAttributeMetadata` create-contract fix for live HTTP 400 0x80048403 on `fsi_OverrideInclude` column creation:
+  - `scripts/create_dataverse_schema.py` (added `_boolean_optionset()` helper; added `AttributeType`, `AttributeTypeName`, `OptionSet` to `fsi_OverrideInclude`)
+  - `scripts/create_audit_compliance_schema.py` (added `_boolean_optionset()` helper; added same three fields to `fsi_AuditEnabled`, `fsi_DataverseAuditEnabled`)
+  - `tests/test_boolean_attribute_contract.py` (new: full-contract, distinct-OptionSet-identity, and DefaultValue regression guards for all three Boolean definitions)
 - `PicklistAttributeMetadata` create-contract fix for live HTTP 500 on `fsi_scope` column creation:
   - `scripts/create_dataverse_schema.py` (added `AttributeType`, `AttributeTypeName`, `SourceTypeMask` to `fsi_Scope`, both `fsi_Zone` definitions, `fsi_Severity`, `fsi_EnvironmentType`)
   - `scripts/create_audit_compliance_schema.py` (same three fields added to `fsi_ComplianceStatus`)

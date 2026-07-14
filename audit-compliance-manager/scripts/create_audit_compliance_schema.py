@@ -198,6 +198,23 @@ def get_audit_environment_compliance_entity() -> dict:
 # Column Definitions
 # ============================================================================
 
+
+def _boolean_optionset() -> dict:
+    """Return a fresh Dataverse Boolean option-set definition."""
+    return {
+        "@odata.type": "Microsoft.Dynamics.CRM.BooleanOptionSetMetadata",
+        "OptionSetType": "Boolean",
+        "TrueOption": {
+            "Value": 1,
+            "Label": {"LocalizedLabels": [{"Label": "Yes", "LanguageCode": 1033}]},
+        },
+        "FalseOption": {
+            "Value": 0,
+            "Label": {"LocalizedLabels": [{"Label": "No", "LanguageCode": 1033}]},
+        },
+    }
+
+
 TABLE_COLUMNS = [
     # Environment identification (upsert key)
     {
@@ -223,6 +240,8 @@ TABLE_COLUMNS = [
     # Purview unified audit status
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": "fsi_AuditEnabled",
         "DisplayName": {
             "LocalizedLabels": [
@@ -239,10 +258,13 @@ TABLE_COLUMNS = [
         },
         "RequiredLevel": {"Value": "None"},
         "DefaultValue": False,
+        "OptionSet": _boolean_optionset(),
     },
     # Dataverse audit status
     {
         "@odata.type": "Microsoft.Dynamics.CRM.BooleanAttributeMetadata",
+        "AttributeType": "Boolean",
+        "AttributeTypeName": {"Value": "BooleanType"},
         "SchemaName": "fsi_DataverseAuditEnabled",
         "DisplayName": {
             "LocalizedLabels": [
@@ -259,6 +281,7 @@ TABLE_COLUMNS = [
         },
         "RequiredLevel": {"Value": "None"},
         "DefaultValue": False,
+        "OptionSet": _boolean_optionset(),
     },
     # Last compliance check timestamp
     {
