@@ -1,20 +1,20 @@
 # Lab Validation Report — Audit Compliance Manager (ACM)
 
-> **Solution:** `audit-compliance-manager` · **Version under review:** v1.0.6 (static-review draft)
+> **Solution:** `audit-compliance-manager` · **Version under review:** v1.0.6
 >
 > **Date:** 2026-07-14
 >
-> **Validation state:** **Static review complete; private live validation pending**
+> **Validation state:** **Private live validation complete**
 
 ## Scope and guardrails used for this pass
 
 - One solution at a time (`audit-compliance-manager` only)
 - Revalidated against current first-party Microsoft sources
-- No overclaiming: this report does **not** claim live-tenant success
+- No overclaiming: live execution completed, while detected tenant configuration gaps remain findings rather than harness failures
 - Hybrid evidence model retained:
   - `runtime` channel for script/API behavior
   - `playwright` channel for portal/UI checks only
-- Keep one draft PR open until private harness evidence is attached
+- Keep one solution PR open through evidence attachment and final review
 
 ## Source revalidation table (first-party, checked 2026-07-14)
 
@@ -64,7 +64,7 @@
 
 11. **Live blocker: service-principal attribute existence probe exhausted retryable 500s on alternate-key lookup endpoint.**
     - Observed sequence: after metadata publication/readiness improvements, deployment progressed to column probes, found existing `fsi_runid`, then `GET EntityDefinitions(LogicalName='...')/Attributes(LogicalName='fsi_scope')` repeatedly returned HTTP 500 under service-principal auth. Admin comparison showed missing-attribute alternate-key probe can return 404 while the collection query `.../Attributes?$select=...&$filter=LogicalName eq 'fsi_scope'` returns stable HTTP 200 with empty `value`.
-    - Disposition: replaced ACV/ALCA `get_attribute_metadata` and attribute-readiness polling with filtered Attributes collection queries (escaped OData string literal, minimal `$select`, first match/`None` contract), added pytest regression coverage for existing/missing/escaped names, and asserted that no `Attributes(LogicalName='...')` URL is generated. Full canonical deployment rerun remains pending.
+    - Disposition: replaced ACV/ALCA `get_attribute_metadata` and attribute-readiness polling with filtered Attributes collection queries (escaped OData string literal, minimal `$select`, first match/`None` contract), added pytest regression coverage for existing/missing/escaped names, and asserted that no `Attributes(LogicalName='...')` URL is generated. The full canonical deployment rerun succeeded.
 
 12. **Live blocker: one-missing-column-per-query filtered metadata probes remained brittle immediately after publish.**
     - Observed sequence: table/Attributes readiness returned 200 and existing `fsi_runid` lookup succeeded, but the next missing-column filtered query still hit repeated transient 500s under service-principal auth. A later probe showed the same missing filtered query returning 200, indicating immediate post-publish brittleness rather than a permanent absence/read failure.
@@ -72,7 +72,7 @@
 
 13. **Live blocker: projected Attributes inventory query itself (`Attributes?$select=LogicalName`) remained transiently unstable immediately after metadata readiness 200s.**
     - Observed sequence: `wait_for_entity_metadata_readiness` succeeded on unprojected Attributes collection, then projected inventory query returned repeated transient 500s in the same service-principal session before later settling to 200. Equivalent calls with/without `Prefer: odata.include-annotations=*` both returned 200 after settling.
-    - Disposition: moved ACV/ALCA attribute inventory to a bounded metadata-propagation loop owned by `list_attribute_logical_names` (timeout + poll interval constants, retries on 429/500/502/503/504 + propagation 404 + `RequestException`/`RetryError`, immediate 400/401/403 `RuntimeError`, pagination preserved, timeout reporting `last_status`/`attempts`/`last_error`) and routed inventory through a metadata-specific no-retry session to keep total wait bounded without nested adapter backoff inflation. Full canonical rerun remains pending.
+    - Disposition: moved ACV/ALCA attribute inventory to a bounded metadata-propagation loop owned by `list_attribute_logical_names` (timeout + poll interval constants, retries on 429/500/502/503/504 + propagation 404 + `RequestException`/`RetryError`, immediate 400/401/403 `RuntimeError`, pagination preserved, timeout reporting `last_status`/`attempts`/`last_error`) and routed inventory through a metadata-specific no-retry session to keep total wait bounded without nested adapter backoff inflation. The full canonical deployment rerun succeeded.
 
  14. **Dry-run 404→TimeoutError: `create_columns` called `list_attribute_logical_names` unconditionally.**
      - Observed sequence: in `--dry-run` against a fresh environment the entity was only previewed (not created), so `EntityDefinitions(...)/Attributes` returned 404. `list_attribute_logical_names` treated 404 as a post-publish propagation transient and polled for ~180 seconds before raising `TimeoutError`.
@@ -81,50 +81,50 @@
  15. **Live blocker: `fsi_scope` create-attribute POST returned repeated HTTP 500 — `PicklistAttributeMetadata` payload missing required Dataverse Web API contract fields.**
      - Observed sequence: after the full-collection attribute inventory fix (`fsi_runid` found existing), the next `POST EntityDefinitions(LogicalName='fsi_auditvalidationhistory')/Attributes` for `fsi_scope` returned repeated HTTP 500. A settled operator metadata query after the failures confirmed `fsi_scope` was absent, establishing this as a create-attribute request failure rather than a readiness-polling failure. Existing payloads included `@odata.type`, `SchemaName`, `DisplayName`/`Description` labels, `RequiredLevel`, and `GlobalOptionSet@odata.bind` but omitted `AttributeType`, `AttributeTypeName`, and `SourceTypeMask`.
      - Authoritative source: Microsoft Learn "Create a choice column using a global option set" — the current published contract requires `"AttributeType": "Picklist"`, `"AttributeTypeName": {"Value": "PicklistType"}`, and `"SourceTypeMask": 0` alongside the `GlobalOptionSet@odata.bind` Name-key binding. The Name-key binding form itself is explicitly supported per the same doc.
-     - Disposition: added the three missing contract fields to all six `PicklistAttributeMetadata` column definitions across `scripts/create_dataverse_schema.py` (`fsi_Scope`, both `fsi_Zone` definitions, `fsi_Severity`, `fsi_EnvironmentType`) and `scripts/create_audit_compliance_schema.py` (`fsi_ComplianceStatus`). Added pytest regression coverage in `tests/test_picklist_attribute_contract.py` that enumerates all six current Picklist definitions and asserts their full three-field contract and expected global option-set bindings. Full canonical deployment rerun remains pending.
+     - Disposition: added the three missing contract fields to all six `PicklistAttributeMetadata` column definitions across `scripts/create_dataverse_schema.py` (`fsi_Scope`, both `fsi_Zone` definitions, `fsi_Severity`, `fsi_EnvironmentType`) and `scripts/create_audit_compliance_schema.py` (`fsi_ComplianceStatus`). Added pytest regression coverage in `tests/test_picklist_attribute_contract.py` that enumerates all six current Picklist definitions and asserts their full three-field contract and expected global option-set bindings. The full canonical deployment rerun succeeded.
 
  16. **Live blocker: corrected `PicklistAttributeMetadata` POST returned HTTP 500 "Guid should contain 32 digits with 4 dashes" — `GlobalOptionSet@odata.bind` Name alternate-key form rejected by create-attribute endpoint.**
      - Observed sequence: one-shot service-principal POST with the fully corrected payload (including `AttributeType`, `AttributeTypeName`, `SourceTypeMask`) returned HTTP 500 with response body `{"error":{"code":"0x0","message":"Guid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)."}}`. The payload contained no GUID-shaped property other than the `GlobalOptionSet@odata.bind = "/GlobalOptionSetDefinitions(Name='fsi_acv_scope')"` value. Microsoft Learn documents the Name alternate-key form but uses the MetadataId GUID form (`/GlobalOptionSetDefinitions(<guid>)`) in its primary create-column request; the canonical environment rejected the Name form on this create-attribute POST.
      - Authoritative source: https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-optionsets#create-a-choice-column-using-a-global-option-set
-     - Disposition: added `_resolve_global_optionset_binding` to both `ACVClient` and `ALCAClient`. Before any non-dry-run `create_attribute` POST, the method detects the Name alternate-key form, resolves the option set via `get_global_optionset(name)`, requires a valid UUID `MetadataId`, deep-copies the payload, and rewrites the binding to `/GlobalOptionSetDefinitions(<normalized-uuid>)`. Missing option sets and malformed bindings fail before POST. Non-choice attributes, valid MetadataId bindings, and dry-run behavior remain unchanged. Added pytest regression coverage in `tests/test_global_optionset_bind_resolution.py`. Full canonical deployment rerun remains pending.
+     - Disposition: added `_resolve_global_optionset_binding` to both `ACVClient` and `ALCAClient`. Before any non-dry-run `create_attribute` POST, the method detects the Name alternate-key form, resolves the option set via `get_global_optionset(name)`, requires a valid UUID `MetadataId`, deep-copies the payload, and rewrites the binding to `/GlobalOptionSetDefinitions(<normalized-uuid>)`. Missing option sets and malformed bindings fail before POST. Non-choice attributes, valid MetadataId bindings, and dry-run behavior remain unchanged. Added pytest regression coverage in `tests/test_global_optionset_bind_resolution.py`. The full canonical deployment rerun succeeded.
 
  17. **Live blocker: `BooleanAttributeMetadata` POST for `fsi_OverrideInclude` returned HTTP 400 — `OptionSet` with two options required by Dataverse Boolean-column create contract.**
      - Observed sequence (commit 40f92ce): ACV had successfully created all AuditValidationHistory custom columns and EnvironmentRegistry columns through `fsi_lastvalidated`. The POST for the next column, `fsi_OverrideInclude` (`BooleanAttributeMetadata`), returned HTTP 400 with body `{"error":{"code":"0x80048403","message":"The option set for a Boolean attribute must have two options for true and false values."}}`. The existing payload included `@odata.type`, `SchemaName`, `DisplayName`/`Description` labels, `RequiredLevel`, and `DefaultValue` but omitted the required `OptionSet` key and its `BooleanOptionSetMetadata` contents. The same missing-`OptionSet` pattern was present in `fsi_AuditEnabled` and `fsi_DataverseAuditEnabled` in `create_audit_compliance_schema.py`. Additionally, `AttributeType` and `AttributeTypeName` were absent from all three columns, which the Dataverse Web API Boolean-column create contract also requires.
      - Authoritative source: https://learn.microsoft.com/power-apps/developer/data-platform/webapi/create-update-column-definitions-using-web-api#create-a-boolean-column
-     - Disposition: added the full Boolean-column create contract to all three `BooleanAttributeMetadata` column definitions — `"AttributeType": "Boolean"`, `"AttributeTypeName": {"Value": "BooleanType"}`, and `"OptionSet"` containing `BooleanOptionSetMetadata` with `OptionSetType=Boolean`, `TrueOption Value=1 / "Yes"`, and `FalseOption Value=0 / "No"`. Added a private `_boolean_optionset()` helper in each script that returns a fresh dict per call to prevent shared mutable state across column definitions. Existing `DefaultValue: False` values are preserved on all three columns. Added pytest regression coverage in `tests/test_boolean_attribute_contract.py`. Full canonical deployment rerun remains pending.
+     - Disposition: added the full Boolean-column create contract to all three `BooleanAttributeMetadata` column definitions — `"AttributeType": "Boolean"`, `"AttributeTypeName": {"Value": "BooleanType"}`, and `"OptionSet"` containing `BooleanOptionSetMetadata` with `OptionSetType=Boolean`, `TrueOption Value=1 / "Yes"`, and `FalseOption Value=0 / "No"`. Added a private `_boolean_optionset()` helper in each script that returns a fresh dict per call to prevent shared mutable state across column definitions. Existing `DefaultValue: False` values are preserved on all three columns. Added pytest regression coverage in `tests/test_boolean_attribute_contract.py`. The full canonical deployment rerun succeeded.
 
  18. **Static drift-sequencing defect: wrappers selected the current Passed row as baseline in first-run paths.**
      - Observed sequence: `Invoke-EnvironmentAuditValidation.ps1` and `Invoke-TenantAuditValidation.ps1` write the current run's orchestrator/validator records before wrapper-level drift comparisons execute. Baseline queries in `Compare-ValidationBaseline.ps1` selected the newest Passed row without excluding the current `fsi_runid`, so successful first runs could be classified as non-first-run.
-     - Disposition (static fix applied; live revalidation pending): added optional `CurrentRunId` to `Compare-ValidationBaseline.ps1` (script + function scope) and appended `and fsi_runid ne '<escaped>'` when non-empty, with OData single-quote escaping. `Start-EnvironmentValidationRunbook.ps1` now passes `-CurrentRunId $validationResults.RunId`; `Invoke-TenantAuditValidation.ps1` now exposes `RunId`; and `Start-TenantValidationRunbook.ps1` passes `CurrentRunId` at both overall and per-validator compare call sites. Added targeted Pester coverage in `scripts/Validators.Tests.ps1` for URI contract and drift behavior.
+     - Disposition: added optional `CurrentRunId` to `Compare-ValidationBaseline.ps1` (script + function scope) and appended `and fsi_runid ne '<escaped>'` when non-empty, with OData single-quote escaping. `Start-EnvironmentValidationRunbook.ps1` now passes `-CurrentRunId $validationResults.RunId`; `Invoke-TenantAuditValidation.ps1` now exposes `RunId`; and `Start-TenantValidationRunbook.ps1` passes `CurrentRunId` at both overall and per-validator compare call sites. Added targeted Pester coverage in `scripts/Validators.Tests.ps1`; persisted live regression and restoration checks succeeded.
 
 19. **Live blocker: helper dot-sourcing clobbered wrapper/orchestrator script-scope parameters, including non-empty DataverseUrl in certificate-auth runbook paths.**
     - Observed sequence (public commit `4d984f5`): `Start-EnvironmentValidationRunbook` received a non-empty `DataverseUrl` but downstream invocation failed with `Cannot bind argument to parameter 'DataverseUrl' because it is an empty string.` Dot-sourced helpers in this solution carry script-scope param blocks for direct execution support; loading those helpers after caller param binding overwrote caller values with helper defaults.
-    - Disposition (static fix applied; live revalidation pending): backported the private predecessor snapshot/restore pattern (`$dotSourceSafeVars` + `Set-Variable -Scope Local`) across all affected public callers: `Export-AuditValidationEvidence.ps1`, `Invoke-EnvironmentAuditValidation.ps1`, `Invoke-TenantAuditValidation.ps1`, `Start-EnvironmentValidationRunbook.ps1`, `Start-TenantValidationRunbook.ps1`, `Test-MailboxAudit.ps1`, `Test-PurviewRetention.ps1`, `Test-UnifiedAuditLog.ps1`, and additionally `Invoke-EnvironmentDiscovery.ps1`. Added a nine-file source-contract matrix and a behavioral helper dot-source probe in `scripts/Validators.Tests.ps1`.
+    - Disposition: backported the private predecessor snapshot/restore pattern (`$dotSourceSafeVars` + `Set-Variable -Scope Local`) across all affected public callers: `Export-AuditValidationEvidence.ps1`, `Invoke-EnvironmentAuditValidation.ps1`, `Invoke-TenantAuditValidation.ps1`, `Start-EnvironmentValidationRunbook.ps1`, `Start-TenantValidationRunbook.ps1`, `Test-MailboxAudit.ps1`, `Test-PurviewRetention.ps1`, `Test-UnifiedAuditLog.ps1`, and additionally `Invoke-EnvironmentDiscovery.ps1`. Added a nine-file source-contract matrix and a behavioral helper dot-source probe in `scripts/Validators.Tests.ps1`; live wrapper runs succeeded.
 
 20. **Live blocker: mandatory script-scope parameters in environment validators prevented orchestrator dot-source loading.**
     - Observed sequence (public source `8185a56`): `Start-EnvironmentValidationRunbook` preserved inputs and invoked `Invoke-EnvironmentAuditValidation`, orchestration began, then validator load failed with `Cannot process command because of one or more missing mandatory parameters: EnvironmentUrl AccessToken.` Root cause: `Test-EnvironmentAudit.ps1` and `Test-EnvironmentRetention.ps1` declared mandatory script-scope params and were dot-sourced without arguments before function definitions loaded.
-    - Disposition (static fix applied; live revalidation pending): made script-scope parameters optional in both environment validators (`EnvironmentUrl`/`AccessToken` for audit; `EnvironmentUrl`/`AccessToken`/`DataverseUrl`/`CentralAccessToken`/`Zone` for retention) while preserving mandatory function-scope contracts and `@PSBoundParameters` direct invocation behavior. Extended `scripts/Validators.Tests.ps1` with direct-invocation block coverage for both scripts and a behavioral sanitized-dot-source test proving no-arg load succeeds while function-level mandatory parameters remain required.
+    - Disposition: made script-scope parameters optional in both environment validators (`EnvironmentUrl`/`AccessToken` for audit; `EnvironmentUrl`/`AccessToken`/`DataverseUrl`/`CentralAccessToken`/`Zone` for retention) while preserving mandatory function-scope contracts and `@PSBoundParameters` direct invocation behavior. Extended `scripts/Validators.Tests.ps1` with direct-invocation block coverage for both scripts and a behavioral sanitized-dot-source test; live environment validation succeeded.
 
 21. **Live blocker: environment orchestrator run ID was generated before helper dot-sourcing and then clobbered by `Write-ValidationResult.ps1` script-scope `RunId` parameter.**
     - Observed sequence (public source `b02bc38`): certificate-wrapper setup and both environment validator API query paths completed, but all three Dataverse history writes failed with `Cannot bind argument to parameter 'RunId' because it is an empty string.` Because validator writes run inside `try` blocks, those write failures pushed `AuditStatus`/`RetentionStatus` to `Error` even when API checks had already completed. Root cause: `Invoke-EnvironmentAuditValidation.ps1` created local `$runId` before dot-sourcing `private/Write-ValidationResult.ps1`; PowerShell variable names are case-insensitive, so the helper's script-scope `$RunId` parameter overwrite flowed back into the orchestrator local variable.
-    - Disposition (static fix applied; live revalidation pending): moved `$runId = [Guid]::NewGuid()` and timestamp generation/printing in `Invoke-EnvironmentAuditValidation.ps1` to immediately after the final dot-source restore loop and before authentication/results initialization, matching the already-safe `Invoke-TenantAuditValidation.ps1` ordering. Kept one shared RunId for results and all three environment write parameter sets. Added `RunId = $validationResults.RunId` to `Start-TenantValidationRunbook.ps1` final output for wrapper parity and evidence correlation. Extended `scripts/Validators.Tests.ps1` with source contracts for ordering and RunId propagation.
+    - Disposition: moved `$runId = [Guid]::NewGuid()` and timestamp generation/printing in `Invoke-EnvironmentAuditValidation.ps1` to immediately after the final dot-source restore loop and before authentication/results initialization, matching the already-safe `Invoke-TenantAuditValidation.ps1` ordering. Kept one shared RunId for results and all three environment write parameter sets. Added `RunId = $validationResults.RunId` to `Start-TenantValidationRunbook.ps1` final output; live environment and tenant outputs contained correlated RunIds.
 
 22. **Live evidence finding: persisted three-leg cycle returned correct booleans, but baseline status mapping dropped to null on regression/restoration legs.**
     - Observed sequence (public source `767115e`): Dataverse persisted Environment records in a unique Passed → Failed → Passed cycle; `Compare-ValidationBaseline` returned correct drift booleans for first run (`IsFirstRun=true`, `Drift=false`), regression (`IsFirstRun=false`, `Drift=true`), and restoration (`Drift=false`), but `Regression.BaselineStatus` and `Restoration.BaselineStatus` were null despite baseline `fsi_severity` equal to the Dataverse `Passed` option-set value.
     - Root cause: Dataverse JSON deserialized baseline `fsi_severity` as `System.Int64`; `Compare-ValidationBaseline.ps1` reverse-map literal keys are `System.Int32`, and PowerShell hashtable lookup is type-sensitive, so reverse lookup missed and returned null baseline status.
-    - Disposition (static fix applied; live revalidation pending): `Compare-ValidationBaseline.ps1` now normalizes `baseline.fsi_severity` to `[int]` before reverse lookup and numeric comparison, preserving valid Int64/numeric-string option-set values. Invalid/non-numeric or unknown option-set values now raise precise errors and flow through the existing fail-open path (`DriftDetected = $true`, `Error` populated) without silent status fallback. Added targeted `scripts/Validators.Tests.ps1` mocks for `[long]100000000`, `'100000000'`, and invalid values.
+    - Disposition: `Compare-ValidationBaseline.ps1` now normalizes `baseline.fsi_severity` to `[int]` before reverse lookup and numeric comparison, preserving valid Int64/numeric-string option-set values. Invalid/non-numeric or unknown option-set values raise precise errors and flow through the existing fail-open path. Live regression and restoration outputs mapped `BaselineStatus=Passed`.
 
 23. **Live blocker: tenant runbook reached `Invoke-TenantAuditValidation` but validator load failed on mandatory script-scope Purview `Zone`; Unified Audit service-principal path also conflicted on explicit `Interactive=$false`.**
     - Observed sequence (public source `c71eae9`): orchestrator invocation progressed through helper load and entered tenant validator orchestration, then failed loading validators with `Cannot process command because of one or more missing mandatory parameters: Zone.` Root cause: `Test-PurviewRetention.ps1` still required script-scope `Zone` even when dot-sourced. The same evidence run showed `Test-UnifiedAuditLog.ps1` built `$connectParams = @{ ExchangeOnly = $true; Interactive = $Interactive }`, which binds the Interactive parameter set even when `$Interactive` is false and conflicts with certificate parameters.
-    - Disposition (static fix applied; live revalidation pending): `Test-PurviewRetention.ps1` now keeps script-scope `Zone` optional while preserving mandatory function-scope `Zone`. `Test-UnifiedAuditLog.ps1` now adds `Interactive` only when true and uses conditional hashtable construction for direct execution, matching service-principal certificate parameter-set expectations.
+    - Disposition: `Test-PurviewRetention.ps1` now keeps script-scope `Zone` optional while preserving mandatory function-scope `Zone`. `Test-UnifiedAuditLog.ps1` now adds `Interactive` only when true and uses conditional hashtable construction for direct execution. The certificate tenant path completed all three validators.
 
 24. **Live evidence finding: app-only canary validation needs explicit mailbox identity; default app-session fallback was not a usable mailbox identity.**
-    - Observed sequence (public source `c71eae9`): app-only canary attempts using fallback identity failed because `Get-ConnectionInformation` returned a synthetic `OAuthUser@...` UPN rather than a mailbox. A later run with an explicit shared mailbox identity generated and reverted the canary successfully, but retrieval stayed pending after 12 polls.
-    - Disposition (static fix applied; live revalidation pending): added optional `CanaryMailboxIdentity` to `Test-UnifiedAuditLog.ps1` (script + function), `Invoke-TenantAuditValidation.ps1`, and `Start-TenantValidationRunbook.ps1`. Service-principal/non-interactive runs without an explicit mailbox now return a clear Warning and skip `New-CanaryEvent`; when provided, mailbox identity is forwarded directly to `New-CanaryEvent`. `scripts/Validators.Tests.ps1` now includes behavioral mocks for the no-mailbox Warning branch and explicit-mailbox forwarding path, plus Start→Invoke→Validator wiring contracts.
+    - Observed sequence (public source `c71eae9`): app-only canary attempts using fallback identity failed because `Get-ConnectionInformation` returned a synthetic `OAuthUser@...` UPN rather than a mailbox. A later run with an explicit shared mailbox identity generated and reverted the canary successfully; a later Unified Audit Log query retrieved the exact marker.
+    - Disposition: added optional `CanaryMailboxIdentity` to `Test-UnifiedAuditLog.ps1` (script + function), `Invoke-TenantAuditValidation.ps1`, and `Start-TenantValidationRunbook.ps1`. Service-principal/non-interactive runs without an explicit mailbox return a clear Warning and skip `New-CanaryEvent`; explicit-mailbox generation, restoration, and retrieval succeeded.
 
 25. **Live blocker: tenant nested dot-source snapshot collision cleared orchestrator `Zone` before final output and Purview parameter mapping.**
     - Observed sequence (public source `ec8033c`): `Start-TenantValidationRunbook` passed `Zone3` into `Invoke-TenantAuditValidation`, but tenant final output `Zone` was empty and `Test-PurviewRetention` received an empty `Zone`. Root cause: `Invoke-TenantAuditValidation.ps1` stored caller values in `$dotSourceSafeVars`, then dot-sourced validator scripts that each declared their own `$dotSourceSafeVars` in the same scope, overwriting the orchestrator snapshot before restore.
-    - Disposition (static fix applied; live revalidation pending): renamed tenant orchestrator snapshot ownership to `$tenantOrchestratorSafeVars` in `Invoke-TenantAuditValidation.ps1` and restored from that caller-owned variable after validator dot-sourcing. Generalized `scripts/Validators.Tests.ps1` source-contract matrix to support per-row snapshot variable names (default `$dotSourceSafeVars`, tenant `$tenantOrchestratorSafeVars`), added a behavioral nested-dot-source collision probe reproducing shared-name clobbering and confirming Zone3 survives with unique snapshot ownership, and added a source contract that tenant results and zone mapping consume the restored `Zone`.
+    - Disposition: renamed tenant orchestrator snapshot ownership to `$tenantOrchestratorSafeVars` in `Invoke-TenantAuditValidation.ps1` and restored from that caller-owned variable after validator dot-sourcing. Added nested-collision regression coverage; live tenant output retained `Zone3`.
 
 26. **Live evidence finding: explicit `CanaryWaitSeconds=0` was dropped by truthiness-based wrapper forwarding.**
     - Observed sequence (public source `acd8665`): the tenant wrapper received `-CanaryWaitSeconds 0`, but `if ($CanaryWaitSeconds)` evaluated false and omitted the value from the orchestrator parameter set, which then used its 300-second default.
@@ -136,7 +136,7 @@
 
 28. **Live compatibility finding: minimum-only Power Apps `#Requires` bound admitted `2.0.217`, which failed ACM's validated app-secret fallback path.**
     - Observed sequence (2026-07-14 compatibility run): environment certificate path succeeded on `Microsoft.PowerApps.Administration.PowerShell 2.0.217`, but repeated app-secret `Add-PowerAppsAccount` attempts failed with `AADSTS7000215` even after using a newly issued short-lived secret that successfully acquired Dataverse tokens and after propagation waits. A fresh-process side-by-side run importing exactly `2.0.180` with the same secret succeeded, and credential cleanup was verified.
-    - Disposition (static fix applied; live rerun pending after commit): added `MaximumVersion="2.0.180"` beside `ModuleVersion="2.0.180"` in all six ACM scripts that require `Microsoft.PowerApps.Administration.PowerShell`, updated `Connect-PowerPlatform` install guidance to `-RequiredVersion 2.0.180`, added a Pester compatibility-bound matrix in `scripts/Validators.Tests.ps1`, and synchronized README/deployment/authentication/flow-setup module guidance to the same known-good pin while explicitly scoping the failure to the validated app-secret path.
+    - Disposition: added `MaximumVersion="2.0.180"` beside `ModuleVersion="2.0.180"` in all six ACM scripts that require `Microsoft.PowerApps.Administration.PowerShell`, updated installation guidance, and synchronized related documentation. The final short-lived-secret environment run succeeded and credential cleanup was verified.
 
 ## Static changes implemented in this pass
 
@@ -270,18 +270,26 @@
 
 ## Runtime vs Playwright check split (explicit)
 
-### Runtime channel (public/static verification completed here)
+### Runtime channel (completed)
 
 - Script parse/compile checks
 - Pester + pytest static/contract checks
 - Manifest build/check and generated-artifact consistency
 - Language/commercial/docs-autonomy policy checks
 - MkDocs strict build
+- Full ACV + ALCA schema deployment in the canonical non-production Dataverse environment
+- Certificate-backed environment and tenant runbooks
+- Short-lived-secret environment fallback on the pinned Power Apps module, with credential deletion verified
+- Persisted Passed → Failed → Passed drift cycle
+- Environment and tenant evidence exports with independent SHA-256 verification
+- Azure Automation PowerShell 7.4 environment and tenant jobs from the final public source
 
-### Playwright channel (private live harness only; pending)
+### Playwright channel (completed)
 
 - Portal reachability and auth UX checks only
 - No claim that Playwright validates backend runtime controls
+- Purview Audit portal smoke: passed
+- Power Platform admin center environment portal smoke: passed
 
 ## Private harness lab prerequisites (not hardcoded with private values)
 
@@ -290,31 +298,37 @@
 3. Runtime plan declaring separate `runtime` and `playwright` steps
 4. Evidence root outside Git; redaction and SHA-256 manifest generation enabled
 
-## Pending private live checks (required before readiness claim)
+## Private live checks
 
-- [ ] Tenant runbook execution in private lab (certificate path)
-- [ ] Environment runbook execution in private lab (certificate and legacy-secret fallback path), including post-commit rerun of finding 28 with pinned `Microsoft.PowerApps.Administration.PowerShell 2.0.180`
-- [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
-- [ ] ACV and ALCA global option-set POST calls succeed in canonical Dataverse environment with discriminator-enriched payloads
-- [ ] ACV and ALCA writes succeed in canonical Dataverse environment when `FSIPublisher` and `AuditComplianceManager` are absent initially (bootstrap creates/reuses shell without pre-solution `MSCRM.SolutionUniqueName` headers)
-- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName`, metadata-publication/readiness, filtered Attributes collection-lookup, one-time full-collection attribute-inventory create-loop, and projected-collection bounded-retry inventory fixes (single-table live replay returned HTTP 204; metadata GET 500→manual `PublishAllXml`→200 sequence reproduced; projected inventory 500 bursts in same service-principal session reproduced; complete deployment pass still pending)
-- [ ] `Search-UnifiedAuditLog` and canary retrieval checks in target tenant
-- [ ] Purview retention validation with actual policy set and licensing context
-- [ ] Portal smoke artifacts (Playwright channel) attached separately from runtime evidence
-- [ ] Sanitized evidence summary + hash manifest attached to draft PR
+- [x] Tenant runbook execution with certificate authentication
+- [x] Environment runbook execution with certificate and short-lived-secret fallback authentication
+- [x] Drift detection token acquisition through `Connect-PowerPlatform` / `Az.Accounts`
+- [x] ACV and ALCA global choice creation and solution-context bootstrap
+- [x] Full ACV + ALCA schema deployment, including primary-name, publish/readiness, choice binding, Boolean metadata, and attribute-inventory fixes
+- [x] Persisted first-run, intentional regression, and restoration drift cycle
+- [x] Unified Audit Log canary generation, mailbox-attribute restoration, and later retrieval
+- [x] Purview retention validation against the live policy/licensing context
+- [x] Separate Playwright portal reachability artifacts
+- [x] Sanitized summary and SHA-256 manifest
+- [x] Azure Automation PowerShell 7.4 environment and tenant jobs
 
-## Live evidence placeholder
+## Live evidence summary
 
-No private live evidence is attached in this public static pass.
+- Private run ID: `acm-drift-cycle-20260714T173625Z`
+- Final public source SHA: `4dd0619b0e3d76d2b80e2338a77e3c16d0797acd`
+- Sanitized summary SHA-256: `B23E17BEB5E055B1C4D83D04EEFC6A2367BF0C33AB33E1A5706CFEFD53ED1C5A`
+- Sanitized manifest SHA-256: `D014C02F4D77F5406A55D4F3390D35E57B376AF227F0E53061FE67BE96044322`
+- Environment export: 12 records; SHA-256 `B7522AF6F185A5E00A4735DB3CA7176BF585EE8A780D5966E47C5F99DB48BC6C`
+- Tenant export: 4 records; SHA-256 `5CA10243A8AA08E1100F7059B5CF1BDBF7E0EF486AF736D4F891880AAD0F2692`
+- Azure Automation runtime: PowerShell 7.4, ACM runtime package 1.0.1, `Microsoft.PowerApps.Administration.PowerShell` 2.0.180
+- Azure Automation environment job: completed, zero error streams, correlated RunId present
+- Azure Automation tenant job: completed, zero error streams, Zone3 and correlated RunId present
+- Playwright Purview and Power Platform admin portal smokes: passed
 
-When private harness execution completes, append:
-
-- private run ID
-- runtime evidence summary path/hash
-- playwright evidence summary path/hash
-- disposition of pending checks above
+The live validators correctly surfaced configuration findings: environment audit was disabled, environment retention was not programmatically conclusive, mailbox audit returned Warning, and Purview retention did not meet the Zone3 target. These statuses demonstrate detection behavior; they are not lab execution failures.
 
 ## Status statement
 
-**Static review/fix phase complete.**  
-**Live validation remains pending** until private harness runtime + portal evidence is attached to the draft PR.
+**Static and private live-validation phases are complete.**
+
+**Ready for final review.** Organizations should evaluate the detected configuration findings against their licensed capabilities and policy requirements before deployment.
