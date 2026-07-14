@@ -185,6 +185,9 @@ HISTORY_TABLE_COLUMNS = [
         "SchemaName": "fsi_Scope",
         "DisplayName": {"LocalizedLabels": [{"Label": "Scope", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_scope')",
     },
     # Environment Context (optional for tenant-scope validations)
@@ -213,6 +216,9 @@ HISTORY_TABLE_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Zone at time of validation (denormalized)", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_zone')",
     },
     # Validation Result
@@ -222,6 +228,9 @@ HISTORY_TABLE_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Severity", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Overall validation result", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_severity')",
     },
     {
@@ -299,6 +308,9 @@ REGISTRY_TABLE_COLUMNS = [
         "DisplayName": {"LocalizedLabels": [{"Label": "Zone", "LanguageCode": 1033}]},
         "Description": {"LocalizedLabels": [{"Label": "Assigned governance zone (Unclassified triggers alert)", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_zone')",
     },
     # Environment Metadata
@@ -316,6 +328,9 @@ REGISTRY_TABLE_COLUMNS = [
         "SchemaName": "fsi_EnvironmentType",
         "DisplayName": {"LocalizedLabels": [{"Label": "Environment Type", "LanguageCode": 1033}]},
         "RequiredLevel": {"Value": "ApplicationRequired"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_acv_environmenttype')",
     },
     {

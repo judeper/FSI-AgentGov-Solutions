@@ -78,6 +78,11 @@
      - Observed sequence: in `--dry-run` against a fresh environment the entity was only previewed (not created), so `EntityDefinitions(...)/Attributes` returned 404. `list_attribute_logical_names` treated 404 as a post-publish propagation transient and polled for ~180 seconds before raising `TimeoutError`.
      - Disposition: added entity-existence guard at the top of the dry-run branch in both `create_dataverse_schema.create_columns` and `create_audit_compliance_schema.create_columns`. In dry-run mode `get_entity_metadata` is called first (single GET; returns `None` on 404 immediately); if the entity already exists, `list_attribute_logical_names` is called normally so existing columns are skipped accurately; if the entity does not yet exist, an empty set is used and all custom columns are previewed. Non-dry-run call sequence is unchanged. Pytest regression tests added to `tests/test_metadata_publish_readiness.py` covering ACV and ALCA parity for both the missing-entity and existing-entity dry-run cases.
 
+ 15. **Live blocker: `fsi_scope` create-attribute POST returned repeated HTTP 500 — `PicklistAttributeMetadata` payload missing required Dataverse Web API contract fields.**
+     - Observed sequence: after the full-collection attribute inventory fix (`fsi_runid` found existing), the next `POST EntityDefinitions(LogicalName='fsi_auditvalidationhistory')/Attributes` for `fsi_scope` returned repeated HTTP 500. A settled operator metadata query after the failures confirmed `fsi_scope` was absent, establishing this as a create-attribute request failure rather than a readiness-polling failure. Existing payloads included `@odata.type`, `SchemaName`, `DisplayName`/`Description` labels, `RequiredLevel`, and `GlobalOptionSet@odata.bind` but omitted `AttributeType`, `AttributeTypeName`, and `SourceTypeMask`.
+     - Authoritative source: Microsoft Learn "Create a choice column using a global option set" — the current published contract requires `"AttributeType": "Picklist"`, `"AttributeTypeName": {"Value": "PicklistType"}`, and `"SourceTypeMask": 0` alongside the `GlobalOptionSet@odata.bind` Name-key binding. The Name-key binding form itself is explicitly supported per the same doc.
+     - Disposition: added the three missing contract fields to all six `PicklistAttributeMetadata` column definitions across `scripts/create_dataverse_schema.py` (`fsi_Scope`, both `fsi_Zone` definitions, `fsi_Severity`, `fsi_EnvironmentType`) and `scripts/create_audit_compliance_schema.py` (`fsi_ComplianceStatus`). Added pytest regression coverage in `tests/test_picklist_attribute_contract.py` that enumerates all six current Picklist definitions and asserts their full three-field contract and expected global option-set bindings. Full canonical deployment rerun remains pending.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -133,6 +138,10 @@
   - `scripts/create_dataverse_schema.py` (entity-existence guard in `create_columns` dry-run branch for both `fsi_auditvalidationhistory` and `fsi_environmentregistry`)
   - `scripts/create_audit_compliance_schema.py` (same guard for `fsi_auditenvironmentcompliance`)
   - `tests/test_metadata_publish_readiness.py` (extended `ACVSchemaRecorder`/`ALCASchemaRecorder` with configurable `entity_data`; added four regression tests covering ACV/ALCA dry-run missing-entity and existing-entity parity)
+- `PicklistAttributeMetadata` create-contract fix for live HTTP 500 on `fsi_scope` column creation:
+  - `scripts/create_dataverse_schema.py` (added `AttributeType`, `AttributeTypeName`, `SourceTypeMask` to `fsi_Scope`, both `fsi_Zone` definitions, `fsi_Severity`, `fsi_EnvironmentType`)
+  - `scripts/create_audit_compliance_schema.py` (same three fields added to `fsi_ComplianceStatus`)
+  - `tests/test_picklist_attribute_contract.py` (new: full-contract + expected-binding + non-picklist-unaffected regression guards for all Picklist columns in ACV and ALCA column lists)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`

@@ -298,6 +298,9 @@ TABLE_COLUMNS = [
             ]
         },
         "RequiredLevel": {"Value": "None"},
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "GlobalOptionSet@odata.bind": "/GlobalOptionSetDefinitions(Name='fsi_alca_compliancestatus')",
     },
     # Remediation tracking
