@@ -12,6 +12,10 @@ from urllib.parse import urljoin, urlparse
 import msal
 import requests
 from requests.adapters import HTTPAdapter, Retry
+from solution_context_bootstrap import (
+    DEFAULT_SOLUTION_BOOTSTRAP_CONFIG,
+    SolutionContextBootstrapper,
+)
 
 
 class ALCAClient:
@@ -76,6 +80,13 @@ class ALCAClient:
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self._session.mount("https://", adapter)
+        self._solution_context_bootstrapper = SolutionContextBootstrapper(
+            session=self._session,
+            api_url=self.api_url,
+            get_headers=self._get_headers,
+            solution_name=self.solution_name,
+            config=DEFAULT_SOLUTION_BOOTSTRAP_CONFIG,
+        )
 
         if interactive:
             if not client_id:
@@ -134,6 +145,8 @@ class ALCAClient:
 
     def _get_write_headers(self) -> dict:
         """Get HTTP headers for write operations, including solution context."""
+        if self.solution_name:
+            self._solution_context_bootstrapper.ensure()
         headers = self._get_headers()
         if self.solution_name:
             headers["MSCRM.SolutionUniqueName"] = self.solution_name
