@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-13T00:00:00Z",
+  "solution": "audit-compliance-manager",
+  "executionMode": "PlanOnly",
+  "result": "PlanValidatedNotExecuted",
+  "exitCode": 2,
+  "planPath": "lab-harness/templates/audit-compliance-manager.plan.json",
+  "ownershipManifest": "lab-harness/templates/audit-compliance-manager.ownership.json",
+  "steps": [
+    {
+      "id": "acm-runtime-pester-validators",
+      "channel": "runtime",
+      "adapter": "runtime.powershell.pester",
+      "status": "not-run-planonly",
+      "startedAtUtc": "2026-07-13T00:00:00Z",
+      "durationSeconds": 0
+    }
+  ]
+}
