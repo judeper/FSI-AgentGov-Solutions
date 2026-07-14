@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
-import { detectInteractiveAuthSignal } from '../../src/portal-helpers';
+import { detectInteractiveAuthSignal, detectInteractiveAuthUrl } from '../../src/portal-helpers';
 import { resolvePortalBaseUrl, resolveStorageStatePath } from '../../src/config-helpers';
 
 test('resolveStorageStatePath returns undefined when not configured', () => {
@@ -24,6 +24,18 @@ test('detectInteractiveAuthSignal identifies account picker and sign-in prompts'
   assert.equal(detectInteractiveAuthSignal('Pick an account to continue'), 'pick an account');
   assert.equal(detectInteractiveAuthSignal('Please Sign in to your account now'), 'sign in to your account');
   assert.equal(detectInteractiveAuthSignal('Portal dashboard ready'), undefined);
+});
+
+test('detectInteractiveAuthUrl identifies Microsoft sign-in hosts and authorize paths', () => {
+  assert.equal(
+    detectInteractiveAuthUrl('https://login.microsoftonline.com/common/oauth2/v2.0/authorize'),
+    'login.microsoftonline.com'
+  );
+  assert.equal(
+    detectInteractiveAuthUrl('https://portal.example.com/oauth2/authorize?client_id=test'),
+    '/oauth2/authorize'
+  );
+  assert.equal(detectInteractiveAuthUrl('https://make.powerapps.com/environments/test'), undefined);
 });
 
 test('playwright config reads storage state from environment', async () => {

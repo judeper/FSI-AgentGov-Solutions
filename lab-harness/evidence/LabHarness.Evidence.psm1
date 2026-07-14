@@ -10,7 +10,11 @@ function Get-LabRedactionPatterns {
         @{ Name = 'tenant-domain'; Pattern = '(?i)\b[a-z0-9\-]+\.onmicrosoft\.com\b'; Replacement = '<redacted:tenant-domain>' },
         @{ Name = 'guid'; Pattern = '(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b'; Replacement = '<redacted:guid>' },
         @{ Name = 'dynamics-url'; Pattern = '(?i)https:\/\/[a-z0-9\-]+\.crm\d*\.dynamics\.com'; Replacement = '<redacted:dynamics-url>' },
+        @{ Name = 'sharepoint-url'; Pattern = '(?i)https:\/\/[a-z0-9\-]+\.sharepoint\.com(?:\/[^\s"''<>]*)?'; Replacement = '<redacted:sharepoint-url>' },
         @{ Name = 'webhook-url'; Pattern = '(?i)https:\/\/[^ \r\n]*webhook[^ \r\n]*'; Replacement = '<redacted:webhook-url>' },
+        @{ Name = 'authorization-bearer'; Pattern = '(?im)(authorization\s*[:=]\s*bearer\s+)[a-z0-9._~+\/=\-]+'; Replacement = '$1<redacted:token>' },
+        @{ Name = 'jwt'; Pattern = '(?i)\beyJ[a-z0-9_-]{5,}\.[a-z0-9_-]{5,}\.[a-z0-9_-]{5,}\b'; Replacement = '<redacted:jwt>' },
+        @{ Name = 'connection-secret'; Pattern = '(?i)(AccountKey|SharedAccessSignature)\s*=\s*[^;\s]+'; Replacement = '$1=<redacted:token>' },
         @{ Name = 'token-parameter'; Pattern = '(?i)(sig|code|token|access_token|client_secret)=([^&\s]+)'; Replacement = '$1=<redacted:token>' }
     )
 }

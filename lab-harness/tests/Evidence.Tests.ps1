@@ -28,6 +28,10 @@ Tenant: contoso.onmicrosoft.com
 Environment: https://contoso.crm.dynamics.com
 RecordId: 123e4567-e89b-12d3-a456-426614174000
 Webhook: https://workflow.contoso.com/webhook/endpoint?sig=abc123
+SharePoint: https://contoso.sharepoint.com/sites/AgentGov/Shared%20Documents
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signaturevalue
+Storage: AccountKey=topsecretvalue;EndpointSuffix=core.windows.net
+EvidenceHash: bb90e859a61d8e65f77b3092bc74e29d38581a785c2847980c7fe9c68dbe84d3
 '@ | Set-Content -LiteralPath $inputPath -Encoding utf8NoBOM
 
         $result = Invoke-LabEvidenceRedaction -InputPath $inputPath -OutputPath $outputPath
@@ -36,8 +40,15 @@ Webhook: https://workflow.contoso.com/webhook/endpoint?sig=abc123
         $content | Should -Not -Match 'alex\.smith@contoso\.com'
         $content | Should -Not -Match 'contoso\.onmicrosoft\.com'
         $content | Should -Not -Match '123e4567-e89b-12d3-a456-426614174000'
+        $content | Should -Not -Match 'contoso\.sharepoint\.com'
+        $content | Should -Not -Match 'eyJhbGci'
+        $content | Should -Not -Match 'topsecretvalue'
         $content | Should -Match '<redacted:upn>'
         $content | Should -Match '<redacted:webhook-url>'
+        $content | Should -Match '<redacted:sharepoint-url>'
+        $content | Should -Match 'Authorization: Bearer <redacted:token>'
+        $content | Should -Match 'AccountKey=<redacted:token>'
+        $content | Should -Match 'bb90e859a61d8e65f77b3092bc74e29d38581a785c2847980c7fe9c68dbe84d3'
         $result.Replacements.upn | Should -BeGreaterThan 0
     }
 
