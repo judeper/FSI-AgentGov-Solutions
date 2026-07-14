@@ -149,6 +149,7 @@ BeforeDiscovery {
             Name             = 'Invoke-TenantAuditValidation.ps1'
             Path             = Join-Path $validatorRoot 'Invoke-TenantAuditValidation.ps1'
             ExpectedParams   = @('Zone', 'OutputPath', 'SkipCanaryValidation', 'GracePeriodHours', 'CanaryWaitSeconds', 'DataverseUrl', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath', 'CanaryMailboxIdentity')
+            SnapshotVariable = 'tenantOrchestratorSafeVars'
             AuthAnchorPattern = 'if\s*\(\$DataverseUrl\)'
         }
         @{
@@ -379,8 +380,11 @@ Describe "Dot-source parameter-preservation source contracts" {
         $Path | Should -Exist -Because "$Name should exist"
         $content = Get-Content -LiteralPath $Path -Raw
 
-        $snapshotMatch = [regex]::Match($content, '\$dotSourceSafeVars\s*=\s*@\{(?<Body>.*?)\}\s*', [System.Text.RegularExpressions.RegexOptions]::Singleline)
-        $snapshotMatch.Success | Should -BeTrue -Because "$Name must define a dot-source snapshot hashtable"
+        $snapshotVariableName = if ([string]::IsNullOrWhiteSpace($SnapshotVariable)) { 'dotSourceSafeVars' } else { $SnapshotVariable }
+        $escapedSnapshotVariableName = [regex]::Escape($snapshotVariableName)
+        $snapshotPattern = '\$' + $escapedSnapshotVariableName + '\s*=\s*@\{(?<Body>.*?)\}\s*'
+        $snapshotMatch = [regex]::Match($content, $snapshotPattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $snapshotMatch.Success | Should -BeTrue -Because "$Name must define snapshot hashtable `$$snapshotVariableName"
 
         $snapshotIndex = $snapshotMatch.Index
         $snapshotBody = $snapshotMatch.Groups['Body'].Value
@@ -395,8 +399,9 @@ Describe "Dot-source parameter-preservation source contracts" {
 
         $snapshotIndex | Should -BeLessThan $firstDotSourceIndex -Because "$Name snapshot block must appear before the first dot-source"
 
-        $restoreMatch = [regex]::Match($content, 'foreach\s*\(\s*\$name\s+in\s+\$dotSourceSafeVars\.Keys\s*\)\s*\{')
-        $restoreMatch.Success | Should -BeTrue -Because "$Name must restore script-scope params after dot-sourcing"
+        $restorePattern = 'foreach\s*\(\s*\$name\s+in\s+\$' + $escapedSnapshotVariableName + '\.Keys\s*\)\s*\{'
+        $restoreMatch = [regex]::Match($content, $restorePattern)
+        $restoreMatch.Success | Should -BeTrue -Because "$Name must restore script-scope params from `$$snapshotVariableName after dot-sourcing"
         $restoreIndex = $restoreMatch.Index
 
         $restoreIndex | Should -BeGreaterThan $lastDotSourceIndex -Because "$Name restore loop must run after the final dot-source"
@@ -404,6 +409,104 @@ Describe "Dot-source parameter-preservation source contracts" {
         $anchorMatch = [regex]::Match($content, $AuthAnchorPattern)
         $anchorMatch.Success | Should -BeTrue -Because "$Name anchor pattern should exist to verify restore ordering"
         $restoreIndex | Should -BeLessThan $anchorMatch.Index -Because "$Name restore loop must execute before parameter-dependent logic"
+    }
+}
+
+Describe "Nested dot-source snapshot collision behavior" {
+    It "unique caller-owned snapshot survives nested child clobber of dotSourceSafeVars and Zone" {
+        function Invoke-SharedSnapshotCollisionProbe {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$Zone
+            )
+
+            $dotSourceSafeVars = @{
+                Zone = $Zone
+            }
+
+            $childScript = {
+                $dotSourceSafeVars = @{
+                    Zone = $null
+                }
+                $Zone = $null
+            }
+            . $childScript
+
+            foreach ($name in $dotSourceSafeVars.Keys) {
+                Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
+            }
+
+            [PSCustomObject]@{
+                Zone              = $Zone
+                SharedSnapshotKey = $dotSourceSafeVars.Zone
+            }
+        }
+
+        function Invoke-UniqueSnapshotCollisionProbe {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$Zone
+            )
+
+            $tenantOrchestratorSafeVars = @{
+                Zone = $Zone
+            }
+
+            $childScript = {
+                $dotSourceSafeVars = @{
+                    Zone = $null
+                }
+                $Zone = $null
+            }
+            . $childScript
+
+            $nestedSnapshotZone = $dotSourceSafeVars.Zone
+            foreach ($name in $tenantOrchestratorSafeVars.Keys) {
+                Set-Variable -Name $name -Value $tenantOrchestratorSafeVars[$name] -Scope Local
+            }
+
+            [PSCustomObject]@{
+                Zone                = $Zone
+                TenantSnapshotZone  = $tenantOrchestratorSafeVars.Zone
+                NestedSnapshotZone  = $nestedSnapshotZone
+            }
+        }
+
+        $sharedResult = Invoke-SharedSnapshotCollisionProbe -Zone 'Zone3'
+        $uniqueResult = Invoke-UniqueSnapshotCollisionProbe -Zone 'Zone3'
+
+        $sharedResult.Zone | Should -BeNullOrEmpty -Because 'Shared snapshot ownership collides when a nested dot-source reuses $dotSourceSafeVars.'
+        $sharedResult.SharedSnapshotKey | Should -BeNullOrEmpty -Because 'Nested dot-source clobbers the shared snapshot key before restore.'
+        $uniqueResult.Zone | Should -Be 'Zone3' -Because 'Unique caller-owned snapshot must restore Zone after nested clobber.'
+        $uniqueResult.TenantSnapshotZone | Should -Be 'Zone3' -Because 'Caller snapshot must retain the original zone.'
+        $uniqueResult.NestedSnapshotZone | Should -BeNullOrEmpty -Because 'Child snapshot remains isolated from caller-owned snapshot.'
+    }
+
+    It "Invoke-TenantAuditValidation results and zone mapping consume restored Zone" {
+        $path = Join-Path $PSScriptRoot 'Invoke-TenantAuditValidation.ps1'
+        $path | Should -Exist
+        $content = Get-Content -LiteralPath $path -Raw
+
+        $restoreMatch = [regex]::Match($content, 'foreach\s*\(\s*\$name\s+in\s+\$tenantOrchestratorSafeVars\.Keys\s*\)\s*\{')
+        $restoreMatch.Success | Should -BeTrue -Because 'Tenant orchestrator must restore from caller-owned tenant snapshot.'
+        $restoreIndex = $restoreMatch.Index
+
+        $resultsBlock = [regex]::Match($content, '\$results\s*=\s*@\{(?<Body>.*?)\}\s*', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $resultsBlock.Success | Should -BeTrue -Because 'Tenant orchestrator must initialize a results object.'
+        ($resultsBlock.Groups['Body'].Value -cmatch 'Zone\s*=\s*\$Zone') | Should -BeTrue -Because 'Results object must persist the restored Zone value.'
+        $resultsBlock.Index | Should -BeGreaterThan $restoreIndex -Because 'Results object must be initialized after tenant snapshot restore.'
+
+        $zoneSwitchMatch = [regex]::Match($content, '\$zoneName\s*=\s*switch\s*\(\$Zone\)')
+        $zoneSwitchMatch.Success | Should -BeTrue -Because 'Zone-to-friendly-name mapping should consume restored Zone.'
+        $zoneSwitchMatch.Index | Should -BeGreaterThan $restoreIndex -Because 'Zone mapping should execute after tenant snapshot restore.'
+
+        $validationTargetMatch = [regex]::Match($content, 'Validation Target:\s*\$Zone')
+        $validationTargetMatch.Success | Should -BeTrue -Because 'Validation banner should render restored Zone.'
+        $validationTargetMatch.Index | Should -BeGreaterThan $restoreIndex -Because 'Validation banner should execute after tenant snapshot restore.'
+
+        $purviewZoneMatch = [regex]::Match($content, '\$purviewParams\.Zone\s*=\s*\$Zone')
+        $purviewZoneMatch.Success | Should -BeTrue -Because 'Purview validator must receive restored Zone.'
+        $purviewZoneMatch.Index | Should -BeGreaterThan $restoreIndex -Because 'Purview parameter mapping should execute after tenant snapshot restore.'
     }
 }
 

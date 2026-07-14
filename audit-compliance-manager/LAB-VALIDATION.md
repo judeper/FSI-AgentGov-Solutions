@@ -122,6 +122,10 @@
     - Observed sequence (public source `c71eae9`): app-only canary attempts using fallback identity failed because `Get-ConnectionInformation` returned a synthetic `OAuthUser@...` UPN rather than a mailbox. A later run with an explicit shared mailbox identity generated and reverted the canary successfully, but retrieval stayed pending after 12 polls.
     - Disposition (static fix applied; live revalidation pending): added optional `CanaryMailboxIdentity` to `Test-UnifiedAuditLog.ps1` (script + function), `Invoke-TenantAuditValidation.ps1`, and `Start-TenantValidationRunbook.ps1`. Service-principal/non-interactive runs without an explicit mailbox now return a clear Warning and skip `New-CanaryEvent`; when provided, mailbox identity is forwarded directly to `New-CanaryEvent`. `scripts/Validators.Tests.ps1` now includes behavioral mocks for the no-mailbox Warning branch and explicit-mailbox forwarding path, plus Start→Invoke→Validator wiring contracts.
 
+25. **Live blocker: tenant nested dot-source snapshot collision cleared orchestrator `Zone` before final output and Purview parameter mapping.**
+    - Observed sequence (public source `ec8033c`): `Start-TenantValidationRunbook` passed `Zone3` into `Invoke-TenantAuditValidation`, but tenant final output `Zone` was empty and `Test-PurviewRetention` received an empty `Zone`. Root cause: `Invoke-TenantAuditValidation.ps1` stored caller values in `$dotSourceSafeVars`, then dot-sourced validator scripts that each declared their own `$dotSourceSafeVars` in the same scope, overwriting the orchestrator snapshot before restore.
+    - Disposition (static fix applied; live revalidation pending): renamed tenant orchestrator snapshot ownership to `$tenantOrchestratorSafeVars` in `Invoke-TenantAuditValidation.ps1` and restored from that caller-owned variable after validator dot-sourcing. Generalized `scripts/Validators.Tests.ps1` source-contract matrix to support per-row snapshot variable names (default `$dotSourceSafeVars`, tenant `$tenantOrchestratorSafeVars`), added a behavioral nested-dot-source collision probe reproducing shared-name clobbering and confirming Zone3 survives with unique snapshot ownership, and added a source contract that tenant results and zone mapping consume the restored `Zone`.
+
 ## Static changes implemented in this pass
 
 - Canary mailbox and app-only parameter-set reliability updates:
@@ -166,6 +170,9 @@
   - `scripts/Test-UnifiedAuditLog.ps1`
   - `scripts/Invoke-EnvironmentDiscovery.ps1` (additional uncovered caller)
   - `scripts/Validators.Tests.ps1` (nine-file source-contract matrix + DataverseUrl behavioral restore probe)
+- Tenant nested dot-source snapshot collision fix (finding 25):
+  - `scripts/Invoke-TenantAuditValidation.ps1` (caller-owned tenant snapshot renamed to `$tenantOrchestratorSafeVars` and used for post-dot-source restore)
+  - `scripts/Validators.Tests.ps1` (source-contract matrix supports per-row snapshot variable names; nested-dot-source collision behavioral probe; tenant zone-consumption restore contract)
 - Environment-validator script-scope parameter fix for orchestrator dot-source loading:
   - `scripts/Test-EnvironmentAudit.ps1` (script-scope `EnvironmentUrl`/`AccessToken` optional; function-scope mandatory unchanged)
   - `scripts/Test-EnvironmentRetention.ps1` (script-scope `EnvironmentUrl`/`AccessToken`/`DataverseUrl`/`CentralAccessToken`/`Zone` optional; function-scope mandatory unchanged)

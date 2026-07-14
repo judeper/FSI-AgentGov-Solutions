@@ -193,7 +193,7 @@ if (-not (Test-Path $modulePath)) {
 }
 Import-Module $modulePath -Force -ErrorAction Stop
 
-$dotSourceSafeVars = @{
+$tenantOrchestratorSafeVars = @{
     Zone                  = $Zone
     OutputPath            = $OutputPath
     SkipCanaryValidation  = $SkipCanaryValidation
@@ -233,8 +233,8 @@ foreach ($script in $requiredScripts) {
     }
     . $scriptPath
 }
-foreach ($name in $dotSourceSafeVars.Keys) {
-    Set-Variable -Name $name -Value $dotSourceSafeVars[$name] -Scope Local
+foreach ($name in $tenantOrchestratorSafeVars.Keys) {
+    Set-Variable -Name $name -Value $tenantOrchestratorSafeVars[$name] -Scope Local
 }
 
 # Generate RunId for correlated validation records
