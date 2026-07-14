@@ -49,6 +49,9 @@
 6. **Non-user record retention limit conflicts with Zone 3 target in some classes.**
    - Disposition: documented limit and caveat in README/LAB narrative; no speculative code migration in this PR.
 
+7. **Live blocker: Dataverse global option-set POST payloads missing polymorphic metadata discriminators.**
+   - Disposition: added root `@odata.type = Microsoft.Dynamics.CRM.OptionSetMetadata` and per-option `@odata.type = Microsoft.Dynamics.CRM.OptionMetadata` to ACM ACV/ALCA option-set definitions, plus pytest guards validating discriminator presence and client pass-through semantics.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -66,6 +69,10 @@
 - `scripts/Start-EnvironmentValidationRunbook.ps1`
   - Removed `MSAL.PS` dependency and `Get-MsalToken`
   - Added `Connect-PowerPlatform` helper usage for Dataverse drift token
+- Option-set metadata payload fix for live Dataverse compatibility:
+  - `scripts/create_dataverse_schema.py` (ACV global option sets)
+  - `scripts/create_audit_compliance_schema.py` (ALCA global option set)
+  - `tests/test_optionset_discriminators.py` (root/option discriminator guards + ACV/ALCA client POST pass-through guard)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`
@@ -108,6 +115,7 @@
 - [ ] Tenant runbook execution in private lab (certificate path)
 - [ ] Environment runbook execution in private lab (certificate and legacy-secret fallback path)
 - [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
+- [ ] ACV and ALCA global option-set POST calls succeed in canonical Dataverse environment with discriminator-enriched payloads
 - [ ] `Search-UnifiedAuditLog` and canary retrieval checks in target tenant
 - [ ] Purview retention validation with actual policy set and licensing context
 - [ ] Portal smoke artifacts (Playwright channel) attached separately from runtime evidence

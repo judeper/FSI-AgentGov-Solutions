@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refreshed `LAB-VALIDATION.md` to an explicit static-only posture with source/date revalidation, runtime-vs-playwright split, private-live-check placeholders, and no live-success claim.
 - Canonicalized Exchange PowerShell documentation links in updated ACM docs to `...?view=exchange-ps` where applicable.
 - Added explicit retention caveat that non-user audit records (service principal/system/application) have fixed one-year retention and are not controlled by custom retention policies.
+- Added required Dataverse metadata discriminators for ACM global option-set creation payloads (`@odata.type` root `OptionSetMetadata` and per-option `OptionMetadata`) in both ACV and ALCA schema scripts; added pytest guards confirming discriminator presence and client POST pass-through behavior.
 
 ## [1.0.5] - 2026-05-23
 

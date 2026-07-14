@@ -49,6 +49,7 @@ PUBLISHER_PREFIX = "fsi"
 
 OPTIONSETS = {
     "fsi_alca_compliancestatus": {
+        "@odata.type": "Microsoft.Dynamics.CRM.OptionSetMetadata",
         "Name": "fsi_alca_compliancestatus",
         "DisplayName": {
             "LocalizedLabels": [
@@ -67,6 +68,7 @@ OPTIONSETS = {
         "IsGlobal": True,
         "Options": [
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000000,
                 "Label": {
                     "LocalizedLabels": [
@@ -75,6 +77,7 @@ OPTIONSETS = {
                 },
             },
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000001,
                 "Label": {
                     "LocalizedLabels": [
@@ -83,6 +86,7 @@ OPTIONSETS = {
                 },
             },
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000002,
                 "Label": {
                     "LocalizedLabels": [
@@ -91,6 +95,7 @@ OPTIONSETS = {
                 },
             },
             {
+                "@odata.type": "Microsoft.Dynamics.CRM.OptionMetadata",
                 "Value": 100000003,
                 "Label": {
                     "LocalizedLabels": [
