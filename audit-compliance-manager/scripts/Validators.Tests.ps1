@@ -55,6 +55,10 @@
     Justification = 'Variable feeds Pester -ForEach discovery for ExchangeOnlineManagement version-bound checks; PSSA static analysis misses Pester discovery scriptblock reads.'
 )]
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+    'PSUseDeclaredVarsMoreThanAssignments', 'powerAppsCompatibilityBoundMatrix',
+    Justification = 'Variable feeds Pester -ForEach discovery for Microsoft.PowerApps.Administration.PowerShell compatibility-bound checks; PSSA static analysis misses Pester discovery scriptblock reads.'
+)]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     'PSUseDeclaredVarsMoreThanAssignments', 'sourceContractMatrix',
     Justification = 'Variable feeds Pester -ForEach discovery for dot-source parameter preservation contracts; PSSA static analysis misses Pester discovery scriptblock reads.'
 )]
@@ -130,6 +134,15 @@ BeforeDiscovery {
         @{ Name = "Test-PurviewRetention.ps1"; Path = Join-Path $validatorRoot "Test-PurviewRetention.ps1" }
         @{ Name = "Test-UnifiedAuditLog.ps1"; Path = Join-Path $validatorRoot "Test-UnifiedAuditLog.ps1" }
         @{ Name = "private\\Connect-AuditServices.ps1"; Path = Join-Path $privateRoot "Connect-AuditServices.ps1" }
+    )
+
+    $powerAppsCompatibilityBoundMatrix = @(
+        @{ Name = "Enable-AuditLogging.ps1"; Path = Join-Path $validatorRoot "Enable-AuditLogging.ps1" }
+        @{ Name = "Invoke-EnvironmentAuditValidation.ps1"; Path = Join-Path $validatorRoot "Invoke-EnvironmentAuditValidation.ps1" }
+        @{ Name = "Invoke-EnvironmentDiscovery.ps1"; Path = Join-Path $validatorRoot "Invoke-EnvironmentDiscovery.ps1" }
+        @{ Name = "private\\Connect-PowerPlatform.ps1"; Path = Join-Path $privateRoot "Connect-PowerPlatform.ps1" }
+        @{ Name = "Start-EnvironmentValidationRunbook.ps1"; Path = Join-Path $validatorRoot "Start-EnvironmentValidationRunbook.ps1" }
+        @{ Name = "Test-AuditLoggingCompliance.ps1"; Path = Join-Path $validatorRoot "Test-AuditLoggingCompliance.ps1" }
     )
 
     $sourceContractMatrix = @(
@@ -516,6 +529,15 @@ Describe "ExchangeOnlineManagement compatibility bounds" {
         $content = Get-Content -LiteralPath $Path -Raw
 
         ($content -cmatch 'ModuleName\s*=\s*["'']ExchangeOnlineManagement["''][^\r\n]*MaximumVersion\s*=\s*["'']3\.9\.2["'']') | Should -BeTrue -Because "$Name should bound ExchangeOnlineManagement to <=3.9.2 for PowerShell 7.4 compatibility"
+    }
+}
+
+Describe "Power Apps compatibility bounds" {
+    It "<Name> pins Microsoft.PowerApps.Administration.PowerShell to 2.0.180 for ACM legacy app-secret fallback compatibility" -ForEach $powerAppsCompatibilityBoundMatrix {
+        $Path | Should -Exist -Because "$Name should exist"
+        $content = Get-Content -LiteralPath $Path -Raw
+
+        ($content -cmatch 'ModuleName\s*=\s*["'']Microsoft\.PowerApps\.Administration\.PowerShell["''][^\r\n]*ModuleVersion\s*=\s*["'']2\.0\.180["''][^\r\n]*MaximumVersion\s*=\s*["'']2\.0\.180["'']') | Should -BeTrue -Because "$Name should pin Microsoft.PowerApps.Administration.PowerShell to 2.0.180 for ACM compatibility validation"
     }
 }
 

@@ -1,5 +1,5 @@
 ﻿#Requires -Version 7.2
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180"; MaximumVersion="2.0.180" }
 
 <#
 .SYNOPSIS
@@ -64,7 +64,9 @@
 
 .NOTES
     Version: 1.0.2
-    Requires Microsoft.PowerApps.Administration.PowerShell module v2.0 or later.
+    Requires Microsoft.PowerApps.Administration.PowerShell module 2.0.180.
+    ACM currently pins to 2.0.180 as known-good; app-secret Add-PowerAppsAccount validation
+    on 2.0.217 failed with AADSTS7000215 while 2.0.180 succeeded with the same short-lived secret.
 
     IMPORTANT: Power Platform Admin or Entra Global Admin role is required
     for Get-AdminPowerAppEnvironment cmdlet. Users without these roles will receive

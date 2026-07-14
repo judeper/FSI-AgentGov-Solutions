@@ -1,5 +1,5 @@
 #Requires -Version 7.2
-#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180" }, Az.Accounts
+#Requires -Modules @{ ModuleName="Microsoft.PowerApps.Administration.PowerShell"; ModuleVersion="2.0.180"; MaximumVersion="2.0.180" }, Az.Accounts
 
 <#
 .SYNOPSIS
@@ -78,7 +78,7 @@
     Azure Automation setup:
     1. Import this script as a runbook
     2. Upload certificate to Automation Account > Certificates (or store ClientSecret as encrypted variable)
-    3. Install required modules: Microsoft.PowerApps.Administration.PowerShell, Az.Accounts
+    3. Install required modules: Microsoft.PowerApps.Administration.PowerShell 2.0.180 (ACM known-good pin; app-secret Add-PowerAppsAccount validation on 2.0.217 failed with AADSTS7000215), Az.Accounts
     4. Grant application permissions:
        - Power Platform Admin role
        - Dataverse System Administrator role in central environment

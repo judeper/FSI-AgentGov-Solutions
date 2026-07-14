@@ -228,11 +228,18 @@ Send-ComplianceNotification `
 
 Import these modules from the PowerShell Gallery:
 
-| Module | Minimum Version | Purpose |
-|--------|----------------|---------|
-| `Microsoft.PowerApps.Administration.PowerShell` | 2.0.180 | Environment enumeration, admin config |
+| Module | Version | Purpose |
+|--------|---------|---------|
+| `Microsoft.PowerApps.Administration.PowerShell` | 2.0.180 (pinned known-good for ACM app-secret fallback) | Environment enumeration, admin config |
 | `ExchangeOnlineManagement` | 3.0.0-3.9.2 | Exchange Online managed identity auth, Unified Audit Log enablement checks, audit log search on PowerShell 7.4 |
 | `Az.Accounts` | 5.0+ | Dataverse token acquisition for runbook drift checks |
+
+> **Power Apps compatibility note:** ACM currently pins
+> `Microsoft.PowerApps.Administration.PowerShell` to `2.0.180` as the known-good
+> version for the validated app-secret fallback path. In ACM evidence, `2.0.217`
+> failed `Add-PowerAppsAccount` on that app-secret path with `AADSTS7000215`,
+> while the same short-lived secret succeeded on `2.0.180`. Certificate-based
+> validation on `2.0.217` succeeded in the same evidence set.
 
 **For each module:**
 

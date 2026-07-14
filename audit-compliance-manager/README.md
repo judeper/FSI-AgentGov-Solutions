@@ -53,7 +53,7 @@ pip install -r scripts/requirements.txt
 | Component | Version |
 |-----------|---------|
 | PowerShell | 7.2+ (local execution) |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.180 (pinned) |
 | ExchangeOnlineManagement | 3.0.0–3.9.2 |
 | Az.Accounts | 5.0+ |
 | Azure Automation Runtime | 7.4 |
@@ -63,6 +63,13 @@ pip install -r scripts/requirements.txt
 > supports PowerShell `7.4` for this solution's runbook path. ACM therefore pins
 > ExchangeOnlineManagement to `3.0.0–3.9.2` for now and tracks the `3.10+`
 > upgrade as a monitor/evaluate item for a future runtime refresh.
+>
+> **Power Apps module compatibility note:** ACM currently pins
+> `Microsoft.PowerApps.Administration.PowerShell` to `2.0.180` as the known-good
+> version for the validated legacy app-secret fallback path. In ACM lab evidence,
+> `2.0.217` failed `Add-PowerAppsAccount` on that app-secret path with
+> `AADSTS7000215`, while the same short-lived secret succeeded on `2.0.180`.
+> Certificate-based validation on `2.0.217` succeeded in the same evidence set.
 
 ## What This Solution Does
 
@@ -171,7 +178,7 @@ Steps 1–4 run interactively for initial setup and validation. For ongoing auto
    - Mail.Send (Microsoft Graph API permission — admin consent required)
    - Dataverse Application User with System Administrator role (per environment)
 3. **Import PowerShell modules** into the Automation Account:
-   - `Microsoft.PowerApps.Administration.PowerShell` (2.0+)
+   - `Microsoft.PowerApps.Administration.PowerShell` (2.0.180 pinned known-good for ACM app-secret fallback)
    - `ExchangeOnlineManagement` (3.0.0-3.9.2 for the current PowerShell 7.4 runtime path)
    - `AuditComplianceHelpers` (custom module — ZIP and upload `.psm1` + `.psd1`)
 4. **Create and publish runbooks** from the ALCA scripts (see [docs/deployment-guide.md](./docs/deployment-guide.md) for detailed steps)

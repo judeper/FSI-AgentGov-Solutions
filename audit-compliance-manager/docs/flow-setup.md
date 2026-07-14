@@ -26,7 +26,7 @@ Before creating the flows, ensure you have:
 - [ ] **Azure subscription** with Automation Account containing:
   - Start-TenantValidationRunbook.ps1 (imported as PowerShell 7.4 runbook)
   - Start-EnvironmentValidationRunbook.ps1 (imported as PowerShell 7.4 runbook)
-  - Required PowerShell modules installed (Az.Accounts, ExchangeOnlineManagement 3.0.0-3.9.2, Microsoft.PowerApps.Administration.PowerShell 2.0.180+)
+  - Required PowerShell modules installed (Az.Accounts, ExchangeOnlineManagement 3.0.0-3.9.2, Microsoft.PowerApps.Administration.PowerShell 2.0.180 pinned)
   - Certificate uploaded for service principal authentication
 - [ ] **Power Automate Premium license** (required for Azure Automation connector)
 - [ ] **Microsoft Teams** with Workflows app installed and channel created for alerts
@@ -84,9 +84,16 @@ Navigate to **Automation Account** > **Modules** > **Browse gallery** and import
 |--------|---------|---------|
 | Az.Accounts | 5.0+ | Dataverse Web API token acquisition for runbook drift checks |
 | ExchangeOnlineManagement | 3.0.0-3.9.2 | Tenant-level audit configuration checks on current PowerShell 7.4 runtime |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Environment discovery and validation |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.180 (pinned known-good for ACM app-secret fallback) | Environment discovery and validation |
 
 **Important:** Wait for each module to finish importing before starting the next one (status = "Available").
+
+> **Power Apps compatibility note:** ACM currently pins
+> `Microsoft.PowerApps.Administration.PowerShell` to `2.0.180` as the known-good
+> version for the validated app-secret fallback path. In ACM evidence, `2.0.217`
+> failed `Add-PowerAppsAccount` on that app-secret path with `AADSTS7000215`,
+> while the same short-lived secret succeeded on `2.0.180`. Certificate-based
+> validation on `2.0.217` succeeded in the same evidence set.
 
 ### 1.3 Import Runbooks
 
@@ -569,7 +576,7 @@ This table defines the alert behavior based on validation status:
 2. Check module versions match requirements:
    - Az.Accounts: 5.0+
    - ExchangeOnlineManagement: 3.0.0-3.9.2
-   - Microsoft.PowerApps.Administration.PowerShell: 2.0.180+
+   - Microsoft.PowerApps.Administration.PowerShell: 2.0.180 (pinned)
 3. Update modules if needed (may require reimporting)
 
 ### 3. OData Filter Syntax

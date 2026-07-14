@@ -134,6 +134,10 @@
     - Observed sequence (public source `99a7a52`): certificate tenant validation returned three validator results, drift output, and a correlated RunId, but the final tenant evidence export contained zero records. `Start-TenantValidationRunbook.ps1` used `DataverseUrl` for wrapper-level drift checks but did not include it in the parameter set passed to `Invoke-TenantAuditValidation.ps1`, so validator history writes were disabled.
     - Disposition: added `DataverseUrl = $DataverseUrl` to the tenant orchestrator parameter set and added a wiring regression assertion in `scripts/Validators.Tests.ps1`.
 
+28. **Live compatibility finding: minimum-only Power Apps `#Requires` bound admitted `2.0.217`, which failed ACM's validated app-secret fallback path.**
+    - Observed sequence (2026-07-14 compatibility run): environment certificate path succeeded on `Microsoft.PowerApps.Administration.PowerShell 2.0.217`, but repeated app-secret `Add-PowerAppsAccount` attempts failed with `AADSTS7000215` even after using a newly issued short-lived secret that successfully acquired Dataverse tokens and after propagation waits. A fresh-process side-by-side run importing exactly `2.0.180` with the same secret succeeded, and credential cleanup was verified.
+    - Disposition (static fix applied; live rerun pending after commit): added `MaximumVersion="2.0.180"` beside `ModuleVersion="2.0.180"` in all six ACM scripts that require `Microsoft.PowerApps.Administration.PowerShell`, updated `Connect-PowerPlatform` install guidance to `-RequiredVersion 2.0.180`, added a Pester compatibility-bound matrix in `scripts/Validators.Tests.ps1`, and synchronized README/deployment/authentication/flow-setup module guidance to the same known-good pin while explicitly scoping the failure to the validated app-secret path.
+
 ## Static changes implemented in this pass
 
 - Canary mailbox and app-only parameter-set reliability updates:
@@ -248,7 +252,17 @@
   - `Test-PurviewRetention.ps1`
   - `Test-UnifiedAuditLog.ps1`
   - `Start-TenantValidationRunbook.ps1`
+- Microsoft.PowerApps.Administration.PowerShell compatibility pin added for ACM legacy app-secret fallback path:
+  - `Enable-AuditLogging.ps1`
+  - `Invoke-EnvironmentAuditValidation.ps1`
+  - `Invoke-EnvironmentDiscovery.ps1`
+  - `private/Connect-PowerPlatform.ps1`
+  - `Start-EnvironmentValidationRunbook.ps1`
+  - `Test-AuditLoggingCompliance.ps1`
+  - `scripts/Validators.Tests.ps1` (Power Apps compatibility-bound matrix: ModuleVersion and MaximumVersion both pinned to `2.0.180`)
 - Documentation sync updates:
+  - `README.md`
+  - `docs/authentication.md`
   - `docs/deployment-guide.md`
   - `docs/flow-setup.md`
   - `docs/evidence-export-guide.md`
@@ -279,7 +293,7 @@
 ## Pending private live checks (required before readiness claim)
 
 - [ ] Tenant runbook execution in private lab (certificate path)
-- [ ] Environment runbook execution in private lab (certificate and legacy-secret fallback path)
+- [ ] Environment runbook execution in private lab (certificate and legacy-secret fallback path), including post-commit rerun of finding 28 with pinned `Microsoft.PowerApps.Administration.PowerShell 2.0.180`
 - [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
 - [ ] ACV and ALCA global option-set POST calls succeed in canonical Dataverse environment with discriminator-enriched payloads
 - [ ] ACV and ALCA writes succeed in canonical Dataverse environment when `FSIPublisher` and `AuditComplianceManager` are absent initially (bootstrap creates/reuses shell without pre-solution `MSCRM.SolutionUniqueName` headers)
