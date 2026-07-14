@@ -126,6 +126,10 @@
     - Observed sequence (public source `ec8033c`): `Start-TenantValidationRunbook` passed `Zone3` into `Invoke-TenantAuditValidation`, but tenant final output `Zone` was empty and `Test-PurviewRetention` received an empty `Zone`. Root cause: `Invoke-TenantAuditValidation.ps1` stored caller values in `$dotSourceSafeVars`, then dot-sourced validator scripts that each declared their own `$dotSourceSafeVars` in the same scope, overwriting the orchestrator snapshot before restore.
     - Disposition (static fix applied; live revalidation pending): renamed tenant orchestrator snapshot ownership to `$tenantOrchestratorSafeVars` in `Invoke-TenantAuditValidation.ps1` and restored from that caller-owned variable after validator dot-sourcing. Generalized `scripts/Validators.Tests.ps1` source-contract matrix to support per-row snapshot variable names (default `$dotSourceSafeVars`, tenant `$tenantOrchestratorSafeVars`), added a behavioral nested-dot-source collision probe reproducing shared-name clobbering and confirming Zone3 survives with unique snapshot ownership, and added a source contract that tenant results and zone mapping consume the restored `Zone`.
 
+26. **Live evidence finding: explicit `CanaryWaitSeconds=0` was dropped by truthiness-based wrapper forwarding.**
+    - Observed sequence (public source `acd8665`): the tenant wrapper received `-CanaryWaitSeconds 0`, but `if ($CanaryWaitSeconds)` evaluated false and omitted the value from the orchestrator parameter set, which then used its 300-second default.
+    - Disposition: `Start-TenantValidationRunbook.ps1` now forwards the value when `$PSBoundParameters.ContainsKey('CanaryWaitSeconds')`, preserving explicit zero-second smoke runs while retaining the default when the caller omits the parameter.
+
 ## Static changes implemented in this pass
 
 - Canary mailbox and app-only parameter-set reliability updates:

@@ -183,7 +183,9 @@ try {
     if ($ClientId) { $ualParams.ClientId = $ClientId }
     if ($CertificateThumbprint) { $ualParams.CertificateThumbprint = $CertificateThumbprint }
     if ($SkipCanaryValidation) { $ualParams.SkipCanaryValidation = $true }
-    if ($CanaryWaitSeconds) { $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds }
+    if ($PSBoundParameters.ContainsKey('CanaryWaitSeconds')) {
+        $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds
+    }
     if (-not [string]::IsNullOrWhiteSpace($CanaryMailboxIdentity)) { $ualParams.CanaryMailboxIdentity = $CanaryMailboxIdentity }
 
     Write-Verbose "Invoking Invoke-TenantAuditValidation with parameters: $($ualParams.Keys -join ', ')"

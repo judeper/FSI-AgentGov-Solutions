@@ -887,6 +887,7 @@ Describe "Helper script load and invocation contracts" {
         ($startContent -cmatch '\[string\]\$CanaryMailboxIdentity') | Should -BeTrue
         ($startContent -cmatch 'CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
         ($startContent -cmatch '\$ualParams\.CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
+        ($startContent -cmatch '\$PSBoundParameters\.ContainsKey\(''CanaryWaitSeconds''\)') | Should -BeTrue -Because 'Explicit CanaryWaitSeconds=0 must be forwarded.'
 
         ($invokeContent -cmatch '\[string\]\$CanaryMailboxIdentity') | Should -BeTrue
         ($invokeContent -cmatch 'CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
