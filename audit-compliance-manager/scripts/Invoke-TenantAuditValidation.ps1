@@ -56,6 +56,10 @@
     Default: 300 (5 minutes). Increase if audit ingestion is consistently slow
     in your environment.
 
+.PARAMETER CanaryMailboxIdentity
+    Mailbox identity used for canary event generation when explicit mailbox targeting is required.
+    Recommended for service-principal runs; interactive runs may omit it.
+
 .PARAMETER Interactive
     Use interactive browser-based authentication instead of service principal.
 
@@ -165,7 +169,10 @@ param(
     [string]$CertificateThumbprint,
 
     [Parameter(Mandatory = $false)]
-    [string]$CertificateFilePath
+    [string]$CertificateFilePath,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CanaryMailboxIdentity
 )
 
 $ErrorActionPreference = "Stop"
@@ -198,6 +205,7 @@ $dotSourceSafeVars = @{
     ClientId              = $ClientId
     CertificateThumbprint = $CertificateThumbprint
     CertificateFilePath   = $CertificateFilePath
+    CanaryMailboxIdentity = $CanaryMailboxIdentity
 }
 
 $privatePath = Join-Path $PSScriptRoot 'private'
@@ -297,6 +305,7 @@ try {
     }
     $ualParams.GracePeriodHours = $GracePeriodHours
     $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds
+    if (-not [string]::IsNullOrWhiteSpace($CanaryMailboxIdentity)) { $ualParams.CanaryMailboxIdentity = $CanaryMailboxIdentity }
 
     # Execute validator
     $results.Validators.UnifiedAuditLog = Test-UnifiedAuditLog @ualParams

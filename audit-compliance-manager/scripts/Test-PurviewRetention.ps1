@@ -107,7 +107,9 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)]
+    # Optional at script scope to support safe dot-sourcing by orchestrators.
+    # Required by Test-PurviewRetention function and direct execution.
+    [Parameter(Mandatory = $false)]
     [ValidateSet("Zone1", "Zone2", "Zone3")]
     [string]$Zone,
 

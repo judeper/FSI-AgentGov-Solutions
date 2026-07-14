@@ -58,6 +58,10 @@
 .PARAMETER CanaryWaitSeconds
     Seconds to wait after generating canary event before searching for it. Default: 300.
 
+.PARAMETER CanaryMailboxIdentity
+    Mailbox identity used for canary event generation when service-principal runs need explicit mailbox targeting.
+    Recommended for service-principal validation; interactive runs may omit it.
+
 .EXAMPLE
     Start-TenantValidationRunbook `
         -Zone "Zone3" `
@@ -123,7 +127,10 @@ param(
     [switch]$SkipCanaryValidation,
 
     [Parameter(Mandatory = $false)]
-    [int]$CanaryWaitSeconds = 300
+    [int]$CanaryWaitSeconds = 300,
+
+    [Parameter(Mandatory = $false)]
+    [string]$CanaryMailboxIdentity
 )
 
 $ErrorActionPreference = "Stop"
@@ -145,6 +152,7 @@ try {
         CertificateThumbprint = $CertificateThumbprint
         SkipCanaryValidation  = $SkipCanaryValidation
         CanaryWaitSeconds     = $CanaryWaitSeconds
+        CanaryMailboxIdentity = $CanaryMailboxIdentity
     }
 
     $privatePath = Join-Path $PSScriptRoot 'private'
@@ -176,6 +184,7 @@ try {
     if ($CertificateThumbprint) { $ualParams.CertificateThumbprint = $CertificateThumbprint }
     if ($SkipCanaryValidation) { $ualParams.SkipCanaryValidation = $true }
     if ($CanaryWaitSeconds) { $ualParams.CanaryWaitSeconds = $CanaryWaitSeconds }
+    if (-not [string]::IsNullOrWhiteSpace($CanaryMailboxIdentity)) { $ualParams.CanaryMailboxIdentity = $CanaryMailboxIdentity }
 
     Write-Verbose "Invoking Invoke-TenantAuditValidation with parameters: $($ualParams.Keys -join ', ')"
 

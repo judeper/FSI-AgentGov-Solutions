@@ -148,7 +148,7 @@ BeforeDiscovery {
         @{
             Name             = 'Invoke-TenantAuditValidation.ps1'
             Path             = Join-Path $validatorRoot 'Invoke-TenantAuditValidation.ps1'
-            ExpectedParams   = @('Zone', 'OutputPath', 'SkipCanaryValidation', 'GracePeriodHours', 'CanaryWaitSeconds', 'DataverseUrl', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath')
+            ExpectedParams   = @('Zone', 'OutputPath', 'SkipCanaryValidation', 'GracePeriodHours', 'CanaryWaitSeconds', 'DataverseUrl', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath', 'CanaryMailboxIdentity')
             AuthAnchorPattern = 'if\s*\(\$DataverseUrl\)'
         }
         @{
@@ -160,7 +160,7 @@ BeforeDiscovery {
         @{
             Name             = 'Start-TenantValidationRunbook.ps1'
             Path             = Join-Path $validatorRoot 'Start-TenantValidationRunbook.ps1'
-            ExpectedParams   = @('Zone', 'DataverseUrl', 'TenantId', 'ClientId', 'CertificateThumbprint', 'SkipCanaryValidation', 'CanaryWaitSeconds')
+            ExpectedParams   = @('Zone', 'DataverseUrl', 'TenantId', 'ClientId', 'CertificateThumbprint', 'SkipCanaryValidation', 'CanaryWaitSeconds', 'CanaryMailboxIdentity')
             AuthAnchorPattern = '\$ualParams\s*=\s*@\{'
         }
         @{
@@ -178,7 +178,7 @@ BeforeDiscovery {
         @{
             Name             = 'Test-UnifiedAuditLog.ps1'
             Path             = Join-Path $validatorRoot 'Test-UnifiedAuditLog.ps1'
-            ExpectedParams   = @('SkipCanaryValidation', 'GracePeriodHours', 'CanaryWaitSeconds', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath')
+            ExpectedParams   = @('SkipCanaryValidation', 'GracePeriodHours', 'CanaryWaitSeconds', 'Interactive', 'TenantId', 'ClientId', 'CertificateThumbprint', 'CertificateFilePath', 'CanaryMailboxIdentity')
             AuthAnchorPattern = 'function\s+Test-UnifiedAuditLog'
         }
         @{
@@ -451,6 +451,76 @@ Describe "Helper script load and invocation contracts" {
             Set-Content -LiteralPath $sanitizedPath -Value $sanitizedContent -Encoding UTF8
             return $sanitizedPath
         }
+
+        function New-SanitizedValidatorHarness {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$SourcePath,
+
+                [Parameter(Mandatory = $false)]
+                [string[]]$PrivateHelpers = @()
+            )
+
+            $harnessRoot = Join-Path $script:helperArtifactsDir ("harness-" + [Guid]::NewGuid().ToString())
+            $privateRoot = Join-Path $harnessRoot 'private'
+            New-Item -ItemType Directory -Path $privateRoot -Force | Out-Null
+
+            $scriptTarget = Join-Path $harnessRoot (Split-Path -Path $SourcePath -Leaf)
+            $sourceContent = Get-Content -LiteralPath $SourcePath -Raw
+            $sanitizedSource = ($sourceContent -split "`r?`n" | Where-Object { $_ -notmatch '^\s*#Requires\s+-Modules\b' }) -join [Environment]::NewLine
+            Set-Content -LiteralPath $scriptTarget -Value $sanitizedSource -Encoding UTF8
+
+            foreach ($helper in $PrivateHelpers) {
+                $helperSourcePath = Join-Path (Split-Path -Path $SourcePath -Parent) ("private\" + $helper)
+                $helperTargetPath = Join-Path $privateRoot $helper
+                $helperContent = Get-Content -LiteralPath $helperSourcePath -Raw
+                $sanitizedHelper = ($helperContent -split "`r?`n" | Where-Object { $_ -notmatch '^\s*#Requires\s+-Modules\b' }) -join [Environment]::NewLine
+                Set-Content -LiteralPath $helperTargetPath -Value $sanitizedHelper -Encoding UTF8
+            }
+
+            return $scriptTarget
+        }
+
+        function Import-FunctionDefinitionFromScript {
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$SourcePath,
+
+                [Parameter(Mandatory = $true)]
+                [string]$FunctionName
+            )
+
+            if (Get-Command $FunctionName -CommandType Function -ErrorAction SilentlyContinue) {
+                Remove-Item -LiteralPath "Function:\$FunctionName" -Force -ErrorAction SilentlyContinue
+            }
+
+            $tokens = $null
+            $parseErrors = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile($SourcePath, [ref]$tokens, [ref]$parseErrors)
+            if ($parseErrors -and $parseErrors.Count -gt 0) {
+                throw "Failed to parse ${SourcePath}: $($parseErrors[0].Message)"
+            }
+
+            $functionAst = $ast.Find(
+                {
+                    param($node)
+                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $FunctionName
+                },
+                $true
+            )
+            if (-not $functionAst) {
+                throw "Function '$FunctionName' not found in $SourcePath"
+            }
+
+            $functionText = $functionAst.Extent.Text
+            $scopedFunctionText = [regex]::Replace(
+                $functionText,
+                "(?m)^(\s*function\s+)$FunctionName\b",
+                "`${1}global:$FunctionName",
+                1
+            )
+            . ([scriptblock]::Create($scopedFunctionText))
+        }
     }
 
     AfterAll {
@@ -556,6 +626,184 @@ Describe "Helper script load and invocation contracts" {
             $parameterAttribute | Should -Not -BeNullOrEmpty -Because "$FunctionName parameter '$parameterName' should include [Parameter()] metadata"
             $parameterAttribute.Mandatory | Should -BeTrue -Because "$FunctionName parameter '$parameterName' should remain mandatory at function scope"
         }
+    }
+
+    It "Test-PurviewRetention supports no-arg dot-source while keeping Zone mandatory at function scope" {
+        $sourcePath = Join-Path $PSScriptRoot 'Test-PurviewRetention.ps1'
+        if (Get-Command Test-PurviewRetention -CommandType Function -ErrorAction SilentlyContinue) {
+            Remove-Item -LiteralPath 'Function:\Test-PurviewRetention' -Force
+        }
+
+        $sanitizedPath = New-SanitizedValidatorHarness `
+            -SourcePath $sourcePath `
+            -PrivateHelpers @('Connect-AuditServices.ps1')
+
+        Set-Variable -Name Zone -Value 'Zone3' -Scope Local
+        $dotSourceError = $null
+        try {
+            . $sanitizedPath
+        } catch {
+            $dotSourceError = $_
+        }
+        $dotSourceError | Should -BeNullOrEmpty -Because 'Test-PurviewRetention.ps1 should dot-source with no script-scope arguments.'
+
+        $content = Get-Content -LiteralPath $sourcePath -Raw
+        $zoneParamAttributes = [regex]::Matches(
+            $content,
+            '\[Parameter\(Mandatory\s*=\s*(\$true|\$false)\)\]\s*\[ValidateSet\("Zone1",\s*"Zone2",\s*"Zone3"\)\]\s*\[string\]\$Zone'
+        )
+        ($zoneParamAttributes.Count -ge 2) | Should -BeTrue -Because 'Script and function scope should both define Zone.'
+        $zoneParamAttributes[0].Groups[1].Value | Should -Be '$false' -Because 'Script-scope Zone must remain optional for orchestrator dot-sourcing.'
+        $zoneParamAttributes[1].Groups[1].Value | Should -Be '$true' -Because 'Function-scope Zone must remain mandatory for direct invocation.'
+
+        $loadedFunction = Get-Command Test-PurviewRetention -CommandType Function -ErrorAction SilentlyContinue
+        $loadedFunction | Should -Not -BeNullOrEmpty -Because 'Test-PurviewRetention function should be available after dot-sourcing.'
+        $zoneMetadata = $loadedFunction.Parameters['Zone']
+        $zoneMetadata | Should -Not -BeNullOrEmpty
+        $zoneAttribute = $zoneMetadata.Attributes |
+            Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] } |
+            Select-Object -First 1
+        $zoneAttribute.Mandatory | Should -BeTrue -Because 'Function parameter Zone must remain mandatory.'
+    }
+
+    It "Test-UnifiedAuditLog omits Interactive switch for service-principal path and forwards CanaryMailboxIdentity" {
+        $sourcePath = Join-Path $PSScriptRoot 'Test-UnifiedAuditLog.ps1'
+        Import-FunctionDefinitionFromScript -SourcePath $sourcePath -FunctionName 'Test-UnifiedAuditLog'
+
+        foreach ($commandName in @('Connect-AuditServices', 'Get-AdminAuditLogConfig', 'New-CanaryEvent', 'Search-UnifiedAuditLog', 'Disconnect-AuditServices')) {
+            if (-not (Get-Command $commandName -CommandType Function -ErrorAction SilentlyContinue)) {
+                Set-Item -Path "Function:\$commandName" -Value { }
+            }
+        }
+
+        $global:lastConnectParams = $null
+        Mock Connect-AuditServices {
+            param(
+                [string]$TenantId,
+                [string]$ClientId,
+                [string]$CertificateThumbprint,
+                [string]$CertificateFilePath,
+                [switch]$Interactive,
+                [switch]$ComplianceOnly,
+                [switch]$ExchangeOnly
+            )
+
+            $global:lastConnectParams = @{
+                TenantId              = $TenantId
+                ClientId              = $ClientId
+                CertificateThumbprint = $CertificateThumbprint
+                CertificateFilePath   = $CertificateFilePath
+                ExchangeOnly          = [bool]$ExchangeOnly
+                InteractiveIsPresent  = $PSBoundParameters.ContainsKey('Interactive')
+            }
+        } -Verifiable
+        Mock Get-AdminAuditLogConfig {
+            [PSCustomObject]@{
+                UnifiedAuditLogIngestionEnabled = $true
+                AdminAuditLogEnabled            = $true
+            }
+        } -Verifiable
+        $global:lastCanaryMailboxIdentity = $null
+        Mock New-CanaryEvent {
+            param([string]$MailboxIdentity)
+            $global:lastCanaryMailboxIdentity = $MailboxIdentity
+            [PSCustomObject]@{
+                Status       = 'Success'
+                CanaryId     = 'canary-123'
+                ErrorMessage = $null
+            }
+        } -Verifiable
+        Mock Search-UnifiedAuditLog { [PSCustomObject]@{ Id = 'event-1' } } -Verifiable
+        Mock Start-Sleep { } -Verifiable
+        Mock Disconnect-AuditServices { } -Verifiable
+
+        $mailboxIdentity = 'shared-mailbox@example.com'
+        $result = Test-UnifiedAuditLog `
+            -TenantId 'contoso.onmicrosoft.com' `
+            -ClientId 'app-id' `
+            -CertificateThumbprint 'thumb' `
+            -CanaryMailboxIdentity $mailboxIdentity `
+            -CanaryWaitSeconds 0
+
+        $result.OverallStatus | Should -Be 'Passed'
+        Should -Invoke Connect-AuditServices -Times 1
+        $global:lastConnectParams.ExchangeOnly | Should -BeTrue
+        $global:lastConnectParams.InteractiveIsPresent | Should -BeFalse -Because 'Interactive must not be passed when false.'
+        $global:lastConnectParams.TenantId | Should -Be 'contoso.onmicrosoft.com'
+        $global:lastConnectParams.ClientId | Should -Be 'app-id'
+        $global:lastConnectParams.CertificateThumbprint | Should -Be 'thumb'
+        Should -Invoke New-CanaryEvent -Times 1
+        $global:lastCanaryMailboxIdentity | Should -Be $mailboxIdentity
+    }
+
+    It "Test-UnifiedAuditLog service-principal branch without mailbox skips canary generation and returns clear warning" {
+        $sourcePath = Join-Path $PSScriptRoot 'Test-UnifiedAuditLog.ps1'
+        Import-FunctionDefinitionFromScript -SourcePath $sourcePath -FunctionName 'Test-UnifiedAuditLog'
+
+        foreach ($commandName in @('Connect-AuditServices', 'Get-AdminAuditLogConfig', 'New-CanaryEvent', 'Search-UnifiedAuditLog', 'Disconnect-AuditServices')) {
+            if (-not (Get-Command $commandName -CommandType Function -ErrorAction SilentlyContinue)) {
+                Set-Item -Path "Function:\$commandName" -Value { }
+            }
+        }
+
+        Mock Connect-AuditServices { } -Verifiable
+        Mock Get-AdminAuditLogConfig {
+            [PSCustomObject]@{
+                UnifiedAuditLogIngestionEnabled = $true
+                AdminAuditLogEnabled            = $true
+            }
+        } -Verifiable
+        Mock New-CanaryEvent { throw 'Should not be invoked in this branch.' }
+        Mock Search-UnifiedAuditLog { throw 'Search should not run when canary generation is skipped.' }
+        Mock Disconnect-AuditServices { } -Verifiable
+
+        $result = Test-UnifiedAuditLog `
+            -TenantId 'contoso.onmicrosoft.com' `
+            -ClientId 'app-id' `
+            -CertificateThumbprint 'thumb'
+
+        $result.OverallStatus | Should -Be 'Warning'
+        $result.Reason | Should -Match 'explicit mailbox identity'
+        $canaryCheck = $result.Checks | Where-Object { $_.Name -eq 'CanaryEventValidation' } | Select-Object -First 1
+        $canaryCheck | Should -Not -BeNullOrEmpty
+        $canaryCheck.Status | Should -Be 'Warning'
+        $canaryCheck.Reason | Should -Match 'CanaryMailboxIdentity is required'
+        Should -Invoke New-CanaryEvent -Times 0
+        Should -Invoke Search-UnifiedAuditLog -Times 0
+    }
+
+    It "Tenant canary mailbox wiring exists from Start-TenantValidationRunbook through Invoke-TenantAuditValidation into Test-UnifiedAuditLog" {
+        $startPath = Join-Path $PSScriptRoot 'Start-TenantValidationRunbook.ps1'
+        $invokePath = Join-Path $PSScriptRoot 'Invoke-TenantAuditValidation.ps1'
+        $validatorPath = Join-Path $PSScriptRoot 'Test-UnifiedAuditLog.ps1'
+
+        $startContent = Get-Content -LiteralPath $startPath -Raw
+        $invokeContent = Get-Content -LiteralPath $invokePath -Raw
+        $validatorContent = Get-Content -LiteralPath $validatorPath -Raw
+
+        ($startContent -cmatch '\[string\]\$CanaryMailboxIdentity') | Should -BeTrue
+        ($startContent -cmatch 'CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
+        ($startContent -cmatch '\$ualParams\.CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
+
+        ($invokeContent -cmatch '\[string\]\$CanaryMailboxIdentity') | Should -BeTrue
+        ($invokeContent -cmatch 'CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
+        ($invokeContent -cmatch '\$ualParams\.CanaryMailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
+        ($invokeContent -cmatch 'Test-UnifiedAuditLog\s+@ualParams') | Should -BeTrue
+
+        ($validatorContent -cmatch '\[string\]\$CanaryMailboxIdentity') | Should -BeTrue
+        ($validatorContent -cmatch '\$canaryParams\.MailboxIdentity\s*=\s*\$CanaryMailboxIdentity') | Should -BeTrue
+    }
+
+    It "Test-UnifiedAuditLog source keeps Interactive binding conditional in connect and direct-exec paths" {
+        $path = Join-Path $PSScriptRoot 'Test-UnifiedAuditLog.ps1'
+        $content = Get-Content -LiteralPath $path -Raw
+
+        $connectParamsBlock = [regex]::Match($content, '\$connectParams\s*=\s*@\{(?<Body>.*?)\}', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+        $connectParamsBlock.Success | Should -BeTrue
+        ($connectParamsBlock.Groups['Body'].Value -cnotmatch 'Interactive\s*=') | Should -BeTrue -Because 'Connect params should not set Interactive directly.'
+        ($content -cmatch 'if\s*\(\$Interactive\)\s*\{\s*\$connectParams\.Interactive\s*=\s*\$true\s*\}') | Should -BeTrue
+        ($content -cmatch 'if\s*\(\$Interactive\)\s*\{\s*\$execParams\.Interactive\s*=\s*\$true\s*\}') | Should -BeTrue
+        ($content -cnotmatch '-Interactive:\$Interactive') | Should -BeTrue -Because 'Direct invocation should use conditional splatting.'
     }
 
     It "Compare-ValidationBaseline escapes CurrentRunId in URI and treats empty baseline as first run" {

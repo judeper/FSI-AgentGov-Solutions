@@ -114,8 +114,23 @@
     - Root cause: Dataverse JSON deserialized baseline `fsi_severity` as `System.Int64`; `Compare-ValidationBaseline.ps1` reverse-map literal keys are `System.Int32`, and PowerShell hashtable lookup is type-sensitive, so reverse lookup missed and returned null baseline status.
     - Disposition (static fix applied; live revalidation pending): `Compare-ValidationBaseline.ps1` now normalizes `baseline.fsi_severity` to `[int]` before reverse lookup and numeric comparison, preserving valid Int64/numeric-string option-set values. Invalid/non-numeric or unknown option-set values now raise precise errors and flow through the existing fail-open path (`DriftDetected = $true`, `Error` populated) without silent status fallback. Added targeted `scripts/Validators.Tests.ps1` mocks for `[long]100000000`, `'100000000'`, and invalid values.
 
+23. **Live blocker: tenant runbook reached `Invoke-TenantAuditValidation` but validator load failed on mandatory script-scope Purview `Zone`; Unified Audit service-principal path also conflicted on explicit `Interactive=$false`.**
+    - Observed sequence (public source `c71eae9`): orchestrator invocation progressed through helper load and entered tenant validator orchestration, then failed loading validators with `Cannot process command because of one or more missing mandatory parameters: Zone.` Root cause: `Test-PurviewRetention.ps1` still required script-scope `Zone` even when dot-sourced. The same evidence run showed `Test-UnifiedAuditLog.ps1` built `$connectParams = @{ ExchangeOnly = $true; Interactive = $Interactive }`, which binds the Interactive parameter set even when `$Interactive` is false and conflicts with certificate parameters.
+    - Disposition (static fix applied; live revalidation pending): `Test-PurviewRetention.ps1` now keeps script-scope `Zone` optional while preserving mandatory function-scope `Zone`. `Test-UnifiedAuditLog.ps1` now adds `Interactive` only when true and uses conditional hashtable construction for direct execution, matching service-principal certificate parameter-set expectations.
+
+24. **Live evidence finding: app-only canary validation needs explicit mailbox identity; default app-session fallback was not a usable mailbox identity.**
+    - Observed sequence (public source `c71eae9`): app-only canary attempts using fallback identity failed because `Get-ConnectionInformation` returned a synthetic `OAuthUser@...` UPN rather than a mailbox. A later run with an explicit shared mailbox identity generated and reverted the canary successfully, but retrieval stayed pending after 12 polls.
+    - Disposition (static fix applied; live revalidation pending): added optional `CanaryMailboxIdentity` to `Test-UnifiedAuditLog.ps1` (script + function), `Invoke-TenantAuditValidation.ps1`, and `Start-TenantValidationRunbook.ps1`. Service-principal/non-interactive runs without an explicit mailbox now return a clear Warning and skip `New-CanaryEvent`; when provided, mailbox identity is forwarded directly to `New-CanaryEvent`. `scripts/Validators.Tests.ps1` now includes behavioral mocks for the no-mailbox Warning branch and explicit-mailbox forwarding path, plus Start→Invoke→Validator wiring contracts.
+
 ## Static changes implemented in this pass
 
+- Canary mailbox and app-only parameter-set reliability updates:
+  - `scripts/Test-PurviewRetention.ps1` (script-scope `Zone` optional; function-scope mandatory unchanged)
+  - `scripts/Test-UnifiedAuditLog.ps1` (conditional Interactive splatting, optional `CanaryMailboxIdentity`, service-principal/no-mailbox Warning branch that skips `New-CanaryEvent`, conditional direct-exec params)
+  - `scripts/Invoke-TenantAuditValidation.ps1` (optional `CanaryMailboxIdentity` script params, dot-source snapshot, and Unified Audit validator forwarding)
+  - `scripts/Start-TenantValidationRunbook.ps1` (optional `CanaryMailboxIdentity` runbook params, dot-source snapshot, and tenant orchestrator forwarding)
+  - `scripts/Validators.Tests.ps1` (Purview no-arg dot-source + mandatory function contract, Unified Audit Interactive and canary-mailbox behavior checks, Start→Invoke→validator wiring contracts)
+  - `docs/flow-setup.md` (customer-facing runbook parameter examples/variables now include optional `CanaryMailboxIdentity` guidance for service-principal tenant runs)
 - `manifest.yaml`
   - Version `1.0.5` → `1.0.6`
   - Removed hard dependency on `agent-observability-foundation`

@@ -162,6 +162,7 @@ Add **Initialize variable** actions for each parameter:
 - `TeamsChannelId` (String): Teams channel ID for alerts
 - `ComplianceDistributionList` (String): `compliance-alerts@example.com`
 - `Zone` (String): `Zone3` (or Zone1/Zone2)
+- `CanaryMailboxIdentity` (String, optional): shared mailbox or user mailbox UPN for service-principal canary validation (recommended for app-only runs)
 
 **Add Scope - Try:**
 
@@ -183,7 +184,8 @@ Add **Initialize variable** actions for each parameter:
     "DataverseUrl": "@{variables('DataverseUrl')}",
     "TenantId": "@{variables('TenantId')}",
     "ClientId": "@{variables('ClientId')}",
-    "CertificateThumbprint": "@{variables('CertificateThumbprint')}"
+    "CertificateThumbprint": "@{variables('CertificateThumbprint')}",
+    "CanaryMailboxIdentity": "@{variables('CanaryMailboxIdentity')}"
   }
   ```
 
@@ -409,6 +411,7 @@ Before testing the full flows, verify runbooks work in Azure Automation:
    - TenantId: Your tenant ID
    - ClientId: Your app client ID
    - CertificateThumbprint: Your certificate thumbprint
+   - CanaryMailboxIdentity (optional): shared mailbox or user mailbox UPN (recommended for service-principal runs)
 4. Click **OK** and monitor job output
 5. Verify JSON output is returned with expected structure
 
@@ -490,6 +493,7 @@ Store these values as Power Automate flow variables (initialize at the top of ea
 | TeamsChannelId | 19:abcd1234... | Teams channel ID for alerts |
 | ComplianceDistributionList | compliance-alerts@example.com | Email distribution list |
 | Zone | Zone3 | Governance zone (tenant flow only) |
+| CanaryMailboxIdentity | shared-mailbox@example.com | Optional canary mailbox identity for tenant runbook service-principal validation |
 
 **Security best practice:** Consider using Azure Key Vault to store sensitive values (ClientId, CertificateThumbprint) and retrieve them in the flow using the Azure Key Vault connector.
 
