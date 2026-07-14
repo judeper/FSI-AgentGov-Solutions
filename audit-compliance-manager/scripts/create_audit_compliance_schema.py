@@ -418,6 +418,10 @@ def create_table(client: ALCAClient, dry_run: bool = False) -> dict:
         client.create_entity(get_audit_environment_compliance_entity())
         print(f"  {logical_name}: created")
         counts["created"] += 1
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(logical_name)
+        print(f"  {logical_name}: metadata ready")
 
     return counts
 
@@ -428,6 +432,9 @@ def create_columns(client: ALCAClient, dry_run: bool = False) -> dict:
     counts = {"created": 0, "skipped": 0}
 
     entity = "fsi_auditenvironmentcompliance"
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(entity)
     for col in TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
         existing = client.get_attribute_metadata(entity, col_name)
@@ -439,6 +446,8 @@ def create_columns(client: ALCAClient, dry_run: bool = False) -> dict:
             print(f"  {col_name}: would create ({odata_type})")
         else:
             client.create_attribute(entity, col)
+            client.publish_all_customizations()
+            client.wait_for_attribute_metadata_readiness(entity, col_name)
             print(f"  {col_name}: created")
             counts["created"] += 1
 

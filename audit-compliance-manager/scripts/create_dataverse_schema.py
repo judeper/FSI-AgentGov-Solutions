@@ -379,6 +379,10 @@ def create_tables(client: ACVClient, dry_run: bool = False) -> None:
     else:
         client.create_entity(get_audit_validation_history_entity())
         print(f"  {history_logical_name}: created")
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(history_logical_name)
+        print(f"  {history_logical_name}: metadata ready")
 
     # Create EnvironmentRegistry table
     registry_logical_name = "fsi_environmentregistry"
@@ -390,6 +394,10 @@ def create_tables(client: ACVClient, dry_run: bool = False) -> None:
     else:
         client.create_entity(get_environment_registry_entity())
         print(f"  {registry_logical_name}: created")
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness(registry_logical_name)
+        print(f"  {registry_logical_name}: metadata ready")
 
 
 def create_columns(client: ACVClient, dry_run: bool = False) -> None:
@@ -398,6 +406,9 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
 
     # AuditValidationHistory columns
     print("  AuditValidationHistory columns:")
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness("fsi_auditvalidationhistory")
     for col in HISTORY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
         existing = client.get_attribute_metadata("fsi_auditvalidationhistory", col_name)
@@ -407,10 +418,15 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
             print(f"    {col_name}: would create")
         else:
             client.create_attribute("fsi_auditvalidationhistory", col)
+            client.publish_all_customizations()
+            client.wait_for_attribute_metadata_readiness("fsi_auditvalidationhistory", col_name)
             print(f"    {col_name}: created")
 
     # EnvironmentRegistry columns
     print("  EnvironmentRegistry columns:")
+    if not dry_run:
+        client.publish_all_customizations()
+        client.wait_for_entity_metadata_readiness("fsi_environmentregistry")
     for col in REGISTRY_TABLE_COLUMNS:
         col_name = col["SchemaName"].lower()
         existing = client.get_attribute_metadata("fsi_environmentregistry", col_name)
@@ -420,6 +436,8 @@ def create_columns(client: ACVClient, dry_run: bool = False) -> None:
             print(f"    {col_name}: would create")
         else:
             client.create_attribute("fsi_environmentregistry", col)
+            client.publish_all_customizations()
+            client.wait_for_attribute_metadata_readiness("fsi_environmentregistry", col_name)
             print(f"    {col_name}: created")
 
 

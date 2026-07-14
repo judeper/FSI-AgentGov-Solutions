@@ -58,6 +58,10 @@
 9. **Live blocker: Dataverse CreateEntity returned `0x80040203` (`Required field 'PrimaryAttribute' is missing for RequestName='CreateEntity'`) after option-set + solution bootstrap fixes.**
    - Disposition: updated all ACM CreateEntity payloads to mark the primary name column inline in `Attributes` via `IsPrimaryName: true` (`AuditValidationHistory`, `EnvironmentRegistry`, `AuditEnvironmentCompliance`) while preserving `PrimaryNameAttribute` values. Direct live replay of corrected AuditValidationHistory payload returned HTTP 204 in the ACM solution context.
 
+10. **Live blocker: after first column creation succeeded, next metadata-read call failed with repeated 500s until manual publish.**
+    - Observed sequence: table create succeeded, first column `fsi_runid` created, then `GET EntityDefinitions(LogicalName='fsi_auditvalidationhistory')/Attributes` exhausted retry (`total=3`, `backoff_factor=1`) on repeated HTTP 500. Manual `POST /PublishAllXml` returned HTTP 204; after ~30 seconds the same metadata GET returned HTTP 200.
+    - Disposition: added explicit `publish_all_customizations()` and bounded metadata-readiness polling in ACV/ALCA clients; schema scripts now publish + wait after table creation and after each column creation before the next metadata mutation.
+
 ## Static changes implemented in this pass
 
 - `manifest.yaml`
@@ -88,6 +92,12 @@
   - `scripts/create_dataverse_schema.py` (`AuditValidationHistory`, `EnvironmentRegistry`)
   - `scripts/create_audit_compliance_schema.py` (`AuditEnvironmentCompliance`)
   - `tests/test_entity_primary_attributes.py` (all entity-factory primary-name guard + live `0x80040203` error-shape regression contract)
+- Dataverse metadata publication/readiness reliability fix for post-create transient metadata 500s:
+  - `scripts/acv_client.py` (`publish_all_customizations`, bounded metadata readiness polling helpers)
+  - `scripts/alca_client.py` (`publish_all_customizations`, bounded metadata readiness polling helpers)
+  - `scripts/create_dataverse_schema.py` (publish + wait after table creation; publish + attribute readiness wait after each column)
+  - `scripts/create_audit_compliance_schema.py` (publish + wait after table creation; publish + attribute readiness wait after each column)
+  - `tests/test_metadata_publish_readiness.py` (transient 500 readiness sequence, publish header behavior, timeout contract, ACV/ALCA create-order gating)
 - ExchangeOnlineManagement compatibility bounds added in scripts:
   - `Enable-AuditLogging.ps1`
   - `Invoke-TenantAuditValidation.ps1`
@@ -132,7 +142,7 @@
 - [ ] Drift detection path verifies Dataverse token acquisition via Az.Accounts helper
 - [ ] ACV and ALCA global option-set POST calls succeed in canonical Dataverse environment with discriminator-enriched payloads
 - [ ] ACV and ALCA writes succeed in canonical Dataverse environment when `FSIPublisher` and `AuditComplianceManager` are absent initially (bootstrap creates/reuses shell without pre-solution `MSCRM.SolutionUniqueName` headers)
-- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName` CreateEntity fix (single-table live replay returned HTTP 204; complete deployment pass still pending)
+- [ ] Full ACV+ALCA schema deploy rerun in canonical Dataverse environment after the `IsPrimaryName` and metadata-publication/readiness gating fixes (single-table live replay returned HTTP 204; metadata GET 500→manual `PublishAllXml`→200 sequence reproduced; complete deployment pass still pending)
 - [ ] `Search-UnifiedAuditLog` and canary retrieval checks in target tenant
 - [ ] Purview retention validation with actual policy set and licensing context
 - [ ] Portal smoke artifacts (Playwright channel) attached separately from runtime evidence

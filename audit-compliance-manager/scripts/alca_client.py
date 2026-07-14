@@ -7,6 +7,7 @@ Includes retry logic, dry-run mode, and alternate key support for safe deploymen
 """
 
 from typing import Optional
+import time
 from urllib.parse import urljoin, urlparse
 
 import msal
@@ -22,6 +23,9 @@ class ALCAClient:
     """Dataverse Web API client with MSAL authentication and retry logic."""
 
     API_VERSION = "v9.2"
+    METADATA_TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
+    DEFAULT_METADATA_TIMEOUT_SECONDS = 180.0
+    DEFAULT_METADATA_POLL_INTERVAL_SECONDS = 5.0
 
     def __init__(
         self,
@@ -264,6 +268,115 @@ class ALCAClient:
         )
         response.raise_for_status()
         return optionset_metadata
+
+    def publish_all_customizations(self) -> None:
+        """Publish Dataverse customizations (solution header intentionally omitted)."""
+        if self.dry_run:
+            print("  [DRY RUN] Would publish all customizations")
+            return
+
+        response = self._session.post(
+            urljoin(self.api_url, "PublishAllXml"),
+            headers=self._get_headers(),
+            json={},
+        )
+        response.raise_for_status()
+
+    def _wait_for_metadata_readable(
+        self,
+        metadata_url: str,
+        description: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> dict:
+        """Poll metadata endpoint until readable, tolerating transient Dataverse failures."""
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be greater than 0")
+        if poll_interval_seconds < 0:
+            raise ValueError("poll_interval_seconds must be >= 0")
+
+        deadline = time.monotonic() + timeout_seconds
+        attempts = 0
+        last_status: Optional[int] = None
+        last_error = "no response received"
+
+        while True:
+            attempts += 1
+            try:
+                response = self._session.get(metadata_url, headers=self._get_headers())
+                last_status = response.status_code
+                if response.status_code == 404:
+                    last_error = "HTTP 404"
+                elif response.status_code in self.METADATA_TRANSIENT_STATUS_CODES:
+                    last_error = f"HTTP {response.status_code}"
+                else:
+                    response.raise_for_status()
+                    return response.json()
+            except requests.HTTPError as exc:
+                status = exc.response.status_code if exc.response is not None else None
+                if status in self.METADATA_TRANSIENT_STATUS_CODES:
+                    last_status = status
+                    last_error = f"HTTP {status}"
+                else:
+                    raise RuntimeError(
+                        f"Metadata readiness check failed for {description}: {exc}"
+                    ) from exc
+            except requests.RequestException as exc:
+                last_error = f"{exc.__class__.__name__}: {exc}"
+
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"Timed out after {timeout_seconds:.1f}s waiting for {description} "
+                    f"metadata readiness (last_status={last_status}, attempts={attempts}, "
+                    f"last_error={last_error})."
+                )
+
+            if poll_interval_seconds > 0:
+                time.sleep(poll_interval_seconds)
+
+    def wait_for_entity_metadata_readiness(
+        self,
+        logical_name: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> None:
+        """Wait until entity metadata and the entity Attributes collection are readable."""
+        self._wait_for_metadata_readable(
+            urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')"),
+            f"entity '{logical_name}'",
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+        self._wait_for_metadata_readable(
+            urljoin(self.api_url, f"EntityDefinitions(LogicalName='{logical_name}')/Attributes"),
+            f"attribute collection for entity '{logical_name}'",
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+        )
+
+    def wait_for_attribute_metadata_readiness(
+        self,
+        entity_logical_name: str,
+        attribute_logical_name: str,
+        timeout_seconds: float = DEFAULT_METADATA_TIMEOUT_SECONDS,
+        poll_interval_seconds: float = DEFAULT_METADATA_POLL_INTERVAL_SECONDS,
+    ) -> dict:
+        """Wait until the specific attribute metadata endpoint is readable."""
+        return self._wait_for_metadata_readable(
+            urljoin(
+                self.api_url,
+                (
+                    f"EntityDefinitions(LogicalName='{entity_logical_name}')/"
+                    f"Attributes(LogicalName='{attribute_logical_name}')"
+                ),
+            ),
+            (
+                f"attribute '{attribute_logical_name}' on entity "
+                f"'{entity_logical_name}'"
+            ),
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+        )
 
     def get_global_optionset(self, name: str) -> Optional[dict]:
         """Get global option set by name. Returns None if not found."""
