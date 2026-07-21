@@ -51,6 +51,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
@@ -87,6 +88,36 @@ CREATED_IN_COPILOT_STUDIO = "Copilot Studio"
 # selects which raw field holds that GUID (see _canonical_agent_id, H-3).
 DISCOVERY_SOURCE_ARG = "Azure Resource Graph"
 DISCOVERY_SOURCE_DATAVERSE = "Per-Environment Dataverse Scan"
+DISCOVERY_SOURCE_PACKAGE_API = "Package Management API"
+DISCOVERY_SOURCE_RECONCILED = "Reconciled (multi-source)"
+
+# Graph Package Management API (GA v1.0, application permission
+# CopilotPackages.Read.All, admin-consented).
+# Ref: learn.microsoft.com/microsoft-365/copilot/extensibility/api/
+#      admin-settings/package/copilotpackages-list
+GRAPH_SCOPE = "https://graph.microsoft.com/.default"
+GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
+PACKAGE_API_PATH = "/copilot/admin/catalog/packages"
+
+# Platforms to query from the Package Management API. Restricted to Agent Builder
+# ONLY — the ARG and Dataverse layers already cover Copilot Studio, and package
+# joins are not strong enough to prevent duplicates if both are queried here.
+PACKAGE_API_PLATFORMS = [
+    CREATED_IN_AGENT_BUILDER,   # "Microsoft 365 Copilot Agent Builder"
+]
+
+# Package ids from the Package Management API start with "P_" — a DISTINCT id
+# space from the Copilot Studio bot GUID that fsi_agentid uses for ARG and
+# Dataverse sourced rows. Reconciliation joins on appId / manifestId; standalone
+# package-only rows use the package id as fsi_agentid.
+PACKAGE_ID_PREFIX = "P_"
+
+# Completeness label written to every package-touched row when the Package
+# Management API enumeration was truncated (paging incomplete). Used by
+# reconcile_package_catalog when the caller signals truncation.
+_PACKAGE_TRUNCATION_REASON = (
+    "Package Management API enumeration truncated (paging incomplete)"
+)
 
 # botcomponent_componenttype -> (feature label, component version).
 # Verified against the 2025-10-31 platform docs (max code = 19). Includes the
@@ -157,6 +188,13 @@ class ScanContext:
     tenant_id: Optional[str] = None
     client_id: Optional[str] = None
     auth_mode: str = "managed-identity"
+    enable_package_api: bool = False
+    # Optional registry-correlation + entitlement fields (D).
+    registry_export_path: Optional[str] = None
+    columnmap_path: Optional[str] = None
+    as_of: Optional[str] = None
+    resolve_entitlement: bool = False
+    entitlement_ps1_path: Optional[str] = None
     _credential: Any = field(default=None, repr=False)
 
 
@@ -618,17 +656,27 @@ def _authshare_record(ctx: ScanContext, bot: dict) -> dict:
 def classify_scan_completeness(agent: dict) -> tuple[str, str]:
     """Return (scan_completeness, reason).
 
-    Lite / Agent-Builder agents are `Incomplete Scan`: no public API returns
-    their full definition (instructions + knowledge + capabilities). The Graph
-    Package Management API is beta, Agent-365-licensed, and delegated-only,
-    which blocks unattended service-principal automation.
+    Agent Builder agents discovered via the Graph Package Management API (GA
+    v1.0, application permission CopilotPackages.Read.All, admin-consented) are
+    classified as Complete: the catalog endpoint returns their package definition.
+    Enable the API layer with --enable-package-api.
+
+    Agent Builder agents discovered only via ARG or Dataverse without Package API
+    enrichment remain Incomplete Scan: ARG/Dataverse do not return their full
+    definition (instructions + knowledge + capabilities). fsi_packageid being
+    set on a row signals that Package API data is present and upgrades
+    completeness from Incomplete Scan to Complete.
     """
     created_in = (agent.get("createdIn") or agent.get("fsi_createdin") or "")
     if created_in == CREATED_IN_AGENT_BUILDER:
+        if agent.get("fsi_packageid"):
+            # Package Management API contributed catalog data: upgrade to Complete.
+            return ("Complete", "")
         return (
             "Incomplete Scan",
-            "Agent Builder agent: no public API returns the full definition "
-            "(Graph Package Management API is beta / Agent-365 / delegated-only).",
+            "Agent Builder agent discovered without Package API enrichment. "
+            "Enable --enable-package-api (GA v1.0, CopilotPackages.Read.All) "
+            "to upgrade scan completeness when catalog data is available.",
         )
     return ("Complete", "")
 
@@ -759,9 +807,20 @@ def reconcile_sources(arg_agents: list[dict], scanned_agents: list[dict]) -> dic
     Reports agents present in one source but not the other ("present in A not
     B"), which surfaces deleted-but-lingering and not-yet-indexed agents. PPAC
     is the third leg; wire it in when its export is available.
+
+    Package Management API rows key fsi_agentid on P_... ids (a distinct id
+    space from the bot GUID). They are reconciled separately in
+    reconcile_package_catalog() and must NOT participate in ARG/Dataverse drift
+    detection. P_... ids are excluded here as a defensive guard; callers should
+    not pass package-sourced rows to this function — cross-id-space comparison
+    produces a false 100% drift report (same H-3 guard, applied inter-layer).
     """
-    arg_ids = {a.get("fsi_agentid") for a in arg_agents if a.get("fsi_agentid")}
-    scan_ids = {a.get("fsi_agentid") for a in scanned_agents if a.get("fsi_agentid")}
+    def _is_bot_guid_row(a: dict) -> bool:
+        aid = str(a.get("fsi_agentid") or "")
+        return bool(aid) and not aid.startswith(PACKAGE_ID_PREFIX)
+
+    arg_ids = {a.get("fsi_agentid") for a in arg_agents if _is_bot_guid_row(a)}
+    scan_ids = {a.get("fsi_agentid") for a in scanned_agents if _is_bot_guid_row(a)}
     # Smoke check (H-3): both layers derive fsi_agentid from the SAME bot-GUID
     # id space (ARG resource name == Dataverse botid). If both sources returned
     # agents yet share zero ids, the id spaces have split again — surface it
@@ -779,8 +838,336 @@ def reconcile_sources(arg_agents: list[dict], scanned_agents: list[dict]) -> dic
     }
 
 
+# =============================================================================
+# Layer 4 — Package Management API (feature-flagged, --enable-package-api)
+# =============================================================================
+
+
+def _package_status_label(raw: Any) -> str:
+    """Map a copilotPackage availableTo/deployedTo value to the option-set label.
+
+    The API returns lowercase strings ("none", "some", "all"). The
+    fsi_cai_packagestatus Dataverse option-set uses Title Case labels.
+    """
+    return {"none": "None", "some": "Some", "all": "All"}.get(
+        str(raw or "").lower(), "None"
+    )
+
+
+def _package_fields(ctx: ScanContext, pkg: dict) -> dict:
+    """Extract ALL first-class package API fields for merging into an agent row.
+
+    Projects the full documented field set so BI consumers never need to parse
+    rawjson. Includes the five new Yen columns (fsi_packagetype, fsi_elementtypes,
+    fsi_isblocked, fsi_packageversion, fsi_assetid) plus fsi_modifiedon and the
+    derived fsi_agenttype.
+    """
+    hosts = pkg.get("supportedHosts") or []
+    element_types = pkg.get("elementTypes") or []
+    if not isinstance(element_types, list):
+        element_types = []
+
+    # Derive fsi_agenttype from elementTypes per the contract.
+    if "DeclarativeAgent" in element_types:
+        agent_type = "Declarative Agent"
+    elif "CustomEngineAgent" in element_types:
+        agent_type = "Custom Engine Agent"
+    else:
+        agent_type = "Lite / Agent Builder"
+
+    return {
+        "fsi_packageid": pkg.get("id", ""),
+        "fsi_publisher": pkg.get("publisher", ""),
+        "fsi_supportedhosts": json.dumps(hosts if isinstance(hosts, list) else []),
+        "fsi_availableto": _package_status_label(pkg.get("availableTo")),
+        "fsi_deployedto": _package_status_label(pkg.get("deployedTo")),
+        "fsi_manifestid": pkg.get("manifestId", ""),
+        "fsi_manifestversion": pkg.get("manifestVersion", ""),
+        "fsi_entraappid": pkg.get("appId"),
+        "fsi_modifiedon": pkg.get("lastModifiedDateTime"),
+        "fsi_packagetype": pkg.get("type"),
+        "fsi_elementtypes": json.dumps(element_types),
+        "fsi_isblocked": pkg.get("isBlocked"),
+        "fsi_packageversion": pkg.get("version"),
+        "fsi_assetid": pkg.get("assetId"),
+        "fsi_agenttype": agent_type,
+        "fsi_discoverysource": DISCOVERY_SOURCE_PACKAGE_API,
+        "fsi_runid": ctx.run_id,
+    }
+
+
+def map_package_record(ctx: ScanContext, pkg: dict) -> dict:
+    """Map a copilotPackage API object to a standalone fsi_copilotagent row.
+
+    Used when reconcile_package_catalog() finds no appId/manifestId match in
+    the existing agent set. The fsi_agentid is the package id (P_... id space)
+    and fsi_ownermatchconfidence is "Unmatched" — the Package API returns no
+    creator/owner field, so owner attribution is not possible from this source.
+    """
+    pkg_id = str(pkg.get("id") or "")
+    platform = str(pkg.get("platform") or "")
+    # The package 'platform' value mirrors the ARG/Dataverse 'createdIn' strings.
+    agent_dict: dict = {
+        "fsi_agentid": pkg_id,
+        "fsi_agentname": pkg.get("displayName", ""),
+        "fsi_createdin": platform,
+        "fsi_entraappid": pkg.get("appId"),
+        "fsi_ownermatchconfidence": "Unmatched",
+        "fsi_rawjson": json.dumps(pkg)[:100000],
+    }
+    agent_dict.update(_package_fields(ctx, pkg))  # sets fsi_packageid
+    completeness, reason = classify_scan_completeness(agent_dict)
+    agent_dict["fsi_scancompleteness"] = completeness
+    agent_dict["fsi_scancompletenessreason"] = reason
+    return agent_dict
+
+
+def fetch_package_catalog(
+    ctx: ScanContext, session: requests.Session
+) -> tuple[list[dict], bool]:
+    """Fetch agent packages from the Graph Package Management API (Layer 4).
+
+    Calls GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages
+    with $filter=platform eq '<platform>' for each entry in PACKAGE_API_PLATFORMS.
+
+    Application permission: CopilotPackages.Read.All (GA v1.0, admin-consented).
+    Ref: learn.microsoft.com/microsoft-365/copilot/extensibility/api/
+         admin-settings/package/copilotpackages-list
+
+    Paging: follows @odata.nextLink defensively. Pagination is not documented
+    for this endpoint; any paging failure (HTTP error, throttle exhaustion) is
+    treated as INCOMPLETE (GATE-1) — a truncated pull is never a silent empty.
+
+    Returns (packages, paging_was_truncated).
+    """
+    if ctx.dry_run:
+        for platform in PACKAGE_API_PLATFORMS:
+            logger.info(
+                "[DRY RUN] would GET %s%s?$filter=platform eq '%s' "
+                "(app permission: CopilotPackages.Read.All)",
+                GRAPH_API_BASE, PACKAGE_API_PATH, platform,
+            )
+        return [], False
+
+    token = _get_token(ctx, GRAPH_SCOPE)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+    }
+    all_packages: list[dict] = []
+    any_truncated = False
+
+    for platform in PACKAGE_API_PLATFORMS:
+        platform_truncated = False
+        url: Optional[str] = (
+            f"{GRAPH_API_BASE}{PACKAGE_API_PATH}"
+            f"?$filter=platform eq '{platform}'"
+        )
+        while url:
+            try:
+                resp = _request_with_backoff(session, "GET", url, headers=headers)
+            except ThrottlingExhaustedError as exc:
+                logger.warning(
+                    "Package API 429 exhausted for platform '%s'; "
+                    "marking layer INCOMPLETE (GATE-1): %s", platform, exc
+                )
+                platform_truncated = True
+                break
+            if resp.status_code != 200:
+                logger.warning(
+                    "Package API HTTP %s for platform '%s'; "
+                    "marking layer INCOMPLETE (GATE-1).",
+                    resp.status_code, platform,
+                )
+                platform_truncated = True
+                break
+            payload = resp.json()
+            page_items = payload.get("value", [])
+            if not isinstance(page_items, list):
+                logger.warning(
+                    "Package API unexpected 'value' shape for platform '%s'; "
+                    "marking layer INCOMPLETE.", platform,
+                )
+                platform_truncated = True
+                break
+            all_packages.extend(page_items)
+            url = payload.get("@odata.nextLink")
+        any_truncated = any_truncated or platform_truncated
+
+    logger.info(
+        "Package Management API: %d packages across %d platform(s) "
+        "(paging_truncated=%s)",
+        len(all_packages), len(PACKAGE_API_PLATFORMS), any_truncated,
+    )
+    return all_packages, any_truncated
+
+
+def reconcile_package_catalog(
+    ctx: ScanContext,
+    packages: list[dict],
+    existing_agents: list[dict],
+    truncated: bool = False,
+) -> tuple[list[dict], list[dict]]:
+    """Reconcile Package API packages against existing bot-GUID agent rows.
+
+    Best-effort join order:
+      1. package.appId      == existing.fsi_entraappid
+      2. package.manifestId == existing.fsi_manifestid
+
+    MATCH -> Enrich the existing row in-place: set fsi_packageid + package
+             fields + fsi_discoverysource. fsi_agentid stays as the bot GUID
+             (id space is preserved). Re-classifies scan completeness — the
+             fsi_packageid now present may upgrade an Agent Builder row from
+             Incomplete Scan to Complete.
+
+    NO MATCH -> Create a new standalone row: fsi_agentid = package id (P_...),
+                fsi_ownermatchconfidence = "Unmatched".
+
+    When truncated=True (Package API paging was cut short), EVERY package-touched
+    row (enriched existing rows AND new standalone rows) is marked
+    fsi_scancompleteness="Incomplete Scan" with _PACKAGE_TRUNCATION_REASON.  ARG-only and
+    Dataverse-only rows are never modified by this function.
+
+    Returns (existing_agents, new_package_only_rows).
+    The caller appends new_package_only_rows to the final agent set; the
+    existing_agents list is enriched in-place (no duplication).
+    """
+    # Build lookup maps over existing rows (skip empty/None values).
+    by_app_id: dict[str, dict] = {}
+    by_manifest_id: dict[str, dict] = {}
+    for agent in existing_agents:
+        app_id = str(agent.get("fsi_entraappid") or "").strip()
+        if app_id:
+            by_app_id[app_id] = agent
+        manifest_id = str(agent.get("fsi_manifestid") or "").strip()
+        if manifest_id:
+            by_manifest_id[manifest_id] = agent
+
+    new_rows: list[dict] = []
+    enriched_ids: set = set()
+    for pkg in packages:
+        pkg_app_id = str(pkg.get("appId") or "").strip()
+        pkg_manifest_id = str(pkg.get("manifestId") or "").strip()
+        matched = (
+            (by_app_id.get(pkg_app_id) if pkg_app_id else None)
+            or (by_manifest_id.get(pkg_manifest_id) if pkg_manifest_id else None)
+        )
+        if matched:
+            # Enrich without duplicating: merge package fields into existing row.
+            matched.update(_package_fields(ctx, pkg))
+            # Preserve multi-source provenance: an existing ARG/Dataverse row
+            # enriched with package data is "Reconciled (multi-source)", NOT
+            # "Package Management API" — overwriting the original source label
+            # would destroy provenance.
+            matched["fsi_discoverysource"] = DISCOVERY_SOURCE_RECONCILED
+            enriched_ids.add(id(matched))
+            if truncated:
+                matched["fsi_scancompleteness"] = "Incomplete Scan"
+                matched["fsi_scancompletenessreason"] = _PACKAGE_TRUNCATION_REASON
+            else:
+                completeness, reason = classify_scan_completeness(matched)
+                matched["fsi_scancompleteness"] = completeness
+                matched["fsi_scancompletenessreason"] = reason
+            logger.debug(
+                "Package %s enriched existing agent row "
+                "(fsi_agentid=%s, truncated=%s, new_completeness=%s)",
+                pkg.get("id"), matched.get("fsi_agentid"),
+                truncated, matched["fsi_scancompleteness"],
+            )
+        else:
+            new_row = map_package_record(ctx, pkg)
+            if truncated:
+                new_row["fsi_scancompleteness"] = "Incomplete Scan"
+                new_row["fsi_scancompletenessreason"] = _PACKAGE_TRUNCATION_REASON
+            new_rows.append(new_row)
+            logger.debug(
+                "Package %s: no bot-GUID match; standalone row created "
+                "(fsi_agentid=%s, fsi_ownermatchconfidence=Unmatched, truncated=%s)",
+                pkg.get("id"), pkg.get("id"), truncated,
+            )
+
+    logger.info(
+        "Package reconciliation: %d enriched existing rows, %d new standalone rows "
+        "(truncated=%s)",
+        len(enriched_ids), len(new_rows), truncated,
+    )
+    return existing_agents, new_rows
+
+
+# =============================================================================
+# Orchestration
+# =============================================================================
+
+
+def _normalize_agent_name(name: str) -> str:
+    """Collapse whitespace and lowercase an agent display name for exact-match joins.
+
+    Used only for the LAST-RESORT name join in registry correlation — ambiguous
+    normalised names (two or more candidates) are always skipped, never guessed.
+    """
+    return " ".join(name.split()).lower()
+
+
+def _validate_as_of(value: str) -> str:
+    """Validate and normalise an ISO-8601 UTC datetime string.
+
+    Accepts a 'Z' suffix or an explicit UTC offset (e.g. +05:00).
+    Rejects naive (timezone-less) values — UTC 'Z' or an explicit offset is
+    required, matching the strict behaviour of import_registry_export._parse_iso8601_utc.
+
+    Returns the canonical 'YYYY-MM-DDTHH:MM:SSZ' form.
+    Raises ValueError on invalid format or absent timezone.
+    """
+    s = value.strip()
+    # Normalise 'Z' suffix to '+00:00' for fromisoformat() on Python 3.7-3.10.
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        raise ValueError(
+            f"Invalid ISO-8601 datetime: {value!r}. "
+            "Expected UTC, e.g. '2026-07-20T18:00:00Z'."
+        )
+    if dt.tzinfo is None:
+        raise ValueError(
+            f"Datetime {value!r} has no timezone — UTC is required (append 'Z')."
+        )
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _apply_registry_owner(
+    agent: dict, reg_row: dict, as_of: Optional[str]
+) -> None:
+    """Enrich an agent row with owner attribution from a registry export row.
+
+    Owner is NEVER set from creator/display-name fields.
+    fsi_discoverysource is intentionally NOT modified (preserves API provenance).
+    """
+    # fsi_ownerupn: only copy if the importer set it (it already enforced '@').
+    if "fsi_ownerupn" in reg_row:
+        agent["fsi_ownerupn"] = reg_row["fsi_ownerupn"]
+    if "fsi_ownerid" in reg_row:
+        agent["fsi_ownerid"] = reg_row["fsi_ownerid"]
+    if "fsi_createdon" in reg_row:
+        agent["fsi_createdon"] = reg_row["fsi_createdon"]
+    # Use the confidence already computed by the importer.
+    agent["fsi_ownersource"] = "Agent Registry Export"
+    agent["fsi_ownermatchconfidence"] = reg_row.get(
+        "fsi_ownermatchconfidence", "Unmatched"
+    )
+    if as_of:
+        agent["fsi_ownerasofdatetime"] = as_of
+    # fsi_discoverysource intentionally NOT modified here.
+
+
 def scan_all(ctx: ScanContext) -> dict:
-    """Run the three-layer discovery and return the canonical record set."""
+    """Run the discovery layers and return the canonical record set.
+
+    Three-layer behavior (ARG + Dataverse + reconciliation) is unchanged when
+    --enable-package-api is off (default). Layer 4 (Package Management API) is
+    strictly additive and activated only by the feature flag.
+    """
     session = _build_session()
     logger.info("Scan run %s (dry_run=%s, max_workers=%d)",
                 ctx.run_id, ctx.dry_run, ctx.max_workers)
@@ -820,8 +1207,43 @@ def scan_all(ctx: ScanContext) -> dict:
             features.extend(outcome["features"])
             auth_shares.extend(outcome.get("authShares", []))
 
+    # --- Layer 4 — Package Management API (feature-flagged; default OFF) -----------
+    # When --enable-package-api is set, fetch the GA v1.0 catalog endpoint and
+    # reconcile packages against the existing bot-GUID agent set. Off by default
+    # so the three-layer behavior is byte-for-byte unchanged without the flag.
+    package_new_rows: list[dict] = []
+    package_truncated = False
+    if ctx.enable_package_api:
+        primary_agents = arg_agents if arg_agents else scanned_agents
+        try:
+            raw_packages, package_truncated = fetch_package_catalog(ctx, session)
+        except (requests.exceptions.RequestException, json.JSONDecodeError) as exc:
+            # Transport or parse failure from the Package API layer: mirror the
+            # ARG-layer throttle guard (L-3) — mark INCOMPLETE and continue
+            # rather than aborting the whole scan.
+            logger.warning(
+                "Package Management API layer failed with a transport or parse "
+                "error; marking layer INCOMPLETE (GATE-1): %s", exc,
+            )
+            raw_packages = []
+            package_truncated = True
+        _, package_new_rows = reconcile_package_catalog(
+            ctx, raw_packages, primary_agents, truncated=package_truncated
+        )
+        if package_truncated:
+            logger.warning(
+                "Package Management API paging was truncated; "
+                "package-layer discovery is INCOMPLETE (GATE-1)."
+            )
+
     reconciliation = reconcile_sources(arg_agents, scanned_agents)
-    summary = {
+
+    # Build final_agents before the optional post-processing steps so registry
+    # correlation and entitlement resolution can operate on the complete set.
+    final_agents = list(arg_agents or scanned_agents)
+    final_agents.extend(package_new_rows)
+
+    summary: dict = {
         "runId": ctx.run_id,
         "argAgentCount": len(arg_agents),
         "scannedAgentCount": len(scanned_agents),
@@ -830,10 +1252,257 @@ def scan_all(ctx: ScanContext) -> dict:
         "environmentCount": len(environments),
         "reconciliation": reconciliation,
     }
+    if ctx.enable_package_api:
+        summary["packageNewRowCount"] = len(package_new_rows)
+        summary["packageScanTruncated"] = package_truncated
+
+    # -------------------------------------------------------------------------
+    # Step 5 — Registry correlation (optional; only when --registry-export set).
+    # Enriches Agent Builder / package-sourced rows only.  Unmatched registry
+    # rows are counted but never create orphan fsi_copilotagent rows.
+    # fsi_discoverysource is never overwritten (API provenance is preserved).
+    # -------------------------------------------------------------------------
+    if ctx.registry_export_path:
+        import import_registry_export as _reg  # type: ignore[import]  # noqa: PLC0415
+
+        _registry_rows: list[dict] = []
+        _import_warnings: list[str] = []
+        _reg_status = "Complete"
+        _matched_count = 0
+        _unmatched_registry = 0
+        _ambiguous_name_skipped = 0
+
+        try:
+            _cm_path = Path(
+                ctx.columnmap_path
+                or str(
+                    Path(__file__).parent.parent
+                    / "templates"
+                    / "registry-columnmap.sample.json"
+                )
+            )
+            _aliases, _required, _sheet = _reg.load_columnmap(_cm_path)
+            _registry_rows, _import_warnings = _reg.import_registry_file(
+                path=ctx.registry_export_path,
+                aliases=_aliases,
+                required_fields=_required,
+                sheet_name=_sheet,
+                as_of=ctx.as_of,
+            )
+
+            # Candidate rows: Agent Builder agents or rows already carrying package data.
+            _candidates = [
+                a for a in final_agents
+                if a.get("fsi_packageid")
+                or a.get("fsi_createdin") == CREATED_IN_AGENT_BUILDER
+            ]
+
+            # Build stable-key lookup maps over candidates.
+            _by_agent_id: dict[str, dict] = {}
+            _by_pkg_id: dict[str, dict] = {}
+            _by_app_id: dict[str, dict] = {}
+            _by_manifest_id: dict[str, dict] = {}
+            _by_norm_name: dict[str, list] = {}
+            for _ca in _candidates:
+                _aid = str(_ca.get("fsi_agentid") or "").strip()
+                if _aid:
+                    _by_agent_id[_aid] = _ca
+                _pid = str(_ca.get("fsi_packageid") or "").strip()
+                if _pid:
+                    _by_pkg_id[_pid] = _ca
+                _appid = str(_ca.get("fsi_entraappid") or "").strip()
+                if _appid:
+                    _by_app_id[_appid] = _ca
+                _mid = str(_ca.get("fsi_manifestid") or "").strip()
+                if _mid:
+                    _by_manifest_id[_mid] = _ca
+                _nm = _normalize_agent_name(str(_ca.get("fsi_agentname") or ""))
+                if _nm:
+                    _by_norm_name.setdefault(_nm, []).append(_ca)
+
+            for _rr in _registry_rows:
+                _hit: Optional[dict] = None
+
+                # (a) Stable agent id — strongest key.
+                _r_aid = str(_rr.get("fsi_agentid") or "").strip()
+                if _r_aid:
+                    _hit = _by_agent_id.get(_r_aid)
+
+                # (b) Package / app / manifest id (only if present in this export row).
+                if _hit is None:
+                    _r_pid = str(_rr.get("fsi_packageid") or "").strip()
+                    if _r_pid:
+                        _hit = _by_pkg_id.get(_r_pid)
+
+                if _hit is None:
+                    _r_appid = str(_rr.get("fsi_entraappid") or "").strip()
+                    if _r_appid:
+                        _hit = _by_app_id.get(_r_appid)
+
+                if _hit is None:
+                    _r_mid = str(_rr.get("fsi_manifestid") or "").strip()
+                    if _r_mid:
+                        _hit = _by_manifest_id.get(_r_mid)
+
+                # (c) LAST-RESORT: exact normalised name — only when EXACTLY ONE
+                # candidate matches.  Two or more candidates → skip + count.
+                if _hit is None:
+                    _r_nm = _normalize_agent_name(
+                        str(_rr.get("fsi_agentname") or "")
+                    )
+                    if _r_nm:
+                        _nm_cands = _by_norm_name.get(_r_nm, [])
+                        if len(_nm_cands) == 1:
+                            _hit = _nm_cands[0]
+                        elif len(_nm_cands) > 1:
+                            _ambiguous_name_skipped += 1
+                            logger.debug(
+                                "Registry correlation: ambiguous name %r matches "
+                                "%d candidates; skipping (never guess).",
+                                _r_nm, len(_nm_cands),
+                            )
+
+                if _hit is not None:
+                    _apply_registry_owner(_hit, _rr, ctx.as_of)
+                    _matched_count += 1
+                else:
+                    _unmatched_registry += 1
+                    logger.debug(
+                        "Registry row unmatched (agent_id=%r, name=%r); "
+                        "no orphan row created.",
+                        _rr.get("fsi_agentid"), _rr.get("fsi_agentname"),
+                    )
+
+            if _import_warnings:
+                _reg_status = "Incomplete"
+
+        except Exception as _reg_exc:
+            logger.error(
+                "Registry correlation failed: %s — continuing scan (zero matches).",
+                _reg_exc,
+            )
+            _reg_status = "Failed"
+
+        summary["registryCorrelation"] = {
+            "registryRowCount": len(_registry_rows),
+            "matched": _matched_count,
+            "unmatchedRegistryRows": _unmatched_registry,
+            "ambiguousNameSkipped": _ambiguous_name_skipped,
+            "invalidDateWarnings": len(_import_warnings),
+            "status": _reg_status,
+        }
+
+    # -------------------------------------------------------------------------
+    # Step 6 — Entitlement resolution (optional; requires correlation to have run).
+    # Builds an ordered unique UPN list from agents with UPN-shaped owners and
+    # zip-joins results back deterministically.  No UPN appears in evidence.
+    # -------------------------------------------------------------------------
+    if ctx.resolve_entitlement and ctx.registry_export_path:
+        import resolve_owner_entitlement as _ent  # type: ignore[import]  # noqa: PLC0415
+
+        # Build ordered unique UPN list (UPN-shaped means contains '@').
+        _eligible_upns: list[str] = []
+        _seen_upns_lc: set[str] = set()
+        for _ea in final_agents:
+            _upn = str(_ea.get("fsi_ownerupn") or "").strip()
+            if "@" in _upn and _upn.lower() not in _seen_upns_lc:
+                _seen_upns_lc.add(_upn.lower())
+                _eligible_upns.append(_upn)
+
+        _ent_paid = _ent_chat = _ent_unknown = 0
+        _ent_status = "Complete"
+
+        if ctx.dry_run:
+            # Dry-run: skip Graph token acquisition and pwsh subprocess entirely.
+            logger.info(
+                "[DRY RUN] Step 6 entitlement resolution skipped "
+                "(%d eligible UPN(s)); no Graph call or pwsh invocation made.",
+                len(_eligible_upns),
+            )
+            summary["entitlementResolution"] = {
+                "ownersConsidered": len(_eligible_upns),
+                "paidCount": 0,
+                "chatOnlyCount": 0,
+                "unknownCount": 0,
+                "status": "Skipped (dry-run)",
+            }
+        else:
+            try:
+                _graph_token = _get_token(ctx, GRAPH_SCOPE)
+                _ps1_path = Path(
+                    ctx.entitlement_ps1_path
+                    or str(
+                        Path(__file__).parent.parent.parent
+                        / "copilot-billing-governance"
+                        / "scripts"
+                        / "Get-CopilotEntitlement.ps1"
+                    )
+                )
+                _ent_results, _invocation_failed = _ent.resolve_entitlements(
+                    upns=_eligible_upns,
+                    ps1_path=_ps1_path,
+                    graph_token=_graph_token,
+                    work_dir=Path(__file__).parent,
+                    run_id=ctx.run_id,
+                )
+                # Subprocess-level failure: PS1 could not run or exited non-zero.
+                # Results are all-Unknown (fail-open); status must reflect the failure
+                # so callers distinguish "ran; genuine Unknown" from "resolver crashed".
+                if _invocation_failed:
+                    _ent_status = "Failed"
+
+                # Deterministic zip join-back — no UPN written to evidence.
+                _upn_to_result = {
+                    _u.lower(): _r
+                    for _u, _r in zip(_eligible_upns, _ent_results)
+                }
+                for _ea in final_agents:
+                    _upn_lc = str(_ea.get("fsi_ownerupn") or "").strip().lower()
+                    if _upn_lc in _upn_to_result:
+                        _er = _upn_to_result[_upn_lc]
+                        _ea["fsi_ownerentitlement"] = _er["fsi_ownerentitlement"]
+                        _ea["fsi_ownerentitlementevidence"] = (
+                            _er["fsi_ownerentitlementevidence"]
+                        )
+
+                _ent_paid = sum(
+                    1 for _r in _ent_results
+                    if _r.get("fsi_ownerentitlement") == "Paid Copilot"
+                )
+                _ent_chat = sum(
+                    1 for _r in _ent_results
+                    if _r.get("fsi_ownerentitlement") == "Copilot Chat Only"
+                )
+                _ent_unknown = sum(
+                    1 for _r in _ent_results
+                    if _r.get("fsi_ownerentitlement") == "Unknown"
+                )
+
+            except Exception as _ent_exc:
+                logger.error(
+                    "Entitlement resolution failed: %s — all %d UPN(s) set to Unknown.",
+                    _ent_exc, len(_eligible_upns),
+                )
+                _ent_status = "Failed"
+                _ent_unknown = len(_eligible_upns)
+                for _ea in final_agents:
+                    _upn_lc = str(_ea.get("fsi_ownerupn") or "").strip().lower()
+                    if _upn_lc in _seen_upns_lc:
+                        _ea["fsi_ownerentitlement"] = "Unknown"
+                        _ea["fsi_ownerentitlementevidence"] = "[]"
+
+            summary["entitlementResolution"] = {
+                "ownersConsidered": len(_eligible_upns),
+                "paidCount": _ent_paid,
+                "chatOnlyCount": _ent_chat,
+                "unknownCount": _ent_unknown,
+                "status": _ent_status,
+            }
+
     logger.info("Scan summary: %s", json.dumps(summary, default=str))
     return {
         "summary": summary,
-        "agents": arg_agents or scanned_agents,
+        "agents": final_agents,
         "features": features,
         "authShares": auth_shares,
     }
@@ -855,7 +1524,13 @@ def main() -> None:
             "  python discover_agents.py --dry-run\n\n"
             "  # Live scan with managed identity (Azure-hosted runner)\n"
             "  python discover_agents.py --auth-mode managed-identity \\\n"
-            "    --tenant-id <tenant> --output scan.json\n"
+            "    --tenant-id <tenant> --output scan.json\n\n"
+            "  # Full integrated scan with registry correlation + entitlement\n"
+            "  python discover_agents.py --enable-package-api \\\n"
+            "    --registry-export export.xlsx \\\n"
+            "    --columnmap templates/registry-columnmap.sample.json \\\n"
+            "    --as-of 2026-07-20T18:00:00Z \\\n"
+            "    --resolve-entitlement --output scan.json\n"
         ),
     )
     parser.add_argument("--tenant-id", default=os.environ.get("CAI_TENANT_ID"),
@@ -879,6 +1554,74 @@ def main() -> None:
                         help="Skip the ARG layer; per-environment scan only")
     parser.add_argument("--dry-run", action="store_true",
                         help="Log planned API calls without contacting any service")
+    parser.add_argument(
+        "--enable-package-api",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable the Layer 4 Package Management API discovery "
+            "(GET /v1.0/copilot/admin/catalog/packages, application permission "
+            "CopilotPackages.Read.All, admin-consented). Default OFF. "
+            "When OFF, three-layer behavior is byte-for-byte unchanged. "
+            "Prerequisite: Microsoft Agent 365 license on the tenant."
+        ),
+    )
+    # Registry correlation flags (D).
+    parser.add_argument(
+        "--registry-export",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Path to the agent registry export file (.xlsx or .csv). "
+            "When set, enriches Agent Builder / package rows with owner attribution "
+            "from the export.  Unmatched export rows are counted; no orphan rows created."
+        ),
+    )
+    parser.add_argument(
+        "--columnmap",
+        default=str(
+            Path(__file__).parent.parent / "templates" / "registry-columnmap.sample.json"
+        ),
+        metavar="PATH",
+        help=(
+            "Path to the column-map JSON for the registry export. "
+            "Default: templates/registry-columnmap.sample.json"
+        ),
+    )
+    parser.add_argument(
+        "--as-of",
+        default=None,
+        metavar="ISO8601",
+        help=(
+            "ISO-8601 UTC datetime when the registry export was produced "
+            "(e.g., 2026-07-20T18:00:00Z). Stamped as fsi_ownerasofdatetime. "
+            "Invalid values are rejected."
+        ),
+    )
+    parser.add_argument(
+        "--resolve-entitlement",
+        action="store_true",
+        default=False,
+        help=(
+            "After registry correlation, resolve Copilot license entitlement for "
+            "each matched owner UPN via Get-CopilotEntitlement.ps1. "
+            "Requires --registry-export."
+        ),
+    )
+    parser.add_argument(
+        "--entitlement-ps1-path",
+        default=str(
+            Path(__file__).parent.parent.parent
+            / "copilot-billing-governance"
+            / "scripts"
+            / "Get-CopilotEntitlement.ps1"
+        ),
+        metavar="PATH",
+        help=(
+            "Path to Get-CopilotEntitlement.ps1. "
+            "Default: ../../copilot-billing-governance/scripts/Get-CopilotEntitlement.ps1"
+        ),
+    )
     parser.add_argument("--output", default=None,
                         help="Write the scan result JSON to this path")
     parser.add_argument("--log-level", default=os.environ.get("CAI_LOG_LEVEL", "INFO"),
@@ -894,6 +1637,14 @@ def main() -> None:
         parser.error("--tenant-id is required for live scans unless using "
                      "system-assigned managed identity")
 
+    # Validate --as-of before constructing the context.
+    as_of_validated: Optional[str] = None
+    if args.as_of:
+        try:
+            as_of_validated = _validate_as_of(args.as_of)
+        except ValueError as exc:
+            parser.error(f"--as-of: {exc}")
+
     run_id = f"cai-{int(time.time())}"
     ctx = ScanContext(
         run_id=run_id,
@@ -905,6 +1656,12 @@ def main() -> None:
         tenant_id=args.tenant_id,
         client_id=args.client_id,
         auth_mode=args.auth_mode,
+        enable_package_api=args.enable_package_api,
+        registry_export_path=args.registry_export or None,
+        columnmap_path=args.columnmap if args.registry_export else None,
+        as_of=as_of_validated,
+        resolve_entitlement=args.resolve_entitlement,
+        entitlement_ps1_path=args.entitlement_ps1_path if args.resolve_entitlement else None,
     )
 
     try:

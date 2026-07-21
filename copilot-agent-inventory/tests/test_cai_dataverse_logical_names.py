@@ -25,6 +25,7 @@ typos such as ``fsi_agent_id``.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -134,4 +135,71 @@ def test_no_snake_case_in_odata_contexts() -> None:
     assert not violations, (
         "OData contexts reference fsi_ column tokens with inter-word "
         "underscores (likely typos):\n" + "\n".join(violations)
+    )
+
+
+# ---------------------------------------------------------------------------
+# DEFECT 1 regression — fsi_copilotagent alternate-key idempotency
+#
+# Yen added fsi_PackageKey alongside fsi_AgentEnvKey so that package-only rows
+# (no environment-scoped bot GUID) can be upserted without accumulating
+# duplicates.  Both keys must coexist in TABLES["fsi_copilotagent"]["alt_keys"].
+# ---------------------------------------------------------------------------
+
+try:
+    _SCRIPTS_DIR = SOLUTION_ROOT / "scripts"
+    if str(_SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(_SCRIPTS_DIR))
+    import create_cai_dataverse_schema as _cai_schema
+
+    _SCHEMA_IMPORT_ERROR: Exception | None = None
+except Exception as _exc:  # pragma: no cover — only when a dep is absent
+    _cai_schema = None  # type: ignore[assignment]
+    _SCHEMA_IMPORT_ERROR = _exc
+
+_schema_skip = pytest.mark.skipif(
+    _cai_schema is None,
+    reason=(
+        "create_cai_dataverse_schema could not be imported "
+        f"(missing dependency): {_SCHEMA_IMPORT_ERROR}"
+    ),
+)
+
+
+@_schema_skip
+def test_fsi_copilotagent_has_agent_env_key() -> None:
+    """fsi_AgentEnvKey (agentid + environmentid) must be present — pre-existing key."""
+    alt_keys = _cai_schema.TABLES["fsi_copilotagent"]["alt_keys"]
+    matches = [k for k in alt_keys if k.get("schema_name") == "fsi_AgentEnvKey"]
+    assert len(matches) == 1, (
+        f"expected exactly one fsi_AgentEnvKey entry; got {len(matches)}"
+    )
+    assert matches[0]["key_attributes"] == ["fsi_agentid", "fsi_environmentid"], (
+        f"fsi_AgentEnvKey key_attributes mismatch: {matches[0]['key_attributes']!r}"
+    )
+
+
+@_schema_skip
+def test_fsi_copilotagent_has_package_key() -> None:
+    """fsi_PackageKey (packageid) must be present — Yen's new dedup key."""
+    alt_keys = _cai_schema.TABLES["fsi_copilotagent"]["alt_keys"]
+    matches = [k for k in alt_keys if k.get("schema_name") == "fsi_PackageKey"]
+    assert len(matches) == 1, (
+        f"expected exactly one fsi_PackageKey entry; got {len(matches)}"
+    )
+    assert matches[0]["key_attributes"] == ["fsi_packageid"], (
+        f"fsi_PackageKey key_attributes mismatch: {matches[0]['key_attributes']!r}"
+    )
+
+
+@_schema_skip
+def test_fsi_copilotagent_both_alt_keys_coexist() -> None:
+    """Adding fsi_PackageKey must not silently drop fsi_AgentEnvKey."""
+    alt_keys = _cai_schema.TABLES["fsi_copilotagent"]["alt_keys"]
+    schema_names = {k["schema_name"] for k in alt_keys}
+    assert "fsi_AgentEnvKey" in schema_names, (
+        "fsi_AgentEnvKey is missing — Yen's change may have replaced it"
+    )
+    assert "fsi_PackageKey" in schema_names, (
+        "fsi_PackageKey is missing — package-only rows have no dedup key"
     )

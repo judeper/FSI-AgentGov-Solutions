@@ -93,6 +93,7 @@ CAI_OPTIONSETS = {
             ("Standard", 100000000),
             ("Lite / Agent Builder", 100000001),
             ("Declarative Agent", 100000002),
+            ("Custom Engine Agent", 100000005),
             ("Classic V1 (excluded)", 100000003),
             ("Unknown", 100000004),
         ],
@@ -104,6 +105,7 @@ CAI_OPTIONSETS = {
             ("Per-Environment Dataverse Scan", 100000001),
             ("PPAC Reconciliation", 100000002),
             ("Reconciled (multi-source)", 100000003),
+            ("Package Management API", 100000004),
         ],
     },
     "fsi_cai_featuretype": {
@@ -231,6 +233,51 @@ CAI_OPTIONSETS = {
             ("Configured (Dataverse)", 100000001),
             ("Inferred", 100000002),
             ("Unknown", 100000099),
+        ],
+    },
+    # Owner Copilot license class for BI. Paid = M365_COPILOT_* service plan;
+    # Copilot Chat Only = Bing_Chat_Enterprise only; Unknown = lookup failure
+    # or owner not resolved. Keys on service-plan GUIDs — never hard-code
+    # SKU display names.
+    "fsi_cai_ownerentitlement": {
+        "name": "fsi_cai_ownerentitlement",
+        "options": [
+            ("Paid Copilot", 100000000),
+            ("Copilot Chat Only", 100000001),
+            ("Unknown", 100000002),
+        ],
+    },
+    # Provenance of the owner identity on an fsi_CopilotAgent row. "Agent
+    # Registry Export" is a TEMPORARY bridge via import_registry_export.py
+    # pending a first-party API that surfaces owner metadata; treat rows with
+    # this source as potentially stale (see fsi_ownerasofdatetime).
+    "fsi_cai_ownersource": {
+        "name": "fsi_cai_ownersource",
+        "options": [
+            ("Dataverse Owner", 100000000),
+            ("Agent Registry Export", 100000001),  # TEMPORARY: bridge until first-party API
+            ("Unresolved", 100000002),
+        ],
+    },
+    # Confidence of the owner match operation. "Exact" = matched by stable
+    # identifier (Entra object ID); "Heuristic" = matched by display name or
+    # UPN fuzzy logic; "Unmatched" = no match found.
+    "fsi_cai_ownermatchconfidence": {
+        "name": "fsi_cai_ownermatchconfidence",
+        "options": [
+            ("Exact", 100000000),
+            ("Heuristic", 100000001),
+            ("Unmatched", 100000002),
+        ],
+    },
+    # Maps the Package Management API availableTo / deployedTo fields
+    # (none / some / all). Values mirror the API response enum.
+    "fsi_cai_packagestatus": {
+        "name": "fsi_cai_packagestatus",
+        "options": [
+            ("None", 100000000),
+            ("Some", 100000001),
+            ("All", 100000002),
         ],
     },
 }
@@ -433,6 +480,100 @@ COPILOTAGENT_COLUMNS = [
                 description="GUID correlating all records from one scan run"),
     _memo_col("fsi_RawJson", "Raw JSON", 100000,
               description="Full ARG / bot JSON snapshot for evidence and reparse"),
+    # --- Package Management API fields (fsi_cai_discoverysource = 100000004) ---
+    _string_col("fsi_PackageId", "Package ID", 100, required=False,
+                description=(
+                    "Package Management API package id (P_...). DISTINCT id space "
+                    "from the Copilot Studio bot GUID; used as the stable key for "
+                    "package-sourced rows and reconciliation via fsi_entraappid"
+                )),
+    _string_col("fsi_Publisher", "Publisher", 200, required=False,
+                description=(
+                    "Package vendor/publisher from the Package Management API "
+                    "(not the agent creator or owner)"
+                )),
+    _memo_col("fsi_SupportedHosts", "Supported Hosts", 4000,
+              description=(
+                  "JSON array of supported host surface identifiers from the "
+                  "Package Management API (supportedHosts[])"
+              )),
+    _picklist_col("fsi_AvailableTo", "Available To", "fsi_cai_packagestatus",
+                  required=False,
+                  description=(
+                      "Package availableTo scope from the Package Management API "
+                      "(None / Some / All)"
+                  )),
+    _picklist_col("fsi_DeployedTo", "Deployed To", "fsi_cai_packagestatus",
+                  required=False,
+                  description=(
+                      "Package deployedTo scope from the Package Management API "
+                      "(None / Some / All)"
+                  )),
+    _string_col("fsi_ManifestId", "Manifest ID", 200, required=False,
+                description="Declarative-agent manifest identifier from the Package Management API"),
+    _string_col("fsi_ManifestVersion", "Manifest Version", 50, required=False,
+                description="Declarative-agent manifest version string from the Package Management API"),
+    _string_col("fsi_PackageType", "Package Type", 100, required=False,
+                description=(
+                    "Package Management API copilotPackage.type for this agent "
+                    "(microsoft / external / shared / custom)"
+                )),
+    _memo_col("fsi_ElementTypes", "Element Types", 2000,
+              description=(
+                  "JSON array of copilotPackage.elementTypes reported by the "
+                  "Package Management API (e.g. Bots, DeclarativeAgent, "
+                  "CustomEngineAgent). Used to derive fsi_agenttype"
+              )),
+    _boolean_col("fsi_IsBlocked", "Is Blocked", default=False,
+                 description=(
+                     "Records copilotPackage.isBlocked from the Package Management "
+                     "API; true indicates the package has been blocked from deployment "
+                     "in this tenant"
+                 )),
+    _string_col("fsi_PackageVersion", "Package Version", 50, required=False,
+                description=(
+                    "Package Management API copilotPackage.version string. "
+                    "Distinct from fsi_manifestversion (declarative-agent manifest "
+                    "version); this is the package-catalog version label"
+                )),
+    _string_col("fsi_AssetId", "Asset ID", 100, required=False,
+                description=(
+                    "Package Management API copilotPackage.assetId; cross-references "
+                    "the package asset in the Microsoft catalog"
+                )),
+    # --- Owner / entitlement fields (populated by import_registry_export.py
+    #     and resolve_owner_entitlement.py) ---------------------------------
+    _picklist_col("fsi_OwnerEntitlement", "Owner Entitlement",
+                  "fsi_cai_ownerentitlement", required=False,
+                  description=(
+                      "Owner Copilot license class for BI reporting "
+                      "(Paid Copilot / Copilot Chat Only / Unknown). "
+                      "Populated by resolve_owner_entitlement.py; Unknown on any "
+                      "lookup failure or unresolved owner"
+                  )),
+    _memo_col("fsi_OwnerEntitlementEvidence", "Owner Entitlement Evidence", 4000,
+              description=(
+                  "Matched service-plan GUIDs and SKU evidence that drove the "
+                  "fsi_ownerentitlement classification. Contains NO PII or UPN values"
+              )),
+    _picklist_col("fsi_OwnerSource", "Owner Source", "fsi_cai_ownersource",
+                  required=False,
+                  description=(
+                      "Provenance of the owner identity: Dataverse Owner, "
+                      "Agent Registry Export (temporary bridge — treat as "
+                      "potentially stale; check fsi_ownerasofdatetime), or Unresolved"
+                  )),
+    _picklist_col("fsi_OwnerMatchConfidence", "Owner Match Confidence",
+                  "fsi_cai_ownermatchconfidence", required=False,
+                  description=(
+                      "Confidence of the owner match: Exact (stable Entra object ID), "
+                      "Heuristic (display name or UPN fuzzy logic), or Unmatched"
+                  )),
+    _datetime_col("fsi_OwnerAsOfDateTime", "Owner As Of", required=False,
+                  description=(
+                      "Timestamp of the registry export the owner data was drawn from; "
+                      "staleness signal when fsi_ownersource = Agent Registry Export"
+                  )),
 ]
 
 # --- 2. fsi_CaiEnvironment ---------------------------------------------------
@@ -696,7 +837,12 @@ TABLES = {
                 "schema_name": "fsi_AgentEnvKey",
                 "display": "Agent + Environment Key",
                 "key_attributes": ["fsi_agentid", "fsi_environmentid"],
-            }
+            },
+            {
+                "schema_name": "fsi_PackageKey",
+                "display": "Package Key",
+                "key_attributes": ["fsi_packageid"],
+            },
         ],
     },
     "fsi_caienvironment": {

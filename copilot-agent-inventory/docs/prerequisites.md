@@ -65,6 +65,7 @@ application depending on the auth mode):
 | Power Platform API (`https://api.powerplatform.com`) | `https://api.powerplatform.com/.default` | Layer 1 — ARG `resourcequery` against `PowerPlatformResources` |
 | Power Platform Admin / BAP (`https://api.bap.microsoft.com`) | `https://api.bap.microsoft.com/.default` | Environment enumeration |
 | Dataverse (per environment) | `https://<org>.crm.dynamics.com/.default` | Layer 2 — read `bot` / `botcomponent`; write the CAI inventory tables in the governance environment |
+| Microsoft Graph (`https://graph.microsoft.com`) | `https://graph.microsoft.com/.default` | Layer 4 — Package Management API (`CopilotPackages.Read.All`); owner licensing queries (`User.Read.All`, `Organization.Read.All`, `GroupMember.Read.All`) |
 
 > **Note:** After configuring permissions, a Microsoft Entra admin must grant
 > tenant consent.
@@ -112,6 +113,7 @@ file. This is required to keep secrets out of source control and CI logs.
 | `api.powerplatform.com` | HTTPS | Layer 1 — ARG `resourcequery` |
 | `api.bap.microsoft.com` | HTTPS | Environment enumeration |
 | `*.crm.dynamics.com` | HTTPS | Layer 2 — `bot` / `botcomponent` reads; CAI table writes |
+| `graph.microsoft.com` | HTTPS | Layer 4 — Package Management API; owner licensing queries |
 | `*.vault.azure.net` | HTTPS | Key Vault secret retrieval (dev fallback) |
 
 > **Live-confirm (🔎):** `microsoft.copilotstudio/agents` is absent from the
@@ -151,21 +153,128 @@ python scripts/create_cai_dataverse_schema.py --output-docs
 The deployed schema is 8 tables, 11 solution-specific option sets, and 1 shared
 option set. See [dataverse-schema.md](dataverse-schema.md) for the full reference.
 
-## Running the Discovery Scanner
+## Package Management API — Layer 4 Prerequisites
+
+The Package Management API layer (`--enable-package-api`) is **additive and
+off by default**. It discovers `Microsoft 365 Copilot Agent Builder` packages
+only; Copilot Studio agents are intentionally excluded because existing layers
+(ARG, per-environment Dataverse, and PPAC) already cover Copilot Studio agents,
+and package-to-bot joins are not strong enough to prevent duplicates. The layer
+requires three separate gates — each must be satisfied independently, at
+different administrative levels. Activate this layer only in the **US commercial
+Microsoft 365 cloud** (see cloud scope note below).
+
+> **Reference:** [List packages — Microsoft Learn](https://learn.microsoft.com/microsoft-365/copilot/extensibility/api/admin-settings/package/copilotpackages-list)
+> · [copilotPackage resource type](https://learn.microsoft.com/microsoft-365/copilot/extensibility/api/admin-settings/package/resources/copilotpackage)
+
+---
+
+### Gate 1 — Microsoft Agent 365 License (tenant product gate)
+
+The Package Management API is surfaced only when the tenant holds a
+**Microsoft Agent 365** license. This is a tenant-level product gate; the API
+endpoint returns `404` or an empty catalog for tenants without this license.
+
+- **Who sets this up:** Microsoft licensing or enterprise agreement — not an
+  admin configuration step.
+- **How to verify:** Confirm the tenant has a Microsoft Agent 365 license
+  assignment before enabling Layer 4.
+
+---
+
+### Gate 2 — `CopilotPackages.Read.All` Application Permission (API gate)
+
+The scanner uses **application** (app-only) permission to read the package
+catalog, which allows unattended automation without a signed-in user.
+
+| Permission | Type | Purpose |
+|-----------|------|---------|
+| `CopilotPackages.Read.All` | Application | Read all Agent Builder packages from the catalog |
+
+**Who grants this:** A Microsoft Entra **Global Admin** or **Privileged Role
+Administrator** must grant tenant-wide admin consent.
+
+**How to add the permission:**
+
+1. In [Azure Portal](https://portal.azure.com) > **Microsoft Entra ID** >
+   **App registrations**, open the CAI scanner app registration.
+2. Navigate to **API permissions** > **Add a permission** >
+   **Microsoft Graph** > **Application permissions**.
+3. Search for and add `CopilotPackages.Read.All`.
+4. Click **Grant admin consent for \<tenant\>** (requires Global Admin or
+   Privileged Role Administrator).
+
+**Additional Graph permissions for owner licensing queries** (required by
+`resolve_owner_entitlement.py`):
+
+| Permission | Type | Purpose |
+|-----------|------|---------|
+| `User.Read.All` | Application | Read owner profile and license assignments |
+| `Organization.Read.All` | Application | Read tenant SKU information for entitlement classification |
+| `GroupMember.Read.All` | Application | Resolve security-group memberships for sharing audience expansion |
+
+Grant admin consent for these at the same time as `CopilotPackages.Read.All`.
+
+---
+
+### Gate 3 — AI Administrator Entra Role (portal / delegated gate)
+
+The **AI Administrator** role in Microsoft Entra ID grants access to the
+Copilot admin portal and is required for interactive/delegated workflows and
+for granting consent to Copilot-scoped permissions in the portal. For the
+**app-only scanner** running under a managed identity or service principal,
+this role is **not required per-run** — Gate 2 (admin-consented application
+permission) is sufficient for unattended automation.
+
+- **When this role is needed:** Interactive portal workflows; granting
+  Copilot-scoped admin consent via the M365 admin center; reviewing or
+  managing the package catalog in the portal UI.
+- **Who holds this role:** Typically the Copilot governance admin, not the
+  scanner service principal.
+
+---
+
+### PowerShell Core (`pwsh`) Requirement
+
+`resolve_owner_entitlement.py` invokes
+`copilot-billing-governance/scripts/Get-CopilotEntitlement.ps1` as a
+subprocess. **PowerShell Core (`pwsh`) must be installed** in the execution
+environment (Azure Automation, GitHub Actions runner, or admin workstation).
+
+Verify availability:
+
+```bash
+pwsh --version
+```
+
+Install from [aka.ms/install-powershell](https://aka.ms/install-powershell) if
+not present.
+
+---
 
 ```bash
 # Dry run (no Dataverse writes; logs the calls that would be made)
 python scripts/discover_agents.py \
-    --environment-url https://governance.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
     --dry-run \
     --output scan.json
 
 # Production run (managed identity preferred)
 python scripts/discover_agents.py \
-    --environment-url https://governance.crm.dynamics.com \
     --tenant-id <your-tenant-id> \
     --auth-mode managed-identity
+
+# Full integrated scan — Package API + registry correlation + entitlement
+# (Global commercial cloud only; requires pwsh for entitlement resolution)
+python scripts/discover_agents.py \
+    --auth-mode managed-identity \
+    --tenant-id <your-tenant-id> \
+    --enable-package-api \
+    --registry-export registry-export.xlsx \
+    --columnmap templates/registry-columnmap.sample.json \
+    --as-of 2026-07-20T18:00:00Z \
+    --resolve-entitlement \
+    --output scan.json
 ```
 
 **Python Requirements:** Python 3.9+, packages listed in `scripts/requirements.txt`.

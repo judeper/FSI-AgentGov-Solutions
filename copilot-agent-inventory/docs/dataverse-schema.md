@@ -4,7 +4,7 @@ Auto-generated schema documentation. Do not edit manually — regenerate with `p
 
 ## Overview
 
-The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-specific option sets**, and **1 shared option set(s)**, with **106 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
+The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-specific option sets**, and **1 shared option set(s)**, with **123 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
 
 > **Logical-name convention.** Dataverse logical names are the SchemaName lowercased with NO underscores between words (`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> `fsi_agentid`). Always use logical names in OData `$select` / `$filter` / `$orderby`.
 
@@ -23,8 +23,8 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-
 | Option Set | Values |
 |-----------|--------|
 | `fsi_cai_createdin` | Copilot Studio (100000000), Microsoft 365 Copilot Agent Builder (100000001), Unknown (100000002) |
-| `fsi_cai_agenttype` | Standard (100000000), Lite / Agent Builder (100000001), Declarative Agent (100000002), Classic V1 (excluded) (100000003), Unknown (100000004) |
-| `fsi_cai_discoverysource` | Azure Resource Graph (100000000), Per-Environment Dataverse Scan (100000001), PPAC Reconciliation (100000002), Reconciled (multi-source) (100000003) |
+| `fsi_cai_agenttype` | Standard (100000000), Lite / Agent Builder (100000001), Declarative Agent (100000002), Custom Engine Agent (100000005), Classic V1 (excluded) (100000003), Unknown (100000004) |
+| `fsi_cai_discoverysource` | Azure Resource Graph (100000000), Per-Environment Dataverse Scan (100000001), PPAC Reconciliation (100000002), Reconciled (multi-source) (100000003), Package Management API (100000004) |
 | `fsi_cai_featuretype` | Topic (100000000), Skill (100000001), Knowledge Source (100000002), Custom GPT (100000003), Copilot Settings (100000004), External Trigger (100000005), File Attachment (100000006), Bot Variable (100000007), Bot Entity (100000008), Dialog (100000009), Dialog Schema (100000021), Trigger (100000010), Language Understanding (100000011), Language Generation (100000012), Bot Translations (100000013), Test Case (100000014), Tool / Plugin (100000015), Connector (100000016), Power Automate Flow (100000017), Environment Variable (100000018), Dataverse Search Grounding (100000019), AI Builder Model (100000020), People (Org Chart & Profile) (100000022), Other / Unrecognized (100000099) |
 | `fsi_cai_componentversion` | V1 (100000000), V2 (100000001), Not Applicable (100000002) |
 | `fsi_cai_policytype` | PAYG Billing Policy (100000000), Prepaid Credit Policy (100000001), None (100000002), Unknown (100000003) |
@@ -35,6 +35,10 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-
 | `fsi_cai_scancompleteness` | Complete (100000000), Incomplete Scan (100000001), Failed (100000002) |
 | `fsi_cai_detectionsource` | Dataverse Botcomponent Scan (100000000), Declarative Manifest (Local App Package) (100000001), Declarative Manifest (Source/CI Repo) (100000002), Declarative Manifest (Export Adapter - Future) (100000003), Unknown (100000099) |
 | `fsi_cai_detectionconfidence` | Declared (Manifest) (100000000), Configured (Dataverse) (100000001), Inferred (100000002), Unknown (100000099) |
+| `fsi_cai_ownerentitlement` | Paid Copilot (100000000), Copilot Chat Only (100000001), Unknown (100000002) |
+| `fsi_cai_ownersource` | Dataverse Owner (100000000), Agent Registry Export (100000001), Unresolved (100000002) |
+| `fsi_cai_ownermatchconfidence` | Exact (100000000), Heuristic (100000001), Unmatched (100000002) |
+| `fsi_cai_packagestatus` | None (100000000), Some (100000001), All (100000002) |
 
 ---
 
@@ -72,8 +76,26 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **13 solution-
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this inventory row was last refreshed |
 | `fsi_RunId` | `fsi_runid` | String(36) | No | GUID correlating all records from one scan run |
 | `fsi_RawJson` | `fsi_rawjson` | Memo(100000) | No | Full ARG / bot JSON snapshot for evidence and reparse |
+| `fsi_PackageId` | `fsi_packageid` | String(100) | No | Package Management API package id (P_...). DISTINCT id space from the Copilot Studio bot GUID; used as the stable key for package-sourced rows and reconciliation via fsi_entraappid |
+| `fsi_Publisher` | `fsi_publisher` | String(200) | No | Package vendor/publisher from the Package Management API (not the agent creator or owner) |
+| `fsi_SupportedHosts` | `fsi_supportedhosts` | Memo(4000) | No | JSON array of supported host surface identifiers from the Package Management API (supportedHosts[]) |
+| `fsi_AvailableTo` | `fsi_availableto` | Picklist (`fsi_cai_packagestatus`) | No | Package availableTo scope from the Package Management API (None / Some / All) |
+| `fsi_DeployedTo` | `fsi_deployedto` | Picklist (`fsi_cai_packagestatus`) | No | Package deployedTo scope from the Package Management API (None / Some / All) |
+| `fsi_ManifestId` | `fsi_manifestid` | String(200) | No | Declarative-agent manifest identifier from the Package Management API |
+| `fsi_ManifestVersion` | `fsi_manifestversion` | String(50) | No | Declarative-agent manifest version string from the Package Management API |
+| `fsi_PackageType` | `fsi_packagetype` | String(100) | No | Package Management API copilotPackage.type for this agent (microsoft / external / shared / custom) |
+| `fsi_ElementTypes` | `fsi_elementtypes` | Memo(2000) | No | JSON array of copilotPackage.elementTypes reported by the Package Management API (e.g. Bots, DeclarativeAgent, CustomEngineAgent). Used to derive fsi_agenttype |
+| `fsi_IsBlocked` | `fsi_isblocked` | Boolean (default: false) | No | Records copilotPackage.isBlocked from the Package Management API; true indicates the package has been blocked from deployment in this tenant |
+| `fsi_PackageVersion` | `fsi_packageversion` | String(50) | No | Package Management API copilotPackage.version string. Distinct from fsi_manifestversion (declarative-agent manifest version); this is the package-catalog version label |
+| `fsi_AssetId` | `fsi_assetid` | String(100) | No | Package Management API copilotPackage.assetId; cross-references the package asset in the Microsoft catalog |
+| `fsi_OwnerEntitlement` | `fsi_ownerentitlement` | Picklist (`fsi_cai_ownerentitlement`) | No | Owner Copilot license class for BI reporting (Paid Copilot / Copilot Chat Only / Unknown). Populated by resolve_owner_entitlement.py; Unknown on any lookup failure or unresolved owner |
+| `fsi_OwnerEntitlementEvidence` | `fsi_ownerentitlementevidence` | Memo(4000) | No | Matched service-plan GUIDs and SKU evidence that drove the fsi_ownerentitlement classification. Contains NO PII or UPN values |
+| `fsi_OwnerSource` | `fsi_ownersource` | Picklist (`fsi_cai_ownersource`) | No | Provenance of the owner identity: Dataverse Owner, Agent Registry Export (temporary bridge — treat as potentially stale; check fsi_ownerasofdatetime), or Unresolved |
+| `fsi_OwnerMatchConfidence` | `fsi_ownermatchconfidence` | Picklist (`fsi_cai_ownermatchconfidence`) | No | Confidence of the owner match: Exact (stable Entra object ID), Heuristic (display name or UPN fuzzy logic), or Unmatched |
+| `fsi_OwnerAsOfDateTime` | `fsi_ownerasofdatetime` | DateTime | No | Timestamp of the registry export the owner data was drawn from; staleness signal when fsi_ownersource = Agent Registry Export |
 
 **Alternate key** `fsi_AgentEnvKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
+**Alternate key** `fsi_PackageKey`: (`fsi_packageid`) — idempotent upsert key.
 
 ### CAI Environment (`fsi_caienvironment`)
 

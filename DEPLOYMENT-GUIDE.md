@@ -66,7 +66,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 |----------|------|---------|
 | [Agent Intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | v1.0.1-preview |
 | [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.4 |
-| [Copilot Agent Inventory](./copilot-agent-inventory/) | Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. | v0.2.0-preview |
+| [Copilot Agent Inventory](./copilot-agent-inventory/) | Foundation system-of-record for Copilot Studio and Agent Builder agents — four-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation, Package Management API) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. Adds Agent Builder package discovery (GA v1.0 Package Management API), temporary owner attribution from the manual Agent Registry export, and owner Copilot entitlement classification. | v0.3.0-preview |
 
 ### Layer 2: Tier 2 Governance Solutions
 
