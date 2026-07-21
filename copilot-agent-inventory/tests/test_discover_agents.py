@@ -228,3 +228,63 @@ def test_authshare_record_omits_column_when_signal_unknown() -> None:
     # expander treats whole-tenant reach as unknown (Partial), not a confident empty.
     assert "fsi_sharedwitheveryone" not in rec
     assert rec["fsi_agentid"] == "bot-2"
+
+
+# ---------------------------------------------------------------------------
+# _validate_as_of — strict UTC enforcement (DEFECT 2 regression)
+#
+# Rusty changed _validate_as_of to REJECT naive (timezone-less) datetimes.
+# Previously they were silently accepted and could shift by the runner's local
+# TZ, producing non-deterministic timestamps.  The regressions below pin the
+# three input classes that the fix must handle correctly.
+# ---------------------------------------------------------------------------
+
+def test_validate_as_of_rejects_naive_datetime() -> None:
+    """A naive datetime (no 'Z', no offset) must raise ValueError.
+
+    Pre-fix behaviour: silently accepted and shifted by runner-local TZ.
+    Post-fix behaviour: ValueError — UTC is required.
+    """
+    with pytest.raises(ValueError):
+        da._validate_as_of("2026-07-20T18:00:00")
+
+
+def test_validate_as_of_accepts_z_suffix_and_returns_canonical_form() -> None:
+    """'Z' suffix is valid UTC and must round-trip to the canonical YYYY-MM-DDTHH:MM:SSZ form."""
+    result = da._validate_as_of("2026-07-20T18:00:00Z")
+    assert result == "2026-07-20T18:00:00Z"
+
+
+def test_validate_as_of_normalizes_explicit_offset_to_utc() -> None:
+    """An explicit non-zero offset must be converted to UTC deterministically.
+
+    '2026-07-20T23:00:00+05:00' is 18:00 UTC regardless of the runner's local TZ.
+    Pre-fix: naive input could produce a different timestamp on a UTC-offset host.
+    Post-fix: explicit offsets are always normalised; the result is runner-independent.
+    """
+    result = da._validate_as_of("2026-07-20T23:00:00+05:00")
+    assert result == "2026-07-20T18:00:00Z"
+
+
+def test_validate_as_of_parity_with_parse_iso8601_utc() -> None:
+    """_validate_as_of and import_registry_export._parse_iso8601_utc must agree.
+
+    Both functions enforce strict UTC and produce the same canonical output for
+    the same valid inputs.  Divergence here would mean an --as-of value that
+    one pipeline leg accepts is rejected (or normalised differently) by the other.
+    """
+    try:
+        import import_registry_export as ire
+    except Exception:  # pragma: no cover — dep absent in some CI configurations
+        pytest.skip("import_registry_export not importable — skipping parity check")
+
+    for value in ("2026-07-20T18:00:00Z", "2026-07-20T23:00:00+05:00"):
+        assert da._validate_as_of(value) == ire._parse_iso8601_utc(value), (
+            f"_validate_as_of and _parse_iso8601_utc disagree on {value!r}"
+        )
+
+    # Both must reject the same naive input.
+    with pytest.raises(ValueError):
+        da._validate_as_of("2026-07-20T18:00:00")
+    with pytest.raises(ValueError):
+        ire._parse_iso8601_utc("2026-07-20T18:00:00")

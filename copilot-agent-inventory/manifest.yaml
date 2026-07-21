@@ -1,7 +1,7 @@
 id: copilot-agent-inventory
 name: Copilot Agent Inventory
-description: Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent.
-version: 0.2.0-preview
+description: Foundation system-of-record for Copilot Studio and Agent Builder agents — four-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation, Package Management API) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. Adds Agent Builder package discovery (GA v1.0 Package Management API), temporary owner attribution from the manual Agent Registry export, and owner Copilot entitlement classification.
+version: 0.3.0-preview
 status: preview
 domain: monitoring-analytics
 tier: '1'
@@ -14,12 +14,13 @@ url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-agent-in
 prerequisites:
   power-platform-admin: Power Platform Admin (or Dynamics 365 admin) for tenant-wide environment enumeration and Dataverse bot/botcomponent reads, plus the fsi publisher prefix in the governance environment.
   security-admin: Security Admin to provision the least-privilege scanner service principal and store its secret in Key Vault via managed identity.
-verification: Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`.
+  microsoft-365-admin: Microsoft 365 admin (or Entra Global Admin) to grant admin consent for the CopilotPackages.Read.All application permission required by the Package Management API layer. Requires a Microsoft Agent 365 license at the tenant level.
+verification: Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`. To verify the Package Management API layer, run with --enable-package-api and confirm rows appear with `fsi_discoverysource = "Package Management API"`.
 
 # Microsoft platform dependency maturity (rendered in README header).
 upstreamDependency:
   status: mixed
-  note: "ARG Power Platform Inventory GA Mar 31 2026; several agent-specific fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview."
+  note: "ARG Power Platform Inventory GA Mar 31 2026; Package Management API GA v1.0 (application CopilotPackages.Read.All); several agent-specific ARG fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview."
 
 # zones/dataClassification ASSUMED 2026-Q2 (pending Jude ratification):
 #   foundation inventory applies in multi-user team/enterprise governance zones.

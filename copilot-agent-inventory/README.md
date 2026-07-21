@@ -7,11 +7,11 @@ coe_function: govern
 ---
 # Copilot Agent Inventory
 
-> **Version:** v0.2.0-preview
+> **Version:** v0.3.0-preview
 > **Status:** Preview
 > **Validated against framework version:** v1.6.0
-> **Upstream Microsoft dependency:** Mixed — ARG Power Platform Inventory GA Mar 31 2026; several agent-specific fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview.
-> **Last Verified:** 2026-06-12
+> **Upstream Microsoft dependency:** Mixed — ARG Power Platform Inventory GA Mar 31 2026; Package Management API GA v1.0 (application CopilotPackages.Read.All); several agent-specific ARG fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview.
+> **Last Verified:** 2026-07-20
 
 Tenant-wide discovery and a canonical Dataverse **system-of-record** for every
 Copilot Studio and Microsoft 365 Copilot Agent Builder agent. Copilot Agent
@@ -21,13 +21,20 @@ read from, rather than each re-scanning the platform. This solution targets the
 
 ## Overview
 
-CAI composes a three-layer discovery (Azure Resource Graph → per-environment
-Dataverse → PPAC reconciliation) and normalizes the result into eight Dataverse
-tables. A complete, current agent inventory is required for agent registry
-control 1.2 and supports compliance with the record-keeping expectations of
-FINRA Rule 4511 and SEC Rule 17a-3/17a-4 (a documented inventory is a
-prerequisite for the records those rules require). The inventory also provides
-the agent dimension that management and reporting solutions join against.
+CAI composes a **four-layer discovery** (Azure Resource Graph → per-environment
+Dataverse → PPAC reconciliation → Package Management API) and normalizes the
+result into eight Dataverse tables. A complete, current agent inventory is
+required for agent registry control 1.2 and supports compliance with the
+record-keeping expectations of FINRA Rule 4511 and SEC Rule 17a-3/17a-4 (a
+documented inventory is a prerequisite for the records those rules require).
+The 0.3.0-preview release adds the Microsoft Graph **Package Management API**
+(GA v1.0, application `CopilotPackages.Read.All`) as an additive fourth
+discovery layer for Agent Builder packages, plus temporary owner attribution
+from the manual Agent Registry export and owner Copilot entitlement
+classification, feeding a BI dataset that answers three governance questions:
+who owns agents, which agents originate in Agent Builder, and whether the
+owner holds a Paid Copilot or Copilot Chat Only license. The inventory also
+provides the agent dimension that management and reporting solutions join against.
 
 Unlike `agent-registry-automation` (which operates a registration and approval
 workflow over its legacy `fsi_agentinventory` table), CAI owns the **canonical
@@ -39,7 +46,7 @@ agents) with delta change tracking and batched writes. See
 
 Full detail in [docs/architecture.md](docs/architecture.md). In summary:
 
-**Three-layer discovery**
+**Four-layer discovery**
 
 1. **Azure Resource Graph (ARG)** — tenant-wide enumeration from the dedicated
    `PowerPlatformResources` table (resource type
@@ -54,6 +61,20 @@ Full detail in [docs/architecture.md](docs/architecture.md). In summary:
    and AI models.
 3. **PPAC reconciliation** — cross-checks ARG against the Dataverse scan and
    records coverage gaps so they are auditable rather than silent.
+4. **Package Management API** (`--enable-package-api`, off by default) — calls
+   `GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages?$filter=platform eq 'Microsoft 365 Copilot Agent Builder'`
+   under application permission `CopilotPackages.Read.All` (admin-consented,
+   Global commercial cloud only). Discovers `Microsoft 365 Copilot Agent Builder`
+   packages only (Copilot Studio is intentionally excluded: existing layers
+   already cover it, and package-to-bot joins are not strong enough to prevent
+   duplicates). Returns package-level metadata (`id` as `P_...`, `displayName`,
+   `publisher`, `appId`, `manifestId`, `supportedHosts`, etc.) for Agent Builder
+   packages. Enriches existing Agent Builder rows via `appId` / `manifestId`
+   (setting `fsi_discoverysource = "Reconciled (multi-source)"`); unmatched
+   packages create new rows keyed on the `P_...` id
+   (`fsi_discoverysource = "Package Management API"`). Package ids are a distinct
+   id space from bot GUIDs — see
+   [Reconciliation limitation](docs/architecture.md#reconciliation-limitation).
 
 **8-entity model** (logical names): `fsi_copilotagent` (master),
 `fsi_caienvironment`, `fsi_caiagentfeature` (one row per detected feature),
@@ -80,7 +101,9 @@ copilot-agent-inventory/
 │   └── flow-configuration.md
 ├── scripts/
 │   ├── create_cai_dataverse_schema.py   # 8-entity schema, idempotent, --output-docs
-│   ├── discover_agents.py               # three-layer discovery scanner
+│   ├── discover_agents.py               # four-layer discovery scanner (--enable-package-api)
+│   ├── import_registry_export.py        # Agent Registry XLSX/CSV owner importer
+│   ├── resolve_owner_entitlement.py     # owner Copilot entitlement classifier (via CBG PS1)
 │   ├── detect_people_capability.py      # declarative-agent People capability (manifest)
 │   ├── expand_audience_upns.py          # sharing audience -> member UPNs (Graph transitive)
 │   └── requirements.txt
@@ -88,7 +111,9 @@ copilot-agent-inventory/
     ├── agent-record.sample.json         # sample fsi_copilotagent + feature rows
     ├── people-detection.sample.json     # sample People-capability detection artifact
     ├── audience-input.sample.json       # sample sharing posture (expand input)
-    └── audience-upn-list.sample.json    # sample CBG-shaped intendedUsers artifact
+    ├── audience-upn-list.sample.json    # sample CBG-shaped intendedUsers artifact
+    ├── package-inventory.sample.json    # BI-ready sample: Package API + owner + entitlement
+    └── registry-columnmap.sample.json   # alias map for registry XLSX importer
 ```
 
 ## Quick Start
@@ -105,29 +130,112 @@ python scripts/create_cai_dataverse_schema.py \
 python scripts/create_cai_dataverse_schema.py \
     --environment-url https://governance.crm.dynamics.com \
     --tenant-id <your-tenant-id> --interactive
+```
 
-# 3. Run the discovery scanner (dry-run first)
+```bash
+# 3. Run the three-layer discovery scanner (dry-run first — no Dataverse writes)
 python scripts/discover_agents.py \
-    --environment-url https://governance.crm.dynamics.com \
     --tenant-id <your-tenant-id> --dry-run --output scan.json
 
-# 4. Production run (managed identity preferred)
+# 4. Production three-layer scan (managed identity preferred)
 python scripts/discover_agents.py \
-    --environment-url https://governance.crm.dynamics.com \
     --tenant-id <your-tenant-id> --auth-mode managed-identity
 
-# 5. Detect the declarative-agent "People" capability from manifests
+# 5. Full integrated scan — Package API + registry owner attribution + entitlement
+#
+#    Produces a combined BI-ready JSON (--output). The scanner emits JSON and
+#    does NOT itself write to Dataverse; persistence is handled by the Power
+#    Automate flow documented in docs/flow-configuration.md.
+#
+#    Requirements: Microsoft Agent 365 license; CopilotPackages.Read.All
+#    application permission (Global commercial cloud only); pwsh.
+#
+#    Edit templates/registry-columnmap.sample.json to declare your XLSX column
+#    headers before running. Exact native headers in the M365 admin center are
+#    unverified; use the alias map to declare the actual header names.
+#
+#    Combined output includes: agents[] enriched with package, owner, and
+#    entitlement fields; registryCorrelation summary (registryRowCount, matched,
+#    unmatchedRegistryRows, ambiguousNameSkipped, invalidDateWarnings, status);
+#    entitlementResolution summary (ownersConsidered, paidCount, chatOnlyCount,
+#    unknownCount, status).
+python scripts/discover_agents.py \
+    --auth-mode managed-identity \
+    --tenant-id <your-tenant-id> \
+    --enable-package-api \
+    --registry-export registry-export.xlsx \
+    --columnmap templates/registry-columnmap.sample.json \
+    --as-of 2026-07-20T18:00:00Z \
+    --resolve-entitlement \
+    --output scan.json
+```
+
+### Standalone diagnostic tools
+
+The registry importer and entitlement resolver can be run independently to
+validate column mapping or troubleshoot entitlement classification. They do
+not enrich agents or write to Dataverse.
+
+```bash
+# Validate registry export column mapping and row parsing (diagnostic only)
+python scripts/import_registry_export.py \
+    --input registry-export.xlsx \
+    --columnmap templates/registry-columnmap.sample.json \
+    --as-of 2026-07-20T18:00:00Z \
+    --output rows.json
+
+# Resolve Copilot entitlement for a list of owner UPNs (diagnostic only)
+#    Requires pwsh + copilot-billing-governance/scripts/Get-CopilotEntitlement.ps1
+python scripts/resolve_owner_entitlement.py \
+    --upns-file upns.json \
+    --ps1-path ../../copilot-billing-governance/scripts/Get-CopilotEntitlement.ps1 \
+    --output ent.json
+```
+
+```bash
+# Detect the declarative-agent "People" capability from manifests
 #    (source-repo tree or local app-package directory/zip; --dry-run plans only)
 python scripts/detect_people_capability.py \
     --source source-repo --path ../my-agent-repo \
     --id-map ./agent-id-map.json --output people.json
 
-# 6. Expand each agent's sharing audience to member UPNs (CBG input)
+# Expand each agent's sharing audience to member UPNs (CBG input)
 #    --dry-run resolves nothing over the network
 python scripts/expand_audience_upns.py \
     --input authshare.json --auth-mode managed-identity \
     --output intended-users.json
 ```
+
+## Package API, Owner Attribution, and Entitlement BI Dataset
+
+The Layer 4 Package Management API, registry importer, and entitlement resolver
+together populate a BI-ready slice of `fsi_copilotagent` that answers three
+governance questions:
+
+| Question | Key columns |
+|----------|-------------|
+| Who owns agents? | `fsi_ownerupn`, `fsi_ownerid`, `fsi_ownersource`, `fsi_ownermatchconfidence`, `fsi_ownerasofdatetime` |
+| Which agents were created in Agent Builder? | `fsi_createdin = "Microsoft 365 Copilot Agent Builder"` |
+| Is the owner a paid Copilot user or Copilot Chat only? | `fsi_ownerentitlement`, `fsi_ownerentitlementevidence` |
+
+See `templates/package-inventory.sample.json` for a synthetic Contoso dataset
+illustrating all three entitlement values, stale-owner examples, and Unmatched
+confidence rows.
+
+**Owner data is temporary and may be stale.** `fsi_ownersource = "Agent Registry
+Export"` means owner attribution comes from a point-in-time manual export, not
+a live API. Check `fsi_ownerasofdatetime` to assess staleness, and qualify any
+owner-dependent report with `fsi_ownermatchconfidence`.
+
+**Entitlement may be Unknown.** Any unresolved owner, Graph lookup failure, or
+`pwsh` subprocess error sets `fsi_ownerentitlement = "Unknown"`. Downstream BI
+queries should filter or flag Unknown rows rather than treating them as
+authoritative negatives.
+
+**Package id ≠ bot GUID.** `fsi_packageid` values (`P_...`) are distinct from
+Copilot Studio bot GUIDs. Best-effort reconciliation joins on `appId` /
+`manifestId`; unmatched rows carry `fsi_ownermatchconfidence = "Unmatched"` and
+should not participate in bot-GUID-keyed joins.
 
 ## People capability & audience expansion (FNF)
 
@@ -271,7 +379,7 @@ migration.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — three-layer discovery, 8-entity model, scale engine
+- [Architecture](docs/architecture.md) — four-layer discovery, 8-entity model, scale engine
 - [Prerequisites](docs/prerequisites.md) — auth, roles, scopes, network endpoints
 - [Dataverse Schema](docs/dataverse-schema.md) — table, column, and option-set reference
 - [Flow Setup](docs/flow-configuration.md) — daily discovery flow build guide

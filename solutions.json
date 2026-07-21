@@ -446,11 +446,11 @@
     "copilot-agent-inventory": {
       "id": "copilot-agent-inventory",
       "name": "Copilot Agent Inventory",
-      "version": "0.2.0-preview",
+      "version": "0.3.0-preview",
       "domain": "monitoring-analytics",
       "tier": "1",
       "status": "preview",
-      "description": "Foundation system-of-record for Copilot Studio and Agent Builder agents — three-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation) feeding a canonical eight-entity governance store keyed on fsi_copilotagent.",
+      "description": "Foundation system-of-record for Copilot Studio and Agent Builder agents — four-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation, Package Management API) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. Adds Agent Builder package discovery (GA v1.0 Package Management API), temporary owner attribution from the manual Agent Registry export, and owner Copilot entitlement classification.",
       "url": "https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-agent-inventory/",
       "controls": [
         "1.2",
@@ -461,9 +461,10 @@
       "dependencies": [],
       "prerequisites": {
         "power-platform-admin": "Power Platform Admin (or Dynamics 365 admin) for tenant-wide environment enumeration and Dataverse bot/botcomponent reads, plus the fsi publisher prefix in the governance environment.",
-        "security-admin": "Security Admin to provision the least-privilege scanner service principal and store its secret in Key Vault via managed identity."
+        "security-admin": "Security Admin to provision the least-privilege scanner service principal and store its secret in Key Vault via managed identity.",
+        "microsoft-365-admin": "Microsoft 365 admin (or Entra Global Admin) to grant admin consent for the CopilotPackages.Read.All application permission required by the Package Management API layer. Requires a Microsoft Agent 365 license at the tenant level."
       },
-      "verification": "Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`.",
+      "verification": "Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`. To verify the Package Management API layer, run with --enable-package-api and confirm rows appear with `fsi_discoverysource = \"Package Management API\"`.",
       "zones": [
         "team",
         "enterprise"

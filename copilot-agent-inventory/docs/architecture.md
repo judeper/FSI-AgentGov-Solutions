@@ -1,6 +1,6 @@
 # Architecture - Copilot Agent Inventory
 
-> **Status:** `0.2.0-preview`. This document describes the intended architecture
+> **Status:** `0.3.0-preview`. This document describes the intended architecture
 > of the discovery scanner and the canonical Dataverse system-of-record. Several
 > build-time facts are tagged for live verification (see
 > [Assumptions and build-time verifications](#assumptions-and-build-time-verifications));
@@ -19,10 +19,10 @@ and supports compliance with the record-keeping expectations of FINRA Rule 4511
 and SEC Rule 17a-3/17a-4 (a complete agent inventory is a prerequisite for the
 documentation those rules require).
 
-## Three-Layer Discovery
+## Four-Layer Discovery
 
 No single API returns a complete, tenant-wide agent inventory, so discovery
-composes three layers and reconciles them.
+composes four layers and reconciles them.
 
 ### Layer 1 — Tenant-wide discovery via Azure Resource Graph (ARG)
 
@@ -98,17 +98,139 @@ cross-check to reconcile Layer 1 against Layer 2 — surfacing agents present in
 ARG but not in a Dataverse scan (and vice versa). Reconciliation output is
 written to the inventory so coverage gaps are auditable rather than silent.
 
+### Layer 4 — Package Management API (Agent Builder catalog, GA v1.0)
+
+> **Activation:** requires `--enable-package-api` (off by default) and the
+> `CopilotPackages.Read.All` application permission. See
+> [prerequisites.md](prerequisites.md#package-management-api-layer-4-prerequisites).
+
+- **Scope — Agent Builder only:** this layer queries packages filtered to
+  `platform eq 'Microsoft 365 Copilot Agent Builder'` only. Copilot Studio
+  agents are intentionally excluded: existing layers (ARG, per-environment
+  Dataverse, and PPAC) already cover Copilot Studio agents, and package-to-bot
+  joins are not strong enough to prevent duplicates.
+- **Endpoint:** `GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages`
+  with `$filter=platform eq 'Microsoft 365 Copilot Agent Builder'`. The
+  `platform` field supports `$filter` with `eq`.
+- **Auth:** application (app-only) permission `CopilotPackages.Read.All`
+  (admin-consented). No signed-in user required for unattended automation.
+- **Response envelope:** `{ "value": [ copilotPackage ] }`.
+- **Fields captured per package:** `id` (`P_...`), `displayName`, `type`
+  (`microsoft` / `external` / `shared` / `custom`), `platform`, `publisher`,
+  `version`, `manifestId`, `manifestVersion`, `appId`, `availableTo`,
+  `deployedTo`, `supportedHosts[]`, `elementTypes[]`
+  (`Bots` / `DeclarativeAgent` / `CustomEngineAgent`), `isBlocked`.
+  **No `owner`, `creator`, or `createdDate` field is returned by this API.**
+- **Pagination:** `@odata.nextLink` is handled defensively. A truncated pull
+  is recorded as an `Incomplete Scan` (GATE-1), never treated as a complete or
+  silently empty result.
+- **Reconciliation rule:** packages are joined to existing `fsi_copilotagent`
+  rows (Agent Builder rows only — Copilot Studio rows are not enriched by this
+  layer) via `appId` (Package.appId == `fsi_entraappid`) then `manifestId`. On
+  a match the existing row is enriched in-place: `fsi_packageid`, package
+  metadata columns, and `fsi_discoverysource = "Reconciled (multi-source)"` are
+  set. On no match a **new** package-sourced row is created with
+  `fsi_agentid = package_id` (`P_...`), `fsi_discoverysource = "Package
+  Management API"`, and `fsi_ownermatchconfidence = "Unmatched"`.
+- **Id-space isolation:** package `P_...` ids occupy a distinct space from
+  Copilot Studio bot GUIDs. `reconcile_sources()` guards against cross-id-space
+  false drift (see [Reconciliation limitation](#reconciliation-limitation) below).
+
 ## Scan Completeness
 
 Lite / Agent Builder agents are recorded with
-`fsi_caicompliancestate.fsi_scancompleteness = "Incomplete Scan"` (✅ verified):
-no public API returns their full definition (instructions + knowledge +
-capabilities). The Graph Package Management API is beta, is delegated-only
-(which blocks unattended service-principal automation), and returns a minimal
-definition; the full manifest is available only via a manual export. Recording
-these as `incomplete-scan` keeps the coverage limitation explicit in the
-record-keeping trail rather than implying a completeness the platform does not
-support.
+`fsi_caicompliancestate.fsi_scancompleteness = "Incomplete Scan"` when no
+enriched definition is available. The Package Management API (Layer 4, GA v1.0,
+application `CopilotPackages.Read.All`) returns package-level metadata
+(`displayName`, `publisher`, `supportedHosts`, `appId`, `manifestId`, etc.)
+for Agent Builder agents. An Agent Builder row that is enriched via Layer 4
+carries more metadata than a Layer-1-only record; the scan completeness signal
+may be upgraded from `Incomplete Scan` when the package layer produces a
+successful match. Full feature enumeration (instructions, knowledge sources,
+capabilities) remains unavailable via any public API for Agent Builder agents;
+`fsi_caicompliancestate.fsi_scancompletenessreason` records the specific
+gap.
+
+## Package API — Owner Attribution and Entitlement
+
+### Owner attribution (temporary bridge)
+
+The Package Management API returns **no owner, creator, or creation-date
+field**. Owner attribution for Agent Builder packages is sourced from a manual
+Microsoft 365 admin center Agent Registry export (XLSX or CSV). This is a
+**temporary bridge** until a live owner API is available.
+
+Key limitations of this approach:
+
+| Signal | Column | Limitation |
+|--------|--------|-----------|
+| Owner UPN / ID | `fsi_ownerupn`, `fsi_ownerid` | Derived from point-in-time manual export; may be stale |
+| Owner as-of date | `fsi_ownerasofdatetime` | Timestamp of the export file, not a live lookup |
+| Owner source | `fsi_ownersource` | Value `"Agent Registry Export"` (100000001) — a temporary bridge |
+| Match confidence | `fsi_ownermatchconfidence` | `"Exact"` / `"Heuristic"` / `"Unmatched"` based on join quality |
+
+Treat any `fsi_ownersource = "Agent Registry Export"` row as an approximation
+and check `fsi_ownerasofdatetime` to assess staleness. Rows with
+`fsi_ownermatchconfidence = "Unmatched"` have no owner attribution; their
+`fsi_ownerentitlement` is `"Unknown"`.
+
+### Entitlement classification
+
+Owner entitlement is classified into three values via service-plan GUID lookup
+against the owner's Microsoft 365 license (delegated to
+`copilot-billing-governance/scripts/Get-CopilotEntitlement.ps1` — the GUID
+allowlist is not duplicated into CAI):
+
+| Value | Dataverse option | Meaning |
+|-------|-----------------|---------|
+| `Paid Copilot` | 100000000 | Owner holds a `M365_COPILOT_*` service plan |
+| `Copilot Chat Only` | 100000001 | Owner has Bing Chat Enterprise (deny plan) but no paid plan |
+| `Unknown` | 100000002 | Unresolved owner, lookup failure, or subprocess error |
+
+`fsi_ownerentitlementevidence` stores matched service-plan GUIDs as a raw JSON
+array. **SKU GUIDs (tenant-level subscription ids) are NOT stored in this
+field.** Only service-plan GUIDs are recorded as evidence — for example
+`3f30311c-6b1e-48a4-ab79-725b469da960` (`M365_COPILOT_BUSINESS_CHAT`) or
+`0d0c0d31-fae7-41f2-b909-eaf4d7f26dba` (`Bing_Chat_Enterprise`).
+**No PII or UPN values are written to this field.**
+Downstream BI queries should filter or account for `Unknown` rows.
+
+### Reconciliation limitation
+
+`fsi_packageid` values (format: `P_...`) are from the Package Management API
+id space and are **distinct** from Copilot Studio bot GUIDs. The best-effort
+reconciliation join is via `appId` (Package.appId == `fsi_entraappid`) then
+`manifestId`. Unmatched package rows receive a `P_...` value as `fsi_agentid`
+and **must not** be used in bot-GUID-keyed joins or drift-detection logic.
+Reconciliation code guards against cross-id-space false positives; the
+`P_...` id space is private to the package layer.
+
+### BI dataset — three governance questions
+
+The combined output of the integrated scanner (`discover_agents.py
+--enable-package-api --registry-export ... --resolve-entitlement --output
+scan.json`) answers three governance questions directly from `fsi_copilotagent`
+and includes two new top-level summary blocks in the JSON output:
+
+- **`registryCorrelation`** — `registryRowCount`, `matched`,
+  `unmatchedRegistryRows`, `ambiguousNameSkipped`, `invalidDateWarnings`,
+  `status` (`Complete` / `Incomplete` / `Failed`).
+- **`entitlementResolution`** — `ownersConsidered`, `paidCount`,
+  `chatOnlyCount`, `unknownCount`, `status` (`Complete` / `Incomplete` /
+  `Failed`).
+
+The scanner **emits JSON and does not itself write to Dataverse**. Persistence
+is handled by the Power Automate flow described in
+[flow-configuration.md](flow-configuration.md).
+
+| Question | Columns to query |
+|----------|-----------------|
+| Who owns agents? | `fsi_ownerupn`, `fsi_ownerid`, `fsi_ownersource`, `fsi_ownermatchconfidence`, `fsi_ownerasofdatetime` |
+| Which agents were created in Agent Builder? | `fsi_createdin = "Microsoft 365 Copilot Agent Builder"` |
+| Is the owner a paid Copilot user or Copilot Chat only? | `fsi_ownerentitlement`, `fsi_ownerentitlementevidence` |
+
+Filter results by `fsi_ownermatchconfidence` to exclude or flag low-confidence
+owner attributions in reports.
 
 ## 8-Entity Data Model
 
