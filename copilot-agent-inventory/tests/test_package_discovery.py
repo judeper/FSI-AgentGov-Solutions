@@ -282,7 +282,7 @@ def test_fetch_package_catalog_follows_nextlink_paging() -> None:
 
     next_url = (
         "https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages"
-        "?$skiptoken=abc123synthetic"
+        "?$skiptoken=page-two"
     )
     page2_pkg = dict(_AB_PKG)
     page2_pkg["id"] = "P_19ae1zz1-0000-0000-0000-contoso00002"

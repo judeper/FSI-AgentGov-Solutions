@@ -29,7 +29,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | compliance-dashboard | v1.0.5 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
 | conditional-access-automation | v2.0.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
 | content-moderation-monitor | v1.1.2 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
-| copilot-agent-inventory | v0.2.0-preview | 1.2, 1.7, 2.1, 2.13 | Foundation system-of-record for Copilot agents — three-layer tenant-wide discovery feeding a canonical governance store |
+| copilot-agent-inventory | v0.3.0-preview | 1.2, 1.7, 2.1, 2.13 | Foundation system-of-record for Copilot agents — three-layer tenant-wide discovery feeding a canonical governance store |
 | copilot-billing-governance | v0.1.0-preview | 3.5, 1.18, 1.14 | Governance for Copilot consumption billing — PAYG/prepaid credit policies, entitlement engine, per-agent caps, coverage-gap analysis |
 | copilot-studio-analytics | v2.0.2 | 3.2 | Business impact analytics for Copilot Studio agents |
 | credential-oversharing-detector | v2.1.2 | 1.14, 1.4, 1.18 | Configuration-time credential scope governance for agent connectors |
