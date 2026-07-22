@@ -859,7 +859,7 @@ COMPLIANCESTATE_COLUMNS = [
 # --- 9. fsi_CaiScanRun --------------------------------------------------------
 SCANRUN_COLUMNS = [
     _string_col("fsi_RunId", "Run ID", 100,
-                description="Stable run identifier (GUID/UUIDv7/ULID-compatible)"),
+                description="Stable cai- run identifier with UTC timestamp and random suffix (36 characters or fewer)"),
     _datetime_col("fsi_StartedAt", "Started At",
                   description="UTC timestamp when the scan run started"),
     _datetime_col("fsi_CompletedAt", "Completed At", required=False,

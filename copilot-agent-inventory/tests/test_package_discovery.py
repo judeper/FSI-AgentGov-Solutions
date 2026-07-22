@@ -1044,6 +1044,13 @@ def test_regression_defect4_sample_json_shape_matches_scan_all_output() -> None:
     assert isinstance(sample["agents"], list), (
         "sample['agents'] must be a list — Defect 4 regression."
     )
+    sample_run_id = sample["summary"]["runId"]
+    assert sample_run_id.startswith("cai-20260721T020005Z-")
+    assert len(sample_run_id) == 35
+    assert sample["summary"]["coreAgentCount"] == len(sample["agents"])
+    assert all(agent["fsi_runid"] == sample_run_id for agent in sample["agents"])
+    assert sample["summary"]["agent365"]["requestedMode"] == "Present"
+    assert sample["summary"]["agent365"]["detectionConfidence"] == "OperatorDeclared"
 
     # Forbidden top-level keys.
     assert "runId" not in sample_toplevel, (
@@ -1706,6 +1713,7 @@ def test_scan_all_summary_emits_agent365_and_coverage_scope_contract() -> None:
     assert "agent365" in summary
     assert "coverageScope" in summary
     assert summary["status"] == "Dry Run"
+    assert summary["coreAgentCount"] == len(result["agents"])
     agent365 = summary["agent365"]
     for key in (
         "requestedMode",

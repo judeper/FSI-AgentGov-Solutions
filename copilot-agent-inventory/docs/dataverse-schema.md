@@ -285,7 +285,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | Column (SchemaName) | Logical name | Type | Required | Description |
 |---------------------|--------------|------|----------|-------------|
 | `fsi_Name` | `fsi_name` | String(850) | Yes | Primary name attribute |
-| `fsi_RunId` | `fsi_runid` | String(100) | Yes | Stable run identifier (GUID/UUIDv7/ULID-compatible) |
+| `fsi_RunId` | `fsi_runid` | String(100) | Yes | Stable cai- run identifier with UTC timestamp and random suffix (36 characters or fewer) |
 | `fsi_StartedAt` | `fsi_startedat` | DateTime | Yes | UTC timestamp when the scan run started |
 | `fsi_CompletedAt` | `fsi_completedat` | DateTime | No | UTC timestamp when the scan run completed |
 | `fsi_Status` | `fsi_status` | Picklist (`fsi_cai_scanrunstatus`) | Yes | Run outcome: Complete / Incomplete / Failed / Dry Run |

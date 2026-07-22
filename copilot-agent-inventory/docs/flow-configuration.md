@@ -532,7 +532,7 @@ new row** here — that would accumulate duplicate ledger rows.
 | `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['arg']` | `fsi_arglayerstatus` | Choice | Layer 1 (ARG) coverage status — Step 8a |
 | `body('Parse_Summary')?['summary']?['argAgentCount']` | `fsi_argagentcount` | Integer | Agents discovered through the ARG layer |
 | `body('Parse_Summary')?['summary']?['argLayer']?['httpStatus']` | `fsi_arghttpstatus` | Integer (nullable) | ARG query HTTP status |
-| `body('Parse_Summary')?['summary']?['coreAgentCount']` | `fsi_coreagentcount` | Integer | Reconciled core (non-package) agent count |
+| `body('Parse_Summary')?['summary']?['coreAgentCount']` | `fsi_coreagentcount` | Integer | Total agent rows emitted to the canonical agent table, including package-only rows |
 | `body('Parse_Summary')?['summary']?['featureCount']` | `fsi_featurecount` | Integer | Feature rows written this run |
 | `body('Parse_Summary')?['summary']?['authShareCount']` | `fsi_authsharecount` | Integer | Auth/share rows recorded this run |
 | `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['registry']` | `fsi_registrylayerstatus` | Choice | Registry-correlation coverage status — Step 8a |

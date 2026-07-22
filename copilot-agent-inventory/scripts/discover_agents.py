@@ -2061,6 +2061,7 @@ def scan_all(ctx: ScanContext) -> dict:
         "status": overall_status,
         "argAgentCount": len(arg_agents),
         "scannedAgentCount": len(scanned_agents),
+        "coreAgentCount": len(final_agents),
         "featureCount": len(features),
         "authShareCount": len(auth_shares),
         "environmentCount": len(environments),

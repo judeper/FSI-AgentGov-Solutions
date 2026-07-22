@@ -1,11 +1,11 @@
 {
   "$comment": "ILLUSTRATIVE SYNTHETIC DATA ONLY. All identities, UPNs, package ids, GUIDs, and organisation names are fictional (Contoso / Northwind). This dataset does NOT represent a real tenant, real agents, or real licensing state. It is a sample BI-ready combined output produced by the integrated discovery scanner (discover_agents.py --agent365 present --registry-export ... --resolve-entitlement). The combined output reflects the exact shape returned by scan_all: top-level keys are summary, agents, features, and authShares. The summary block carries runId, counts (argAgentCount, scannedAgentCount, coreAgentCount, featureCount, authShareCount, environmentCount), reconciliation, and — when the respective flags are active — packageNewRowCount, packageScanTruncated, registryCorrelation, and entitlementResolution sub-objects. The summary ALSO carries the agent365 resolution block (requestedMode, resolvedState, resolutionSource, detectionConfidence, licenseProbeAttempted, packageApiAttempted, layerStatus, httpStatus, sanitized errorCode/errorSubcode/reason, packagesObserved, packageNewRowCount, pagingTruncated) and the coverageScope block (layers.arg/environmentDataverse/packageApi/registry/entitlement statuses nested under coverageScope.layers, plus authoritativeFor, limitations, warning). runId is a synthetic collision-resistant, sortable identifier (UTC timestamp prefix + random suffix, <=36 chars), used identically in summary.runId and every agent fsi_runid so agent rows join to the fsi_caiscanrun ledger row. packageNewRowCount and packageScanTruncated remain DEPRECATED top-level mirrors, retained in this sample because it represents an attempted (present) Package API run; when the Package API is not attempted they are omitted and agent365.packagesObserved/packageNewRowCount are null (not observed) rather than 0 (observed empty). The enum label strings for detectionConfidence and resolutionSource reflect the integrated scanner/schema contract: detectionConfidence carries one of OperatorDeclared/Confirmed/Heuristic/Inconclusive/NotApplicable, and resolutionSource is a plain String (one of CLI/Environment/DeprecatedAlias/Default/LicenseProbe/DryRun) that the flow writes directly to fsi_agent365resolutionsource with NO label-to-integer conversion. This file is the SCANNER JSON ONLY — there is deliberately no top-level scanRun key; the Dataverse fsi_caiscanrun run-row mapping is shown separately in docs/flow-configuration.md. Field names are Dataverse LOGICAL names (SchemaName lowercased, no underscores between words). Picklist fields carry LABEL strings; the Power Automate flow converts each label to its option-set integer via Switch/Compose before the upsert (Update a row with an alternate key); the scanner itself performs no Dataverse write and no label-to-integer conversion. Package ids use the P_... id space from the Microsoft Graph Package Management API and are DISTINCT from Copilot Studio bot GUIDs. fsi_ownerentitlementevidence contains matched service-plan GUIDs ONLY (NOT SKU GUIDs). Upsert routing: enriched rows (Rows 1, 2, 3, 5; fsi_discoverysource == 'Reconciled (multi-source)') carry BOTH fsi_agentid and fsi_environmentid and route to fsi_AgentEnvKey (Branch A — checked first); package-only row (Row 4; fsi_discoverysource == 'Package Management API', fsi_agentid == fsi_packageid) has no fsi_environmentid and routes to fsi_PackageKey (Branch B). Row notes: Row 1 (Loan Origination Assistant, Contoso) — Reconciled (multi-source), Paid Copilot, Exact owner from Agent Registry Export; evidence: M365_COPILOT_BUSINESS_CHAT service-plan GUID 3f30311c-6b1e-48a4-ab79-725b469da960. Row 2 (Account Summary Bot, Northwind) — Reconciled (multi-source), Copilot Chat Only, Exact owner from Agent Registry Export; evidence: Bing_Chat_Enterprise deny-plan GUID 0d0c0d31-fae7-41f2-b909-eaf4d7f26dba. Row 3 (Regulatory Filing Assistant, Contoso) — Reconciled (multi-source), Unknown entitlement (pwsh subprocess failed at resolution time), Heuristic owner (UPN-only match, no object GUID returned; export is stale >45 days at scan time). Row 4 (Trade Confirmation Helper, Contoso) — Package Management API (package-only: no bot-GUID row matched appId or manifestId; fsi_agentid = fsi_packageid), Unresolved owner, Unknown entitlement. Row 5 (Portfolio Risk Advisor, Contoso) — Reconciled (multi-source), Paid Copilot, Exact owner from Dataverse Owner field (live, no staleness signal); evidence: M365_COPILOT_APPS service-plan GUID a62f8878-de10-42f3-b68f-6149a25ceb97. Exact native XLSX column headers in the Microsoft 365 admin center are UNVERIFIED; synthetic header names in registry-columnmap.sample.json are placeholders mapped through the configurable alias map.",
   "summary": {
-    "runId": "20260721T020005Z-7f3b9c21a4e6",
+    "runId": "cai-20260721T020005Z-7f3b9c21a4e6d8",
     "status": "Complete",
     "argAgentCount": 4,
     "scannedAgentCount": 4,
-    "coreAgentCount": 4,
+    "coreAgentCount": 5,
     "featureCount": 0,
     "authShareCount": 0,
     "environmentCount": 1,
@@ -52,7 +52,7 @@
       "requestedMode": "Present",
       "resolvedState": "Present",
       "resolutionSource": "CLI",
-      "detectionConfidence": "Confirmed",
+      "detectionConfidence": "OperatorDeclared",
       "licenseProbeAttempted": false,
       "packageApiAttempted": true,
       "layerStatus": "Full",
@@ -116,7 +116,7 @@
       "fsi_ownerentitlementevidence": "[\"3f30311c-6b1e-48a4-ab79-725b469da960\"]",
       "fsi_scancompleteness": "Complete",
       "fsi_scancompletenessreason": null,
-      "fsi_runid": "20260721T020005Z-7f3b9c21a4e6"
+      "fsi_runid": "cai-20260721T020005Z-7f3b9c21a4e6d8"
     },
     {
       "fsi_agentid": "b2c3d4e5-2222-3333-4444-5555ccccdddd",
@@ -148,7 +148,7 @@
       "fsi_ownerentitlementevidence": "[\"0d0c0d31-fae7-41f2-b909-eaf4d7f26dba\"]",
       "fsi_scancompleteness": "Complete",
       "fsi_scancompletenessreason": null,
-      "fsi_runid": "20260721T020005Z-7f3b9c21a4e6"
+      "fsi_runid": "cai-20260721T020005Z-7f3b9c21a4e6d8"
     },
     {
       "fsi_agentid": "c3d4e5f6-3333-4444-5555-6666ddddeee",
@@ -180,7 +180,7 @@
       "fsi_ownerentitlementevidence": "[]",
       "fsi_scancompleteness": "Incomplete Scan",
       "fsi_scancompletenessreason": "stale registry export; entitlement lookup failed",
-      "fsi_runid": "20260721T020005Z-7f3b9c21a4e6"
+      "fsi_runid": "cai-20260721T020005Z-7f3b9c21a4e6d8"
     },
     {
       "fsi_agentid": "P_4de5f6a7-9c1b-4af3-c7e4-f3d2b5a0e184",
@@ -211,7 +211,7 @@
       "fsi_ownerentitlementevidence": "[]",
       "fsi_scancompleteness": "Incomplete Scan",
       "fsi_scancompletenessreason": "package-only row; no per-environment bot scan coverage",
-      "fsi_runid": "20260721T020005Z-7f3b9c21a4e6"
+      "fsi_runid": "cai-20260721T020005Z-7f3b9c21a4e6d8"
     },
     {
       "fsi_agentid": "d4e5f6a7-4444-5555-6666-7777eeeeffff",
@@ -243,7 +243,7 @@
       "fsi_ownerentitlementevidence": "[\"a62f8878-de10-42f3-b68f-6149a25ceb97\"]",
       "fsi_scancompleteness": "Complete",
       "fsi_scancompletenessreason": null,
-      "fsi_runid": "20260721T020005Z-7f3b9c21a4e6"
+      "fsi_runid": "cai-20260721T020005Z-7f3b9c21a4e6d8"
     }
   ],
   "features": [],

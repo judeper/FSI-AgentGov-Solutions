@@ -209,7 +209,7 @@ The scanner always emits an `agent365` resolution block in its JSON `summary`:
 | `requestedMode` | `Present` / `Absent` / `Auto` — the mode after precedence resolution (the scanner emits title-case; the `--agent365` CLI flag stays lower-case). |
 | `resolvedState` | `Present` / `Absent` / `NotDetected` / `Inconclusive`. |
 | `resolutionSource` | A plain **String** naming what determined the state — one of `CLI`, `Environment`, `DeprecatedAlias`, `Default`, `LicenseProbe`, or `DryRun`. Persisted directly to `fsi_agent365resolutionsource` (no option-set conversion). |
-| `detectionConfidence` | `OperatorDeclared` (operator-asserted with no independent probe — e.g. `absent`, or a `present` declaration that did not reach the Package API), `Confirmed` (Package API observed packages), `Heuristic` (`auto` exact-name license match or no-match), `Inconclusive` (`auto` probe could not decide), or `NotApplicable`. |
+| `detectionConfidence` | `OperatorDeclared` (explicit `present` / `absent`), `Heuristic` (`auto` exact-name license match or no-match), or `Inconclusive` (`auto` probe could not decide). `Confirmed` and `NotApplicable` are reserved schema labels for additional resolvers. |
 | `licenseProbeAttempted` | Whether `subscribedSkus` was called (`auto` only). |
 | `packageApiAttempted` | Whether the Package API was called. |
 | `layerStatus` | `Full` / `Deferred` / `Unsupported` / `Partial` / `Failed` / `Dry Run`. |
@@ -428,7 +428,7 @@ row on `fsi_runid` (`fsi_copilotagent.fsi_runid == fsi_caiscanrun.fsi_runid`).
 
 Run IDs are **collision-resistant and sortable** — a synthetic identity built
 from a UTC timestamp prefix plus a random suffix, at most 36 characters (for
-example `20260721T020005Z-7f3b9c21a4e6`). The timestamp prefix keeps runs
+example `cai-20260721T020005Z-7f3b9c21a4e6d8`). The timestamp prefix keeps runs
 naturally ordered while the random suffix prevents concurrent or replayed runs
 from ever sharing a key.
 
@@ -459,7 +459,7 @@ Columns (Dataverse logical names):
 | `fsi_packagescantruncated` | Package paging-truncated flag (`summary.agent365.pagingTruncated`). |
 | `fsi_arglayerstatus` | Layer 1 (ARG) coverage status Choice (`summary.coverageScope.layers.arg`). |
 | `fsi_argagentcount` / `fsi_arghttpstatus` | Agents discovered via ARG / ARG query HTTP status (nullable). |
-| `fsi_coreagentcount` / `fsi_featurecount` / `fsi_authsharecount` | Reconciled core (non-package) agent, feature, and auth/share counts. |
+| `fsi_coreagentcount` / `fsi_featurecount` / `fsi_authsharecount` | Total canonical agent rows (including package-only rows), feature rows, and auth/share rows. |
 | `fsi_registrylayerstatus` | Registry-correlation coverage status Choice (`summary.coverageScope.layers.registry`). |
 | `fsi_registryrowcount` / `fsi_registrymatchedcount` / `fsi_registryunmatchedcount` | Registry rows read / matched / unmatched (nullable). |
 | `fsi_registryambiguousnameskippedcount` / `fsi_registryinvaliddatewarningcount` | Ambiguous-name rows skipped / invalid as-of date warnings (nullable). |
