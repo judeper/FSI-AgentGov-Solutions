@@ -425,3 +425,183 @@ def test_main_resolve_entitlement_with_registry_export_is_allowed(
     }
     with patch.object(da, "scan_all", return_value=ok_result):
         da.main()  # must not raise (validation passes)
+
+
+# =============================================================================
+# Agent 365 v0.4 — CLI precedence, sanitization, dry-run I/O, run IDs
+# =============================================================================
+
+
+def test_main_defaults_to_agent365_absent(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict = {}
+
+    def _fake_scan(ctx):
+        captured["ctx"] = ctx
+        return {"summary": {"status": "Complete", "environmentFailures": []},
+                "agents": [], "features": [], "authShares": []}
+
+    monkeypatch.delenv("CAI_AGENT365", raising=False)
+    monkeypatch.setattr(sys, "argv", ["discover_agents.py", "--dry-run"])
+    with patch.object(da, "scan_all", side_effect=_fake_scan):
+        da.main()
+    ctx = captured["ctx"]
+    assert ctx.agent365_requested_mode == "absent"
+    assert ctx.agent365_resolution_source == "Default"
+
+
+def test_main_env_mode_used_when_cli_absent(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict = {}
+
+    def _fake_scan(ctx):
+        captured["ctx"] = ctx
+        return {"summary": {"status": "Complete", "environmentFailures": []},
+                "agents": [], "features": [], "authShares": []}
+
+    monkeypatch.setenv("CAI_AGENT365", "auto")
+    monkeypatch.setattr(sys, "argv", ["discover_agents.py", "--dry-run"])
+    with patch.object(da, "scan_all", side_effect=_fake_scan):
+        da.main()
+    assert captured["ctx"].agent365_requested_mode == "auto"
+    assert captured["ctx"].agent365_resolution_source == "Environment"
+
+
+def test_main_deprecated_alias_maps_to_present_and_warns(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    captured: dict = {}
+
+    def _fake_scan(ctx):
+        captured["ctx"] = ctx
+        return {"summary": {"status": "Complete", "environmentFailures": []},
+                "agents": [], "features": [], "authShares": []}
+
+    monkeypatch.delenv("CAI_AGENT365", raising=False)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["discover_agents.py", "--dry-run", "--enable-package-api"],
+    )
+    with patch.object(da, "scan_all", side_effect=_fake_scan), caplog.at_level("WARNING"):
+        da.main()
+    assert captured["ctx"].agent365_requested_mode == "present"
+    assert captured["ctx"].agent365_resolution_source == "DeprecatedAlias"
+    assert any("DEPRECATED: --enable-package-api" in rec.getMessage() for rec in caplog.records)
+
+
+def test_main_cli_mode_has_highest_precedence_when_inputs_agree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict = {}
+
+    def _fake_scan(ctx):
+        captured["ctx"] = ctx
+        return {"summary": {"status": "Complete", "environmentFailures": []},
+                "agents": [], "features": [], "authShares": []}
+
+    monkeypatch.setenv("CAI_AGENT365", "present")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["discover_agents.py", "--dry-run", "--agent365", "present", "--enable-package-api"],
+    )
+    with patch.object(da, "scan_all", side_effect=_fake_scan):
+        da.main()
+    assert captured["ctx"].agent365_requested_mode == "present"
+    assert captured["ctx"].agent365_resolution_source == "CLI"
+
+
+def test_main_conflicting_cli_and_alias_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["discover_agents.py", "--dry-run", "--agent365", "auto", "--enable-package-api"],
+    )
+    with pytest.raises(SystemExit) as excinfo:
+        da.main()
+    assert excinfo.value.code == 2
+
+
+def test_main_invalid_agent365_env_value_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CAI_AGENT365", "maybe")
+    monkeypatch.setattr(sys, "argv", ["discover_agents.py", "--dry-run"])
+    with pytest.raises(SystemExit) as excinfo:
+        da.main()
+    assert excinfo.value.code == 2
+
+
+def test_main_reads_agent365_alias_overrides_from_named_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict = {}
+
+    def _fake_scan(ctx):
+        captured["ctx"] = ctx
+        return {"summary": {"status": "Complete", "environmentFailures": []},
+                "agents": [], "features": [], "authShares": []}
+
+    monkeypatch.setenv("CAI_AGENT365_LICENSE_ALIASES", "contoso-agent-365-custom, Foo Plan")
+    monkeypatch.delenv("CAI_AGENT365_SKU_ALIASES", raising=False)
+    monkeypatch.setattr(sys, "argv", ["discover_agents.py", "--dry-run"])
+    with patch.object(da, "scan_all", side_effect=_fake_scan):
+        da.main()
+    assert captured["ctx"].agent365_alias_overrides == (
+        "CONTOSO_AGENT_365_CUSTOM",
+        "FOO_PLAN",
+    )
+
+
+def test_main_legacy_agent365_alias_env_still_works_with_warning(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    captured: dict = {}
+
+    def _fake_scan(ctx):
+        captured["ctx"] = ctx
+        return {"summary": {"status": "Complete", "environmentFailures": []},
+                "agents": [], "features": [], "authShares": []}
+
+    monkeypatch.delenv("CAI_AGENT365_LICENSE_ALIASES", raising=False)
+    monkeypatch.setenv("CAI_AGENT365_SKU_ALIASES", "legacy-value")
+    monkeypatch.setattr(sys, "argv", ["discover_agents.py", "--dry-run"])
+    with patch.object(da, "scan_all", side_effect=_fake_scan), caplog.at_level("WARNING"):
+        da.main()
+    assert captured["ctx"].agent365_alias_overrides == ("LEGACY_VALUE",)
+    assert any("DEPRECATED: CAI_AGENT365_SKU_ALIASES" in rec.getMessage() for rec in caplog.records)
+
+
+def test_generate_run_id_is_sortable_and_collision_resistant() -> None:
+    now = da.datetime(2026, 7, 22, 17, 0, 0, tzinfo=da.timezone.utc)
+    run_ids = {da._generate_run_id(now) for _ in range(40)}
+    assert len(run_ids) == 40
+    assert all(rid.startswith("cai-20260722T170000Z-") for rid in run_ids)
+
+
+def test_sanitize_reason_redacts_bearer_upn_and_url() -> None:
+    text = (
+        "Bearer abc.def.ghi user alice@contoso.com "
+        "https://contoso.crm.dynamics.com/api/data"
+    )
+    cleaned = da._sanitize_reason(text)
+    assert "abc.def.ghi" not in cleaned
+    assert "alice@contoso.com" not in cleaned
+    assert "contoso.crm.dynamics.com" not in cleaned
+    assert "<redacted-upn>" in cleaned
+    assert "<redacted-url>" in cleaned
+
+
+def test_scan_all_dry_run_auto_performs_no_token_or_network_io() -> None:
+    ctx = da.ScanContext(
+        run_id="dryrun-auto-001",
+        dry_run=True,
+        agent365_requested_mode="auto",
+        agent365_resolution_source="Test",
+    )
+    with patch.object(da, "_get_token") as mock_token, patch.object(
+        da, "_request_with_backoff"
+    ) as mock_request:
+        result = da.scan_all(ctx)
+    mock_token.assert_not_called()
+    mock_request.assert_not_called()
+    assert result["summary"]["agent365"]["layerStatus"] == da.LAYER_STATUS_DRY_RUN
