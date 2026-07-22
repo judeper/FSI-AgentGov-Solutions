@@ -114,6 +114,172 @@ def test_enumerate_environments_non_json_body_raises() -> None:
             da.enumerate_environments(ctx, MagicMock())
 
 
+def test_nested_bap_instance_url_is_used_for_dataverse_scan() -> None:
+    """The live BAP shape nests the instance URL under linked metadata."""
+    ctx = _ctx()
+    session = MagicMock()
+    environment = {
+        "name": "env-contoso-001",
+        "properties": {
+            "databaseType": "CommonDataService",
+            "linkedEnvironmentMetadata": {
+                "instanceUrl": "https://contoso.crm.dynamics.com/",
+            },
+        },
+    }
+
+    with patch.object(
+        da, "scan_environment_bots", return_value=([], None)
+    ) as scan_bots:
+        result = da._scan_one_environment(ctx, session, environment)
+
+    assert result["status"] == "Complete"
+    assert result["environmentUrl"] == "https://contoso.crm.dynamics.com"
+    scan_bots.assert_called_once_with(
+        ctx, session, "https://contoso.crm.dynamics.com"
+    )
+
+
+def test_missing_dataverse_url_fails_before_http_request() -> None:
+    """Malformed BAP metadata is a coverage gap, not a relative HTTP request."""
+    ctx = _ctx()
+    session = MagicMock()
+    environment = {
+        "name": "env-contoso-001",
+        "properties": {"databaseType": "CommonDataService"},
+    }
+
+    with patch.object(da, "scan_environment_bots") as scan_bots:
+        result = da._scan_one_environment(ctx, session, environment)
+
+    assert result["status"] == "Failed"
+    assert result["environmentUrl"] == ""
+    assert result["failures"] == [
+        {
+            "environmentId": "env-contoso-001",
+            "stage": "environment",
+            "httpStatus": None,
+            "reason": (
+                "BAP environment metadata is missing a Dataverse instance URL"
+            ),
+        }
+    ]
+    scan_bots.assert_not_called()
+
+
+def test_scan_all_skips_explicit_database_free_environment() -> None:
+    """A BAP environment with databaseType=None is not a Layer 2 failure."""
+    ctx = _ctx()
+    dataverse_environment = {
+        "name": "env-contoso-001",
+        "properties": {
+            "databaseType": "CommonDataService",
+            "linkedEnvironmentMetadata": {
+                "instanceUrl": "https://contoso.crm.dynamics.com",
+            },
+        },
+    }
+    database_free_environment = {
+        "name": "env-contoso-002",
+        "properties": {
+            "databaseType": "None",
+            "linkedEnvironmentMetadata": None,
+        },
+    }
+    outcome = {
+        "environmentId": "env-contoso-001",
+        "environmentUrl": "https://contoso.crm.dynamics.com",
+        "agents": [],
+        "features": [],
+        "authShares": [],
+        "deltaLink": None,
+        "failures": [],
+        "status": "Complete",
+    }
+
+    with patch.object(da, "probe_arg_resource_type", return_value=False), \
+         patch.object(
+             da,
+             "enumerate_environments",
+             return_value=[dataverse_environment, database_free_environment],
+         ), \
+         patch.object(
+             da, "_scan_one_environment", return_value=outcome
+         ) as scan_environment:
+        result = da.scan_all(ctx)
+
+    assert scan_environment.call_count == 1
+    assert scan_environment.call_args.args[2] == dataverse_environment
+    assert result["summary"]["environmentCount"] == 2
+    assert result["summary"]["environmentEnumeration"] == {
+        "status": "Success",
+        "environmentCount": 2,
+        "dataverseEnvironmentCount": 1,
+        "skippedNoDataverseCount": 1,
+        "httpStatus": None,
+        "reason": "",
+    }
+    assert result["summary"]["environmentFailures"] == []
+    assert result["summary"]["status"] == "Complete"
+    assert (
+        result["summary"]["coverageScope"]["layers"]["environmentDataverse"]
+        == "Full"
+    )
+
+
+def test_scan_all_surfaces_when_all_environments_have_no_dataverse() -> None:
+    """Vacuous Layer 2 coverage remains auditable through explicit skip counts."""
+    ctx = _ctx()
+    database_free_environments = [
+        {
+            "name": f"env-contoso-{index:03d}",
+            "properties": {
+                "databaseType": "None",
+                "linkedEnvironmentMetadata": None,
+            },
+        }
+        for index in (1, 2)
+    ]
+
+    with patch.object(da, "probe_arg_resource_type", return_value=False), \
+         patch.object(
+             da,
+             "enumerate_environments",
+             return_value=database_free_environments,
+         ), \
+         patch.object(da, "_scan_one_environment") as scan_environment:
+        result = da.scan_all(ctx)
+
+    scan_environment.assert_not_called()
+    enumeration = result["summary"]["environmentEnumeration"]
+    assert enumeration["environmentCount"] == 2
+    assert enumeration["dataverseEnvironmentCount"] == 0
+    assert enumeration["skippedNoDataverseCount"] == 2
+    assert result["summary"]["status"] == "Complete"
+    assert (
+        result["summary"]["coverageScope"]["layers"]["environmentDataverse"]
+        == "Full"
+    )
+
+
+def test_database_type_none_with_instance_url_is_still_scannable() -> None:
+    """A present URL wins over a stale/contradictory databaseType value."""
+    environment = {
+        "name": "env-contoso-001",
+        "properties": {
+            "databaseType": "None",
+            "linkedEnvironmentMetadata": {
+                "instanceUrl": "https://contoso.crm.dynamics.com",
+            },
+        },
+    }
+
+    assert da._environment_dataverse_url(environment) == (
+        "https://contoso.crm.dynamics.com"
+    )
+    assert da._environment_has_no_dataverse(environment) is False
+
+
 # =============================================================================
 # scan_all — enumeration failure vs genuine empty (top-level status)
 # =============================================================================

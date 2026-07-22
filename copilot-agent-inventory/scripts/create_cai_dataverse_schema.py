@@ -912,6 +912,19 @@ SCANRUN_COLUMNS = [
                  description="Count of auth/share posture rows emitted in this run"),
     _integer_col("fsi_EnvironmentCount", "Environment Count", required=False,
                  description="Count of environments enumerated for this run"),
+    _integer_col("fsi_DataverseEnvironmentCount", "Dataverse Environment Count",
+                 required=False,
+                 description=(
+                     "Count of enumerated environments in Layer 2 scope, excluding "
+                     "only environments explicitly classified without Dataverse; "
+                     "malformed URL metadata remains visible as a coverage failure"
+                 )),
+    _integer_col("fsi_NoDataverseEnvironmentCount",
+                 "No Dataverse Environment Count", required=False,
+                 description=(
+                     "Count of enumerated environments explicitly classified with "
+                     "no Dataverse database; Layer 2 is not applicable"
+                 )),
     _boolean_col("fsi_LicenseProbeAttempted", "License Probe Attempted", default=False,
                  description="Whether the tenant Agent 365 /subscribedSkus probe was attempted"),
     _picklist_col("fsi_PackageApiLayerStatus", "Package API Layer Status",

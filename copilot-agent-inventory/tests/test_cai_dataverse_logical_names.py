@@ -243,6 +243,8 @@ def test_scanrun_required_columns_and_logical_names() -> None:
         "fsi_ArgAgentCount": "fsi_argagentcount",
         "fsi_DataverseScannedAgentCount": "fsi_dataversescannedagentcount",
         "fsi_EnvironmentCount": "fsi_environmentcount",
+        "fsi_DataverseEnvironmentCount": "fsi_dataverseenvironmentcount",
+        "fsi_NoDataverseEnvironmentCount": "fsi_nodataverseenvironmentcount",
         "fsi_RegistryLayerStatus": "fsi_registrylayerstatus",
         "fsi_RegistryRowCount": "fsi_registryrowcount",
         "fsi_EntitlementLayerStatus": "fsi_entitlementlayerstatus",

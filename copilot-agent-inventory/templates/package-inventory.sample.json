@@ -12,6 +12,8 @@
     "environmentEnumeration": {
       "status": "Success",
       "environmentCount": 1,
+      "dataverseEnvironmentCount": 1,
+      "skippedNoDataverseCount": 0,
       "httpStatus": null,
       "reason": ""
     },

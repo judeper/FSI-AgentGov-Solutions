@@ -932,6 +932,37 @@ def enumerate_environments(ctx: ScanContext, session: requests.Session) -> list[
     return environments
 
 
+def _environment_dataverse_url(environment: dict) -> str:
+    """Return the Dataverse instance URL from supported BAP response shapes."""
+    properties = environment.get("properties")
+    if not isinstance(properties, dict):
+        properties = {}
+    linked_metadata = properties.get("linkedEnvironmentMetadata")
+    if not isinstance(linked_metadata, dict):
+        linked_metadata = {}
+
+    for candidate in (
+        environment.get("url"),
+        environment.get("instanceUrl"),
+        properties.get("instanceUrl"),
+        linked_metadata.get("instanceUrl"),
+    ):
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip().rstrip("/")
+    return ""
+
+
+def _environment_has_no_dataverse(environment: dict) -> bool:
+    """Return True when BAP explicitly classifies the environment as database-free."""
+    properties = environment.get("properties")
+    if not isinstance(properties, dict):
+        return False
+    return (
+        not _environment_dataverse_url(environment)
+        and str(properties.get("databaseType") or "").strip().casefold() == "none"
+    )
+
+
 def _dataverse_url(environment_url: str, path: str) -> str:
     base = environment_url.rstrip("/")
     return f"{base}/api/data/{DATAVERSE_API_VERSION}/{path}"
@@ -1309,7 +1340,7 @@ def _scan_one_environment(
       * ``"Failed"``     — the bot read itself failed; the environment contributed
                            no trustworthy agent rows.
     """
-    env_url = environment.get("url") or environment.get("instanceUrl") or ""
+    env_url = _environment_dataverse_url(environment)
     env_id = environment.get("name") or environment.get("id") or ""
     result: dict = {
         "environmentId": env_id,
@@ -1321,6 +1352,18 @@ def _scan_one_environment(
         "failures": [],
         "status": "Complete",
     }
+    if not env_url:
+        exc = ValueError(
+            "BAP environment metadata is missing a Dataverse instance URL"
+        )
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "environment", None, exc))
+        logger.warning(
+            "Environment %s has no Dataverse instance URL; recorded as a "
+            "coverage gap.",
+            env_id,
+        )
+        return result
     try:
         bots, delta_link = scan_environment_bots(ctx, session, env_url)
     except EnvironmentScanError as exc:
@@ -1943,11 +1986,27 @@ def scan_all(ctx: ScanContext) -> dict:
     env_failures: list[dict] = []
     env_statuses: list[str] = []
 
+    # Power Platform can return environments that explicitly have no Dataverse
+    # database. Layer 2 does not apply to those environments; they remain part of
+    # the enumeration count but are not submitted as malformed relative URLs.
+    scan_environments = [
+        environment
+        for environment in environments
+        if not _environment_has_no_dataverse(environment)
+    ]
+    skipped_no_dataverse = len(environments) - len(scan_environments)
+    if skipped_no_dataverse:
+        logger.info(
+            "Skipping %d environment(s) explicitly classified without Dataverse; "
+            "Layer 2 is not applicable to them.",
+            skipped_no_dataverse,
+        )
+
     # Throttled concurrent per-environment fan-out (~10 workers, 429 backoff).
     with ThreadPoolExecutor(max_workers=ctx.max_workers) as pool:
         futures = {
             pool.submit(_scan_one_environment, ctx, session, env): env
-            for env in environments
+            for env in scan_environments
         }
         for future in as_completed(futures):
             outcome = future.result()
@@ -2069,6 +2128,8 @@ def scan_all(ctx: ScanContext) -> dict:
         "environmentEnumeration": {
             "status": enumeration_status,
             "environmentCount": len(environments),
+            "dataverseEnvironmentCount": len(scan_environments),
+            "skippedNoDataverseCount": skipped_no_dataverse,
             "httpStatus": enumeration_http,
             "reason": enumeration_reason,
         },

@@ -294,7 +294,10 @@ authorization or API failure must never look like a clean, agent-free tenant.
 
 - **`summary.status`** — `Complete` / `Incomplete` / `Failed` for the whole run.
 - **`summary.environmentEnumeration`** — `status` (`Success` / `Failed` /
-  `Dry Run`), `environmentCount`, `httpStatus`, `reason`. A failed environment
+  `Dry Run`), `environmentCount`, `dataverseEnvironmentCount`,
+  `skippedNoDataverseCount`, `httpStatus`, `reason`. The two scoped counts make
+  the Layer 2 denominator auditable: total enumerated = Layer 2-scoped +
+  explicitly no-Dataverse. A failed environment
   list (401/403/5xx or malformed body) is a `Failed` enumeration, **not** an empty
   tenant, and the scanner exits non-zero.
 - **`summary.argLayer`** — `status` (`Available` / `Unavailable` / `Failed` /
@@ -309,6 +312,11 @@ authorization or API failure must never look like a clean, agent-free tenant.
   `Failed` if every environment failed) and the agent count from that environment
   is **not** counted as an observed zero. Token material is scrubbed from reasons;
   ordinary environment identifiers are retained for provenance.
+- The BAP environment response exposes the Dataverse URL at
+  `properties.linkedEnvironmentMetadata.instanceUrl`; the scanner normalizes that
+  nested value before building OData URLs. Environments explicitly classified
+  with `databaseType: "None"` remain in `environmentCount` but are not submitted
+  to Layer 2 because the Dataverse scan is not applicable.
 
 Downstream persistence (the Power Automate flow) reads these fields to alert on
 coverage gaps rather than silently recording a partial inventory as complete.
@@ -450,7 +458,7 @@ Columns (Dataverse logical names):
 | `fsi_environmentfailurecount` | Count of per-environment coverage failures. |
 | `fsi_environmentenumerationhttpstatus` / `fsi_environmentenumerationreason` | Enumeration HTTP status / sanitized reason (nullable). |
 | `fsi_dataverselayerstatus` | Layer 2 (per-environment Dataverse) status Choice (`summary.coverageScope.layers.environmentDataverse`). |
-| `fsi_environmentcount` / `fsi_dataversescannedagentcount` | Environments enumerated / agents scanned through the Dataverse layer. |
+| `fsi_environmentcount` / `fsi_dataverseenvironmentcount` / `fsi_nodataverseenvironmentcount` / `fsi_dataversescannedagentcount` | Environments enumerated / Layer 2-scoped / explicitly no-Dataverse / agents scanned through the Dataverse layer. |
 | `fsi_agent365requestedmode` | `summary.agent365.requestedMode` (Choice). |
 | `fsi_agent365resolvedstate` | `summary.agent365.resolvedState` (Choice). |
 | `fsi_agent365resolutionsource` | `summary.agent365.resolutionSource` (**String**, written directly — no option-set conversion). |

@@ -185,6 +185,8 @@ the placeholders (`{{...}}`) with your organization's values.
                     "properties": {
                         "status": { "type": "string" },
                         "environmentCount": { "type": "integer" },
+                        "dataverseEnvironmentCount": { "type": "integer" },
+                        "skippedNoDataverseCount": { "type": "integer" },
                         "httpStatus": { "type": ["integer", "null"] },
                         "reason": { "type": "string" }
                     }
@@ -514,6 +516,8 @@ new row** here — that would accumulate duplicate ledger rows.
 | `body('Parse_Summary')?['summary']?['environmentEnumeration']?['reason']` | `fsi_environmentenumerationreason` | String (nullable) | Sanitized enumeration failure reason |
 | `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['environmentDataverse']` | `fsi_dataverselayerstatus` | Choice | Layer 2 (per-environment Dataverse) status — Step 8a |
 | `body('Parse_Summary')?['summary']?['environmentCount']` | `fsi_environmentcount` | Integer | Environments enumerated this run |
+| `body('Parse_Summary')?['summary']?['environmentEnumeration']?['dataverseEnvironmentCount']` | `fsi_dataverseenvironmentcount` | Integer | Environments in Layer 2 scope, including malformed candidates that surface as coverage failures |
+| `body('Parse_Summary')?['summary']?['environmentEnumeration']?['skippedNoDataverseCount']` | `fsi_nodataverseenvironmentcount` | Integer | Environments explicitly classified without Dataverse; Layer 2 not applicable |
 | `body('Parse_Summary')?['summary']?['scannedAgentCount']` | `fsi_dataversescannedagentcount` | Integer | Agents scanned through the Dataverse layer |
 | `body('Parse_Summary')?['summary']?['agent365']?['requestedMode']` | `fsi_agent365requestedmode` | Choice | Present / Absent / Auto — Step 8a |
 | `body('Parse_Summary')?['summary']?['agent365']?['resolvedState']` | `fsi_agent365resolvedstate` | Choice | Present / Absent / NotDetected / Inconclusive — Step 8a |

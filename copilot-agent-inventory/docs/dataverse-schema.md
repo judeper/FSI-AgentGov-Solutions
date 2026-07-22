@@ -4,7 +4,7 @@ Auto-generated schema documentation. Do not edit manually — regenerate with `p
 
 ## Overview
 
-The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-specific option sets**, and **1 shared option set(s)**, with **167 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
+The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-specific option sets**, and **1 shared option set(s)**, with **169 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
 
 > **Logical-name convention.** Dataverse logical names are the SchemaName lowercased with NO underscores between words (`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> `fsi_agentid`). Always use logical names in OData `$select` / `$filter` / `$orderby`.
 
@@ -307,6 +307,8 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_FeatureCount` | `fsi_featurecount` | Integer | No | Count of feature rows emitted in this run |
 | `fsi_AuthShareCount` | `fsi_authsharecount` | Integer | No | Count of auth/share posture rows emitted in this run |
 | `fsi_EnvironmentCount` | `fsi_environmentcount` | Integer | No | Count of environments enumerated for this run |
+| `fsi_DataverseEnvironmentCount` | `fsi_dataverseenvironmentcount` | Integer | No | Count of enumerated environments in Layer 2 scope, excluding only environments explicitly classified without Dataverse; malformed URL metadata remains visible as a coverage failure |
+| `fsi_NoDataverseEnvironmentCount` | `fsi_nodataverseenvironmentcount` | Integer | No | Count of enumerated environments explicitly classified with no Dataverse database; Layer 2 is not applicable |
 | `fsi_LicenseProbeAttempted` | `fsi_licenseprobeattempted` | Boolean (default: false) | No | Whether the tenant Agent 365 /subscribedSkus probe was attempted |
 | `fsi_PackageApiLayerStatus` | `fsi_packageapilayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of the Package Management API layer |
 | `fsi_PackageApiAttempted` | `fsi_packageapiattempted` | Boolean (default: false) | No | Whether Package Management API discovery was attempted |

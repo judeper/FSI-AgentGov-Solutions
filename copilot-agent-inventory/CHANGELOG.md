@@ -23,6 +23,19 @@ generated `docs/dataverse-schema.md` reference is regenerated.
 > Package API. `--enable-package-api` continues to work for one release as a
 > deprecated alias.
 
+### Fixed
+
+- **BAP Dataverse URL normalization.** Live environment enumeration returns the
+  Dataverse base URL at
+  `properties.linkedEnvironmentMetadata.instanceUrl`, not at the top level.
+  The scanner now resolves the nested URL before constructing OData requests
+  and skips environments explicitly classified with `databaseType: "None"` as
+  not applicable to Layer 2. This prevents valid environments from failing with
+  relative `/api/data/v9.2/...` URLs while preserving the total enumerated
+  environment count. `summary.environmentEnumeration` and `fsi_caiscanrun` now
+  expose the Layer 2-scoped and explicitly no-Dataverse environment counts
+  separately so the Layer 2 denominator is auditable in JSON and BI.
+
 ### Added
 
 - **License-aware mode selection (`--agent365 present|absent|auto`).** A new
