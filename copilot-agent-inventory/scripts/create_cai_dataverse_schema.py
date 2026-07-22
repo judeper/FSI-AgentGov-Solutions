@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create the Dataverse schema for the Copilot Agent Inventory solution.
 
-Deploys the canonical eight-entity governance store that serves as the
+Deploys the canonical nine-entity governance store that serves as the
 system-of-record for Copilot Studio and Agent Builder agents discovered
 across a tenant. All operations are idempotent (check-then-create), so the
 script is safe to re-run.
@@ -15,6 +15,7 @@ Canonical entity model (logical names):
   - fsi_caiusagesignal        (OrganizationOwned): Source-aggregated usage rollup
   - fsi_caiworkiqstate        (OrganizationOwned): Work IQ config-vs-invoked state
   - fsi_caicompliancestate    (OrganizationOwned): Risk + scan completeness
+  - fsi_caiscanrun            (OrganizationOwned): Run-level BI evidence
 
 ARA boundary (ASSUMPTION — flagged for Jude's ratification): this solution
 owns the NEW canonical entity fsi_copilotagent. It does NOT modify
@@ -204,6 +205,53 @@ CAI_OPTIONSETS = {
             ("Complete", 100000000),
             ("Incomplete Scan", 100000001),
             ("Failed", 100000002),
+        ],
+    },
+    "fsi_cai_scanrunstatus": {
+        "name": "fsi_cai_scanrunstatus",
+        "options": [
+            ("Complete", 100000000),
+            ("Incomplete", 100000001),
+            ("Failed", 100000002),
+            ("Dry Run", 100000003),
+        ],
+    },
+    "fsi_cai_agent365requestedmode": {
+        "name": "fsi_cai_agent365requestedmode",
+        "options": [
+            ("Present", 100000000),
+            ("Absent", 100000001),
+            ("Auto", 100000002),
+        ],
+    },
+    "fsi_cai_agent365resolvedstate": {
+        "name": "fsi_cai_agent365resolvedstate",
+        "options": [
+            ("Present", 100000000),
+            ("Absent", 100000001),
+            ("NotDetected", 100000002),
+            ("Inconclusive", 100000003),
+        ],
+    },
+    "fsi_cai_agent365detectionconfidence": {
+        "name": "fsi_cai_agent365detectionconfidence",
+        "options": [
+            ("OperatorDeclared", 100000000),
+            ("Confirmed", 100000001),
+            ("Heuristic", 100000002),
+            ("Inconclusive", 100000003),
+            ("NotApplicable", 100000004),
+        ],
+    },
+    "fsi_cai_layerstatus": {
+        "name": "fsi_cai_layerstatus",
+        "options": [
+            ("Full", 100000000),
+            ("Deferred", 100000001),
+            ("Unsupported", 100000002),
+            ("Partial", 100000003),
+            ("Failed", 100000004),
+            ("Dry Run", 100000005),
         ],
     },
     # Provenance of a feature row: which acquisition source produced it. Most
@@ -808,6 +856,111 @@ COMPLIANCESTATE_COLUMNS = [
                 description="Correlating scan run GUID"),
 ]
 
+# --- 9. fsi_CaiScanRun --------------------------------------------------------
+SCANRUN_COLUMNS = [
+    _string_col("fsi_RunId", "Run ID", 100,
+                description="Stable run identifier (GUID/UUIDv7/ULID-compatible)"),
+    _datetime_col("fsi_StartedAt", "Started At",
+                  description="UTC timestamp when the scan run started"),
+    _datetime_col("fsi_CompletedAt", "Completed At", required=False,
+                  description="UTC timestamp when the scan run completed"),
+    _picklist_col("fsi_Status", "Run Status", "fsi_cai_scanrunstatus",
+                  description="Run outcome: Complete / Incomplete / Failed / Dry Run"),
+    _picklist_col("fsi_EnvironmentEnumerationStatus", "Environment Enumeration Status",
+                  "fsi_cai_layerstatus", required=False,
+                  description="Status of environment enumeration for this run"),
+    _integer_col("fsi_EnvironmentFailureCount", "Environment Failure Count",
+                 required=False,
+                 description="Count of per-environment scans that failed"),
+    _integer_col("fsi_EnvironmentEnumerationHttpStatus", "Environment Enumeration HTTP Status",
+                 required=False,
+                 description="HTTP status returned by environment enumeration, when available"),
+    _memo_col("fsi_EnvironmentEnumerationReason", "Environment Enumeration Reason", 4000,
+              description="Sanitized reason for environment enumeration failure or partial status"),
+    _picklist_col("fsi_Agent365RequestedMode", "Agent 365 Requested Mode",
+                  "fsi_cai_agent365requestedmode", required=False,
+                  description="Requested Agent 365 mode for this run"),
+    _picklist_col("fsi_Agent365ResolvedState", "Agent 365 Resolved State",
+                  "fsi_cai_agent365resolvedstate", required=False,
+                  description="Resolved Agent 365 state observed during execution"),
+    _string_col("fsi_Agent365ResolutionSource", "Agent 365 Resolution Source", 200,
+                required=False,
+                description="Resolver source that produced the Agent 365 state"),
+    _picklist_col("fsi_Agent365DetectionConfidence", "Agent 365 Detection Confidence",
+                  "fsi_cai_agent365detectionconfidence", required=False,
+                  description="Confidence assigned to Agent 365 state detection"),
+    _picklist_col("fsi_Agent365LayerStatus", "Agent 365 Layer Status",
+                  "fsi_cai_layerstatus", required=False,
+                  description="Execution status of the Agent 365 detection layer"),
+    _picklist_col("fsi_ArgLayerStatus", "ARG Layer Status", "fsi_cai_layerstatus",
+                  required=False,
+                  description="Execution status of the Azure Resource Graph layer"),
+    _integer_col("fsi_ArgAgentCount", "ARG Agent Count", required=False,
+                 description="Count of agents returned by Azure Resource Graph"),
+    _integer_col("fsi_ArgHttpStatus", "ARG HTTP Status", required=False,
+                 description="HTTP status returned by the Azure Resource Graph query"),
+    _integer_col("fsi_CoreAgentCount", "Core Agent Count", required=False,
+                 description="Total agent rows emitted to the canonical agent table"),
+    _integer_col("fsi_DataverseScannedAgentCount", "Dataverse Scanned Agent Count", required=False,
+                 description="Count of agents observed via per-environment Dataverse scans"),
+    _integer_col("fsi_FeatureCount", "Feature Count", required=False,
+                 description="Count of feature rows emitted in this run"),
+    _integer_col("fsi_AuthShareCount", "Auth Share Count", required=False,
+                 description="Count of auth/share posture rows emitted in this run"),
+    _integer_col("fsi_EnvironmentCount", "Environment Count", required=False,
+                 description="Count of environments enumerated for this run"),
+    _boolean_col("fsi_LicenseProbeAttempted", "License Probe Attempted", default=False,
+                 description="Whether the optional owner-license probe step was attempted"),
+    _picklist_col("fsi_PackageApiLayerStatus", "Package API Layer Status",
+                  "fsi_cai_layerstatus", required=False,
+                  description="Execution status of the Package Management API layer"),
+    _boolean_col("fsi_PackageApiAttempted", "Package API Attempted", default=False,
+                 description="Whether Package Management API discovery was attempted"),
+    _integer_col("fsi_PackageApiHttpStatus", "Package API HTTP Status", required=False,
+                 description="HTTP status returned by the Package Management API"),
+    _string_col("fsi_PackageApiErrorCode", "Package API Error Code", 200, required=False,
+                description="Sanitized Package API error code"),
+    _memo_col("fsi_PackageApiReason", "Package API Reason", 4000,
+              description="Sanitized reason text for Package API partial/failed status"),
+    _integer_col("fsi_PackageCount", "Package Count", required=False,
+                 description="Count of packages returned by Package Management API (nullable when deferred)"),
+    _integer_col("fsi_PackageNewRowCount", "Package New Row Count", required=False,
+                 description="Count of package-sourced net-new agent rows"),
+    _boolean_col("fsi_PackageScanTruncated", "Package Scan Truncated", default=False,
+                 description="Whether package pagination truncated before full completion"),
+    _picklist_col("fsi_RegistryLayerStatus", "Registry Layer Status", "fsi_cai_layerstatus",
+                  required=False,
+                  description="Execution status of registry-correlation enrichment"),
+    _integer_col("fsi_RegistryRowCount", "Registry Row Count", required=False,
+                 description="Count of registry rows provided to correlation"),
+    _integer_col("fsi_RegistryMatchedCount", "Registry Matched Count", required=False,
+                 description="Count of registry rows matched to discovered agents"),
+    _integer_col("fsi_RegistryUnmatchedCount", "Registry Unmatched Count", required=False,
+                 description="Count of registry rows that could not be matched"),
+    _integer_col("fsi_RegistryAmbiguousNameSkippedCount", "Registry Ambiguous Name Skipped Count",
+                 required=False,
+                 description="Count of name-collision candidates intentionally skipped"),
+    _integer_col("fsi_RegistryInvalidDateWarningCount", "Registry Invalid Date Warning Count",
+                 required=False,
+                 description="Count of invalid-date warnings from registry import"),
+    _picklist_col("fsi_EntitlementLayerStatus", "Entitlement Layer Status", "fsi_cai_layerstatus",
+                  required=False,
+                  description="Execution status of owner-entitlement resolution"),
+    _integer_col("fsi_EntitlementOwnersConsideredCount", "Entitlement Owners Considered Count",
+                 required=False,
+                 description="Count of owners considered for entitlement resolution"),
+    _integer_col("fsi_EntitlementPaidCount", "Entitlement Paid Count", required=False,
+                 description="Count of owners resolved as Paid Copilot"),
+    _integer_col("fsi_EntitlementChatOnlyCount", "Entitlement Chat Only Count", required=False,
+                 description="Count of owners resolved as Copilot Chat Only"),
+    _integer_col("fsi_EntitlementUnknownCount", "Entitlement Unknown Count", required=False,
+                 description="Count of owners with Unknown entitlement"),
+    _memo_col("fsi_CoverageScopeJson", "Coverage Scope JSON", 100000,
+              description="Structured layer-scope and toggle metadata for this run"),
+    _memo_col("fsi_SummaryJson", "Summary JSON", 100000,
+              description="Structured run summary payload for reproducibility and BI drillthrough"),
+]
+
 
 # =============================================================================
 # Table Definitions (logical name -> definition)
@@ -969,6 +1122,25 @@ TABLES = {
                 "schema_name": "fsi_ComplianceStateKey",
                 "display": "Agent + Environment Key",
                 "key_attributes": ["fsi_agentid", "fsi_environmentid"],
+            }
+        ],
+    },
+    "fsi_caiscanrun": {
+        "schema_name": "fsi_CaiScanRun",
+        "display": "CAI Scan Run",
+        "plural": "CAI Scan Runs",
+        "description": (
+            "Run-level BI evidence row with layer statuses, counts, "
+            "and provenance summaries for each discovery execution"
+        ),
+        "ownership": "OrganizationOwned",
+        "columns": SCANRUN_COLUMNS,
+        "entity_set_name": "fsi_caiscanruns",
+        "alt_keys": [
+            {
+                "schema_name": "fsi_ScanRunKey",
+                "display": "Scan Run Key",
+                "key_attributes": ["fsi_runid"],
             }
         ],
     },

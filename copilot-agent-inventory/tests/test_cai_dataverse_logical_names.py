@@ -32,6 +32,7 @@ import pytest
 
 SOLUTION_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = SOLUTION_ROOT / "scripts" / "create_cai_dataverse_schema.py"
+SCHEMA_DOC_FILE = SOLUTION_ROOT / "docs" / "dataverse-schema.md"
 
 # Column declared via _string_col("fsi_AgentId", ...) — first arg already has
 # the prefix. _picklist_col's option-set arg is a LATER arg, so it is not
@@ -164,6 +165,158 @@ _schema_skip = pytest.mark.skipif(
         f"(missing dependency): {_SCHEMA_IMPORT_ERROR}"
     ),
 )
+
+
+EXPECTED_SCANRUN_OPTIONSETS = {
+    "fsi_cai_scanrunstatus": [
+        ("Complete", 100000000),
+        ("Incomplete", 100000001),
+        ("Failed", 100000002),
+        ("Dry Run", 100000003),
+    ],
+    "fsi_cai_agent365requestedmode": [
+        ("Present", 100000000),
+        ("Absent", 100000001),
+        ("Auto", 100000002),
+    ],
+    "fsi_cai_agent365resolvedstate": [
+        ("Present", 100000000),
+        ("Absent", 100000001),
+        ("NotDetected", 100000002),
+        ("Inconclusive", 100000003),
+    ],
+    "fsi_cai_agent365detectionconfidence": [
+        ("OperatorDeclared", 100000000),
+        ("Confirmed", 100000001),
+        ("Heuristic", 100000002),
+        ("Inconclusive", 100000003),
+        ("NotApplicable", 100000004),
+    ],
+    "fsi_cai_layerstatus": [
+        ("Full", 100000000),
+        ("Deferred", 100000001),
+        ("Unsupported", 100000002),
+        ("Partial", 100000003),
+        ("Failed", 100000004),
+        ("Dry Run", 100000005),
+    ],
+}
+
+
+@_schema_skip
+def test_cai_schema_has_nine_tables_including_scanrun() -> None:
+    tables = _cai_schema.TABLES
+    assert len(tables) == 9, f"expected 9 tables, found {len(tables)}"
+    assert "fsi_caiscanrun" in tables, "missing required run table fsi_caiscanrun"
+    scanrun = tables["fsi_caiscanrun"]
+    assert scanrun["ownership"] == "OrganizationOwned"
+    assert scanrun["entity_set_name"] == "fsi_caiscanruns"
+
+
+@_schema_skip
+def test_scanrun_required_columns_and_logical_names() -> None:
+    scanrun = _cai_schema.TABLES["fsi_caiscanrun"]
+    by_schema = {c["SchemaName"]: c for c in scanrun["columns"]}
+
+    expected = {
+        "fsi_RunId": "fsi_runid",
+        "fsi_StartedAt": "fsi_startedat",
+        "fsi_CompletedAt": "fsi_completedat",
+        "fsi_Status": "fsi_status",
+        "fsi_EnvironmentEnumerationStatus": "fsi_environmentenumerationstatus",
+        "fsi_EnvironmentFailureCount": "fsi_environmentfailurecount",
+        "fsi_Agent365RequestedMode": "fsi_agent365requestedmode",
+        "fsi_Agent365ResolvedState": "fsi_agent365resolvedstate",
+        "fsi_Agent365ResolutionSource": "fsi_agent365resolutionsource",
+        "fsi_Agent365DetectionConfidence": "fsi_agent365detectionconfidence",
+        "fsi_Agent365LayerStatus": "fsi_agent365layerstatus",
+        "fsi_LicenseProbeAttempted": "fsi_licenseprobeattempted",
+        "fsi_PackageApiAttempted": "fsi_packageapiattempted",
+        "fsi_PackageApiHttpStatus": "fsi_packageapihttpstatus",
+        "fsi_PackageApiErrorCode": "fsi_packageapierrorcode",
+        "fsi_PackageApiReason": "fsi_packageapireason",
+        "fsi_PackageCount": "fsi_packagecount",
+        "fsi_PackageNewRowCount": "fsi_packagenewrowcount",
+        "fsi_PackageScanTruncated": "fsi_packagescantruncated",
+        "fsi_ArgLayerStatus": "fsi_arglayerstatus",
+        "fsi_ArgAgentCount": "fsi_argagentcount",
+        "fsi_DataverseScannedAgentCount": "fsi_dataversescannedagentcount",
+        "fsi_EnvironmentCount": "fsi_environmentcount",
+        "fsi_RegistryLayerStatus": "fsi_registrylayerstatus",
+        "fsi_RegistryRowCount": "fsi_registryrowcount",
+        "fsi_EntitlementLayerStatus": "fsi_entitlementlayerstatus",
+        "fsi_EntitlementOwnersConsideredCount": "fsi_entitlementownersconsideredcount",
+        "fsi_CoverageScopeJson": "fsi_coveragescopejson",
+        "fsi_SummaryJson": "fsi_summaryjson",
+    }
+
+    missing = sorted(set(expected) - set(by_schema))
+    assert not missing, f"missing required scan-run columns: {missing}"
+    for schema_name, logical_name in expected.items():
+        assert schema_name.lower() == logical_name
+
+
+@_schema_skip
+def test_scanrun_package_counts_are_nullable() -> None:
+    scanrun = _cai_schema.TABLES["fsi_caiscanrun"]
+    by_schema = {c["SchemaName"]: c for c in scanrun["columns"]}
+    assert by_schema["fsi_PackageCount"]["RequiredLevel"]["Value"] == "None"
+    assert by_schema["fsi_PackageNewRowCount"]["RequiredLevel"]["Value"] == "None"
+    assert by_schema["fsi_PackageScanTruncated"]["DefaultValue"] is False
+
+
+@_schema_skip
+def test_scanrun_optionsets_have_stable_values() -> None:
+    for optionset_name, expected_options in EXPECTED_SCANRUN_OPTIONSETS.items():
+        assert optionset_name in _cai_schema.CAI_OPTIONSETS
+        assert _cai_schema.CAI_OPTIONSETS[optionset_name]["options"] == expected_options
+
+
+@_schema_skip
+def test_scanrun_alt_key_targets_runid() -> None:
+    alt_keys = _cai_schema.TABLES["fsi_caiscanrun"]["alt_keys"]
+    matches = [k for k in alt_keys if k.get("schema_name") == "fsi_ScanRunKey"]
+    assert len(matches) == 1, (
+        f"expected exactly one fsi_ScanRunKey entry; got {len(matches)}"
+    )
+    assert matches[0]["key_attributes"] == ["fsi_runid"], (
+        f"fsi_ScanRunKey key_attributes mismatch: {matches[0]['key_attributes']!r}"
+    )
+
+
+def test_dataverse_schema_doc_includes_nine_tables_and_scanrun_choices() -> None:
+    assert SCHEMA_DOC_FILE.is_file(), f"schema doc not found at {SCHEMA_DOC_FILE}"
+    text = SCHEMA_DOC_FILE.read_text(encoding="utf-8")
+    assert "**9 Dataverse tables**" in text
+
+    table_headings = re.findall(r"^### .+ \(`fsi_[a-z0-9]+`\)$", text, re.MULTILINE)
+    assert len(table_headings) == 9, (
+        f"expected 9 table sections in docs, found {len(table_headings)}"
+    )
+    assert "### CAI Scan Run (`fsi_caiscanrun`)" in table_headings
+
+    assert (
+        "| `fsi_cai_scanrunstatus` | Complete (100000000), Incomplete (100000001), "
+        "Failed (100000002), Dry Run (100000003) |"
+    ) in text
+    assert (
+        "| `fsi_cai_agent365requestedmode` | Present (100000000), Absent (100000001), "
+        "Auto (100000002) |"
+    ) in text
+    assert (
+        "| `fsi_cai_agent365resolvedstate` | Present (100000000), Absent (100000001), "
+        "NotDetected (100000002), Inconclusive (100000003) |"
+    ) in text
+    assert (
+        "| `fsi_cai_agent365detectionconfidence` | OperatorDeclared (100000000), "
+        "Confirmed (100000001), Heuristic (100000002), Inconclusive (100000003), "
+        "NotApplicable (100000004) |"
+    ) in text
+    assert (
+        "| `fsi_cai_layerstatus` | Full (100000000), Deferred (100000001), "
+        "Unsupported (100000002), Partial (100000003), Failed (100000004), "
+        "Dry Run (100000005) |"
+    ) in text
 
 
 @_schema_skip
