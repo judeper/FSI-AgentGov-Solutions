@@ -59,7 +59,7 @@
       "httpStatus": 200,
       "errorCode": "",
       "errorSubcode": "",
-      "reason": "",
+      "reason": "Operator declared Agent 365 present.",
       "packagesObserved": 5,
       "packageNewRowCount": 1,
       "pagingTruncated": false

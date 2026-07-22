@@ -1052,6 +1052,7 @@ def test_regression_defect4_sample_json_shape_matches_scan_all_output() -> None:
     assert all(agent["fsi_runid"] == sample_run_id for agent in sample["agents"])
     assert sample["summary"]["agent365"]["requestedMode"] == "Present"
     assert sample["summary"]["agent365"]["detectionConfidence"] == "OperatorDeclared"
+    assert sample["summary"]["agent365"]["reason"] == "Operator declared Agent 365 present."
 
     # Forbidden top-level keys.
     assert "runId" not in sample_toplevel, (

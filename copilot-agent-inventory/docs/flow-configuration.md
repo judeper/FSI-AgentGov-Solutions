@@ -525,7 +525,7 @@ new row** here — that would accumulate duplicate ledger rows.
 | `body('Parse_Summary')?['summary']?['agent365']?['packageApiAttempted']` | `fsi_packageapiattempted` | Boolean | Pass `true` / `false` directly (no Switch) |
 | `body('Parse_Summary')?['summary']?['agent365']?['httpStatus']` | `fsi_packageapihttpstatus` | Integer (nullable) | Package-API HTTP status |
 | `body('Parse_Summary')?['summary']?['agent365']?['errorCode']` | `fsi_packageapierrorcode` | String (nullable) | Sanitized Package-API error code |
-| `body('Parse_Summary')?['summary']?['agent365']?['reason']` | `fsi_packageapireason` | Memo (nullable) | Sanitized Package-API reason (no token material) |
+| `body('Parse_Summary')?['summary']?['agent365']?['reason']` | `fsi_packageapireason` | Memo (nullable) | Sanitized Agent 365 resolution or Package-API reason (no token material) |
 | `body('Parse_Summary')?['summary']?['agent365']?['packagesObserved']` | `fsi_packagecount` | Integer (**nullable**) | **Map the raw value.** `null` = not observed (deferred / not attempted); `0` = observed empty. Do **not** coalesce to `0`. |
 | `body('Parse_Summary')?['summary']?['agent365']?['packageNewRowCount']` | `fsi_packagenewrowcount` | Integer (**nullable**) | Same null-vs-zero rule as above |
 | `body('Parse_Summary')?['summary']?['agent365']?['pagingTruncated']` | `fsi_packagescantruncated` | Boolean | Pass `true` / `false` directly |
