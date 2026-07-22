@@ -91,6 +91,7 @@ the placeholders (`{{...}}`) with your organization's values.
 
 | Variable | Type | Default Value | Description |
 |----------|------|---------------|-------------|
+| `RunStartedAt` | String | `utcNow()` | Run-start timestamp captured at flow start (written to `fsi_startedat`). Initialize this **first**, before Step 3 — the scanner JSON does not carry its own run timing. |
 | `GovernanceDataverseUrl` | String | `https://governance.crm.dynamics.com` | Dataverse environment hosting the CAI tables |
 | `TenantId` | String | `{{TENANT_DOMAIN}}` | Microsoft Entra ID tenant identifier |
 | `Agent365Mode` | String | `absent` | Agent 365 / Layer 4 mode. Accepted values: **`present`**, **`absent`** (default), **`auto`**. Passed to the scanner as `--agent365 <Agent365Mode>`. Leave at `absent` unless the operator has authoritatively scoped in Agent 365 (see [prerequisites.md](prerequisites.md#package-management-api-layer-4-prerequisites)). |
@@ -202,6 +203,7 @@ the placeholders (`{{...}}`) with your organization's values.
                 },
                 "argAgentCount": { "type": "integer" },
                 "scannedAgentCount": { "type": "integer" },
+                "coreAgentCount": { "type": "integer" },
                 "featureCount": { "type": "integer" },
                 "authShareCount": { "type": "integer" },
                 "environmentCount": { "type": "integer" },
@@ -258,11 +260,16 @@ the placeholders (`{{...}}`) with your organization's values.
                 "coverageScope": {
                     "type": "object",
                     "properties": {
-                        "arg": { "type": "string" },
-                        "environmentDataverse": { "type": "string" },
-                        "packageApi": { "type": "string" },
-                        "registry": { "type": "string" },
-                        "entitlement": { "type": "string" },
+                        "layers": {
+                            "type": "object",
+                            "properties": {
+                                "arg": { "type": "string" },
+                                "environmentDataverse": { "type": "string" },
+                                "packageApi": { "type": "string" },
+                                "registry": { "type": "string" },
+                                "entitlement": { "type": "string" }
+                            }
+                        },
                         "authoritativeFor": { "type": "array", "items": { "type": "string" } },
                         "limitations": { "type": "array", "items": { "type": "string" } },
                         "warning": { "type": "string" }
@@ -310,9 +317,12 @@ the placeholders (`{{...}}`) with your organization's values.
 >   (deferred / not attempted) and **`0`** when it **was** attempted and returned
 >   an **empty** catalog. Preserve the distinction when mapping to Dataverse in
 >   Step 8 — write `null`, not `0`, for a deferred layer.
-> - `summary.coverageScope` names each layer's status plus `authoritativeFor`,
->   `limitations`, and a `warning` that a `Deferred` / `NotDetected` Layer 4 is
->   not an authoritative Agent Builder catalog.
+> - `summary.coverageScope.layers` names each layer's status
+>   (`layers.arg` / `layers.environmentDataverse` / `layers.packageApi` /
+>   `layers.registry` / `layers.entitlement`), alongside
+>   `coverageScope.authoritativeFor`, `coverageScope.limitations`, and a
+>   `coverageScope.warning` that a `Deferred` / `NotDetected` Layer 4 is not an
+>   authoritative Agent Builder catalog.
 
 ### Step 7: Persist Agent Records to Dataverse
 
@@ -495,35 +505,51 @@ new row** here — that would accumulate duplicate ledger rows.
 | Flow Expression | Dataverse Column (logical) | Type | Notes |
 |----------------|----------------------------|------|-------|
 | `body('Parse_Summary')?['summary']?['runId']` | `fsi_runid` | String | Collision-resistant run identity (alternate-key column) |
-| `coalesce(body('Parse_Summary')?['summary']?['scanStartTime'], triggerOutputs()?['body']?['startTime'])` | `fsi_scanstarttime` | DateTime | Run start (fall back to trigger time if the scanner does not emit one) |
-| `utcNow()` | `fsi_scanendtime` | DateTime | Persist completion timestamp |
-| `body('Parse_Summary')?['summary']?['status']` | `fsi_runstatus` | Choice | Overall run status (Complete / Incomplete / Failed / Dry Run) — Step 8a |
-| `body('Parse_Summary')?['summary']?['agent365']?['requestedMode']` | `fsi_agent365requestedmode` | Choice | present / absent / auto — Step 8a |
+| `variables('RunStartedAt')` | `fsi_startedat` | DateTime | Run start captured at flow start (the scanner JSON carries no run timing) |
+| `utcNow()` | `fsi_completedat` | DateTime | Completion timestamp at write time |
+| `body('Parse_Summary')?['summary']?['status']` | `fsi_status` | Choice | Overall run status (Complete / Incomplete / Failed / Dry Run) — Step 8a |
+| `body('Parse_Summary')?['summary']?['environmentEnumeration']?['status']` | `fsi_environmentenumerationstatus` | Choice | Layer 1 environment enumeration — **special** map Success→Full / Failed→Failed / Dry Run→Dry Run — Step 8a |
+| `length(coalesce(body('Parse_Summary')?['summary']?['environmentFailures'], json('[]')))` | `fsi_environmentfailurecount` | Integer | Count of per-environment coverage failures |
+| `body('Parse_Summary')?['summary']?['environmentEnumeration']?['httpStatus']` | `fsi_environmentenumerationhttpstatus` | Integer (nullable) | Enumeration HTTP status (null on success) |
+| `body('Parse_Summary')?['summary']?['environmentEnumeration']?['reason']` | `fsi_environmentenumerationreason` | String (nullable) | Sanitized enumeration failure reason |
+| `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['environmentDataverse']` | `fsi_dataverselayerstatus` | Choice | Layer 2 (per-environment Dataverse) status — Step 8a |
+| `body('Parse_Summary')?['summary']?['environmentCount']` | `fsi_environmentcount` | Integer | Environments enumerated this run |
+| `body('Parse_Summary')?['summary']?['scannedAgentCount']` | `fsi_dataversescannedagentcount` | Integer | Agents scanned through the Dataverse layer |
+| `body('Parse_Summary')?['summary']?['agent365']?['requestedMode']` | `fsi_agent365requestedmode` | Choice | Present / Absent / Auto — Step 8a |
 | `body('Parse_Summary')?['summary']?['agent365']?['resolvedState']` | `fsi_agent365resolvedstate` | Choice | Present / Absent / NotDetected / Inconclusive — Step 8a |
-| `body('Parse_Summary')?['summary']?['agent365']?['resolutionSource']` | `fsi_agent365resolutionsource` | Choice | Explicit CLI / Environment Variable / Deprecated Alias / Default / License Probe — Step 8a |
+| `body('Parse_Summary')?['summary']?['agent365']?['resolutionSource']` | `fsi_agent365resolutionsource` | String | Write **directly** — CLI / Environment / DeprecatedAlias / Default / LicenseProbe / DryRun (**no Switch**) |
 | `body('Parse_Summary')?['summary']?['agent365']?['detectionConfidence']` | `fsi_agent365detectionconfidence` | Choice | OperatorDeclared / Confirmed / Heuristic / Inconclusive / NotApplicable — Step 8a |
 | `body('Parse_Summary')?['summary']?['agent365']?['layerStatus']` | `fsi_agent365layerstatus` | Choice | Full / Deferred / Unsupported / Partial / Failed / Dry Run — Step 8a |
 | `body('Parse_Summary')?['summary']?['agent365']?['licenseProbeAttempted']` | `fsi_licenseprobeattempted` | Boolean | Pass `true` / `false` directly (no Switch) |
+| `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['packageApi']` | `fsi_packageapilayerstatus` | Choice | Layer 4 (Package API) coverage status — Step 8a |
 | `body('Parse_Summary')?['summary']?['agent365']?['packageApiAttempted']` | `fsi_packageapiattempted` | Boolean | Pass `true` / `false` directly (no Switch) |
-| `body('Parse_Summary')?['summary']?['agent365']?['httpStatus']` | `fsi_agent365httpstatus` | Integer (nullable) | Last probe / Package-API HTTP status |
-| `body('Parse_Summary')?['summary']?['agent365']?['errorCode']` | `fsi_agent365errorcode` | String (nullable) | Sanitized error code |
-| `body('Parse_Summary')?['summary']?['agent365']?['errorSubcode']` | `fsi_agent365errorsubcode` | String (nullable) | Sanitized error subcode |
-| `body('Parse_Summary')?['summary']?['agent365']?['reason']` | `fsi_agent365reason` | Memo (nullable) | Sanitized reason (no token material) |
-| `body('Parse_Summary')?['summary']?['agent365']?['packagesObserved']` | `fsi_packagesobserved` | Integer (**nullable**) | **Map the raw value.** `null` = not observed (deferred); `0` = observed empty. Do **not** coalesce to `0`. |
+| `body('Parse_Summary')?['summary']?['agent365']?['httpStatus']` | `fsi_packageapihttpstatus` | Integer (nullable) | Package-API HTTP status |
+| `body('Parse_Summary')?['summary']?['agent365']?['errorCode']` | `fsi_packageapierrorcode` | String (nullable) | Sanitized Package-API error code |
+| `body('Parse_Summary')?['summary']?['agent365']?['reason']` | `fsi_packageapireason` | Memo (nullable) | Sanitized Package-API reason (no token material) |
+| `body('Parse_Summary')?['summary']?['agent365']?['packagesObserved']` | `fsi_packagecount` | Integer (**nullable**) | **Map the raw value.** `null` = not observed (deferred / not attempted); `0` = observed empty. Do **not** coalesce to `0`. |
 | `body('Parse_Summary')?['summary']?['agent365']?['packageNewRowCount']` | `fsi_packagenewrowcount` | Integer (**nullable**) | Same null-vs-zero rule as above |
-| `body('Parse_Summary')?['summary']?['agent365']?['pagingTruncated']` | `fsi_pagingtruncated` | Boolean | Pass `true` / `false` directly |
-| `body('Parse_Summary')?['summary']?['coverageScope']?['arg']` | `fsi_environmentenumerationstatus` † | Choice | Layer 1 (ARG environment enumeration) status — Step 8a |
-| `body('Parse_Summary')?['summary']?['coverageScope']?['environmentDataverse']` | `fsi_dataverselayerstatus` † | Choice | Layer 2 (per-environment Dataverse) status — Step 8a |
-| `body('Parse_Summary')?['summary']?['coverageScope']?['packageApi']` | `fsi_packageapilayerstatus` | Choice | Layer 4 (Package API) coverage status — Step 8a |
-| `body('Parse_Summary')?['summary']?['coverageScope']?['registry']` | `fsi_registrylayerstatus` | Choice | Registry-correlation status — Step 8a |
-| `body('Parse_Summary')?['summary']?['coverageScope']?['entitlement']` | `fsi_entitlementlayerstatus` | Choice | Entitlement-resolution status — Step 8a |
-| `body('Parse_Summary')?['summary']?['scannedAgentCount']` | `fsi_agentrowcount` | Integer | Agent rows written this run |
-| `body('Parse_Summary')?['summary']?['environmentCount']` | `fsi_environmentrowcount` | Integer | Environments recorded this run |
-| `body('Parse_Summary')?['summary']?['featureCount']` | `fsi_featurerowcount` | Integer | Feature rows written this run |
+| `body('Parse_Summary')?['summary']?['agent365']?['pagingTruncated']` | `fsi_packagescantruncated` | Boolean | Pass `true` / `false` directly |
+| `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['arg']` | `fsi_arglayerstatus` | Choice | Layer 1 (ARG) coverage status — Step 8a |
+| `body('Parse_Summary')?['summary']?['argAgentCount']` | `fsi_argagentcount` | Integer | Agents discovered through the ARG layer |
+| `body('Parse_Summary')?['summary']?['argLayer']?['httpStatus']` | `fsi_arghttpstatus` | Integer (nullable) | ARG query HTTP status |
+| `body('Parse_Summary')?['summary']?['coreAgentCount']` | `fsi_coreagentcount` | Integer | Reconciled core (non-package) agent count |
+| `body('Parse_Summary')?['summary']?['featureCount']` | `fsi_featurecount` | Integer | Feature rows written this run |
+| `body('Parse_Summary')?['summary']?['authShareCount']` | `fsi_authsharecount` | Integer | Auth/share rows recorded this run |
+| `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['registry']` | `fsi_registrylayerstatus` | Choice | Registry-correlation coverage status — Step 8a |
+| `body('Parse_Summary')?['summary']?['registryCorrelation']?['registryRowCount']` | `fsi_registryrowcount` | Integer (nullable) | Registry export rows read (`null` when `--registry-export` not supplied) |
+| `body('Parse_Summary')?['summary']?['registryCorrelation']?['matched']` | `fsi_registrymatchedcount` | Integer (nullable) | Registry rows matched to agents |
+| `body('Parse_Summary')?['summary']?['registryCorrelation']?['unmatchedRegistryRows']` | `fsi_registryunmatchedcount` | Integer (nullable) | Registry rows with no agent match |
+| `body('Parse_Summary')?['summary']?['registryCorrelation']?['ambiguousNameSkipped']` | `fsi_registryambiguousnameskippedcount` | Integer (nullable) | Ambiguous-name rows skipped |
+| `body('Parse_Summary')?['summary']?['registryCorrelation']?['invalidDateWarnings']` | `fsi_registryinvaliddatewarningcount` | Integer (nullable) | Invalid as-of date warnings |
+| `body('Parse_Summary')?['summary']?['coverageScope']?['layers']?['entitlement']` | `fsi_entitlementlayerstatus` | Choice | Entitlement-resolution coverage status — Step 8a |
+| `body('Parse_Summary')?['summary']?['entitlementResolution']?['ownersConsidered']` | `fsi_entitlementownersconsideredcount` | Integer (nullable) | Owners considered for entitlement resolution |
+| `body('Parse_Summary')?['summary']?['entitlementResolution']?['paidCount']` | `fsi_entitlementpaidcount` | Integer (nullable) | Owners resolved to a paid Copilot entitlement |
+| `body('Parse_Summary')?['summary']?['entitlementResolution']?['chatOnlyCount']` | `fsi_entitlementchatonlycount` | Integer (nullable) | Owners resolved to Copilot Chat only |
+| `body('Parse_Summary')?['summary']?['entitlementResolution']?['unknownCount']` | `fsi_entitlementunknowncount` | Integer (nullable) | Owners with unknown entitlement |
 | `string(body('Parse_Summary')?['summary']?['coverageScope'])` | `fsi_coveragescopejson` | Memo | Full `coverageScope` JSON (audit evidence) |
 | `string(body('Parse_Summary')?['summary'])` | `fsi_summaryjson` | Memo | Full `summary` JSON (audit evidence) |
 
-> **Null vs zero (restated where it matters most).** For `fsi_packagesobserved`
+> **Null vs zero (restated where it matters most).** For `fsi_packagecount`
 > and `fsi_packagenewrowcount`, bind the scanner value **directly**. When the
 > Package API was not attempted (for example `absent` / `Deferred`), the scanner
 > emits `null` and the column must stay `null` — a deferred layer is *not* a zero
@@ -537,21 +563,23 @@ new row** here — that would accumulate duplicate ledger rows.
 
 #### Step 8a — Label-to-Integer Conversion for `fsi_caiscanrun` Choice Fields
 
-`fsi_caiscanrun` introduces **new Choice columns** in v0.4. As in Step 7a, the
-scanner emits **label strings** and Dataverse requires **option-set integers**,
-so add one fail-visible **Switch** per Choice column below.
+`fsi_caiscanrun` introduces **Choice columns** in v0.4. As in Step 7a, the scanner
+emits **label strings** and Dataverse requires **option-set integers**, so add one
+fail-visible **Switch** per Choice column below. `fsi_agent365resolutionsource` is
+**not** in this list — it is a plain **String** column written **directly** from
+`summary.agent365.resolutionSource` (one of `CLI` / `Environment` /
+`DeprecatedAlias` / `Default` / `LicenseProbe` / `DryRun`) with **no** conversion.
 
 > **Option-set integers (locked in the v0.4 schema).** The values below are the
-> **canonical** option-set integers for the new `fsi_caiscanrun` Choice columns —
-> wire each **Switch** case to the exact integer shown. Two items remain
-> **pending** and are flagged inline: (1) `fsi_agent365resolutionsource` integers
-> are **not yet assigned**; and (2) the environment-enumeration and Dataverse
-> layer-status columns (`fsi_environmentenumerationstatus` †,
-> `fsi_dataverselayerstatus` †) are being added by a follow-up schema change.
-> The shared **layer-status** option set applies to `fsi_agent365layerstatus`
-> **and** to every per-layer coverage column.
+> **canonical** option-set integers for the `fsi_caiscanrun` Choice columns — wire
+> each **Switch** case to the exact integer shown. The shared **layer-status**
+> option set applies to `fsi_agent365layerstatus`, `fsi_arglayerstatus`,
+> `fsi_packageapilayerstatus`, `fsi_registrylayerstatus`,
+> `fsi_entitlementlayerstatus`, and `fsi_dataverselayerstatus`.
+> `fsi_environmentenumerationstatus` **also** stores a layer-status integer but
+> maps from a **different source vocabulary** (see its dedicated table below).
 
-**`fsi_runstatus`** — overall run status:
+**`fsi_status`** — overall run status:
 
 | Label | Integer |
 |-------|---------|
@@ -560,14 +588,14 @@ so add one fail-visible **Switch** per Choice column below.
 | `Failed` | `100000002` |
 | `Dry Run` | `100000003` |
 
-**`fsi_agent365requestedmode`** — the scanner emits the lower-case CLI token; the
-Dataverse Choice displays title-case:
+**`fsi_agent365requestedmode`** — the scanner emits title-case (`Present` /
+`Absent` / `Auto`); the `--agent365` CLI flag itself stays lower-case:
 
-| Scanner label | Choice label | Integer |
-|---------------|--------------|---------|
-| `present` | Present | `100000000` |
-| `absent` | Absent | `100000001` |
-| `auto` | Auto | `100000002` |
+| Scanner label | Integer |
+|---------------|---------|
+| `Present` | `100000000` |
+| `Absent` | `100000001` |
+| `Auto` | `100000002` |
 
 **`fsi_agent365resolvedstate`**:
 
@@ -588,10 +616,11 @@ Dataverse Choice displays title-case:
 | `Inconclusive` | `100000003` |
 | `NotApplicable` | `100000004` |
 
-**`fsi_agent365layerstatus`** and every per-layer coverage column
-(`fsi_packageapilayerstatus`, `fsi_registrylayerstatus`,
-`fsi_entitlementlayerstatus`, `fsi_environmentenumerationstatus` †,
-`fsi_dataverselayerstatus` †) — shared **layer-status** option set:
+**`fsi_agent365layerstatus`**, **`fsi_arglayerstatus`**,
+**`fsi_packageapilayerstatus`**, **`fsi_registrylayerstatus`**,
+**`fsi_entitlementlayerstatus`**, and **`fsi_dataverselayerstatus`** — shared
+**layer-status** option set (source labels come from `summary.agent365.layerStatus`
+and `summary.coverageScope.layers.*`):
 
 | Label | Integer |
 |-------|---------|
@@ -602,26 +631,26 @@ Dataverse Choice displays title-case:
 | `Failed` | `100000004` |
 | `Dry Run` | `100000005` |
 
-**`fsi_agent365resolutionsource`** — **integers pending** (not assigned in the
-v0.4 schema lock). Wire the Switch cases by label (`Explicit CLI`,
-`Environment Variable`, `Deprecated Alias`, `Default`, `License Probe`) and leave
-the integer as a clearly-marked placeholder until
-[dataverse-schema.md](dataverse-schema.md) lists this column — **do not guess**
-`0` / `100000000`.
+**`fsi_environmentenumerationstatus`** — **special mapping.** Its source
+(`summary.environmentEnumeration.status`) uses `Success` / `Failed` / `Dry Run`,
+**not** the layer-status vocabulary. Map the three source labels into the shared
+layer-status integers:
 
-> † `fsi_environmentenumerationstatus` and `fsi_dataverselayerstatus` are being
-> added by a follow-up schema change; confirm the exact logical names against the
-> regenerated `dataverse-schema.md` before deploying the flow. Their option-set
-> **values** are the shared layer-status integers above.
+| Source label (`environmentEnumeration.status`) | Stored layer-status | Integer |
+|------------------------------------------------|---------------------|---------|
+| `Success` | `Full` | `100000000` |
+| `Failed` | `Failed` | `100000004` |
+| `Dry Run` | `Dry Run` | `100000005` |
 
 > **Every Switch MUST have a fail-visible Default case.** Provide an explicit
 > **Case** for **each** label above, and in the **Default** case **quarantine the
 > run row** (set `IsUnmappedLabel = true`, append the column + offending label to
 > the `UnmappedRows` error collection) and **terminate** (`Terminate`, status
 > Failed) rather than writing a guessed integer. An unrecognized label almost
-> always means the scanner emitted a new option-set value — writing a default
-> such as `0` would silently record a **wrong** governance status. Extend the
-> Switch cases (using the values now in `dataverse-schema.md`) before re-running.
+> always means the scanner emitted a new option-set value — writing a default such
+> as `0` would silently record a **wrong** governance status. Extend the Switch
+> cases (using the values in [dataverse-schema.md](dataverse-schema.md)) before
+> re-running.
 
 #### Step 8b — Read-back and idempotency verification
 
@@ -650,6 +679,7 @@ After `Write_Scan_Run`, confirm the single ledger row persisted:
    - **or** `length(body('Parse_Summary')?['summary']?['environmentFailures'])` is greater than `0`
    - **or** `body('Parse_Summary')?['summary']?['agent365']?['layerStatus']` is **equal to** `Partial`
    - **or** `body('Parse_Summary')?['summary']?['agent365']?['layerStatus']` is **equal to** `Failed`
+   - **or** `body('Parse_Summary')?['summary']?['agent365']?['layerStatus']` is **equal to** `Unsupported`
    - **or** `body('Parse_Summary')?['summary']?['agent365']?['resolvedState']` is **equal to** `Inconclusive`
    - **or** `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_arg_only'])` is greater than `0`
    - **or** `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_dataverse_only'])` is greater than `0`.
@@ -663,18 +693,20 @@ After `Write_Scan_Run`, confirm the single ledger row persisted:
    `errorCode` / `reason`), and the reconciliation deltas (agents in ARG but not
    scanned, and vice versa). Coverage gaps are surfaced for review, not silently
    dropped — an `Incomplete` or `Failed` status, any environment failure, or a
-   `Partial` / `Failed` requested layer means the inventory is a partial picture
-   and must not be treated as a clean, agent-free result.
+   `Partial` / `Failed` / `Unsupported` requested layer means the inventory is a
+   partial picture and must not be treated as a clean, agent-free result.
 5. Rename: `Check_Coverage_And_Reconciliation_Gap`.
 
 > **Deferred / NotDetected are informational, not alerts.** Do **not** raise a
-> failure notification when `summary.agent365.layerStatus` is `Deferred` /
-> `Unsupported` or when `resolvedState` is a heuristic `NotDetected` — these are
-> expected outcomes of the operator's declared scope (for example the default
-> `absent` mode). They do **not** degrade `summary.status`. Report them as
-> **informational context only**, and **never** render a `Deferred` Layer 4 as
-> "zero Agent Builder agents" — those agents are still discovered by Layers 1–2.
-> Alert only on `Partial` / `Failed` requested-layer outcomes, an `Inconclusive`
+> failure notification when `summary.agent365.layerStatus` is `Deferred` or when
+> `resolvedState` is a heuristic `NotDetected` — these are expected outcomes of
+> the operator's declared scope (for example the default `absent` mode). They do
+> **not** degrade `summary.status`. Report them as **informational context only**,
+> and **never** render a `Deferred` Layer 4 as "zero Agent Builder agents" — those
+> agents are still discovered by Layers 1–2. **`Unsupported` is different:** it is
+> an *attempted* layer the platform could not satisfy (a coverage failure), so it
+> **degrades the run and alerts** exactly like `Partial` / `Failed`. Alert on
+> `Partial` / `Failed` / `Unsupported` requested-layer outcomes, an `Inconclusive`
 > resolution, or an overall `Incomplete` / `Failed` run.
 
 > **Enumeration failure is a run failure.** When

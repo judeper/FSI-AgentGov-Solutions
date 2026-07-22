@@ -58,9 +58,10 @@ generated `docs/dataverse-schema.md` reference is regenerated.
   `packageNewRowCount`, and `pagingTruncated`. Resolved states are
   **Present / Absent / NotDetected / Inconclusive**; layer statuses are
   **Full / Deferred / Unsupported / Partial / Failed / Dry Run**.
-- **`summary.coverageScope` block** (always present) — per-layer statuses for
-  ARG, per-environment Dataverse, Package API, registry correlation, and
-  entitlement resolution, plus `authoritativeFor`, `limitations`, and an explicit
+- **`summary.coverageScope` block** (always present) — per-layer statuses nested
+  under `coverageScope.layers` for ARG, per-environment Dataverse, Package API,
+  registry correlation, and entitlement resolution, plus `authoritativeFor`,
+  `limitations`, and an explicit
   `warning` that a **Deferred / NotDetected Layer 4 is not an authoritative Agent
   Builder catalog**.
 - **Canonical ninth Dataverse table `fsi_caiscanrun`** (OrganizationOwned) with
@@ -71,9 +72,10 @@ generated `docs/dataverse-schema.md` reference is regenerated.
   the full `coverageScope` JSON, and the full `summary` JSON. Agent rows join to
   their run row on `fsi_runid`. Active architecture and table references become
   **nine entities**; historical changelog references are left unchanged.
-- **Collision-resistant run identifiers.** Run IDs are generated so that two runs
-  in the same window cannot collide, which keeps the single-scan-run upsert
-  idempotent on `fsi_ScanRunKey`.
+- **Collision-resistant, sortable run identifiers.** Run IDs use a UTC timestamp
+  prefix plus a random suffix (at most 36 characters), so two runs in the same
+  window cannot collide and runs stay naturally ordered — which keeps the
+  single-scan-run upsert idempotent on `fsi_ScanRunKey`.
 
 ### Changed
 
@@ -81,12 +83,13 @@ generated `docs/dataverse-schema.md` reference is regenerated.
   `summary.packageScanTruncated` remain for one release **only when the Package
   API is attempted**, mirroring `summary.agent365.packageNewRowCount` /
   `pagingTruncated`. Consumers should read the `summary.agent365` fields.
-- **Run-status degradation is scoped.** `Deferred`, `Unsupported`, and a
-  heuristic `NotDetected` **do not** degrade an otherwise complete
-  declared-scope run; only `Partial` and `Failed` layer outcomes (or an overall
-  `Incomplete` / `Failed` run) do. Notifications alert on `Partial` / `Failed`
-  requested-layer outcomes, an `Inconclusive` resolution, or an overall
-  `Incomplete` / `Failed` run — **not** on `Deferred` / `NotDetected`.
+- **Run-status degradation is scoped.** `Deferred` and a heuristic `NotDetected`
+  **do not** degrade an otherwise complete declared-scope run; `Partial`,
+  `Failed`, and `Unsupported` layer outcomes (or an overall `Incomplete` /
+  `Failed` run) **do** — an `Unsupported` *attempted* layer is a coverage failure
+  the platform could not satisfy. Notifications alert on `Partial` / `Failed` /
+  `Unsupported` requested-layer outcomes, an `Inconclusive` resolution, or an
+  overall `Incomplete` / `Failed` run — **not** on `Deferred` / `NotDetected`.
 - **Flow persists one scan-run row.** `docs/flow-configuration.md` now documents
   parsing `summary.agent365` and `summary.coverageScope`, upserting exactly one
   `fsi_caiscanrun` row via `fsi_ScanRunKey` / `fsi_runid` after agent rows

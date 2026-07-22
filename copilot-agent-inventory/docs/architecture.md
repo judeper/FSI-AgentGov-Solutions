@@ -206,10 +206,10 @@ The scanner always emits an `agent365` resolution block in its JSON `summary`:
 
 | Field | Meaning |
 |-------|---------|
-| `requestedMode` | `present` / `absent` / `auto` — the mode after precedence resolution. |
+| `requestedMode` | `Present` / `Absent` / `Auto` — the mode after precedence resolution (the scanner emits title-case; the `--agent365` CLI flag stays lower-case). |
 | `resolvedState` | `Present` / `Absent` / `NotDetected` / `Inconclusive`. |
-| `resolutionSource` | What determined the state: explicit CLI, environment variable, deprecated alias, default, or license probe. |
-| `detectionConfidence` | `OperatorDeclared` (operator-asserted via explicit CLI / alias / default / `absent`), `Confirmed` (Package API observed packages), `Heuristic` (auto exact-name match or heuristic no-match), `Inconclusive` (auto probe could not decide), or `NotApplicable`. |
+| `resolutionSource` | A plain **String** naming what determined the state — one of `CLI`, `Environment`, `DeprecatedAlias`, `Default`, `LicenseProbe`, or `DryRun`. Persisted directly to `fsi_agent365resolutionsource` (no option-set conversion). |
+| `detectionConfidence` | `OperatorDeclared` (operator-asserted with no independent probe — e.g. `absent`, or a `present` declaration that did not reach the Package API), `Confirmed` (Package API observed packages), `Heuristic` (`auto` exact-name license match or no-match), `Inconclusive` (`auto` probe could not decide), or `NotApplicable`. |
 | `licenseProbeAttempted` | Whether `subscribedSkus` was called (`auto` only). |
 | `packageApiAttempted` | Whether the Package API was called. |
 | `layerStatus` | `Full` / `Deferred` / `Unsupported` / `Partial` / `Failed` / `Dry Run`. |
@@ -232,15 +232,17 @@ Package API is attempted**. Read the `summary.agent365` fields instead.
 ### `summary.coverageScope`
 
 The scanner always emits a `coverageScope` block describing what the run does and
-does not authoritatively cover:
+does not authoritatively cover. Per-layer statuses are nested under
+`coverageScope.layers`; `authoritativeFor`, `limitations`, and `warning` sit at
+the `coverageScope` top level:
 
 | Field | Meaning |
 |-------|---------|
-| `arg` | Layer 1 status (`Full` / `Partial` / `Failed` / `Unsupported` / `Dry Run`). |
-| `environmentDataverse` | Layer 2 status. |
-| `packageApi` | Layer 4 status (`Full` / `Deferred` / `Unsupported` / `Partial` / `Failed` / `Dry Run`). |
-| `registry` | Registry-correlation status. |
-| `entitlement` | Entitlement-resolution status. |
+| `layers.arg` | Layer 1 status (`Full` / `Partial` / `Failed` / `Unsupported` / `Dry Run`). |
+| `layers.environmentDataverse` | Layer 2 status. |
+| `layers.packageApi` | Layer 4 status (`Full` / `Deferred` / `Unsupported` / `Partial` / `Failed` / `Dry Run`). |
+| `layers.registry` | Registry-correlation status. |
+| `layers.entitlement` | Entitlement-resolution status. |
 | `authoritativeFor` | The dimensions this run authoritatively covers (for example Copilot Studio agents, environment inventory, registry-owner correlation). |
 | `limitations` | Named coverage limits for this run. |
 | `warning` | An explicit statement that a `Deferred` / `NotDetected` Layer 4 **is not an authoritative Agent Builder catalog** and must not be read as an absence of Agent Builder agents. |
@@ -250,14 +252,16 @@ does not authoritatively cover:
 Run-level status (`summary.status`) and notifications distinguish *expected*
 declared-scope outcomes from *failures*:
 
-- **Do not degrade** an otherwise complete declared-scope run: `Deferred`,
-  `Unsupported`, and a heuristic `NotDetected`. In `absent` mode a clean run is
-  still `summary.status == "Complete"` with Layer 4 `Deferred`.
-- **Do degrade** the run: a `Partial` or `Failed` layer outcome, or an overall
-  `Incomplete` / `Failed` run.
-- **Alert** (Step 9 of the flow) on `Partial` / `Failed` requested-layer
-  outcomes, an `Inconclusive` resolution, or an overall `Incomplete` / `Failed`
-  run — **not** on `Deferred` / `NotDetected`, which are informational. A
+- **Do not degrade** an otherwise complete declared-scope run: `Deferred` and a
+  heuristic `NotDetected`. In `absent` mode a clean run is still
+  `summary.status == "Complete"` with Layer 4 `Deferred`.
+- **Do degrade** the run: a `Partial`, `Failed`, or `Unsupported` layer outcome
+  (an `Unsupported` *attempted* layer is a coverage failure the platform could not
+  satisfy), or an overall `Incomplete` / `Failed` run.
+- **Alert** (Step 9 of the flow) on `Partial` / `Failed` / `Unsupported`
+  requested-layer outcomes, an `Inconclusive` resolution, or an overall
+  `Incomplete` / `Failed` run — **not** on `Deferred` / `NotDetected`, which are
+  informational. A
   `Deferred` Layer 4 is **never** reported as "zero Agent Builder agents."
 
 ## Scan Completeness
@@ -418,35 +422,49 @@ later solutions in the build graph.
 
 `fsi_caiscanrun` is an `OrganizationOwned` table with entity set
 `fsi_caiscanruns`. It carries an **alternate key `fsi_ScanRunKey` on the single
-column `fsi_runid`** (String, GUID-length), so the Power Automate flow can upsert
+column `fsi_runid`**, so the Power Automate flow can upsert
 **exactly one** run row per scan deterministically. Agent rows join to their run
 row on `fsi_runid` (`fsi_copilotagent.fsi_runid == fsi_caiscanrun.fsi_runid`).
 
-Run IDs are **collision-resistant** (a GUID-shaped synthetic identity that fits
-the String(36) column), so concurrent or replayed runs never share a key.
+Run IDs are **collision-resistant and sortable** — a synthetic identity built
+from a UTC timestamp prefix plus a random suffix, at most 36 characters (for
+example `20260721T020005Z-7f3b9c21a4e6`). The timestamp prefix keeps runs
+naturally ordered while the random suffix prevents concurrent or replayed runs
+from ever sharing a key.
 
-Proposed columns (logical names; reconciled against the generated schema during
-integration):
+Columns (Dataverse logical names):
 
 | Logical name | Holds |
 |--------------|-------|
-| `fsi_runid` | Collision-resistant run identity (alternate-key column). |
-| `fsi_scanstarttime` / `fsi_scanendtime` | Run start / end timestamps. |
-| `fsi_runstatus` | Overall run status Choice (`Complete` / `Incomplete` / `Failed` / `Dry Run`). |
+| `fsi_runid` | Collision-resistant, sortable run identity (alternate-key column). |
+| `fsi_startedat` / `fsi_completedat` | Run start / completion timestamps (captured by the flow; the scanner JSON carries no run timing). |
+| `fsi_status` | Overall run status Choice (`Complete` / `Incomplete` / `Failed` / `Dry Run`). |
+| `fsi_environmentenumerationstatus` | Layer 1 environment-enumeration status Choice (mapped `Success`→`Full` / `Failed`→`Failed` / `Dry Run`→`Dry Run`). |
+| `fsi_environmentfailurecount` | Count of per-environment coverage failures. |
+| `fsi_environmentenumerationhttpstatus` / `fsi_environmentenumerationreason` | Enumeration HTTP status / sanitized reason (nullable). |
+| `fsi_dataverselayerstatus` | Layer 2 (per-environment Dataverse) status Choice (`summary.coverageScope.layers.environmentDataverse`). |
+| `fsi_environmentcount` / `fsi_dataversescannedagentcount` | Environments enumerated / agents scanned through the Dataverse layer. |
 | `fsi_agent365requestedmode` | `summary.agent365.requestedMode` (Choice). |
 | `fsi_agent365resolvedstate` | `summary.agent365.resolvedState` (Choice). |
+| `fsi_agent365resolutionsource` | `summary.agent365.resolutionSource` (**String**, written directly — no option-set conversion). |
 | `fsi_agent365detectionconfidence` | `summary.agent365.detectionConfidence` (Choice). |
 | `fsi_agent365layerstatus` | `summary.agent365.layerStatus` (Choice). |
-| `fsi_agent365resolutionsource` | `summary.agent365.resolutionSource` (Choice). |
-| `fsi_licenseprobeattempted` / `fsi_packageapiattempted` | Attempt booleans. |
-| `fsi_agent365httpstatus` | Last probe / Package-API HTTP status (nullable). |
-| `fsi_agent365errorcode` / `fsi_agent365errorsubcode` / `fsi_agent365reason` | Sanitized error evidence. |
-| `fsi_packagesobserved` | Packages returned (**nullable** — null when not observed, 0 when observed-empty). |
+| `fsi_licenseprobeattempted` | Whether `subscribedSkus` was called (Boolean). |
+| `fsi_packageapilayerstatus` | Layer 4 (Package API) coverage status Choice (`summary.coverageScope.layers.packageApi`). |
+| `fsi_packageapiattempted` | Whether the Package API was called (Boolean). |
+| `fsi_packageapihttpstatus` | Package-API HTTP status (nullable; `summary.agent365.httpStatus`). |
+| `fsi_packageapierrorcode` / `fsi_packageapireason` | Sanitized Package-API error code / reason (nullable). |
+| `fsi_packagecount` | Packages returned (**nullable** — null when not observed, 0 when observed-empty; `summary.agent365.packagesObserved`). |
 | `fsi_packagenewrowcount` | New package rows (**nullable**, same null-vs-zero rule). |
-| `fsi_pagingtruncated` | Package paging truncated flag. |
-| `fsi_packageapilayerstatus` / `fsi_registrylayerstatus` / `fsi_entitlementlayerstatus` | Package-API / Registry / Entitlement layer coverage statuses (`summary.coverageScope.packageApi` / `.registry` / `.entitlement`). |
-| `fsi_environmentenumerationstatus` / `fsi_dataverselayerstatus` | Environment-enumeration (ARG) and per-environment Dataverse layer statuses (`summary.coverageScope.arg` / `.environmentDataverse`). **Added by a follow-up schema change — confirm the exact logical names against the regenerated `dataverse-schema.md`.** |
-| `fsi_agentrowcount` / `fsi_environmentrowcount` / `fsi_featurerowcount` | Core row counts written this run. |
+| `fsi_packagescantruncated` | Package paging-truncated flag (`summary.agent365.pagingTruncated`). |
+| `fsi_arglayerstatus` | Layer 1 (ARG) coverage status Choice (`summary.coverageScope.layers.arg`). |
+| `fsi_argagentcount` / `fsi_arghttpstatus` | Agents discovered via ARG / ARG query HTTP status (nullable). |
+| `fsi_coreagentcount` / `fsi_featurecount` / `fsi_authsharecount` | Reconciled core (non-package) agent, feature, and auth/share counts. |
+| `fsi_registrylayerstatus` | Registry-correlation coverage status Choice (`summary.coverageScope.layers.registry`). |
+| `fsi_registryrowcount` / `fsi_registrymatchedcount` / `fsi_registryunmatchedcount` | Registry rows read / matched / unmatched (nullable). |
+| `fsi_registryambiguousnameskippedcount` / `fsi_registryinvaliddatewarningcount` | Ambiguous-name rows skipped / invalid as-of date warnings (nullable). |
+| `fsi_entitlementlayerstatus` | Entitlement-resolution coverage status Choice (`summary.coverageScope.layers.entitlement`). |
+| `fsi_entitlementownersconsideredcount` / `fsi_entitlementpaidcount` / `fsi_entitlementchatonlycount` / `fsi_entitlementunknowncount` | Entitlement-resolution owner counts (nullable). |
 | `fsi_coveragescopejson` | Full `summary.coverageScope` JSON. |
 | `fsi_summaryjson` | Full scanner `summary` JSON (audit evidence). |
 
