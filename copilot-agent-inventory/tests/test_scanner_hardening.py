@@ -571,11 +571,23 @@ def test_main_legacy_agent365_alias_env_still_works_with_warning(
     assert any("DEPRECATED: CAI_AGENT365_SKU_ALIASES" in rec.getMessage() for rec in caplog.records)
 
 
-def test_generate_run_id_is_sortable_and_collision_resistant() -> None:
+def test_generate_run_id_has_contract_length_and_sortable_prefix() -> None:
     now = da.datetime(2026, 7, 22, 17, 0, 0, tzinfo=da.timezone.utc)
-    run_ids = {da._generate_run_id(now) for _ in range(40)}
-    assert len(run_ids) == 40
-    assert all(rid.startswith("cai-20260722T170000Z-") for rid in run_ids)
+    run_id = da._generate_run_id(now)
+    assert run_id.startswith("cai-20260722T170000Z-")
+    assert len(run_id) == 35
+
+
+def test_generate_run_id_is_collision_resistant() -> None:
+    now = da.datetime(2026, 7, 22, 17, 0, 0, tzinfo=da.timezone.utc)
+    run_ids = {da._generate_run_id(now) for _ in range(80)}
+    assert len(run_ids) == 80
+
+
+def test_generate_run_id_prefix_remains_sortable_across_seconds() -> None:
+    earlier = da._generate_run_id(da.datetime(2026, 7, 22, 16, 59, 59, tzinfo=da.timezone.utc))
+    later = da._generate_run_id(da.datetime(2026, 7, 22, 17, 0, 0, tzinfo=da.timezone.utc))
+    assert earlier < later
 
 
 def test_sanitize_reason_redacts_bearer_upn_and_url() -> None:
@@ -604,4 +616,6 @@ def test_scan_all_dry_run_auto_performs_no_token_or_network_io() -> None:
         result = da.scan_all(ctx)
     mock_token.assert_not_called()
     mock_request.assert_not_called()
+    assert result["summary"]["status"] == "Dry Run"
+    assert result["summary"]["agent365"]["detectionConfidence"] == "Inconclusive"
     assert result["summary"]["agent365"]["layerStatus"] == da.LAYER_STATUS_DRY_RUN

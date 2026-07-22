@@ -1588,8 +1588,15 @@ def test_scan_all_absent_mode_defers_package_layer_and_keeps_complete_status() -
     mock_probe.assert_not_called()
     agent365 = result["summary"]["agent365"]
     assert agent365["resolvedState"] == "Absent"
+    assert agent365["requestedMode"] == "Absent"
+    assert agent365["detectionConfidence"] == "OperatorDeclared"
+    assert agent365["packageApiAttempted"] is False
     assert agent365["layerStatus"] == da.LAYER_STATUS_DEFERRED
-    assert result["summary"]["status"] == "Complete"
+    assert agent365["packagesObserved"] is None
+    assert agent365["packageNewRowCount"] is None
+    assert result["summary"]["status"] == "Dry Run"
+    assert "packageNewRowCount" not in result["summary"]
+    assert "packageScanTruncated" not in result["summary"]
 
 
 def test_scan_all_auto_not_detected_skips_package_api_and_is_not_absence() -> None:
@@ -1606,8 +1613,13 @@ def test_scan_all_auto_not_detected_skips_package_api_and_is_not_absence() -> No
     mock_fetch.assert_not_called()
     agent365 = result["summary"]["agent365"]
     assert agent365["resolvedState"] == "NotDetected"
+    assert agent365["requestedMode"] == "Auto"
+    assert agent365["detectionConfidence"] == "Heuristic"
+    assert agent365["packageApiAttempted"] is False
     assert agent365["layerStatus"] == da.LAYER_STATUS_DEFERRED
-    assert result["summary"]["status"] == "Complete"
+    assert agent365["packagesObserved"] is None
+    assert agent365["packageNewRowCount"] is None
+    assert result["summary"]["status"] == "Dry Run"
 
 
 def test_scan_all_present_mode_package_failure_remains_present_and_fails() -> None:
@@ -1626,6 +1638,8 @@ def test_scan_all_present_mode_package_failure_remains_present_and_fails() -> No
         result = da.scan_all(ctx)
     agent365 = result["summary"]["agent365"]
     assert agent365["resolvedState"] == "Present"
+    assert agent365["requestedMode"] == "Present"
+    assert agent365["detectionConfidence"] == "OperatorDeclared"
     assert agent365["layerStatus"] == da.LAYER_STATUS_FAILED
     assert result["summary"]["status"] == "Failed"
     assert agent365["resolvedState"] not in {"Absent", "NotDetected", "Deferred"}
@@ -1654,6 +1668,8 @@ def test_scan_all_auto_inconclusive_attempts_package_api_and_degrades_status() -
         result = da.scan_all(ctx)
     assert mock_fetch.called
     assert result["summary"]["agent365"]["resolvedState"] == "Inconclusive"
+    assert result["summary"]["agent365"]["requestedMode"] == "Auto"
+    assert result["summary"]["agent365"]["detectionConfidence"] == "Inconclusive"
     assert result["summary"]["status"] == "Incomplete"
 
 
@@ -1689,6 +1705,7 @@ def test_scan_all_summary_emits_agent365_and_coverage_scope_contract() -> None:
     summary = result["summary"]
     assert "agent365" in summary
     assert "coverageScope" in summary
+    assert summary["status"] == "Dry Run"
     agent365 = summary["agent365"]
     for key in (
         "requestedMode",
@@ -1707,6 +1724,11 @@ def test_scan_all_summary_emits_agent365_and_coverage_scope_contract() -> None:
         "pagingTruncated",
     ):
         assert key in agent365
+    assert agent365["requestedMode"] == "Present"
+    assert agent365["resolvedState"] == "Present"
+    assert agent365["detectionConfidence"] == "OperatorDeclared"
+    assert agent365["packagesObserved"] == 0
+    assert agent365["packageNewRowCount"] == 0
     scope = summary["coverageScope"]
     assert scope["layers"]["packageApi"] == da.LAYER_STATUS_DRY_RUN
     assert "Deferred/NotDetected is not an authoritative Agent Builder catalog." in scope["warning"]

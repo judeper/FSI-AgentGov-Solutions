@@ -125,6 +125,11 @@ AGENT365_MODE_ABSENT = "absent"
 AGENT365_MODE_AUTO = "auto"
 AGENT365_MODES = (AGENT365_MODE_PRESENT, AGENT365_MODE_ABSENT, AGENT365_MODE_AUTO)
 DEFAULT_AGENT365_MODE = AGENT365_MODE_ABSENT
+AGENT365_MODE_CHOICE_LABELS = {
+    AGENT365_MODE_PRESENT: "Present",
+    AGENT365_MODE_ABSENT: "Absent",
+    AGENT365_MODE_AUTO: "Auto",
+}
 
 AGENT365_STATE_PRESENT = "Present"
 AGENT365_STATE_ABSENT = "Absent"
@@ -574,7 +579,7 @@ def _request_with_backoff(
 def _generate_run_id(now: Optional[datetime] = None) -> str:
     """Generate a sortable, collision-resistant run id."""
     timestamp = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    return f"cai-{timestamp.strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(8)}"
+    return f"cai-{timestamp.strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(7)}"
 
 
 def _agent365_aliases(ctx: ScanContext) -> set[str]:
@@ -780,8 +785,8 @@ def _resolve_agent365_state(
     if probe.outcome == Agent365ProbeOutcome.NOT_DETECTED:
         return (AGENT365_STATE_NOT_DETECTED, "LicenseProbe", "Heuristic", probe)
     if probe.outcome == Agent365ProbeOutcome.DRY_RUN:
-        return (AGENT365_STATE_INCONCLUSIVE, "DryRun", "Low", probe)
-    return (AGENT365_STATE_INCONCLUSIVE, "LicenseProbe", "Low", probe)
+        return (AGENT365_STATE_INCONCLUSIVE, "DryRun", "Inconclusive", probe)
+    return (AGENT365_STATE_INCONCLUSIVE, "LicenseProbe", "Inconclusive", probe)
 
 
 # =============================================================================
@@ -2018,6 +2023,8 @@ def scan_all(ctx: ScanContext) -> dict:
         and overall_status == "Complete"
     ):
         overall_status = "Incomplete"
+    if ctx.dry_run:
+        overall_status = "Dry Run"
 
     if enumeration_failed:
         enumeration_status = "Failed"
@@ -2038,6 +2045,16 @@ def scan_all(ctx: ScanContext) -> dict:
             "No heuristic Agent 365 name aliases detected; this is non-authoritative. "
             "Manual verification or --agent365 present override is recommended."
         )
+    packages_observed: Optional[int] = (
+        len(package_fetch.packages) if package_fetch.attempted else None
+    )
+    package_new_row_count: Optional[int] = (
+        len(package_new_rows) if package_fetch.attempted else None
+    )
+    requested_mode_label = AGENT365_MODE_CHOICE_LABELS.get(
+        ctx.agent365_requested_mode,
+        AGENT365_MODE_CHOICE_LABELS[DEFAULT_AGENT365_MODE],
+    )
 
     summary: dict = {
         "runId": ctx.run_id,
@@ -2059,7 +2076,7 @@ def scan_all(ctx: ScanContext) -> dict:
             "httpStatus": arg_query_http,
         },
         "agent365": {
-            "requestedMode": ctx.agent365_requested_mode,
+            "requestedMode": requested_mode_label,
             "resolvedState": agent365_resolved_state,
             "resolutionSource": agent365_resolution_source,
             "detectionConfidence": agent365_detection_confidence,
@@ -2070,8 +2087,8 @@ def scan_all(ctx: ScanContext) -> dict:
             "errorCode": _sanitize_code(agent365_error_code),
             "errorSubcode": _sanitize_code(agent365_error_subcode),
             "reason": _sanitize_reason(agent365_reason),
-            "packagesObserved": len(package_fetch.packages),
-            "packageNewRowCount": len(package_new_rows),
+            "packagesObserved": packages_observed,
+            "packageNewRowCount": package_new_row_count,
             "pagingTruncated": bool(package_fetch.paging_truncated),
         },
         "environmentFailures": env_failures,
