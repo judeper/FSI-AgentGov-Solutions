@@ -7,11 +7,11 @@ coe_function: govern
 ---
 # Copilot Agent Inventory
 
-> **Version:** v0.3.0-preview
+> **Version:** v0.4.0-preview
 > **Status:** Preview
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — ARG Power Platform Inventory GA Mar 31 2026; Package Management API GA v1.0 (application CopilotPackages.Read.All); several agent-specific ARG fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview.
-> **Last Verified:** 2026-07-20
+> **Last Verified:** 2026-07-21
 
 Tenant-wide discovery and a canonical Dataverse **system-of-record** for every
 Copilot Studio and Microsoft 365 Copilot Agent Builder agent. Copilot Agent
@@ -23,17 +23,21 @@ read from, rather than each re-scanning the platform. This solution targets the
 
 CAI composes a **four-layer discovery** (Azure Resource Graph → per-environment
 Dataverse → PPAC reconciliation → Package Management API) and normalizes the
-result into eight Dataverse tables. A complete, current agent inventory is
+result into nine Dataverse tables. A complete, current agent inventory is
 required for agent registry control 1.2 and supports compliance with the
 record-keeping expectations of FINRA Rule 4511 and SEC Rule 17a-3/17a-4 (a
 documented inventory is a prerequisite for the records those rules require).
-The 0.3.0-preview release adds the Microsoft Graph **Package Management API**
-(GA v1.0, application `CopilotPackages.Read.All`) as an additive fourth
-discovery layer for Agent Builder packages, plus temporary owner attribution
-from the manual Agent Registry export and owner Copilot entitlement
-classification, feeding a BI dataset that answers three governance questions:
-who owns agents, which agents originate in Agent Builder, and whether the
-owner holds a Paid Copilot or Copilot Chat Only license. The inventory also
+The fourth layer — the Microsoft Graph **Package Management API** (GA v1.0,
+application `CopilotPackages.Read.All`) — enriches Agent Builder packages and is
+selected by a **license-aware Agent 365 mode** (`--agent365 present|absent|auto`,
+default `absent`) rather than a bare on/off flag, so a *deferred* or
+*not-detected* Agent Builder catalog is never mistaken for an authoritative
+absence of Agent Builder agents. Alongside it, temporary owner attribution from
+the manual Agent Registry export and owner Copilot entitlement classification
+feed a BI dataset that answers three governance questions: who owns agents, which
+agents originate in Agent Builder, and whether the owner holds a Paid Copilot or
+Copilot Chat Only license. Each run persists exactly one `fsi_caiscanrun` row
+carrying the Agent 365 resolution and coverage-scope contract. The inventory also
 provides the agent dimension that management and reporting solutions join against.
 
 Unlike `agent-registry-automation` (which operates a registration and approval
@@ -61,26 +65,39 @@ Full detail in [docs/architecture.md](docs/architecture.md). In summary:
    and AI models.
 3. **PPAC reconciliation** — cross-checks ARG against the Dataverse scan and
    records coverage gaps so they are auditable rather than silent.
-4. **Package Management API** (`--enable-package-api`, off by default) — calls
+4. **Package Management API** (Agent Builder catalog) — selected by the
+   license-aware **Agent 365 mode** (`--agent365 present|absent|auto`, env
+   `CAI_AGENT365`, default `absent`; the deprecated `--enable-package-api` flag
+   is a one-release alias for `--agent365 present`). When attempted it calls
    `GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages?$filter=platform eq 'Microsoft 365 Copilot Agent Builder'`
    under application permission `CopilotPackages.Read.All` (admin-consented,
-   Global commercial cloud only). Discovers `Microsoft 365 Copilot Agent Builder`
-   packages only (Copilot Studio is intentionally excluded: existing layers
-   already cover it, and package-to-bot joins are not strong enough to prevent
-   duplicates). Returns package-level metadata (`id` as `P_...`, `displayName`,
-   `publisher`, `appId`, `manifestId`, `supportedHosts`, etc.) for Agent Builder
-   packages. Enriches existing Agent Builder rows via `appId` / `manifestId`
-   (setting `fsi_discoverysource = "Reconciled (multi-source)"`); unmatched
-   packages create new rows keyed on the `P_...` id
+   US commercial Microsoft 365 cloud) with a Microsoft Agent 365 license.
+   Discovers `Microsoft 365 Copilot Agent Builder` packages only (Copilot Studio
+   is intentionally excluded: existing layers already cover it, and
+   package-to-bot joins are not strong enough to prevent duplicates). Returns
+   package-level metadata (`id` as `P_...`, `displayName`, `publisher`, `appId`,
+   `manifestId`, `supportedHosts`, etc.) for Agent Builder packages — **no owner,
+   creator, or created-date field**. Enriches existing Agent Builder rows via
+   `appId` / `manifestId` (setting `fsi_discoverysource = "Reconciled
+   (multi-source)"`); unmatched packages create new rows keyed on the `P_...` id
    (`fsi_discoverysource = "Package Management API"`). Package ids are a distinct
    id space from bot GUIDs — see
    [Reconciliation limitation](docs/architecture.md#reconciliation-limitation).
+   The run records the outcome as `summary.agent365` (resolved state
+   Present / Absent / NotDetected / Inconclusive; layer status Full / Deferred /
+   Unsupported / Partial / Failed / Dry Run) and `summary.coverageScope`. A
+   **Deferred or NotDetected Layer 4 never means zero Agent Builder agents** —
+   those agents are still discovered by Layers 1–2 via `createdIn`. API errors
+   (`401` / `403` / `404` / `429` / `5xx`) are typed as Partial / Failed /
+   Unsupported and are **never** read as "no license" or absence. See
+   [Agent 365 mode selection](docs/architecture.md#agent-365-mode-selection-license-aware-layer-4).
 
-**8-entity model** (logical names): `fsi_copilotagent` (master),
+**9-entity model** (logical names): `fsi_copilotagent` (master),
 `fsi_caienvironment`, `fsi_caiagentfeature` (one row per detected feature),
 `fsi_caiauthshare`, `fsi_caibillingentitlement` (downstream shell),
 `fsi_caiusagesignal`, `fsi_caiworkiqstate` (downstream shell),
-`fsi_caicompliancestate`.
+`fsi_caicompliancestate`, `fsi_caiscanrun` (one row per scan run — timing,
+status, Agent 365 resolution, and coverage scope).
 
 **Scale engine** — delta change tracking (`@odata.deltaLink`), OData `$batch`
 writes, bounded ~10-worker concurrency with 429 backoff, and usage aggregated at
@@ -100,8 +117,8 @@ copilot-agent-inventory/
 │   ├── dataverse-schema.md        # auto-generated — do not hand-edit
 │   └── flow-configuration.md
 ├── scripts/
-│   ├── create_cai_dataverse_schema.py   # 8-entity schema, idempotent, --output-docs
-│   ├── discover_agents.py               # four-layer discovery scanner (--enable-package-api)
+│   ├── create_cai_dataverse_schema.py   # 9-entity schema, idempotent, --output-docs
+│   ├── discover_agents.py               # four-layer discovery scanner (--agent365 present|absent|auto)
 │   ├── import_registry_export.py        # Agent Registry XLSX/CSV owner importer
 │   ├── resolve_owner_entitlement.py     # owner Copilot entitlement classifier (via CBG PS1)
 │   ├── detect_people_capability.py      # declarative-agent People capability (manifest)
@@ -133,11 +150,12 @@ python scripts/create_cai_dataverse_schema.py \
 ```
 
 ```bash
-# 3. Run the three-layer discovery scanner (dry-run first — no Dataverse writes)
+# 3. Run the discovery scanner in the default `absent` mode — Layer 4 deferred
+#    (dry-run first — no Dataverse writes)
 python scripts/discover_agents.py \
     --tenant-id <your-tenant-id> --dry-run --output scan.json
 
-# 4. Production three-layer scan (managed identity preferred)
+# 4. Production default-mode scan — Layer 4 deferred (managed identity preferred)
 python scripts/discover_agents.py \
     --tenant-id <your-tenant-id> --auth-mode managed-identity
 
@@ -147,25 +165,36 @@ python scripts/discover_agents.py \
 #    does NOT itself write to Dataverse; persistence is handled by the Power
 #    Automate flow documented in docs/flow-configuration.md.
 #
-#    Requirements: Microsoft Agent 365 license; CopilotPackages.Read.All
-#    application permission (Global commercial cloud only); pwsh.
+#    Layer 4 is selected by the license-aware Agent 365 mode:
+#      --agent365 present  attempt the Package API directly
+#      --agent365 auto     probe Graph subscribedSkus, then attempt if detected
+#      --agent365 absent   (default) skip the probe and the API; mark Layer 4
+#                          Deferred — this is NOT zero Agent Builder agents
+#    (`--enable-package-api` is a one-release deprecated alias for
+#    `--agent365 present`.) The mode may also be set via the CAI_AGENT365
+#    environment variable; precedence is explicit CLI > env > alias > default.
+#
+#    Requirements for present/auto: Microsoft Agent 365 license;
+#    CopilotPackages.Read.All application permission (US commercial Microsoft 365
+#    cloud); pwsh for entitlement resolution.
 #
 #    Edit templates/registry-columnmap.sample.json to declare your XLSX column
 #    headers before running. Exact native headers in the M365 admin center are
 #    unverified; use the alias map to declare the actual header names.
 #
 #    Combined output includes: agents[] enriched with package, owner, and
-#    entitlement fields; registryCorrelation summary (registryRowCount, matched,
-#    unmatchedRegistryRows, ambiguousNameSkipped, invalidDateWarnings, status);
-#    entitlementResolution summary (ownersConsidered, paidCount, chatOnlyCount,
-#    unknownCount, status).
+#    entitlement fields; summary.agent365 (Agent 365 resolution) and
+#    summary.coverageScope (per-layer coverage); registryCorrelation summary
+#    (registryRowCount, matched, unmatchedRegistryRows, ambiguousNameSkipped,
+#    invalidDateWarnings, status); entitlementResolution summary
+#    (ownersConsidered, paidCount, chatOnlyCount, unknownCount, status).
 python scripts/discover_agents.py \
     --auth-mode managed-identity \
     --tenant-id <your-tenant-id> \
-    --enable-package-api \
+    --agent365 present \
     --registry-export registry-export.xlsx \
     --columnmap templates/registry-columnmap.sample.json \
-    --as-of 2026-07-20T18:00:00Z \
+    --as-of 2026-07-21T18:00:00Z \
     --resolve-entitlement \
     --output scan.json
 ```
@@ -181,7 +210,7 @@ not enrich agents or write to Dataverse.
 python scripts/import_registry_export.py \
     --input registry-export.xlsx \
     --columnmap templates/registry-columnmap.sample.json \
-    --as-of 2026-07-20T18:00:00Z \
+    --as-of 2026-07-21T18:00:00Z \
     --output rows.json
 
 # Resolve Copilot entitlement for a list of owner UPNs (diagnostic only)
@@ -379,7 +408,7 @@ migration.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — four-layer discovery, 8-entity model, scale engine
+- [Architecture](docs/architecture.md) — four-layer discovery, 9-entity model, scale engine
 - [Prerequisites](docs/prerequisites.md) — auth, roles, scopes, network endpoints
 - [Dataverse Schema](docs/dataverse-schema.md) — table, column, and option-set reference
 - [Flow Setup](docs/flow-configuration.md) — daily discovery flow build guide

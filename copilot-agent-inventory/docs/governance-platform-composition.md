@@ -34,10 +34,17 @@ The design follows two principles:
 ## Pillar 1 — Inventory (`copilot-agent-inventory`)
 
 `copilot-agent-inventory` (CAI) is the **tier-1 foundation and system-of-record**.
-It runs a three-layer discovery (Azure Resource Graph → per-environment Dataverse
-`bot` / `botcomponent` → PPAC reconciliation) and normalizes the result into the
-canonical eight-entity store keyed on `fsi_copilotagent`. The Azure Resource Graph
-`createdIn` field disambiguates Copilot Studio agents from Agent Builder agents.
+It runs a **four-layer, license-aware discovery** (Azure Resource Graph →
+per-environment Dataverse `bot` / `botcomponent` → PPAC reconciliation → the
+optional Agent Builder Package Management API) and normalizes the result into the
+canonical **nine-entity** store keyed on `fsi_copilotagent`. The Azure Resource
+Graph `createdIn` field disambiguates Copilot Studio agents from Agent Builder
+agents. Whether the fourth (Package API) layer runs is an operator decision
+expressed as the Agent 365 mode (`--agent365 present|absent|auto`, default
+`absent`); at the default `absent` the Package API is marked **Deferred** — which
+**never** means zero Agent Builder agents, since those agents are still
+discovered by the first two layers. Each run also writes one `fsi_caiscanrun`
+ledger row capturing coverage scope and the Agent 365 resolution.
 
 A current, reconciled inventory is **required for** agent-registry control 1.2 and
 **supports compliance with** the record-keeping expectations of FINRA Rule 4511

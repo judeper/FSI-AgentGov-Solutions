@@ -5,6 +5,129 @@ All notable changes to the Copilot Agent Inventory are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0-preview] - 2026-07-21
+
+Introduces a **license-aware Agent Builder discovery fallback**. The Package
+Management API layer (Layer 4) is now selected by an explicit operator mode
+instead of a single on/off flag, and the run records a first-class Agent 365
+resolution and coverage-scope contract so that a *deferred* or *not-detected*
+Agent Builder catalog is never confused with an authoritative absence of Agent
+Builder agents. A canonical ninth Dataverse table, `fsi_caiscanrun`, persists one
+tamper-evident run row per scan. This release documents the customer-facing
+contract; the scanner and schema integration land alongside it, after which the
+generated `docs/dataverse-schema.md` reference is regenerated.
+
+> **Compatibility.** The three-layer (ARG → per-environment Dataverse → PPAC)
+> default behavior is unchanged. The new default mode is `absent`, so an
+> unattended run behaves the same as before unless an operator opts into the
+> Package API. `--enable-package-api` continues to work for one release as a
+> deprecated alias.
+
+### Added
+
+- **License-aware mode selection (`--agent365 present|absent|auto`).** A new
+  three-valued mode replaces the single `--enable-package-api` switch as the
+  primary control for Layer 4. The mode may also be supplied by the
+  `CAI_AGENT365` environment variable. The **default is `absent`**. Resolution
+  precedence is deterministic: **explicit CLI flag > environment variable >
+  deprecated alias (`--enable-package-api`) > default**. Contradictory or invalid
+  inputs (for example `--agent365 absent` together with `--enable-package-api`,
+  or an unrecognized value) **fail argument validation** rather than guessing.
+  There is **no interactive prompt** — the operator selects the mode in setup or
+  in the flow's `Agent365Mode` variable.
+  - **`absent`** is an **authoritative operator declaration** that the tenant is
+    not licensed for (or is not inventorying) Agent 365. It calls **neither**
+    Graph `subscribedSkus` **nor** the Package Management API, keeps Layers 1–3,
+    registry owner attribution, and entitlement resolution fully available, and
+    marks the Package API layer **Deferred**. A deferred Layer 4 **never** means
+    zero Agent Builder agents — those agents are still discovered by ARG (Layer 1)
+    and the per-environment Dataverse scan (Layer 2) via
+    `createdIn == "Microsoft 365 Copilot Agent Builder"`.
+  - **`auto`** calls Graph **`GET /v1.0/subscribedSkus`** to probe tenant
+    licensing. Because the public Microsoft licensing-service-plan reference does
+    not currently publish `skuPartNumber` / `servicePlanName` mappings for
+    **Agent 365**, **Agent 365 Frontier**, or **Microsoft 365 E7**, automatic
+    matching is a **conservative exact-name heuristic plus an operator override**.
+    A successful probe that finds no matching SKU resolves to **`NotDetected`**
+    with **heuristic** confidence — this is *not* authoritative absence.
+  - **`present`** attempts the Package Management API directly.
+- **`summary.agent365` resolution block** (always present) —
+  `requestedMode`, `resolvedState`, `resolutionSource`, `detectionConfidence`,
+  `licenseProbeAttempted`, `packageApiAttempted`, `layerStatus`, `httpStatus`,
+  sanitized `errorCode` / `errorSubcode` / `reason`, `packagesObserved`,
+  `packageNewRowCount`, and `pagingTruncated`. Resolved states are
+  **Present / Absent / NotDetected / Inconclusive**; layer statuses are
+  **Full / Deferred / Unsupported / Partial / Failed / Dry Run**.
+- **`summary.coverageScope` block** (always present) — per-layer statuses for
+  ARG, per-environment Dataverse, Package API, registry correlation, and
+  entitlement resolution, plus `authoritativeFor`, `limitations`, and an explicit
+  `warning` that a **Deferred / NotDetected Layer 4 is not an authoritative Agent
+  Builder catalog**.
+- **Canonical ninth Dataverse table `fsi_caiscanrun`** (OrganizationOwned) with
+  alternate key **`fsi_ScanRunKey`** on **`fsi_runid`**. One row per scan run
+  stores run timing/status, the Agent 365 requested/resolved/confidence/status
+  fields, license-probe and Package-API attempt/evidence fields, **nullable**
+  package counts, the core / registry / entitlement layer statuses and counts,
+  the full `coverageScope` JSON, and the full `summary` JSON. Agent rows join to
+  their run row on `fsi_runid`. Active architecture and table references become
+  **nine entities**; historical changelog references are left unchanged.
+- **Collision-resistant run identifiers.** Run IDs are generated so that two runs
+  in the same window cannot collide, which keeps the single-scan-run upsert
+  idempotent on `fsi_ScanRunKey`.
+
+### Changed
+
+- **Package counters are deprecated mirrors.** `summary.packageNewRowCount` and
+  `summary.packageScanTruncated` remain for one release **only when the Package
+  API is attempted**, mirroring `summary.agent365.packageNewRowCount` /
+  `pagingTruncated`. Consumers should read the `summary.agent365` fields.
+- **Run-status degradation is scoped.** `Deferred`, `Unsupported`, and a
+  heuristic `NotDetected` **do not** degrade an otherwise complete
+  declared-scope run; only `Partial` and `Failed` layer outcomes (or an overall
+  `Incomplete` / `Failed` run) do. Notifications alert on `Partial` / `Failed`
+  requested-layer outcomes, an `Inconclusive` resolution, or an overall
+  `Incomplete` / `Failed` run — **not** on `Deferred` / `NotDetected`.
+- **Flow persists one scan-run row.** `docs/flow-configuration.md` now documents
+  parsing `summary.agent365` and `summary.coverageScope`, upserting exactly one
+  `fsi_caiscanrun` row via `fsi_ScanRunKey` / `fsi_runid` after agent rows
+  persist, a read-back verification for that single stable run row, an
+  `Agent365Mode` operator variable (default `absent`, `--agent365 <Agent365Mode>`),
+  fail-visible Switch/Compose mapping for the new scan-run Choice columns, and a
+  clear distinction between a **null** package count (not observed / deferred) and
+  a **zero** package count (successfully observed empty catalog).
+- **Documentation refreshed.** `README.md`, `docs/architecture.md`,
+  `docs/prerequisites.md`, `docs/flow-configuration.md`, and
+  `docs/governance-platform-composition.md` describe the license-aware model, the
+  Agent 365 resolution state machine, and the nine-entity store.
+
+### Fixed
+
+- **Removed the "unlicensed tenant returns 404 / empty catalog" claim.** An
+  HTTP `401` / `403` / `404` / `429` / `5xx` from the Package Management API is
+  **never** interpreted as "no Agent 365 license" or as an authoritative absence.
+  Such responses are typed as `Partial` / `Failed` / `Unsupported` layer
+  outcomes; they never map to `Absent` / `NotDetected` / `Deferred`. Only an
+  explicit operator declaration (`absent`) or a successful license probe produces
+  an absence signal, and a heuristic no-match is `NotDetected`, not `Absent`.
+
+### Notes
+
+- **Owner is not creator.** The Package Management API v1 list and detail
+  resources still expose no owner, creator, or creation-date field. The Agent
+  Registry export remains the temporary owner-identity bridge (`fsi_ownersource
+  = "Agent Registry Export"`); it is referred to consistently as the agent
+  **owner**, never the creator.
+- **Least-privilege license probe.** The `auto` mode `subscribedSkus` probe is
+  documented with the current Microsoft Learn least-privileged application
+  permission **`LicenseAssignment.Read.All`**; the broader `Organization.Read.All`
+  already granted for entitlement classification is a supported alternative.
+- **Cloud scope.** This content targets **US commercial Microsoft 365**; verify
+  applicability for other Microsoft clouds independently with Microsoft.
+- **Schema/scanner integration is companion work.** This entry documents the
+  v0.4 contract. The `create_cai_dataverse_schema.py` addition of `fsi_caiscanrun`,
+  the scanner emission of `summary.agent365` / `summary.coverageScope`, and the
+  regenerated `docs/dataverse-schema.md` land alongside this documentation.
+
 ## [0.3.0-preview] - 2026-07-20
 
 ### Correction note — 2026-07-20 (post-merge, same version)

@@ -1,7 +1,7 @@
 id: copilot-agent-inventory
 name: Copilot Agent Inventory
-description: Foundation system-of-record for Copilot Studio and Agent Builder agents — four-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation, Package Management API) feeding a canonical eight-entity governance store keyed on fsi_copilotagent. Adds Agent Builder package discovery (GA v1.0 Package Management API), temporary owner attribution from the manual Agent Registry export, and owner Copilot entitlement classification.
-version: 0.3.0-preview
+description: Foundation system-of-record for Copilot Studio and Agent Builder agents — four-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation, Package Management API) feeding a canonical nine-entity governance store keyed on fsi_copilotagent. Layer 4 is selected by a license-aware Agent 365 mode (--agent365 present|absent|auto, default absent) so a deferred or not-detected Agent Builder catalog is never mistaken for absence; a ninth table (fsi_caiscanrun) persists one tamper-evident scan-run row with the Agent 365 resolution and coverage-scope contract. Retains temporary owner attribution from the manual Agent Registry export and owner Copilot entitlement classification.
+version: 0.4.0-preview
 status: preview
 domain: monitoring-analytics
 tier: '1'
@@ -15,7 +15,7 @@ prerequisites:
   power-platform-admin: Power Platform Admin (or Dynamics 365 admin) for tenant-wide environment enumeration and Dataverse bot/botcomponent reads, plus the fsi publisher prefix in the governance environment.
   security-admin: Security Admin to provision the least-privilege scanner service principal and store its secret in Key Vault via managed identity.
   microsoft-365-admin: Microsoft 365 admin (or Entra Global Admin) to grant admin consent for the CopilotPackages.Read.All application permission required by the Package Management API layer. Requires a Microsoft Agent 365 license at the tenant level.
-verification: Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`. To verify the Package Management API layer, run with --enable-package-api and confirm rows appear with `fsi_discoverysource = "Package Management API"`.
+verification: Run discover_agents.py and confirm the scanner writes one row per discovered agent to `fsi_copilotagent` and one row per detected feature to `fsi_caiagentfeature`. To exercise the license-aware Agent Builder layer, run with `--agent365 present` (or the deprecated `--enable-package-api` alias) and confirm rows appear with `fsi_discoverysource = "Package Management API"`; confirm the Power Automate flow persists exactly one `fsi_caiscanrun` row per run keyed on `fsi_runid`, carrying the `summary.agent365` resolution and `summary.coverageScope` fields.
 
 # Microsoft platform dependency maturity (rendered in README header).
 upstreamDependency:

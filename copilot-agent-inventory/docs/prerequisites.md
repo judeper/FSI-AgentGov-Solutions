@@ -206,42 +206,107 @@ python scripts/create_cai_dataverse_schema.py \
 python scripts/create_cai_dataverse_schema.py --output-docs
 ```
 
-The deployed schema is 8 tables, 11 solution-specific option sets, and 1 shared
-option set. See [dataverse-schema.md](dataverse-schema.md) for the full reference.
+The deployed schema is **nine tables** — the ninth, `fsi_caiscanrun`, and its
+scan-run option sets are added during the v0.4 schema integration. See
+[dataverse-schema.md](dataverse-schema.md) for the full reference, including the
+11 solution-specific option sets and 1 shared option set (regenerated during
+integration).
 
 ## Package Management API — Layer 4 Prerequisites
 
-The Package Management API layer (`--enable-package-api`) is **additive and
-off by default**. It discovers `Microsoft 365 Copilot Agent Builder` packages
-only; Copilot Studio agents are intentionally excluded because existing layers
-(ARG, per-environment Dataverse, and PPAC) already cover Copilot Studio agents,
-and package-to-bot joins are not strong enough to prevent duplicates. The layer
-requires three separate gates — each must be satisfied independently, at
-different administrative levels. Activate this layer only in the **US commercial
-Microsoft 365 cloud** (see cloud scope note below).
+Layer 4 is governed by the license-aware **Agent 365 mode**
+(`--agent365 present|absent|auto`, environment variable `CAI_AGENT365`, default
+**`absent`**; the deprecated `--enable-package-api` flag is a one-release alias
+for `--agent365 present`). It is **additive** and, at the default `absent`, does
+**not** run. It discovers `Microsoft 365 Copilot Agent Builder` packages only;
+Copilot Studio agents are intentionally excluded because existing layers (ARG,
+per-environment Dataverse, and PPAC) already cover Copilot Studio agents, and
+package-to-bot joins are not strong enough to prevent duplicates. When Layer 4
+runs, it requires the gates below — each satisfied independently, at different
+administrative levels. Activate this layer only in the **US commercial
+Microsoft 365 cloud** (see the cloud-scope statement at the top of this
+document).
+
+> **Mode precedence:** explicit `--agent365` flag > `CAI_AGENT365` environment
+> variable > deprecated `--enable-package-api` alias > default (`absent`).
+> Invalid values or contradictions (for example `--agent365 absent` together
+> with `--enable-package-api`) fail argument validation. See
+> [architecture.md](architecture.md#agent-365-mode-selection-license-aware-layer-4).
 
 > **Reference:** [List packages — Microsoft Learn](https://learn.microsoft.com/microsoft-365/copilot/extensibility/api/admin-settings/package/copilotpackages-list)
 > · [copilotPackage resource type](https://learn.microsoft.com/microsoft-365/copilot/extensibility/api/admin-settings/package/resources/copilotpackage)
+> · [subscribedSku resource type](https://learn.microsoft.com/en-us/graph/api/resources/subscribedsku)
 
 ---
 
-### Gate 1 — Microsoft Agent 365 License (tenant product gate)
+### Gate 1 — Agent 365 mode and the Microsoft Agent 365 license (tenant product gate)
 
-The Package Management API is surfaced only when the tenant holds a
-**Microsoft Agent 365** license. This is a tenant-level product gate; the API
-endpoint returns `404` or an empty catalog for tenants without this license.
+The Package Management API requires a tenant **Microsoft Agent 365** license.
+This is a tenant-level product gate set by Microsoft licensing or the enterprise
+agreement — not an admin configuration step. **How Layer 4 treats licensing
+depends on the selected mode:**
 
-- **Who sets this up:** Microsoft licensing or enterprise agreement — not an
-  admin configuration step.
-- **How to verify:** Confirm the tenant has a Microsoft Agent 365 license
-  assignment before enabling Layer 4.
+- **`absent` (default):** the operator authoritatively declares Agent 365 is out
+  of scope. The scanner calls **neither** `subscribedSkus` **nor** the Package
+  API, records Layer 4 as `Deferred`, and keeps Layers 1–3, registry owner
+  attribution, and entitlement resolution fully available. **A `Deferred`
+  Layer 4 is not "zero Agent Builder agents"** — those agents are still
+  discovered by Layers 1–2 (`createdIn == "Microsoft 365 Copilot Agent
+  Builder"`); only the package-catalog enrichment is deferred.
+- **`present`:** the scanner attempts the Package API directly (no license
+  probe). Provision the Agent 365 license and the Gate 2 permission first.
+- **`auto`:** the scanner performs a **conservative license probe** first (see
+  Gate 1a) and only attempts the Package API when the probe matches.
+
+> **API errors are typed, never absence.** An HTTP `401` / `403` / `404` /
+> `429` / `5xx` from the Package API is classified as a `Partial` / `Failed` /
+> `Unsupported` layer outcome and surfaced in `summary.agent365`. It is **never**
+> interpreted as "the tenant has no Agent 365 license" and **never** recorded as
+> `Absent` / `NotDetected` / `Deferred`. Only an explicit operator `absent`
+> declaration yields `Absent`; only a successful `auto` probe with no SKU match
+> yields a heuristic `NotDetected`.
+
+- **How to verify (before selecting `present`):** confirm the tenant holds a
+  Microsoft Agent 365 license assignment
+  ([Microsoft Agent 365 service description](https://learn.microsoft.com/office365/servicedescriptions/microsoft-agent-365/microsoft-agent-365)).
+
+---
+
+### Gate 1a — `auto`-mode license probe permission (only for `--agent365 auto`)
+
+In `auto` mode the scanner calls Graph
+`GET https://graph.microsoft.com/v1.0/subscribedSkus` to look for an Agent 365
+SKU. `subscribedSkus` supports only `$select` (no `$filter`), so the scanner
+enumerates the tenant's SKUs and matches locally.
+
+| Permission | Type | Purpose | Recommendation |
+|-----------|------|---------|----------------|
+| `LicenseAssignment.Read.All` | Application | List subscribed SKUs for the probe | **Recommended — least privileged** for `GET /subscribedSkus` per current Microsoft Learn |
+| `Organization.Read.All` | Application | Also authorizes `GET /subscribedSkus` | Supported but **broader**; already granted for owner-entitlement queries, so it is compatible if you prefer not to add a permission |
+
+> **Least-privilege guidance.** Current Microsoft Learn lists
+> `LicenseAssignment.Read.All` as the least-privileged application permission for
+> `GET /subscribedSkus`; `Organization.Read.All` is also supported but broader.
+> Grant `LicenseAssignment.Read.All` for the probe where practical. If your app
+> already holds `Organization.Read.All` for entitlement classification, the
+> probe works without adding a permission.
+
+> **Heuristic, not authoritative.** The public Microsoft licensing
+> service-plan reference does **not** currently publish `skuPartNumber` /
+> `servicePlanName` mappings for **Agent 365**, **Agent 365 Frontier**, or
+> **Microsoft 365 E7**. Automatic matching is therefore a conservative
+> **exact-name heuristic plus an operator override list**. A successful probe
+> that finds no match is `NotDetected` with **heuristic** confidence — **not**
+> authoritative absence.
 
 ---
 
 ### Gate 2 — `CopilotPackages.Read.All` Application Permission (API gate)
 
 The scanner uses **application** (app-only) permission to read the package
-catalog, which allows unattended automation without a signed-in user.
+catalog, which allows unattended automation without a signed-in user. This gate
+applies when the resolved mode attempts the Package API (`present`, or `auto`
+with a SKU match).
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
@@ -261,12 +326,12 @@ Administrator** must grant tenant-wide admin consent.
    Privileged Role Administrator).
 
 **Additional Graph permissions for owner licensing queries** (required by
-`resolve_owner_entitlement.py`):
+`resolve_owner_entitlement.py`, and reused by the `auto`-mode probe):
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
 | `User.Read.All` | Application | Read owner profile and license assignments |
-| `Organization.Read.All` | Application | Read tenant SKU information for entitlement classification |
+| `Organization.Read.All` | Application | Read tenant SKU information for entitlement classification (also authorizes the `auto` probe) |
 | `GroupMember.Read.All` | Application | Resolve security-group memberships for sharing audience expansion |
 
 Grant admin consent for these at the same time as `CopilotPackages.Read.All`.
@@ -321,14 +386,14 @@ python scripts/discover_agents.py \
     --auth-mode managed-identity
 
 # Full integrated scan — Package API + registry correlation + entitlement
-# (Global commercial cloud only; requires pwsh for entitlement resolution)
+# (US commercial Microsoft 365 cloud only; requires pwsh for entitlement resolution)
 python scripts/discover_agents.py \
     --auth-mode managed-identity \
     --tenant-id <your-tenant-id> \
-    --enable-package-api \
+    --agent365 present \
     --registry-export registry-export.xlsx \
     --columnmap templates/registry-columnmap.sample.json \
-    --as-of 2026-07-20T18:00:00Z \
+    --as-of 2026-07-21T18:00:00Z \
     --resolve-entitlement \
     --output scan.json
 ```
