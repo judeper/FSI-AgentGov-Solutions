@@ -36,7 +36,6 @@ P_19ae1zz1-... convention from Microsoft docs examples.
 from __future__ import annotations
 
 import json
-import logging
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -975,8 +974,6 @@ def test_regression_defect4_sample_json_shape_matches_scan_all_output() -> None:
         resolve_entitlement=True,
         entitlement_ps1_path="fake-ps1.ps1",
     )
-
-    scan_outcome = {"agents": [], "features": [], "authShares": []}
 
     with ExitStack() as stack:
         import import_registry_export as ire

@@ -51,6 +51,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   corrected: display-name header alias `synthetic_owner_display` removed from
   `owner_upn` mapping (only UPN-shaped headers may map to `owner_upn`).
 
+### Pre-live hardening note — 2026-07-21 (pre-promotion, same version)
+
+Fail-visible discovery hardening found by the pre-live final-gate review. These
+changes eliminate cases where an authorization or API failure could look like a
+clean, agent-free tenant. Backward compatibility is preserved (the flag-off path
+is still the three-layer scan), except that silent authorization failures are now
+surfaced.
+
+- **Environment enumeration is now explicit, not success-shaped empty.**
+  `enumerate_environments` raises on a non-200 response, a non-JSON body, or a
+  payload missing a valid `value` array, instead of soft-breaking and returning the
+  (often empty) rows gathered so far. `scan_all` records the failure in
+  `summary.environmentEnumeration` (`status`, `httpStatus`, sanitized `reason`) and
+  sets `summary.status = "Failed"`; the CLI exits non-zero. A genuine HTTP 200 with
+  `value: []` is still a representable empty result (`status: "Success"`).
+- **Per-environment scan failures are retained as structured coverage gaps.**
+  `_scan_one_environment` no longer swallows per-environment failures into a
+  zero-agent result. A `bots` read failure marks the environment `Failed`; a
+  per-bot `botcomponents` read failure marks it `Incomplete` and flags the affected
+  agent `Incomplete Scan`. Each gap is recorded in `summary.environmentFailures[]`
+  (`environmentId`, `stage`, `httpStatus`, sanitized `reason`, `botId`) and degrades
+  `summary.status` to `Incomplete` / `Failed`.
+- **ARG layer distinguishes unavailable / failed / observed-zero.** A failed ARG
+  query (`ArgQueryError` on non-200, or throttle-exhaustion) is recorded as
+  `summary.argLayer.status = "Failed"` and falls back to Layer 2 — never treated as
+  an observed zero. `Available` with `agentCount: 0` remains a genuine zero;
+  `Unavailable` is the normal Layer-2-default fallback; `Disabled` reflects
+  `--no-arg`.
+- **`--resolve-entitlement` without `--registry-export` now fails argument
+  validation** (fail-fast) instead of silently performing no entitlement work —
+  owner entitlement has no owner source without the registry correlation step.
+- **New `summary` fields:** `status`, `environmentEnumeration`, `argLayer`, and
+  `environmentFailures` are always present. `templates/package-inventory.sample.json`
+  updated to match. Package API truncation behavior is unchanged and remains
+  fail-visible (`packageScanTruncated`). Token material is scrubbed from any failure
+  reason written to structured output.
+- **Docs:** `docs/prerequisites.md` now defines the three governance identities —
+  **deployer** (interactive admin, System Customizer/Admin in the governance
+  environment, schema only), **scanner** (app-only, registered as a Power Platform
+  management application plus a read-only `bot` / `botcomponent` application user in
+  every in-scope environment, **no CAI-table write**), and **flow-writer** (the
+  Power Automate Dataverse connection, Create/Write on the CAI tables in the
+  governance environment) — plus a scanner environment-coverage verification and
+  stop condition. `docs/flow-configuration.md` adds an explicit fail-visible /
+  quarantine **Default** branch for every Choice-label Switch, corrects the
+  misleading "Add a new row" wording (the flow upserts via **Update a row** with an
+  alternate key), reinforces that keyless / unmapped-label rows are never inserted,
+  and surfaces the new coverage-gap signals in the Parse JSON schema, the coverage
+  notification step, and troubleshooting. `docs/architecture.md` documents the
+  run-level status/coverage model and the three-identity split.
+- **Tests:** `tests/test_scanner_hardening.py` covers enumeration 401/403/500,
+  successful-empty, malformed body, per-environment 403 / generic exception /
+  partial (feature-scan) failure, ARG failed vs observed-zero vs unavailable vs
+  disabled, overall-status aggregation, CLI non-zero exit on `Failed`, and the
+  entitlement-flag dependency.
+
 Adds a fourth discovery layer — the Microsoft Graph Package Management API
 (GA v1.0, application permission `CopilotPackages.Read.All`) — for Agent
 Builder catalog discovery, plus temporary owner attribution from the manual

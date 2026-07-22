@@ -40,9 +40,14 @@ Before creating the flow, confirm you have:
   - 8 tables: `fsi_copilotagent`, `fsi_caienvironment`, `fsi_caiagentfeature`,
     `fsi_caiauthshare`, `fsi_caibillingentitlement`, `fsi_caiusagesignal`,
     `fsi_caiworkiqstate`, `fsi_caicompliancestate`.
-- [ ] **Scanner service principal** with the roles and scopes in
-  [prerequisites.md](prerequisites.md) (environment enumeration + per-environment
-  `bot` / `botcomponent` read + CAI table write).
+- [ ] **Scanner service principal** (read-only) with the roles and scopes in
+  [prerequisites.md](prerequisites.md) — environment enumeration + per-environment
+  `bot` / `botcomponent` **read only**. The scanner emits JSON and does **not**
+  write to Dataverse.
+- [ ] **Flow-writer identity** — the Power Automate **Dataverse connection** this
+  flow uses holds **Create / Write** on the CAI tables in the governance
+  environment. This is the **only** identity that writes the inventory (see the
+  three-identity split in [prerequisites.md](prerequisites.md#roles-and-permissions--the-three-governance-identities)).
 - [ ] **Microsoft Teams** channel and/or an **email distribution list** for
   run notifications (optional).
 - [ ] **Connection references** bound in Power Automate (create these in the
@@ -161,6 +166,28 @@ the placeholders (`{{...}}`) with your organization's values.
             "type": "object",
             "properties": {
                 "runId": { "type": "string" },
+                "status": { "type": "string" },
+                "environmentEnumeration": {
+                    "type": "object",
+                    "properties": {
+                        "status": { "type": "string" },
+                        "environmentCount": { "type": "integer" },
+                        "httpStatus": { "type": ["integer", "null"] },
+                        "reason": { "type": "string" }
+                    }
+                },
+                "argLayer": {
+                    "type": "object",
+                    "properties": {
+                        "status": { "type": "string" },
+                        "agentCount": { "type": "integer" },
+                        "httpStatus": { "type": ["integer", "null"] }
+                    }
+                },
+                "environmentFailures": {
+                    "type": "array",
+                    "items": { "type": "object" }
+                },
                 "argAgentCount": { "type": "integer" },
                 "scannedAgentCount": { "type": "integer" },
                 "featureCount": { "type": "integer" },
@@ -210,6 +237,20 @@ the placeholders (`{{...}}`) with your organization's values.
 ```
 
 4. Rename action: `Parse_Summary`.
+
+> **Scan-completeness signals (read before persisting).** The scanner reports
+> whether the run is trustworthy through four summary fields. Use them to decide
+> whether to alert (Step 9) — a partial or authorization-blocked scan must never be
+> treated as a clean, empty tenant:
+>
+> - `summary.status` — `Complete` / `Incomplete` / `Failed` (overall).
+> - `summary.environmentEnumeration.status` — `Success` / `Failed` / `Dry Run`.
+>   A `Failed` value means the environment list itself could not be read (for
+>   example a 401/403), so **zero environments is a failure, not an empty tenant**.
+> - `summary.argLayer.status` — `Available` / `Unavailable` / `Failed` / `Disabled`.
+>   `Failed` is distinct from `Available` with `agentCount: 0` (a genuine zero).
+> - `summary.environmentFailures[]` — one record per per-environment coverage gap
+>   (`environmentId`, `stage`, `httpStatus`, `reason`). An empty array is a clean run.
 
 ### Step 7: Persist Agent Records to Dataverse
 
@@ -299,11 +340,10 @@ The scanner emits each discovered agent as an object in `agents[]`. Use an
 
 #### Step 7a — Label-to-Integer Conversion for Choice Fields
 
-Before the **Add a new row** action in the loop, add a **Switch** (or **Compose**)
-action for each Choice column to convert the scanner's label string to the Dataverse
-option-set integer. The scanner emits labels; Dataverse requires integers.
-`fsi_isblocked` is a Two-Options (Boolean) field — pass `true` / `false` directly,
-no Switch needed.
+Before the **upsert (Update a row) action** in the loop, add a **Switch** action for
+each Choice column to convert the scanner's label string to the Dataverse option-set
+integer. The scanner emits labels; Dataverse requires integers. `fsi_isblocked` is a
+Two-Options (Boolean) field — pass `true` / `false` directly, no Switch needed.
 
 | Choice Column (logical name) | Scanner Label | Dataverse Integer |
 |---|---|---|
@@ -342,9 +382,30 @@ no Switch needed.
 
 > **Implementation tip:** Add a **Switch** action before `Persist_Agent_Records`.
 > Set the **On** value to the scanner label
-> (e.g. `items('Apply_to_each')?['fsi_discoverysource']`). Each **Case** sets
-> a variable to the corresponding integer. Reference that variable in the
-> **Add a new row** column mapping instead of the raw label string.
+> (e.g. `items('Apply_to_each')?['fsi_discoverysource']`). Each **Case** sets a
+> variable to the corresponding integer. Reference that variable in the
+> **Update a row** column mapping instead of the raw label string.
+
+> **Every Switch MUST have a fail-visible Default case.** Do **not** leave the
+> **Default** case empty and do **not** let it fall through to a default integer
+> such as `0` / `100000000` or a null. An unmapped label means the scanner emitted
+> a value this flow does not recognize — almost always platform drift (a new
+> option-set value added by Microsoft). Silently mapping it to a default would write
+> a **wrong or blank** governance signal (for example mislabelling an unknown
+> `fsi_discoverysource` as `Azure Resource Graph`). Instead, in the **Default** case
+> of every label Switch, **quarantine the row**: set an `IsUnmappedLabel` boolean
+> variable to `true` (and optionally append the row + the offending column/label to
+> the `UnmappedRows` error-collection variable), then **skip the upsert for that row**
+> and let Branch C's error path handle it. Review quarantined rows and extend the
+> Switch cases before the next run.
+>
+> **Keyless / unmapped rows are never inserted.** A row is upserted only when it
+> resolves a valid alternate key (Branch A `fsi_AgentEnvKey` or Branch B
+> `fsi_PackageKey`) **and** every Choice label mapped to a known integer. Rows that
+> hit Branch C (no key) or a Switch Default (unmapped label) are routed to the error
+> collection / Terminate path — never written with a generic **Add a new row** action
+> and never written with a guessed default option value. This helps keep the
+> inventory free of unkeyed duplicates and mislabelled governance signals.
 
 ---
 
@@ -372,19 +433,33 @@ Map the parsed summary to your run-tracking table (for example an
 
 Rename action: `Write_Run_Summary`.
 
-### Step 9: Notify on Reconciliation Gaps (optional)
+### Step 9: Notify on Coverage Gaps and Reconciliation Gaps (optional)
 
 1. Add action: **Condition**.
-2. Condition:
-   `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_arg_only'])` is greater than `0`
-   **or** `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_dataverse_only'])` is greater than `0`.
+2. Condition — fire when the scan is not cleanly complete **or** a reconciliation
+   gap exists:
+   - `body('Parse_Summary')?['summary']?['status']` is **not equal to** `Complete`
+   - **or** `length(body('Parse_Summary')?['summary']?['environmentFailures'])` is greater than `0`
+   - **or** `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_arg_only'])` is greater than `0`
+   - **or** `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_dataverse_only'])` is greater than `0`.
 3. Configure **Run after**: `Write_Run_Summary` — set to run after **Succeeded**
    and **Failed** so notification proceeds even if the write fails.
 4. In the **Yes** branch, add **Microsoft Teams** > **Post adaptive card in a
-   chat or channel** (or **Send an email**) summarizing the reconciliation gap
-   (agents in ARG but not scanned, and vice versa). Coverage gaps are surfaced
-   for review, not silently dropped.
-5. Rename: `Check_Reconciliation_Gap`.
+   chat or channel** (or **Send an email**) summarizing the gap. Include the
+   overall `summary.status`, `summary.environmentEnumeration.status`, the
+   `summary.environmentFailures[]` records (environment id, stage, HTTP status),
+   and the reconciliation deltas (agents in ARG but not scanned, and vice versa).
+   Coverage gaps are surfaced for review, not silently dropped — an `Incomplete`
+   or `Failed` status, or any environment failure, means the inventory is a
+   partial picture and must not be treated as a clean, agent-free result.
+5. Rename: `Check_Coverage_And_Reconciliation_Gap`.
+
+> **Enumeration failure is a run failure.** When
+> `summary.environmentEnumeration.status` is `Failed`, the environment list itself
+> could not be read (for example a 401/403). The scanner also exits non-zero in
+> this case, so the Azure Automation job reports **Failed** and `Scope_Catch`
+> (Step 10) additionally fires. Do not interpret a zero-environment /
+> zero-agent result from a failed enumeration as an empty tenant.
 
 ### Step 10: Error Handling (Scope_Catch)
 
@@ -419,11 +494,34 @@ Rename action: `Write_Run_Summary`.
 
 ### Dataverse Write Failures
 
+The **flow-writer** identity (the flow's Dataverse connection) is the only identity
+that writes the CAI tables; the read-only scanner never writes Dataverse.
+
 | Error Code | Cause | Resolution |
 |-----------|-------|------------|
-| 403 Forbidden | Identity lacks Create/Write on CAI tables | Assign a role with Organization-level Create on the CAI tables |
+| 403 Forbidden | Flow-writer identity lacks Create/Write on CAI tables | Assign the flow's Dataverse connection a role with Organization-level Create on the CAI tables in the governance environment |
 | 404 Not Found | Table not deployed | Deploy the schema (`scripts/create_cai_dataverse_schema.py`) |
 | 400 Bad Request | Column-name mismatch | Verify logical column names against `dataverse-schema.md` |
+
+### Scan Reports `Incomplete` / `Failed` or Environment Failures
+
+The scanner now surfaces coverage gaps instead of returning a success-shaped empty
+result. Use the summary signals to diagnose:
+
+- **`summary.environmentEnumeration.status == "Failed"`** — the environment list
+  itself could not be read (often 401/403). Confirm the scanner service principal
+  is registered as a **Power Platform management application** and has ARM access.
+  Zero environments here is a failure, **not** an empty tenant.
+- **An environment in `summary.environmentFailures[]` with `stage: "bots"` and
+  `httpStatus: 403`** — the scanner service principal is missing (or lacks the
+  read-only role) as an **application user** in that environment. Add the read-only
+  application user for `bot` / `botcomponent` and re-run. This is the coverage
+  **stop condition** from [prerequisites.md](prerequisites.md#scanner-environment-coverage-verification-and-stop-condition).
+- **`stage: "botcomponents"` failures** — the bot was discovered but its feature
+  read failed; the agent is retained and flagged `Incomplete Scan`.
+- **`summary.argLayer.status == "Failed"`** — a Layer 1 ARG query failure (distinct
+  from `Available` with `agentCount: 0`). Layer 2 remains the load-bearing default;
+  reconciliation is degraded until ARG succeeds.
 
 ### `botcomponent` Query Returns 400 (Layer 2)
 

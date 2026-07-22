@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "solution": "copilot-agent-inventory",
+  "ownershipManifestPath": "lab-harness/templates/copilot-agent-inventory.ownership.json",
+  "notes": "Static PlanOnly template for the copilot-agent-inventory public/offline validation surface. Every step references repository-local, public assets and existing allow-listed adapters only. This public harness does not execute live Microsoft Graph, Power Platform API, or Dataverse checks; those run only in the private lab repository against a disposable environment. Contains no private tenant values.",
+  "steps": [
+    {
+      "id": "cai-runtime-pytest-offline",
+      "channel": "runtime",
+      "adapter": "runtime.python.pytest",
+      "description": "Run the public/offline copilot-agent-inventory pytest suite. All HTTP calls and token acquisition are mocked in these tests, so no live network or tenant access is required.",
+      "testPaths": [
+        "copilot-agent-inventory/tests"
+      ]
+    },
+    {
+      "id": "cai-playwright-portal-smoke-template",
+      "channel": "playwright",
+      "adapter": "playwright.portal-smoke",
+      "description": "Optional portal-smoke template. The portal URL and any account context are supplied through environment variables at execution time only; none are embedded here. Proves portal reachability and rendering only, not API, Dataverse, or backend policy behavior.",
+      "packagePath": "lab-harness/playwright",
+      "specPath": "lab-harness/playwright/tests/portal-smoke.spec.ts"
+    }
+  ]
+}

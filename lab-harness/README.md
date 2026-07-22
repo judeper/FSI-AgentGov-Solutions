@@ -47,6 +47,20 @@ pwsh .\lab-harness\runtime\Invoke-LabValidation.ps1 `
   -EvidenceRoot C:\FSI-Lab-Evidence
 ```
 
+### Solution templates
+
+Per-solution `*.plan.json` / `*.ownership.json` pairs under `lab-harness/templates/`
+describe the public/offline validation surface for a solution using only the
+existing allow-listed adapters:
+
+- `audit-compliance-manager.plan.json` / `.ownership.json`
+- `copilot-agent-inventory.plan.json` / `.ownership.json` — public/offline pytest
+  (mocked, no live network) plus an optional portal-smoke template.
+
+These templates are PlanOnly-validated in CI and carry no private tenant values.
+Live API/Dataverse execution against a real tenant stays in the private lab
+repository; the public templates never assert live execution occurred.
+
 ### Private-runner/live dispatch
 
 - Live `workflow_dispatch` execution belongs in the private lab repository.

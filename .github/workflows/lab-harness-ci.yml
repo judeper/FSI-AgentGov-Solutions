@@ -117,6 +117,15 @@ jobs:
           validate(instance=ownership, schema=schemas["ownership"])
           validate(instance=summary, schema=schemas["summary"])
 
+          # Per-solution plan/ownership template pairs must all validate.
+          for solution in ('audit-compliance-manager', 'copilot-agent-inventory'):
+              sol_plan = json.loads((root / 'templates' / f'{solution}.plan.json').read_text(encoding='utf-8'))
+              sol_ownership = json.loads((root / 'templates' / f'{solution}.ownership.json').read_text(encoding='utf-8'))
+              validate(instance=sol_plan, schema=schemas["plan"])
+              validate(instance=sol_ownership, schema=schemas["ownership"])
+              assert sol_plan["solution"] == solution
+              assert sol_ownership["solution"] == solution
+
           workflow_path = Path('.github/workflows/lab-harness-ci.yml')
           yaml.safe_load(workflow_path.read_text(encoding='utf-8'))
 

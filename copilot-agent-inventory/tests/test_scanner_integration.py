@@ -606,7 +606,6 @@ def test_entitlement_failed_sets_all_unknown_and_failed_status() -> None:
     """When resolve_entitlements raises an exception, all eligible UPN owners must
     be set to Unknown and status must be 'Failed' — fail-open, never 'blocked'."""
     agent = _ab_agent()
-    reg   = [_reg_row(upn=_OWNER_UPN)]
     ctx   = _make_ctx(**_ENT_CTX)
     scan_outcome = {"agents": [dict(agent)], "features": [], "authShares": []}
 
@@ -738,7 +737,6 @@ def test_regression_defect1_invocation_failed_true_sets_status_failed() -> None:
     The pre-fix code ignored invocation_failed and always wrote 'Complete'.
     """
     agent = _ab_agent()
-    reg   = [_reg_row(upn=_OWNER_UPN)]
 
     # Mock returns all-Unknown results WITH invocation_failed=True.
     ent_failed: list[dict] = [

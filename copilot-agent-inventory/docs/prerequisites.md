@@ -64,39 +64,95 @@ application depending on the auth mode):
 |----------|-------|---------|
 | Power Platform API (`https://api.powerplatform.com`) | `https://api.powerplatform.com/.default` | Layer 1 — ARG `resourcequery` against `PowerPlatformResources` |
 | Power Platform Admin / BAP (`https://api.bap.microsoft.com`) | `https://api.bap.microsoft.com/.default` | Environment enumeration |
-| Dataverse (per environment) | `https://<org>.crm.dynamics.com/.default` | Layer 2 — read `bot` / `botcomponent`; write the CAI inventory tables in the governance environment |
+| Dataverse (per environment) | `https://<org>.crm.dynamics.com/.default` | Layer 2 — the **scanner** reads `bot` / `botcomponent` (read-only). The CAI inventory tables are written by the Power Automate flow's Dataverse connection (the **flow-writer** identity), not by the scanner. |
 | Microsoft Graph (`https://graph.microsoft.com`) | `https://graph.microsoft.com/.default` | Layer 4 — Package Management API (`CopilotPackages.Read.All`); owner licensing queries (`User.Read.All`, `Organization.Read.All`, `GroupMember.Read.All`) |
 
 > **Note:** After configuring permissions, a Microsoft Entra admin must grant
 > tenant consent.
 
-## Roles and Permissions (least privilege)
+## Roles and Permissions — the three governance identities
 
-### Tenant / Power Platform (environment enumeration)
+CAI deliberately separates three identities so no single principal holds both
+schema-authoring rights and tenant-wide scan rights, and so the read-only scanner
+never holds write access to the inventory. Keep each identity scoped to only what
+its stage requires. This separation supports the least-privilege expectations of
+OCC 2011-12 and Fed SR 11-7 (privileged-identity segregation); it does not by
+itself satisfy any regulation.
 
-Environment enumeration is required for Layer 2 and Layer 3 and needs one of:
+| Identity | Who / what | Where | Rights | Used for |
+|----------|-----------|-------|--------|----------|
+| **Deployer** | Interactive admin (a person) | Governance environment only | **System Customizer** (or **System Administrator**) | Deploy the Dataverse schema — `create_cai_dataverse_schema.py` (create tables, columns, option sets, alternate keys). One-time / on schema change. |
+| **Scanner** | App-only service principal (or managed identity) | Every in-scope environment | (1) Registered as a **Power Platform management application** for environment enumeration; (2) **read-only application user** on `bot` / `botcomponent`. **No CAI-table write.** | Run `discover_agents.py`. The scanner emits JSON only and never writes to Dataverse. |
+| **Flow-writer** | Power Automate **Dataverse connection** | Governance environment only | Dataverse user with **Create / Write** on the CAI tables (`fsi_copilotagent`, `fsi_caiagentfeature`, …) | The CAI-DailyDiscovery flow persists the scanner JSON into the inventory tables. |
 
-- Power Platform Admin role, **or**
-- Dynamics 365 Service Admin role.
+### Deployer (schema only)
 
-ARM access is also required for the Layer 1 ARG query. These admin roles are
-required **only** for the enumeration and ARG steps.
+The deployer is an **interactive administrator** running the schema script from an
+admin workstation. It needs schema-authoring rights (System Customizer or System
+Administrator) in the **governance environment only** — the environment that hosts
+the CAI tables. It is not used at scan time and needs no access to the in-scope
+environments being inventoried.
 
-> **Least-privilege note:** granting the scanner System Administrator in every
-> environment ("sys-admin-everywhere") is a standing risk and is **not**
-> recommended. Scope the scanner's application user to read-only roles on `bot` /
-> `botcomponent` in target environments, and reserve write access to the
-> governance environment that hosts the CAI tables.
+### Scanner (read-only, app-only)
+
+The scanner is the least-privilege discovery principal. It requires two distinct
+grants, and **no Dataverse write anywhere**:
+
+1. **Environment enumeration** — register the scanner app as a **Power Platform
+   management application** (for example with `New-PowerAppManagementApp
+   -ApplicationId <appId>` from the `Microsoft.PowerApps.Administration.PowerShell`
+   module, or the `pac admin` equivalent). This lets the app-only principal call
+   the BAP admin environment-list API without granting it a Power Platform Admin
+   **user** role. ARM access is also required for the Layer 1 ARG query.
+2. **Per-environment read** — register the scanner app as an **application user**
+   in **every in-scope environment**, with a **read-only** security role scoped to
+   `bot` and `botcomponent`.
+
+> **Least-privilege note:** granting the scanner **System Administrator** in every
+> environment ("sys-admin-everywhere") is a standing privileged-identity risk and
+> is **not** required for read-only discovery. The scanner never needs write access
+> to the CAI tables — writing the inventory is the flow-writer's job.
+
+### Flow-writer (the only writer)
+
+The Power Automate flow authenticates with its own **Dataverse connection**. That
+connection's identity is the **only** identity that writes the CAI tables, and it
+needs Create / Write on those tables in the **governance environment only**. See
+[flow-configuration.md](flow-configuration.md).
+
+### Scanner environment-coverage verification and stop condition
+
+Before go-live, verify the scanner service principal ("SP under test") is present
+as a read-only application user in **every environment that must be inventoried**:
+
+1. Enumerate the in-scope environments (the environments the scan is expected to
+   cover) and record them as the coverage baseline.
+2. For each in-scope environment, confirm the scanner SP exists as an application
+   user and can read `bot` / `botcomponent` — for example, a targeted read returns
+   HTTP 200 (not 403). A first live run is a convenient way to exercise this across
+   all environments at once.
+3. Inspect the scan result: a healthy run reports `summary.status == "Complete"`,
+   `summary.environmentEnumeration.status == "Success"`, and an empty
+   `summary.environmentFailures[]`.
+
+> **Stop condition (required before promotion):** if the scanner SP is missing from
+> any in-scope environment, that environment now surfaces under
+> `summary.environmentFailures[]` (typically HTTP 403 at the `bots` stage) and the
+> overall `summary.status` becomes `Incomplete` or `Failed` — it is **not** reported
+> as a clean, agent-free environment. Treat any such coverage gap as a stop-and-fix
+> condition: grant the missing read-only application user and re-run until every
+> in-scope environment reads cleanly and `summary.status == "Complete"`. Do not treat
+> an inventory produced by an `Incomplete` / `Failed` scan as complete.
 
 ### Dataverse (per environment)
 
-| Role | Environment | Purpose |
-|------|-------------|---------|
-| Read-only role covering `bot`, `botcomponent` | Target environments | Layer 2 feature enumeration |
-| Dataverse User with Create/Write on CAI tables | Governance environment | Write the inventory system-of-record |
+| Role | Identity | Environment | Purpose |
+|------|----------|-------------|---------|
+| Read-only role covering `bot`, `botcomponent` | Scanner | Every in-scope environment | Layer 2 feature enumeration (read-only) |
+| Dataverse user with Create / Write on CAI tables | Flow-writer | Governance environment | Persist the inventory system-of-record (flow only) |
 
 Register the scanner app as an **application user** in each environment it reads,
-and grant the minimum role that allows the reads above.
+and grant it the minimum **read-only** role that allows the reads above.
 
 ## Azure Key Vault (secret storage for dev fallback)
 

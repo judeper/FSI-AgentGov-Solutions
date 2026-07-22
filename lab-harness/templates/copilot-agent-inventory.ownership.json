@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "solution": "copilot-agent-inventory",
+  "resourceOwner": "Power Platform Admin",
+  "cleanupActions": [
+    {
+      "id": "review-then-delete-raw-evidence",
+      "resourceType": "filesystem",
+      "location": "C:\\FSI-Lab-Evidence\\copilot-agent-inventory\\<runId>\\raw",
+      "cleanupAdapter": "manual-review-then-delete",
+      "notes": "Raw capture output (screenshots, exports, run logs) lives outside Git under the external evidence root. Review, then delete after redacted copies are approved. Substitute the real disposable run id locally; never record an actual run id or tenant data here."
+    },
+    {
+      "id": "review-then-delete-redacted-evidence",
+      "resourceType": "filesystem",
+      "location": "C:\\FSI-Lab-Evidence\\copilot-agent-inventory\\<runId>\\redacted",
+      "cleanupAdapter": "manual-review-then-delete",
+      "notes": "Retain only the sanitized, SHA-256-hashed images referenced by the report manifest; delete every other redacted artifact from the external evidence root."
+    },
+    {
+      "id": "delete-disposable-lab-assets",
+      "resourceType": "service-config",
+      "location": "Disposable copilot-agent-inventory lab assets (discovery flow, temporary agent or app, and any seeded rows) in a throwaway lab environment.",
+      "cleanupAdapter": "scripted-delete",
+      "notes": "Tear down disposable flow and assets after evidence capture. Environment identifiers and tenant values stay in the private lab repository and are never recorded here."
+    },
+    {
+      "id": "retain-only-listed-report-images",
+      "resourceType": "filesystem",
+      "location": "copilot-agent-inventory/docs/img",
+      "cleanupAdapter": "retention-policy",
+      "notes": "Only approved, redacted PNGs listed in copilot-agent-inventory/docs/lab-validation-evidence.json are retained and published. Remove any unlisted PNG so the evidence manifest stays authoritative."
+    }
+  ],
+  "rollbackActions": [
+    {
+      "id": "rollback-sanitized-report",
+      "description": "If the sanitized report must be withdrawn, git revert the commit that added copilot-agent-inventory/docs/lab-validation.md together with its docs/img PNGs and lab-validation-evidence.json."
+    },
+    {
+      "id": "remove-external-evidence-root",
+      "description": "Delete the external, non-Git evidence root for the run (for example C:\\FSI-Lab-Evidence\\copilot-agent-inventory\\<runId>) through the local runbook. Raw evidence is never committed, so no history rewrite is required."
+    }
+  ]
+}

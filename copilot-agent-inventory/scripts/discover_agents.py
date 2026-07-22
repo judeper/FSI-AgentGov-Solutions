@@ -47,6 +47,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -276,6 +277,94 @@ class ThrottlingExhaustedError(RuntimeError):
     """
 
 
+class EnvironmentEnumerationError(RuntimeError):
+    """Raised when the BAP environment enumeration itself fails.
+
+    Distinct from a genuinely empty (HTTP 200, ``value: []``) tenant: an
+    authorization or API failure on the environment-list call must NEVER be
+    returned as a success-shaped empty list, because that makes a 401/403 look
+    like a clean, agent-free tenant. Carries the HTTP status (when known) and a
+    stage label so the caller can surface the failure in structured output and
+    exit non-zero.
+    """
+
+    def __init__(
+        self, message: str, *, http_status: Optional[int] = None,
+        stage: str = "environment-enumeration",
+    ) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+        self.stage = stage
+
+
+class EnvironmentScanError(RuntimeError):
+    """Raised when a per-environment Dataverse read returns a non-200 response.
+
+    Retained (via `_scan_one_environment`) as a structured per-environment
+    failure so a per-environment authorization failure (401/403) is never
+    indistinguishable from an environment that genuinely contains zero agents.
+    """
+
+    def __init__(
+        self, message: str, *, http_status: Optional[int] = None,
+        stage: str = "bots",
+    ) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+        self.stage = stage
+
+
+class ArgQueryError(RuntimeError):
+    """Raised when the Layer 1 ARG resource query returns a non-200 response.
+
+    A failed ARG query must NOT be treated as an observed zero-agent tenant: the
+    caller records the ARG layer as ``Failed`` (distinct from ``Available`` with
+    zero results) and falls back to the load-bearing Layer 2 per-environment scan.
+    """
+
+    def __init__(self, message: str, *, http_status: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+
+
+# Defensive scrub for any bearer token that might appear inside an exception
+# string before it is written to structured scan output. Normal identifiers
+# (environment ids / URLs) are allowed and intentionally NOT redacted here.
+_BEARER_RE = re.compile(r"Bearer\s+[A-Za-z0-9\-\._~\+\/]+=*", re.IGNORECASE)
+
+
+def _sanitize_reason(text: Any, limit: int = 500) -> str:
+    """Return a bounded, token-free failure reason safe for structured output."""
+    if not text:
+        return ""
+    cleaned = _BEARER_RE.sub("Bearer ******", str(text))
+    return cleaned[:limit]
+
+
+def _env_failure(
+    environment_id: str,
+    stage: str,
+    http_status: Optional[int],
+    reason: Any,
+    bot_id: Optional[str] = None,
+) -> dict:
+    """Build one structured per-environment (or per-bot) scan-failure record.
+
+    Preserves the environment identifier/provenance, the failing stage, the HTTP
+    status (when known), and a sanitized reason so a coverage gap is auditable
+    rather than silently collapsing to a zero-agent count.
+    """
+    record: dict = {
+        "environmentId": environment_id,
+        "stage": stage,
+        "httpStatus": http_status,
+        "reason": _sanitize_reason(reason),
+    }
+    if bot_id:
+        record["botId"] = bot_id
+    return record
+
+
 def _request_with_backoff(
     session: requests.Session, method: str, url: str, **kwargs: Any
 ) -> requests.Response:
@@ -379,8 +468,14 @@ def query_arg_inventory(
         }
         resp = _request_with_backoff(session, "POST", url, headers=headers, json=body)
         if resp.status_code != 200:
-            logger.warning("ARG query HTTP %s; stopping paging", resp.status_code)
-            break
+            # A failed ARG query is NOT an observed zero-agent tenant. Raise so the
+            # caller records the ARG layer as Failed and falls back to Layer 2,
+            # rather than silently returning the (possibly partial) rows gathered
+            # so far as if paging had reached its natural end.
+            raise ArgQueryError(
+                f"ARG query failed with HTTP {resp.status_code}",
+                http_status=resp.status_code,
+            )
         payload = resp.json()
         results.extend(payload.get("value", payload.get("Data", [])))
         skip_token = payload.get("skipToken") or payload.get("SkipToken")
@@ -399,6 +494,13 @@ def enumerate_environments(ctx: ScanContext, session: requests.Session) -> list[
     """Enumerate environments via the BAP admin REST API (proven path).
 
     GET /providers/Microsoft.BusinessAppPlatform/scopes/admin/environments
+
+    Raises EnvironmentEnumerationError on a non-200 response, a non-JSON body, or
+    a payload missing a valid ``value`` array. This is deliberate: a soft break
+    that returned the rows gathered so far (often none) would make an
+    authorization/API failure indistinguishable from a genuinely empty tenant. A
+    successful HTTP 200 with ``value: []`` is a genuinely empty result and is
+    returned as an empty list (the caller distinguishes it in the summary).
     """
     if ctx.dry_run:
         logger.info("[DRY RUN] would GET %s/providers/Microsoft.BusinessAppPlatform"
@@ -413,11 +515,22 @@ def enumerate_environments(ctx: ScanContext, session: requests.Session) -> list[
     while url:
         resp = _request_with_backoff(session, "GET", url, headers=headers)
         if resp.status_code != 200:
-            logger.warning("Environment enumeration HTTP %s; stopping",
-                           resp.status_code)
-            break
-        payload = resp.json()
-        environments.extend(payload.get("value", []))
+            raise EnvironmentEnumerationError(
+                f"Environment enumeration failed with HTTP {resp.status_code}",
+                http_status=resp.status_code,
+            )
+        try:
+            payload = resp.json()
+        except ValueError as exc:
+            raise EnvironmentEnumerationError(
+                "Environment enumeration returned a non-JSON body"
+            ) from exc
+        value = payload.get("value")
+        if not isinstance(value, list):
+            raise EnvironmentEnumerationError(
+                "Environment enumeration response is missing a valid 'value' array"
+            )
+        environments.extend(value)
         url = payload.get("nextLink") or payload.get("@odata.nextLink")
         headers = {"Authorization": f"Bearer {token}"}
     logger.info("Enumerated %d environments", len(environments))
@@ -462,8 +575,15 @@ def scan_environment_bots(
     while url:
         resp = _request_with_backoff(session, "GET", url, headers=headers)
         if resp.status_code != 200:
-            logger.warning("bot scan HTTP %s for %s", resp.status_code, environment_url)
-            break
+            # A non-200 bot read is a per-environment scan failure, NOT an empty
+            # environment. Raise so `_scan_one_environment` records a structured
+            # coverage-gap entry instead of returning the (possibly partial) rows
+            # gathered so far as if the environment simply had few/no agents.
+            raise EnvironmentScanError(
+                f"bot scan failed with HTTP {resp.status_code} for {environment_url}",
+                http_status=resp.status_code,
+                stage="bots",
+            )
         payload = resp.json()
         bots.extend(payload.get("value", []))
         new_delta = payload.get("@odata.deltaLink") or new_delta
@@ -506,9 +626,15 @@ def scan_bot_features(
     while url:
         resp = _request_with_backoff(session, "GET", url, headers=headers)
         if resp.status_code != 200:
-            logger.warning("botcomponent scan HTTP %s for bot %s",
-                           resp.status_code, bot_id)
-            break
+            # A non-200 botcomponent read is a per-bot feature-scan failure. Raise
+            # so the caller can retain a structured failure and mark the agent's
+            # scan incomplete, rather than silently returning fewer features.
+            raise EnvironmentScanError(
+                f"botcomponent scan failed with HTTP {resp.status_code} "
+                f"for bot {bot_id}",
+                http_status=resp.status_code,
+                stage="botcomponents",
+            )
         payload = resp.json()
         for component in payload.get("value", []):
             features.extend(_components_to_features(ctx, bot_id, component))
@@ -772,32 +898,103 @@ def build_dataverse_batch(environment_url: str, operations: list[dict]) -> str:
 def _scan_one_environment(
     ctx: ScanContext, session: requests.Session, environment: dict
 ) -> dict:
-    """Scan a single environment: bots + per-bot features. Fail-open per env."""
+    """Scan a single environment: bots + per-bot features.
+
+    A per-environment failure is RETAINED as structured output (``failures`` +
+    ``status``) rather than being swallowed. This is the core fix for the
+    silent-authorization-failure gap: an environment that 401/403s on its bot
+    read must surface as ``status="Failed"`` with a coverage-gap record, never as
+    a ``status="Complete"`` environment that merely contributed zero agents.
+
+    ``status`` is one of:
+      * ``"Complete"``   — bots read and every per-bot feature read succeeded.
+      * ``"Incomplete"`` — bots read, but at least one per-bot feature read failed
+                           (the agent row is kept and flagged Incomplete Scan).
+      * ``"Failed"``     — the bot read itself failed; the environment contributed
+                           no trustworthy agent rows.
+    """
     env_url = environment.get("url") or environment.get("instanceUrl") or ""
     env_id = environment.get("name") or environment.get("id") or ""
-    result = {"environmentId": env_id, "agents": [], "features": [],
-              "authShares": [], "deltaLink": None}
+    result: dict = {
+        "environmentId": env_id,
+        "environmentUrl": env_url,
+        "agents": [],
+        "features": [],
+        "authShares": [],
+        "deltaLink": None,
+        "failures": [],
+        "status": "Complete",
+    }
     try:
         bots, delta_link = scan_environment_bots(ctx, session, env_url)
-        # Thread the delta link into the result instead of discarding it; a
-        # future persistence layer can store it for incremental reads (L-4).
-        result["deltaLink"] = delta_link
+    except EnvironmentScanError as exc:
+        result["status"] = "Failed"
+        result["failures"].append(
+            _env_failure(env_id, exc.stage, exc.http_status, exc)
+        )
+        logger.warning("Environment %s bot scan FAILED (HTTP %s); recorded as a "
+                       "coverage gap, not a zero-agent environment.",
+                       env_id, exc.http_status)
+        return result
+    except ThrottlingExhaustedError as exc:
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "bots", None, exc))
+        logger.warning("Environment %s bot scan throttled to exhaustion; recorded "
+                       "as a coverage gap (Failed).", env_id)
+        return result
+    except Exception as exc:  # one bad env must not abort the whole tenant scan
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "environment", None, exc))
+        logger.warning("Environment %s scan failed (recorded as coverage gap): %s",
+                       env_id, exc)
+        return result
+
+    # Thread the delta link into the result instead of discarding it; a future
+    # persistence layer can store it for incremental reads (L-4).
+    result["deltaLink"] = delta_link
+    try:
         for bot in bots:
             agent = map_agent_record(ctx, bot, DISCOVERY_SOURCE_DATAVERSE)
             agent["fsi_environmentid"] = agent.get("fsi_environmentid") or env_id
             result["agents"].append(agent)
             bot_id = bot.get("botid", "")
-            if bot_id:
+            if not bot_id:
+                continue
+            try:
                 result["features"].extend(
                     scan_bot_features(ctx, session, env_url, bot_id)
                 )
-                authshare = _authshare_record(ctx, bot)
-                authshare["fsi_environmentid"] = (
-                    authshare.get("fsi_environmentid") or env_id
+            except (EnvironmentScanError, ThrottlingExhaustedError) as exc:
+                # The agent exists but its features could not be fully read: keep
+                # the agent row, flag it Incomplete Scan, and downgrade the
+                # environment to Incomplete (never silently drop features as if
+                # the agent had none).
+                if result["status"] == "Complete":
+                    result["status"] = "Incomplete"
+                stage = getattr(exc, "stage", "botcomponents")
+                http_status = getattr(exc, "http_status", None)
+                result["failures"].append(
+                    _env_failure(env_id, stage, http_status, exc, bot_id=bot_id)
                 )
-                result["authShares"].append(authshare)
-    except Exception as exc:  # one bad env must not abort the tenant scan
-        logger.warning("Environment %s scan failed (fail-open): %s", env_id, exc)
+                agent["fsi_scancompleteness"] = "Incomplete Scan"
+                agent["fsi_scancompletenessreason"] = (
+                    agent.get("fsi_scancompletenessreason")
+                    or f"botcomponent feature read failed "
+                       f"(stage={stage}, http={http_status})"
+                )
+                logger.warning("Bot %s in environment %s: feature scan FAILED "
+                               "(HTTP %s); agent flagged Incomplete Scan.",
+                               bot_id, env_id, http_status)
+            authshare = _authshare_record(ctx, bot)
+            authshare["fsi_environmentid"] = (
+                authshare.get("fsi_environmentid") or env_id
+            )
+            result["authShares"].append(authshare)
+    except Exception as exc:  # unexpected per-env error: retain, don't abort scan
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "environment", None, exc))
+        logger.warning("Environment %s scan failed mid-iteration (recorded as a "
+                       "coverage gap): %s", env_id, exc)
     return result
 
 
@@ -1172,28 +1369,71 @@ def scan_all(ctx: ScanContext) -> dict:
     logger.info("Scan run %s (dry_run=%s, max_workers=%d)",
                 ctx.run_id, ctx.dry_run, ctx.max_workers)
 
+    # Layer 1 — ARG. Track a distinct layer status so a failed query is never
+    # mistaken for an observed zero-agent tenant: unavailable / failed / zero are
+    # each separately representable in the summary (argLayer.status).
     arg_agents: list[dict] = []
-    if ctx.use_arg and probe_arg_resource_type(ctx, session):
-        try:
-            arg_agents = [
-                map_agent_record(ctx, item, DISCOVERY_SOURCE_ARG)
-                for item in query_arg_inventory(ctx, session)
-            ]
-        except ThrottlingExhaustedError as exc:
-            # ARG throttled to exhaustion: discard the partial (and therefore
-            # misleading) ARG results and rely on the Layer 2 per-environment
-            # scan instead of aborting the run (L-3).
-            logger.warning("ARG layer throttled to exhaustion; discarding partial "
-                           "ARG results and falling back to Layer 2: %s", exc)
-            arg_agents = []
-    elif ctx.use_arg:
-        logger.info("ARG path unavailable — using Layer 2 per-environment scan "
-                    "as the load-bearing default.")
+    arg_layer_status = "Disabled"    # --no-arg
+    arg_query_http: Optional[int] = None
+    if ctx.use_arg:
+        arg_layer_status = "Unavailable"
+        if probe_arg_resource_type(ctx, session):
+            try:
+                arg_agents = [
+                    map_agent_record(ctx, item, DISCOVERY_SOURCE_ARG)
+                    for item in query_arg_inventory(ctx, session)
+                ]
+                arg_layer_status = "Available"
+            except ThrottlingExhaustedError as exc:
+                # ARG throttled to exhaustion: discard the partial (and therefore
+                # misleading) ARG results and rely on the Layer 2 per-environment
+                # scan instead of aborting the run (L-3). Recorded as Failed, NOT
+                # as an observed zero.
+                logger.warning("ARG layer throttled to exhaustion; discarding "
+                               "partial ARG results and falling back to Layer 2: "
+                               "%s", exc)
+                arg_agents = []
+                arg_layer_status = "Failed"
+            except ArgQueryError as exc:
+                logger.warning("ARG query failed (HTTP %s); falling back to Layer 2. "
+                               "The ARG layer is Failed, not an observed zero.",
+                               exc.http_status)
+                arg_agents = []
+                arg_layer_status = "Failed"
+                arg_query_http = exc.http_status
+            except requests.exceptions.RequestException as exc:
+                logger.warning("ARG query transport error; falling back to "
+                               "Layer 2: %s", exc)
+                arg_agents = []
+                arg_layer_status = "Failed"
+        else:
+            logger.info("ARG path unavailable — using Layer 2 per-environment scan "
+                        "as the load-bearing default.")
 
-    environments = enumerate_environments(ctx, session)
+    # Layer 2 — per-environment enumeration + scan. Enumeration failure is an
+    # explicit, non-success outcome: a 401/403/5xx or malformed environment list
+    # must never look like a genuinely empty tenant. A real HTTP 200 with an
+    # empty list is a genuine (representable) empty result.
+    enumeration_failed = False
+    enumeration_http: Optional[int] = None
+    enumeration_reason = ""
+    try:
+        environments = enumerate_environments(ctx, session)
+    except (EnvironmentEnumerationError, ThrottlingExhaustedError,
+            requests.exceptions.RequestException) as exc:
+        enumeration_failed = True
+        enumeration_http = getattr(exc, "http_status", None)
+        enumeration_reason = _sanitize_reason(exc)
+        environments = []
+        logger.error("Environment enumeration FAILED (HTTP %s): %s — the scan is "
+                     "marked Failed, NOT a clean empty tenant.",
+                     enumeration_http, exc)
+
     scanned_agents: list[dict] = []
     features: list[dict] = []
     auth_shares: list[dict] = []
+    env_failures: list[dict] = []
+    env_statuses: list[str] = []
 
     # Throttled concurrent per-environment fan-out (~10 workers, 429 backoff).
     with ThreadPoolExecutor(max_workers=ctx.max_workers) as pool:
@@ -1206,6 +1446,8 @@ def scan_all(ctx: ScanContext) -> dict:
             scanned_agents.extend(outcome["agents"])
             features.extend(outcome["features"])
             auth_shares.extend(outcome.get("authShares", []))
+            env_failures.extend(outcome.get("failures", []))
+            env_statuses.append(outcome.get("status", "Complete"))
 
     # --- Layer 4 — Package Management API (feature-flagged; default OFF) -----------
     # When --enable-package-api is set, fetch the GA v1.0 catalog endpoint and
@@ -1243,13 +1485,47 @@ def scan_all(ctx: ScanContext) -> dict:
     final_agents = list(arg_agents or scanned_agents)
     final_agents.extend(package_new_rows)
 
+    # Derive the overall scan status/completeness. Enumeration and per-environment
+    # failures degrade the overall status so a partial or authorization-blocked
+    # scan is never indistinguishable from a clean, complete one.
+    if enumeration_failed:
+        overall_status = "Failed"
+    elif env_statuses and all(s == "Failed" for s in env_statuses):
+        overall_status = "Failed"
+    elif (any(s in ("Failed", "Incomplete") for s in env_statuses)
+          or arg_layer_status == "Failed"
+          or package_truncated):
+        overall_status = "Incomplete"
+    else:
+        overall_status = "Complete"
+
+    if enumeration_failed:
+        enumeration_status = "Failed"
+    elif ctx.dry_run:
+        enumeration_status = "Dry Run"
+    else:
+        enumeration_status = "Success"
+
     summary: dict = {
         "runId": ctx.run_id,
+        "status": overall_status,
         "argAgentCount": len(arg_agents),
         "scannedAgentCount": len(scanned_agents),
         "featureCount": len(features),
         "authShareCount": len(auth_shares),
         "environmentCount": len(environments),
+        "environmentEnumeration": {
+            "status": enumeration_status,
+            "environmentCount": len(environments),
+            "httpStatus": enumeration_http,
+            "reason": enumeration_reason,
+        },
+        "argLayer": {
+            "status": arg_layer_status,
+            "agentCount": len(arg_agents),
+            "httpStatus": arg_query_http,
+        },
+        "environmentFailures": env_failures,
         "reconciliation": reconciliation,
     }
     if ctx.enable_package_api:
@@ -1637,6 +1913,15 @@ def main() -> None:
         parser.error("--tenant-id is required for live scans unless using "
                      "system-assigned managed identity")
 
+    # --resolve-entitlement has no owner source without a registry export, so it
+    # would otherwise perform no entitlement work silently. Fail fast.
+    if args.resolve_entitlement and not args.registry_export:
+        parser.error("--resolve-entitlement requires --registry-export: owner "
+                     "entitlement is resolved only for owners attributed by the "
+                     "registry correlation step. Provide --registry-export (and, "
+                     "if needed, --columnmap / --as-of), or drop "
+                     "--resolve-entitlement.")
+
     # Validate --as-of before constructing the context.
     as_of_validated: Optional[str] = None
     if args.as_of:
@@ -1674,6 +1959,20 @@ def main() -> None:
         out_path = Path(args.output)
         out_path.write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")
         logger.info("Wrote scan result to %s", out_path)
+
+    # Fail the process when environment enumeration or the full environment scan
+    # fails. Partial environment gaps remain usable output with an explicit
+    # Incomplete status and warning. Evidence (if requested) is written first.
+    status = result.get("summary", {}).get("status")
+    if status == "Failed":
+        logger.error("Scan status is Failed (see summary.environmentEnumeration / "
+                     "summary.environmentFailures); exiting non-zero.")
+        sys.exit(1)
+    if status == "Incomplete":
+        logger.warning("Scan status is Incomplete: %d environment failure(s) "
+                       "recorded (see summary.environmentFailures). Review the "
+                       "coverage gap before treating the inventory as complete.",
+                       len(result.get("summary", {}).get("environmentFailures", [])))
 
 
 if __name__ == "__main__":

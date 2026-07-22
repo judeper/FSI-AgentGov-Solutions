@@ -151,6 +151,33 @@ capabilities) remains unavailable via any public API for Agent Builder agents;
 `fsi_caicompliancestate.fsi_scancompletenessreason` records the specific
 gap.
 
+### Run status and coverage gaps (fail-visible discovery)
+
+Per-agent scan completeness (above) is distinct from the **run-level status** the
+scanner reports in its JSON `summary`. Discovery is fail-visible: an
+authorization or API failure must never look like a clean, agent-free tenant.
+
+- **`summary.status`** — `Complete` / `Incomplete` / `Failed` for the whole run.
+- **`summary.environmentEnumeration`** — `status` (`Success` / `Failed` /
+  `Dry Run`), `environmentCount`, `httpStatus`, `reason`. A failed environment
+  list (401/403/5xx or malformed body) is a `Failed` enumeration, **not** an empty
+  tenant, and the scanner exits non-zero.
+- **`summary.argLayer`** — `status` (`Available` / `Unavailable` / `Failed` /
+  `Disabled`) and `agentCount`. `Failed` (a query error or throttle-exhaustion) is
+  distinct from `Available` with `agentCount: 0` (an observed zero); a failed ARG
+  query falls back to the load-bearing Layer 2 scan rather than being treated as
+  zero agents.
+- **`summary.environmentFailures[]`** — one structured record per per-environment
+  coverage gap (`environmentId`, `stage` = `bots` / `botcomponents` /
+  `environment`, `httpStatus`, sanitized `reason`, and `botId` for feature-scan
+  gaps). A per-environment `bots` failure degrades the run to `Incomplete` (or
+  `Failed` if every environment failed) and the agent count from that environment
+  is **not** counted as an observed zero. Token material is scrubbed from reasons;
+  ordinary environment identifiers are retained for provenance.
+
+Downstream persistence (the Power Automate flow) reads these fields to alert on
+coverage gaps rather than silently recording a partial inventory as complete.
+
 ## Package API — Owner Attribution and Entitlement
 
 ### Owner attribution (temporary bridge)
@@ -276,16 +303,33 @@ schema doc), so re-runs upsert rather than duplicate.
 
 ## Scanner Identity (least privilege)
 
+CAI separates three governance identities so no principal holds both
+schema-authoring and tenant-wide scan rights, and so the read-only scanner never
+holds inventory-write access. See
+[prerequisites.md](prerequisites.md#roles-and-permissions--the-three-governance-identities)
+for the full split (deployer / scanner / flow-writer).
+
 - The scanner authenticates **managed-identity-first**
   (`DefaultAzureCredential` / `ManagedIdentityCredential`); any client secret is
   a dev-only fallback held in Key Vault and accessed via the managed identity.
-- Environment **enumeration** requires a Power Platform admin **or** Dynamics 365
-  admin role plus ARM access (✅ verified). Per-environment Dataverse **reads**
-  require only read access to `bot` / `botcomponent` in each target environment.
+- Environment **enumeration** is done by registering the scanner as a **Power
+  Platform management application** (app-only) plus ARM access for the Layer 1 ARG
+  query (✅ verified) — this avoids granting the scanner a Power Platform admin
+  **user** role. Per-environment Dataverse **reads** require only a **read-only**
+  application user on `bot` / `botcomponent` in each in-scope environment.
+- The scanner emits JSON and performs **no Dataverse write**. The CAI inventory
+  tables are written only by the Power Automate flow's Dataverse connection (the
+  **flow-writer** identity), scoped to the governance environment.
 - **POLP note (🔎):** granting the scanner System Administrator in every
-  environment ("sys-admin-everywhere") is a standing risk. The recommended
-  posture is a least-privilege application user with read-only roles scoped to
-  the inventory tables; the admin role is required only for the enumeration step.
+  environment ("sys-admin-everywhere") is a standing privileged-identity risk. The
+  recommended posture is a read-only application user scoped to `bot` /
+  `botcomponent`; the management-application registration covers enumeration.
+- **Coverage is verified, not assumed:** a per-environment authorization failure
+  (a missing scanner application user) surfaces as a structured
+  `environmentFailures[]` entry and degrades `summary.status` to `Incomplete` /
+  `Failed` — it is never reported as a clean, agent-free environment. See the
+  scanner environment-coverage stop condition in
+  [prerequisites.md](prerequisites.md#scanner-environment-coverage-verification-and-stop-condition).
 
 ## ARA Boundary — flagged for ratification
 
