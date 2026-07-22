@@ -224,6 +224,7 @@ def test_scanrun_required_columns_and_logical_names() -> None:
         "fsi_CompletedAt": "fsi_completedat",
         "fsi_Status": "fsi_status",
         "fsi_EnvironmentEnumerationStatus": "fsi_environmentenumerationstatus",
+        "fsi_DataverseLayerStatus": "fsi_dataverselayerstatus",
         "fsi_EnvironmentFailureCount": "fsi_environmentfailurecount",
         "fsi_Agent365RequestedMode": "fsi_agent365requestedmode",
         "fsi_Agent365ResolvedState": "fsi_agent365resolvedstate",
@@ -317,6 +318,24 @@ def test_dataverse_schema_doc_includes_nine_tables_and_scanrun_choices() -> None
         "Unsupported (100000002), Partial (100000003), Failed (100000004), "
         "Dry Run (100000005) |"
     ) in text
+    assert (
+        "| `fsi_DataverseLayerStatus` | `fsi_dataverselayerstatus` | "
+        "Picklist (`fsi_cai_layerstatus`) | No | Execution status of "
+        "per-environment Dataverse scans |"
+    ) in text
+
+
+def test_dataverse_schema_doc_has_no_trailing_whitespace() -> None:
+    assert SCHEMA_DOC_FILE.is_file(), f"schema doc not found at {SCHEMA_DOC_FILE}"
+    lines = SCHEMA_DOC_FILE.read_text(encoding="utf-8").splitlines()
+    trailing = [
+        f"{index}: {line!r}"
+        for index, line in enumerate(lines, start=1)
+        if line != line.rstrip(" ")
+    ]
+    assert not trailing, (
+        "dataverse schema doc contains trailing whitespace:\n" + "\n".join(trailing)
+    )
 
 
 @_schema_skip

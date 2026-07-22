@@ -4,7 +4,7 @@ Auto-generated schema documentation. Do not edit manually — regenerate with `p
 
 ## Overview
 
-The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-specific option sets**, and **1 shared option set(s)**, with **166 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
+The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-specific option sets**, and **1 shared option set(s)**, with **167 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
 
 > **Logical-name convention.** Dataverse logical names are the SchemaName lowercased with NO underscores between words (`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> `fsi_agentid`). Always use logical names in OData `$select` / `$filter` / `$orderby`.
 
@@ -51,9 +51,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### Copilot Agent (`fsi_copilotagent`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_copilotagents`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_copilotagents`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Canonical agent master record (system-of-record) for Copilot Studio and Agent Builder agents discovered across the tenant
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -104,9 +104,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Environment (`fsi_caienvironment`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caienvironments`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caienvironments`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Power Platform environment inventory with zone classification and per-environment delta-change-tracking watermark
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -128,9 +128,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Agent Feature (`fsi_caiagentfeature`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiagentfeatures`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiagentfeatures`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Capability-composition layer: one row per detected feature (botcomponent or many-to-many relationship target) per agent
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -156,9 +156,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Auth Share (`fsi_caiauthshare`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiauthshares`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiauthshares`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Per-agent authentication and sharing posture, including the Entra-ID-auth + Require-sign-in audience-control predicate
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -188,9 +188,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Billing Entitlement (`fsi_caibillingentitlement`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caibillingentitlements`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caibillingentitlements`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Billing / credit entitlement shell (populated downstream by the billing-governance solution); zero-rating defaults fail-closed
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -209,9 +209,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Usage Signal (`fsi_caiusagesignal`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiusagesignals`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiusagesignals`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Source-aggregated per-agent usage rollup (30-day interactions, unique users, sessions); never stores transcript rows
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -232,9 +232,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Work IQ State (`fsi_caiworkiqstate`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiworkiqstates`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiworkiqstates`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Work IQ config-vs-invoked state shell (populated downstream by work-iq-usage-detection); emits configuredTier
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -255,9 +255,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Compliance State (`fsi_caicompliancestate`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caicompliancestates`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caicompliancestates`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Per-agent risk level, scan completeness (incomplete-scan marker for Lite/Agent-Builder), and violations rollup
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -277,9 +277,9 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 
 ### CAI Scan Run (`fsi_caiscanrun`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiscanruns`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiscanruns`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Run-level BI evidence row with layer statuses, counts, and provenance summaries for each discovery execution
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -290,6 +290,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_CompletedAt` | `fsi_completedat` | DateTime | No | UTC timestamp when the scan run completed |
 | `fsi_Status` | `fsi_status` | Picklist (`fsi_cai_scanrunstatus`) | Yes | Run outcome: Complete / Incomplete / Failed / Dry Run |
 | `fsi_EnvironmentEnumerationStatus` | `fsi_environmentenumerationstatus` | Picklist (`fsi_cai_layerstatus`) | No | Status of environment enumeration for this run |
+| `fsi_DataverseLayerStatus` | `fsi_dataverselayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of per-environment Dataverse scans |
 | `fsi_EnvironmentFailureCount` | `fsi_environmentfailurecount` | Integer | No | Count of per-environment scans that failed |
 | `fsi_EnvironmentEnumerationHttpStatus` | `fsi_environmentenumerationhttpstatus` | Integer | No | HTTP status returned by environment enumeration, when available |
 | `fsi_EnvironmentEnumerationReason` | `fsi_environmentenumerationreason` | Memo(4000) | No | Sanitized reason for environment enumeration failure or partial status |
@@ -306,7 +307,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_FeatureCount` | `fsi_featurecount` | Integer | No | Count of feature rows emitted in this run |
 | `fsi_AuthShareCount` | `fsi_authsharecount` | Integer | No | Count of auth/share posture rows emitted in this run |
 | `fsi_EnvironmentCount` | `fsi_environmentcount` | Integer | No | Count of environments enumerated for this run |
-| `fsi_LicenseProbeAttempted` | `fsi_licenseprobeattempted` | Boolean (default: false) | No | Whether the optional owner-license probe step was attempted |
+| `fsi_LicenseProbeAttempted` | `fsi_licenseprobeattempted` | Boolean (default: false) | No | Whether the tenant Agent 365 /subscribedSkus probe was attempted |
 | `fsi_PackageApiLayerStatus` | `fsi_packageapilayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of the Package Management API layer |
 | `fsi_PackageApiAttempted` | `fsi_packageapiattempted` | Boolean (default: false) | No | Whether Package Management API discovery was attempted |
 | `fsi_PackageApiHttpStatus` | `fsi_packageapihttpstatus` | Integer | No | HTTP status returned by the Package Management API |
