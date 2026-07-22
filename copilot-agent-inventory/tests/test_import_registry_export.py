@@ -147,9 +147,14 @@ def test_normalize_header_strips_surrounding_whitespace() -> None:
     assert ire._normalize_header("  synthetic_owner_upn  ", aliases) == "owner_upn"
 
 
-def test_normalize_header_fallback_converts_spaces_to_underscores() -> None:
-    assert ire._normalize_header("Agent Name", {}) == "agent_name"
-    assert ire._normalize_header("Date Created", {}) == "date_created"
+def test_normalize_header_requires_alias_for_display_labels() -> None:
+    assert ire._normalize_header("Agent Name", {}) == "unmapped__agent_name"
+    assert ire._normalize_header("Owner Id", {}) == "unmapped__owner_id"
+
+
+def test_normalize_header_allows_exact_canonical_names() -> None:
+    assert ire._normalize_header("agent_name", {}) == "agent_name"
+    assert ire._normalize_header("date_created", {}) == "date_created"
 
 
 # =============================================================================
@@ -186,6 +191,34 @@ def test_load_columnmap_absent_required_fields_uses_defaults(tmp_path: Path) -> 
     p = _write_columnmap(tmp_path, cmap)
     _, required, _ = ire.load_columnmap(p)
     assert required == ire._DEFAULT_REQUIRED_FIELDS
+
+
+def test_default_columnmap_supports_confirmed_registry_headers(
+    tmp_path: Path,
+) -> None:
+    aliases, required, sheet = ire.load_columnmap(ire._DEFAULT_COLUMNMAP)
+    path = _write_csv(tmp_path, [
+        ["Name", "Bot Id", "Owner", "Date created", "Creator Id"],
+        [
+            "Contoso Advisor",
+            "bot-123",
+            "owner@contoso.com",
+            "2026-07-20T18:00:00Z",
+            "11111111-2222-3333-4444-555555555555",
+        ],
+    ])
+
+    rows, warnings = ire.import_registry_file(
+        str(path), aliases, required, sheet, "2026-07-20T18:00:00Z"
+    )
+
+    assert not warnings
+    assert rows[0]["fsi_agentname"] == "Contoso Advisor"
+    assert rows[0]["fsi_agentid"] == "bot-123"
+    assert rows[0]["fsi_ownerupn"] == "owner@contoso.com"
+    assert rows[0]["fsi_createdon"] == "2026-07-20T18:00:00Z"
+    assert "fsi_ownerid" not in rows[0]
+    assert "11111111-2222-3333-4444-555555555555" not in json.dumps(rows[0])
 
 
 # =============================================================================

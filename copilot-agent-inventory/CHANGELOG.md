@@ -41,6 +41,11 @@ generated `docs/dataverse-schema.md` reference is regenerated.
   `GlobalOptionSet@odata.bind`) and omits the local `OptionSet` property when
   binding a global choice. This resolves the live HTTP 400 metadata error while
   preserving idempotent deployment.
+- **Registry export header contract.** The default alias map now includes the
+  observed July 2026 Microsoft 365 admin center headers `Name`, `Bot Id`,
+  `Owner`, and `Date created`. `Owner` is validated as UPN-shaped. The distinct
+  `Creator Id` GUID remains intentionally unmapped so it cannot be mistaken for
+  the owner object ID.
 
 ### Added
 

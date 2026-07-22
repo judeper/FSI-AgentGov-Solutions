@@ -178,9 +178,9 @@ python scripts/discover_agents.py \
 #    CopilotPackages.Read.All application permission (US commercial Microsoft 365
 #    cloud); pwsh for entitlement resolution.
 #
-#    Edit templates/registry-columnmap.sample.json to declare your XLSX column
-#    headers before running. Exact native headers in the M365 admin center are
-#    unverified; use the alias map to declare the actual header names.
+#    The default alias map includes the validated July 2026 native headers:
+#    Name, Bot Id, Owner, and Date created. Review the map if your export differs.
+#    Creator Id is distinct from Owner and is not treated as an owner identifier.
 #
 #    Combined output includes: agents[] enriched with package, owner, and
 #    entitlement fields; summary.agent365 (Agent 365 resolution) and
