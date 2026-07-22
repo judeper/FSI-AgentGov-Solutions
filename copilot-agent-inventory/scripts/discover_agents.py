@@ -497,8 +497,10 @@ def _coerce_int(value: Any) -> int:
         return 0
 
 
-def _extract_graph_error_fields(payload: dict) -> tuple[str, str]:
+def _extract_graph_error_fields(payload: Any) -> tuple[str, str]:
     """Extract sanitized Graph error code/subcode fields."""
+    if not isinstance(payload, dict):
+        return "", ""
     error = payload.get("error")
     if not isinstance(error, dict):
         return "", ""
@@ -599,7 +601,7 @@ def probe_agent365_license(
 
     url = (
         f"{GRAPH_API_BASE}{SUBSCRIBED_SKUS_API_PATH}"
-        "?$select=skuPartNumber,consumedUnits,prepaidUnits,servicePlans"
+        "?$select=skuPartNumber,capabilityStatus,consumedUnits,prepaidUnits,servicePlans"
     )
     try:
         token = _get_token(ctx, GRAPH_SCOPE)
@@ -632,7 +634,7 @@ def probe_agent365_license(
             error_subcode=_sanitize_code(type(exc).__name__),
         )
 
-    payload: dict
+    payload: Any
     try:
         payload = resp.json()
     except ValueError:
@@ -642,6 +644,14 @@ def probe_agent365_license(
             http_status=resp.status_code,
             error_code="ParseFailure",
             reason="Agent 365 license probe returned malformed JSON.",
+        )
+    if not isinstance(payload, dict):
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            http_status=resp.status_code,
+            error_code="MalformedResponse",
+            reason="Agent 365 license probe response must be a JSON object.",
         )
 
     graph_code, graph_subcode = _extract_graph_error_fields(payload)
@@ -1581,7 +1591,7 @@ def fetch_package_catalog_details(
                     reason="Package API transport failure.",
                 )
 
-            payload: dict
+            payload: Any
             try:
                 payload = resp.json()
             except ValueError:
@@ -1593,6 +1603,16 @@ def fetch_package_catalog_details(
                     http_status=resp.status_code,
                     error_code="ParseFailure",
                     reason="Package API returned malformed JSON.",
+                )
+            if not isinstance(payload, dict):
+                return PackageApiFetchResult(
+                    outcome=PackageApiOutcome.PARSE_FAILURE,
+                    attempted=True,
+                    packages=all_packages,
+                    paging_truncated=True,
+                    http_status=resp.status_code,
+                    error_code="MalformedResponse",
+                    reason="Package API response must be a JSON object.",
                 )
 
             if resp.status_code != 200:

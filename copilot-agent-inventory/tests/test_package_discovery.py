@@ -38,6 +38,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -82,7 +83,7 @@ def _ctx(
     )
 
 
-def _mock_response(json_data: dict, status_code: int = 200) -> MagicMock:
+def _mock_response(json_data: object, status_code: int = 200) -> MagicMock:
     resp = MagicMock()
     resp.status_code = status_code
     resp.json.return_value = json_data
@@ -1291,6 +1292,26 @@ def test_probe_agent365_detects_documented_name_aliases(
     assert result.outcome == da.Agent365ProbeOutcome.DETECTED, label
 
 
+def test_probe_agent365_selects_all_fields_required_for_usability_decision() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response({"value": []})
+    ) as mock_req:
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.NOT_DETECTED
+    called_url = mock_req.call_args.args[2]
+    select_value = parse_qs(urlsplit(called_url).query).get("$select", [""])[0]
+    selected_fields = {field.strip() for field in select_value.split(",") if field.strip()}
+    assert {
+        "skuPartNumber",
+        "capabilityStatus",
+        "prepaidUnits",
+        "consumedUnits",
+        "servicePlans",
+    }.issubset(selected_fields)
+
+
 def test_probe_agent365_alias_requires_enabled_or_consumed_seats() -> None:
     ctx = _ctx(dry_run=False, agent365_mode="auto")
     session = MagicMock()
@@ -1435,6 +1456,18 @@ def test_probe_agent365_malformed_response_is_inconclusive() -> None:
     assert result.error_code == "MalformedResponse"
 
 
+@pytest.mark.parametrize("body", [["not-an-object"], 7, None])
+def test_probe_agent365_non_object_json_body_is_inconclusive_malformed(body: object) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(body)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.INCONCLUSIVE
+    assert result.error_code == "MalformedResponse"
+
+
 def test_probe_agent365_transport_failure_is_inconclusive() -> None:
     ctx = _ctx(dry_run=False, agent365_mode="auto")
     session = MagicMock()
@@ -1502,6 +1535,47 @@ def test_fetch_package_catalog_details_parse_failure_outcome() -> None:
     ):
         details = da.fetch_package_catalog_details(ctx, session)
     assert details.outcome == da.PackageApiOutcome.PARSE_FAILURE
+
+
+@pytest.mark.parametrize("body", [["not-an-object"], 42, None])
+def test_fetch_package_catalog_details_non_object_first_page_is_parse_failure(
+    body: object,
+) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(body)
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == da.PackageApiOutcome.PARSE_FAILURE
+    assert details.error_code == "MalformedResponse"
+    assert details.paging_truncated is True
+
+
+@pytest.mark.parametrize("next_page_body", [["not-an-object"], 9, None])
+def test_fetch_package_catalog_details_non_object_next_page_is_parse_failure(
+    next_page_body: object,
+) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    next_url = (
+        "https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages"
+        "?$skiptoken=next-page"
+    )
+
+    def _side_effect(_sess, _method, url, **_kwargs):
+        if url == next_url:
+            return _mock_response(next_page_body)
+        return _mock_response({"value": [_AB_PKG], "@odata.nextLink": next_url})
+
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", side_effect=_side_effect
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == da.PackageApiOutcome.PARSE_FAILURE
+    assert details.error_code == "MalformedResponse"
+    assert details.paging_truncated is True
+    assert len(details.packages) == 1
 
 
 def test_scan_all_absent_mode_defers_package_layer_and_keeps_complete_status() -> None:
