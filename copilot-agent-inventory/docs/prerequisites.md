@@ -249,10 +249,11 @@ depends on the selected mode:**
 - **`absent` (default):** the operator authoritatively declares Agent 365 is out
   of scope. The scanner calls **neither** `subscribedSkus` **nor** the Package
   API, records Layer 4 as `Deferred`, and keeps Layers 1–3, registry owner
-  attribution, and entitlement resolution fully available. **A `Deferred`
-  Layer 4 is not "zero Agent Builder agents"** — those agents are still
-  discovered by Layers 1–2 (`createdIn == "Microsoft 365 Copilot Agent
-  Builder"`); only the package-catalog enrichment is deferred.
+  attribution, and entitlement resolution available. **A `Deferred` Layer 4 is
+  not "zero Agent Builder agents"** — it means the package catalog was not
+  observed. ARG (Layer 1) can classify authoring surface through `createdIn`;
+  Layer 2 still inventories `bot` rows but does not supply that field. If ARG is
+  unavailable, authoring-surface classification remains unknown.
 - **`present`:** the scanner attempts the Package API directly (no license
   probe). Provision the Agent 365 license and the Gate 2 permission first.
 - **`auto`:** the scanner performs a **conservative license probe** first (see

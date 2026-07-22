@@ -141,9 +141,11 @@ the placeholders (`{{...}}`) with your organization's values.
        --output scan.json
      ```
      Set `Agent365Mode` to `absent` (default) to defer Layer 4; the run still
-     discovers Agent Builder agents through Layers 1–2 and marks the Package
-     API `Deferred` (never zero). Set it to `present` to attempt the Package
-     API, or `auto` to license-probe first. Omit `--registry-export` (and
+     inventories available agents and marks the Package API `Deferred` (never
+     an observed zero). ARG can classify Agent Builder agents through
+     `createdIn`; Layer 2 does not supply that field. Set the mode to `present`
+     to attempt the Package API, or `auto` to license-probe first. Omit
+     `--registry-export` (and
      related flags) to run without registry correlation; the output is
      backward-compatible when these flags are absent.
 3. Rename action: `Create_Discovery_Job`.
@@ -313,7 +315,9 @@ the placeholders (`{{...}}`) with your organization's values.
 >   `Unsupported` / `Partial` / `Failed` / `Dry Run`.
 > - **`Deferred` and heuristic `NotDetected` are informational, not failures**
 >   (see Step 9). A `Deferred` Layer 4 is **never** "zero Agent Builder agents";
->   those agents still come from Layers 1–2.
+>   it means the package catalog was not observed. Agent Builder classification
+>   still comes from ARG when `createdIn` is available; Layer 2 inventory alone
+>   leaves the authoring surface unknown.
 > - **Null vs zero for package counts.** `summary.agent365.packagesObserved` and
 >   `packageNewRowCount` are **`null`** when the Package API was **not observed**
 >   (deferred / not attempted) and **`0`** when it **was** attempted and returned
@@ -707,7 +711,8 @@ After `Write_Scan_Run`, confirm the single ledger row persisted:
 > the operator's declared scope (for example the default `absent` mode). They do
 > **not** degrade `summary.status`. Report them as **informational context only**,
 > and **never** render a `Deferred` Layer 4 as "zero Agent Builder agents" — those
-> agents are still discovered by Layers 1–2. **`Unsupported` is different:** it is
+> agents may still be present even when authoring-surface classification is
+> unavailable. **`Unsupported` is different:** it is
 > an *attempted* layer the platform could not satisfy (a coverage failure), so it
 > **degrades the run and alerts** exactly like `Partial` / `Failed`. Alert on
 > `Partial` / `Failed` / `Unsupported` requested-layer outcomes, an `Inconclusive`

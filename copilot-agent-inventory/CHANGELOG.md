@@ -49,6 +49,11 @@ generated `docs/dataverse-schema.md` reference is regenerated.
 
 ### Added
 
+- **Sanitized v0.4 lab validation report.** Documents the observed-live
+  no-license fallback, nine-table schema, alternate-key activation, Registry
+  header contract, direct Dataverse persistence, static licensed-path coverage,
+  deferred Power Automate/entitlement work, and the remaining screenshot
+  checklist.
 - **License-aware mode selection (`--agent365 present|absent|auto`).** A new
   three-valued mode replaces the single `--enable-package-api` switch as the
   primary control for Layer 4. The mode may also be supplied by the
@@ -64,9 +69,11 @@ generated `docs/dataverse-schema.md` reference is regenerated.
     Graph `subscribedSkus` **nor** the Package Management API, keeps Layers 1–3,
     registry owner attribution, and entitlement resolution fully available, and
     marks the Package API layer **Deferred**. A deferred Layer 4 **never** means
-    zero Agent Builder agents — those agents are still discovered by ARG (Layer 1)
-    and the per-environment Dataverse scan (Layer 2) via
-    `createdIn == "Microsoft 365 Copilot Agent Builder"`.
+    zero Agent Builder agents — it means the package catalog was not observed.
+    ARG (Layer 1) can classify Agent Builder agents through `createdIn`; the
+    per-environment Dataverse scan (Layer 2) still inventories `bot` rows but
+    does not supply that authoring-surface field. If ARG is unavailable and
+    Layer 4 is deferred, `fsi_createdin` remains unknown.
   - **`auto`** calls Graph **`GET /v1.0/subscribedSkus`** to probe tenant
     licensing. Because the public Microsoft licensing-service-plan reference does
     not currently publish `skuPartNumber` / `servicePlanName` mappings for

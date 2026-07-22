@@ -61,6 +61,10 @@ For each environment returned by admin enumeration, the scanner queries the
 environment's Dataverse instance for `bot` records and their `botcomponent`
 children to enumerate agent features.
 
+The `bot` table does not supply the ARG `createdIn` authoring-surface field.
+Layer 2 can preserve inventory coverage when ARG is unavailable, but it cannot
+by itself distinguish Copilot Studio from Microsoft 365 Copilot Agent Builder.
+
 - **Lookup correction (✅ verified):** the `botcomponent` → `bot` parent is
   **`parentbotid` (`_parentbotid_value`)** via the `botcomponent_parent_bot`
   relationship — **not** `_botid_value`. Filtering on `_botid_value` returns
@@ -192,9 +196,10 @@ regardless of the Agent 365 mode.
   **neither** `subscribedSkus` **nor** the Package API, keeps Layers 1–3,
   registry owner attribution, and entitlement resolution fully available, and
   marks Layer 4 `Deferred`. **A `Deferred` Layer 4 never means zero Agent
-  Builder agents** — those agents are still discovered by Layers 1–2 via
-  `createdIn == "Microsoft 365 Copilot Agent Builder"`; only the package-catalog
-  enrichment is deferred.
+  Builder agents** — it means the package catalog was not observed. ARG
+  (Layer 1) can classify Agent Builder agents through `createdIn`; Layer 2 still
+  inventories `bot` rows but does not supply that field. If ARG is unavailable,
+  authoring-surface classification remains unknown.
 - **`auto` probes licensing conservatively.** It calls Graph
   `GET /v1.0/subscribedSkus` (which supports only `$select`, not `$filter`, so
   the scanner enumerates SKUs and matches locally). Because the public Microsoft

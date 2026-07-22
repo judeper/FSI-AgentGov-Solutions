@@ -87,7 +87,11 @@ Full detail in [docs/architecture.md](docs/architecture.md). In summary:
    Present / Absent / NotDetected / Inconclusive; layer status Full / Deferred /
    Unsupported / Partial / Failed / Dry Run) and `summary.coverageScope`. A
    **Deferred or NotDetected Layer 4 never means zero Agent Builder agents** —
-   those agents are still discovered by Layers 1–2 via `createdIn`. API errors
+   it means the package catalog was not observed. ARG (Layer 1) can classify
+   Agent Builder agents through `createdIn`; the per-environment Dataverse scan
+   (Layer 2) still inventories `bot` rows but does not supply that authoring
+   surface field. If ARG is unavailable and Layer 4 is deferred,
+   `fsi_createdin` remains unknown and must not be read as zero. API errors
    (`401` / `403` / `404` / `429` / `5xx`) are typed as Partial / Failed /
    Unsupported and are **never** read as "no license" or absence. See
    [Agent 365 mode selection](docs/architecture.md#agent-365-mode-selection-license-aware-layer-4).
@@ -115,7 +119,8 @@ copilot-agent-inventory/
 │   ├── architecture.md
 │   ├── prerequisites.md
 │   ├── dataverse-schema.md        # auto-generated — do not hand-edit
-│   └── flow-configuration.md
+│   ├── flow-configuration.md
+│   └── lab-validation.md
 ├── scripts/
 │   ├── create_cai_dataverse_schema.py   # 9-entity schema, idempotent, --output-docs
 │   ├── discover_agents.py               # four-layer discovery scanner (--agent365 present|absent|auto)
@@ -412,6 +417,7 @@ migration.
 - [Prerequisites](docs/prerequisites.md) — auth, roles, scopes, network endpoints
 - [Dataverse Schema](docs/dataverse-schema.md) — table, column, and option-set reference
 - [Flow Setup](docs/flow-configuration.md) — daily discovery flow build guide
+- [Lab Validation](docs/lab-validation.md) — observed-live, static, and deferred v0.4 results
 - [Changelog](CHANGELOG.md) — version history
 
 ## License

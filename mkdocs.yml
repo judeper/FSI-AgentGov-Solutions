@@ -220,6 +220,7 @@ nav:
         - Governance Platform Composition: solutions/copilot-agent-inventory/governance-platform-composition.md
         - Dataverse Schema: solutions/copilot-agent-inventory/dataverse-schema.md
         - Flow Configuration: solutions/copilot-agent-inventory/flow-configuration.md
+        - Lab Validation: solutions/copilot-agent-inventory/lab-validation.md
       - Work IQ Usage Detection:
         - solutions/work-iq-usage-detection/index.md
         - Prerequisites: solutions/work-iq-usage-detection/prerequisites.md
