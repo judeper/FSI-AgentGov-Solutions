@@ -57,9 +57,9 @@
       "packageApiAttempted": true,
       "layerStatus": "Full",
       "httpStatus": 200,
-      "errorCode": null,
-      "errorSubcode": null,
-      "reason": null,
+      "errorCode": "",
+      "errorSubcode": "",
+      "reason": "",
       "packagesObserved": 5,
       "packageNewRowCount": 1,
       "pagingTruncated": false
@@ -73,16 +73,13 @@
         "entitlement": "Full"
       },
       "authoritativeFor": [
-        "Copilot Studio agents",
-        "Environment inventory",
-        "Agent Builder package catalog",
-        "Registry-owner correlation"
+        "Copilot Studio inventory from ARG and per-environment Dataverse layers.",
+        "Agent Builder package catalog from the Microsoft Graph Package API."
       ],
       "limitations": [
-        "Owner attribution is a point-in-time Agent Registry export bridge, not a live creator record",
-        "Row-level fsi_scancompleteness may be 'Incomplete Scan' for package-only or stale-owner rows even when the run is Complete"
+        "Deferred or NotDetected Agent 365 state is not an authoritative Agent Builder catalog."
       ],
-      "warning": "A Deferred or heuristic NotDetected Layer 4 is not an authoritative Agent Builder catalog and must not be read as an absence of Agent Builder agents. In this run the Package API layer is Full, so the Agent Builder package catalog is authoritative."
+      "warning": "Deferred/NotDetected is not an authoritative Agent Builder catalog."
     }
   },
   "agents": [

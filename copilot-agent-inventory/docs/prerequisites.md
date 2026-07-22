@@ -256,7 +256,9 @@ depends on the selected mode:**
 - **`present`:** the scanner attempts the Package API directly (no license
   probe). Provision the Agent 365 license and the Gate 2 permission first.
 - **`auto`:** the scanner performs a **conservative license probe** first (see
-  Gate 1a) and only attempts the Package API when the probe matches.
+  Gate 1a). It attempts the Package API when the probe matches or, as a
+  best-effort fallback, when the probe is inconclusive. An inconclusive probe
+  keeps `resolvedState = Inconclusive` even if the package request succeeds.
 
 > **API errors are typed, never absence.** An HTTP `401` / `403` / `404` /
 > `429` / `5xx` from the Package API is classified as a `Partial` / `Failed` /

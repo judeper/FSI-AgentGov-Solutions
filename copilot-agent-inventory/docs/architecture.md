@@ -116,6 +116,13 @@ written to the inventory so coverage gaps are auditable rather than silent.
 - **Endpoint:** `GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages`
   with `$filter=platform eq 'Microsoft 365 Copilot Agent Builder'`. The
   `platform` field supports `$filter` with `eq`.
+- **Documentation caveat:** the list-method documentation explicitly enumerates
+  `Copilot Studio` and `Microsoft 365 Copilot Agent Builder` as the supported
+  `platform` filter values, while the resource property's generic description
+  uses host-platform examples such as `web`. This implementation follows the
+  list-method contract. The licensed result remains **Static/Mock — Not Observed
+  Live** until the filter and an observed-empty response can be verified in an
+  Agent 365-licensed tenant.
 - **Auth:** application (app-only) permission `CopilotPackages.Read.All`
   (admin-consented) with a Microsoft Agent 365 license. No signed-in user
   required for unattended automation.
@@ -176,10 +183,10 @@ regardless of the Agent 365 mode.
 | Mode | License probe (`subscribedSkus`) | Package API | Resolved state | Layer status |
 |------|----------------------------------|-------------|----------------|--------------|
 | `absent` (default) | No | No | `Absent` (authoritative operator declaration) | `Deferred` |
-| `present` | No | Yes (attempted) | `Present` (declared) — or `Inconclusive` only if the API itself cannot be classified | `Full` on success; `Partial` / `Failed` / `Unsupported` on a typed API outcome |
+| `present` | No | Yes (attempted) | `Present` (declared) | `Full` on success; `Partial` / `Failed` / `Unsupported` on a typed API outcome |
 | `auto`, SKU matched | Yes | Yes (attempted) | `Present` | `Full` / `Partial` / `Failed` / `Unsupported` |
 | `auto`, successful no-match | Yes | No | `NotDetected` (heuristic) | `Deferred` |
-| `auto`, probe failed | Yes (failed) | No | `Inconclusive` | `Failed` |
+| `auto`, probe failed | Yes (failed) | Yes (best-effort attempt) | `Inconclusive` | `Full` / `Partial` / `Failed` / `Unsupported` per the Package API outcome; overall run is `Incomplete` |
 
 - **`absent` is an authoritative declaration**, not an inference. It calls
   **neither** `subscribedSkus` **nor** the Package API, keeps Layers 1–3,
@@ -497,7 +504,7 @@ schema doc), so re-runs upsert rather than duplicate.
 CAI separates three governance identities so no principal holds both
 schema-authoring and tenant-wide scan rights, and so the read-only scanner never
 holds inventory-write access. See
-[prerequisites.md](prerequisites.md#roles-and-permissions--the-three-governance-identities)
+[prerequisites.md](prerequisites.md#roles-and-permissions-the-three-governance-identities)
 for the full split (deployer / scanner / flow-writer).
 
 - The scanner authenticates **managed-identity-first**

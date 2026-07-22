@@ -47,7 +47,7 @@ Before creating the flow, confirm you have:
 - [ ] **Flow-writer identity** — the Power Automate **Dataverse connection** this
   flow uses holds **Create / Write** on the CAI tables in the governance
   environment. This is the **only** identity that writes the inventory (see the
-  three-identity split in [prerequisites.md](prerequisites.md#roles-and-permissions--the-three-governance-identities)).
+  three-identity split in [prerequisites.md](prerequisites.md#roles-and-permissions-the-three-governance-identities)).
 - [ ] **Microsoft Teams** channel and/or an **email distribution list** for
   run notifications (optional).
 - [ ] **Connection references** bound in Power Automate (create these in the

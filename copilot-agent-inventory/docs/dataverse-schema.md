@@ -79,7 +79,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_ModifiedOn` | `fsi_modifiedon` | DateTime | No | Agent last-modified timestamp |
 | `fsi_LastPublishedAt` | `fsi_lastpublishedat` | DateTime | No | Last publish timestamp (ARG lastPublishedAt) |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this inventory row was last refreshed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | GUID correlating all records from one scan run |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 | `fsi_RawJson` | `fsi_rawjson` | Memo(100000) | No | Full ARG / bot JSON snapshot for evidence and reparse |
 | `fsi_PackageId` | `fsi_packageid` | String(100) | No | Package Management API package id (P_...). DISTINCT id space from the Copilot Studio bot GUID; used as the stable key for package-sourced rows and reconciliation via fsi_entraappid |
 | `fsi_Publisher` | `fsi_publisher` | String(200) | No | Package vendor/publisher from the Package Management API (not the agent creator or owner) |
@@ -122,7 +122,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_AgentCount` | `fsi_agentcount` | Integer | No | Number of agents discovered in this environment |
 | `fsi_DeltaLink` | `fsi_deltalink` | Memo(100000) | No | Dataverse @odata.deltaLink for incremental change tracking |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this environment was last scanned |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_EnvKey`: (`fsi_environmentid`) — idempotent upsert key.
 
@@ -150,7 +150,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_DetectionDetail` | `fsi_detectiondetail` | Memo(4000) | No | JSON provenance for manifest-derived rows: source locator, manifest schema version, and capability sub-settings such as the v1.7 People include_related_content flag |
 | `fsi_AgentRefProvisional` | `fsi_agentrefprovisional` | Boolean (default: false) | No | The fsi_agentid is a PROVISIONAL manifest/app id not yet bound to a Dataverse bot GUID (no --id-map match during manifest detection). Downstream joins (Copilot Billing Governance) must reconcile provisional rows before use; queryable so provisional rows can be filtered |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this feature row was last refreshed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_AgentFeatureKey`: (`fsi_agentid`, `fsi_sourceobjectid`) — idempotent upsert key.
 
@@ -182,7 +182,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_AudienceResolutionStatus` | `fsi_audienceresolutionstatus` | String(100) | No | Complete / Partial / WholeTenantNotEnumerated / Failed / NotResolved — outcome of the UPN expansion |
 | `fsi_AudienceResolvedAt` | `fsi_audienceresolvedat` | DateTime | No | When the audience-to-UPN expansion last ran for this agent |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this posture was last scanned |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_AuthShareKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
 
@@ -205,7 +205,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_ZeroRatingEligible` | `fsi_zeroratingeligible` | Boolean (default: false) | No | Fail-closed default False pending the June 2026 Licensing Guide; CS-built generative answers and tenant-grounded responses remain billable |
 | `fsi_EntitlementBasis` | `fsi_entitlementbasis` | String(1000) | No | Note on the license + createdIn basis for the entitlement decision |
 | `fsi_LastEvaluatedAt` | `fsi_lastevaluatedat` | DateTime | No | When the entitlement was last evaluated |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 ### CAI Usage Signal (`fsi_caiusagesignal`)
 
@@ -226,7 +226,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_AggregationWindowDays` | `fsi_aggregationwindowdays` | Integer | No | Rollup window length in days (default 30) |
 | `fsi_SignalSource` | `fsi_signalsource` | String(200) | No | Source of the aggregate (e.g., msdyn_botsession, App Insights) |
 | `fsi_LastAggregatedAt` | `fsi_lastaggregatedat` | DateTime | Yes | When the usage rollup was last computed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_UsageSignalKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
 
@@ -249,7 +249,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_ConfigSourceComponentType` | `fsi_configsourcecomponenttype` | Integer | No | botcomponent type where config was resolved (18/15/16) — sample to confirm |
 | `fsi_LastObservedUtc` | `fsi_lastobservedutc` | DateTime | No | Most recent observed (invoked) signal timestamp |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this state row was last refreshed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_WorkIqStateKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
 
@@ -271,7 +271,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_ViolationCount` | `fsi_violationcount` | Integer | No | Number of open violations rolled up for the agent |
 | `fsi_ViolationsJson` | `fsi_violationsjson` | Memo(100000) | No | Structured violations[] rollup for the agent |
 | `fsi_LastCheckedUtc` | `fsi_lastcheckedutc` | DateTime | Yes | When compliance state was last evaluated |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_ComplianceStateKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
 

@@ -1543,7 +1543,7 @@ def fetch_package_catalog_details(
             )
         return PackageApiFetchResult(
             outcome=PackageApiOutcome.DRY_RUN,
-            attempted=True,
+            attempted=False,
             packages=[],
             paging_truncated=False,
             reason="Dry run: skipped Package Management API HTTP call.",
@@ -1675,6 +1675,7 @@ def fetch_package_catalog_details(
         attempted=True,
         packages=all_packages,
         paging_truncated=False,
+        http_status=200,
     )
 
 

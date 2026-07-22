@@ -525,7 +525,7 @@ COPILOTAGENT_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this inventory row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="GUID correlating all records from one scan run"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
     _memo_col("fsi_RawJson", "Raw JSON", 100000,
               description="Full ARG / bot JSON snapshot for evidence and reparse"),
     # --- Package Management API fields (fsi_cai_discoverysource = 100000004) ---
@@ -648,7 +648,7 @@ ENVIRONMENT_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this environment was last scanned"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 3. fsi_CaiAgentFeature (one row per detected feature) --------------------
@@ -693,7 +693,7 @@ AGENTFEATURE_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this feature row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 4. fsi_CaiAuthShare -----------------------------------------------------
@@ -747,7 +747,7 @@ AUTHSHARE_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this posture was last scanned"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 5. fsi_CaiBillingEntitlement (downstream-populated shell) ----------------
@@ -774,7 +774,7 @@ BILLINGENTITLEMENT_COLUMNS = [
     _datetime_col("fsi_LastEvaluatedAt", "Last Evaluated At", required=False,
                   description="When the entitlement was last evaluated"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 6. fsi_CaiUsageSignal ---------------------------------------------------
@@ -800,7 +800,7 @@ USAGESIGNAL_COLUMNS = [
     _datetime_col("fsi_LastAggregatedAt", "Last Aggregated At",
                   description="When the usage rollup was last computed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 7. fsi_CaiWorkIqState (downstream-populated by work-iq-usage-detection) --
@@ -828,7 +828,7 @@ WORKIQSTATE_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this state row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 8. fsi_CaiComplianceState ----------------------------------------------
@@ -853,7 +853,7 @@ COMPLIANCESTATE_COLUMNS = [
     _datetime_col("fsi_LastCheckedUtc", "Last Checked (UTC)",
                   description="When compliance state was last evaluated"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 9. fsi_CaiScanRun --------------------------------------------------------

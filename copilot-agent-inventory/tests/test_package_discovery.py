@@ -641,16 +641,17 @@ def test_enable_package_api_off_makes_no_package_catalog_calls() -> None:
 
 
 def test_scan_all_dry_run_flag_on_adds_package_summary_keys() -> None:
-    """With --enable-package-api, summary must include package-layer keys.
-    In dry_run the fetcher returns ([], False), so counts are zero/False."""
+    """Dry-run reports intended package coverage without claiming an API observation."""
     ctx = _ctx(dry_run=True, enable_package_api=True)
     result = da.scan_all(ctx)
     summary = result["summary"]
 
-    assert "packageNewRowCount" in summary
-    assert "packageScanTruncated" in summary
-    assert summary["packageNewRowCount"] == 0
-    assert summary["packageScanTruncated"] is False
+    assert "packageNewRowCount" not in summary
+    assert "packageScanTruncated" not in summary
+    assert summary["agent365"]["packageApiAttempted"] is False
+    assert summary["agent365"]["packagesObserved"] is None
+    assert summary["agent365"]["packageNewRowCount"] is None
+    assert summary["agent365"]["layerStatus"] == da.LAYER_STATUS_DRY_RUN
 
 
 def test_scan_all_dry_run_flag_on_final_agents_has_no_p_rows() -> None:
@@ -1544,6 +1545,18 @@ def test_fetch_package_catalog_details_parse_failure_outcome() -> None:
     assert details.outcome == da.PackageApiOutcome.PARSE_FAILURE
 
 
+def test_fetch_package_catalog_details_success_records_http_200() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response({"value": []})
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == da.PackageApiOutcome.SUCCESS_EMPTY
+    assert details.attempted is True
+    assert details.http_status == 200
+
+
 @pytest.mark.parametrize("body", [["not-an-object"], 42, None])
 def test_fetch_package_catalog_details_non_object_first_page_is_parse_failure(
     body: object,
@@ -1735,8 +1748,11 @@ def test_scan_all_summary_emits_agent365_and_coverage_scope_contract() -> None:
     assert agent365["requestedMode"] == "Present"
     assert agent365["resolvedState"] == "Present"
     assert agent365["detectionConfidence"] == "OperatorDeclared"
-    assert agent365["packagesObserved"] == 0
-    assert agent365["packageNewRowCount"] == 0
+    assert agent365["packageApiAttempted"] is False
+    assert agent365["packagesObserved"] is None
+    assert agent365["packageNewRowCount"] is None
+    assert "packageNewRowCount" not in summary
+    assert "packageScanTruncated" not in summary
     scope = summary["coverageScope"]
     assert scope["layers"]["packageApi"] == da.LAYER_STATUS_DRY_RUN
     assert "Deferred/NotDetected is not an authoritative Agent Builder catalog." in scope["warning"]
