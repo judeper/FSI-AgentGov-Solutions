@@ -460,12 +460,14 @@ def _picklist_col(
     """Build a picklist column bound to a global option set."""
     defn = {
         "@odata.type": "#Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {
             "Value": "ApplicationRequired" if required else "None"
         },
-        "OptionSet": None,
         "GlobalOptionSet@odata.bind": (
             f"/GlobalOptionSetDefinitions(Name='{global_optionset_name}')"
         ),

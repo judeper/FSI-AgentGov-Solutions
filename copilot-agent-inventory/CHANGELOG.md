@@ -35,6 +35,12 @@ generated `docs/dataverse-schema.md` reference is regenerated.
   environment count. `summary.environmentEnumeration` and `fsi_caiscanrun` now
   expose the Layer 2-scoped and explicitly no-Dataverse environment counts
   separately so the Layer 2 denominator is auditable in JSON and BI.
+- **Global Choice column create payload.** The schema generator now emits the
+  complete Dataverse `PicklistAttributeMetadata` contract
+  (`AttributeType`, `AttributeTypeName`, `SourceTypeMask`, and
+  `GlobalOptionSet@odata.bind`) and omits the local `OptionSet` property when
+  binding a global choice. This resolves the live HTTP 400 metadata error while
+  preserving idempotent deployment.
 
 ### Added
 

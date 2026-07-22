@@ -260,6 +260,26 @@ def test_scanrun_required_columns_and_logical_names() -> None:
 
 
 @_schema_skip
+def test_picklist_columns_use_global_optionset_create_contract() -> None:
+    """Global Choice columns must match the Dataverse metadata create payload."""
+    picklists = [
+        column
+        for table in _cai_schema.TABLES.values()
+        for column in table["columns"]
+        if column.get("@odata.type")
+        == "#Microsoft.Dynamics.CRM.PicklistAttributeMetadata"
+    ]
+
+    assert picklists
+    for column in picklists:
+        assert column["AttributeType"] == "Picklist"
+        assert column["AttributeTypeName"] == {"Value": "PicklistType"}
+        assert column["SourceTypeMask"] == 0
+        assert column.get("GlobalOptionSet@odata.bind")
+        assert "OptionSet" not in column
+
+
+@_schema_skip
 def test_scanrun_package_counts_are_nullable() -> None:
     scanrun = _cai_schema.TABLES["fsi_caiscanrun"]
     by_schema = {c["SchemaName"]: c for c in scanrun["columns"]}
