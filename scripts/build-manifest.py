@@ -1566,31 +1566,30 @@ def _validate_png_structure(data: bytes) -> str | None:
                         predictor = upper_left
                 reconstructed[index] = (value + predictor) & 0xFF
 
-            if color_type == 3:
-                assert palette_entries is not None
-                if bit_depth == 8:
-                    if any(
-                        sample >= palette_entries
-                        for sample in reconstructed[:pass_width]
-                    ):
-                        return "indexed PNG pixel references a missing PLTE entry"
-                else:
-                    samples_per_byte = 8 // bit_depth
-                    mask = (1 << bit_depth) - 1
-                    sample_count = 0
-                    for byte in reconstructed:
-                        for sample_index in range(samples_per_byte):
-                            shift = 8 - bit_depth * (sample_index + 1)
-                            sample = (byte >> shift) & mask
-                            if sample >= palette_entries:
-                                return (
-                                    "indexed PNG pixel references a missing PLTE entry"
-                                )
-                            sample_count += 1
-                            if sample_count == pass_width:
-                                break
+            assert palette_entries is not None
+            if bit_depth == 8:
+                if any(
+                    sample >= palette_entries
+                    for sample in reconstructed[:pass_width]
+                ):
+                    return "indexed PNG pixel references a missing PLTE entry"
+            else:
+                samples_per_byte = 8 // bit_depth
+                mask = (1 << bit_depth) - 1
+                sample_count = 0
+                for byte in reconstructed:
+                    for sample_index in range(samples_per_byte):
+                        shift = 8 - bit_depth * (sample_index + 1)
+                        sample = (byte >> shift) & mask
+                        if sample >= palette_entries:
+                            return (
+                                "indexed PNG pixel references a missing PLTE entry"
+                            )
+                        sample_count += 1
                         if sample_count == pass_width:
                             break
+                    if sample_count == pass_width:
+                        break
 
             previous = reconstructed
             row_offset += 1 + row_bytes

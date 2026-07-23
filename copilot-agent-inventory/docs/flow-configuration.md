@@ -675,8 +675,8 @@ After `Write_Scan_Run`, confirm the single ledger row persisted:
 > **Exactly one row per run.** Because the write is an upsert on
 > `fsi_ScanRunKey` / `fsi_runid`, replays of the same run converge on the same
 > row (idempotent) and never fan out into duplicates. A distinct, collision-
-> resistant `runId` per scheduled run guarantees each run gets its own ledger row
-> while agent rows join back via `fsi_runid`.
+> resistant `runId` per scheduled run supports a separate ledger row for each
+> run while agent rows join back via `fsi_runid`.
 
 ### Step 9: Notify on Coverage Gaps and Reconciliation Gaps (optional)
 
