@@ -1,8 +1,12 @@
 {
-  "_comment": "SYNTHETIC placeholder header names only. These are NOT real Microsoft 365 admin center column names. The exact header names for the Owner and Date created columns in the registry XLSX export are UNKNOWN until the lab export is obtained. Update this file once headers are confirmed against the lab export. The importer (import_registry_export.py) loads this file at runtime; no code change is needed when aliases are updated.",
-  "_confirm_required": "CONFIRM header names against lab export before use in production.",
+  "_comment": "Confirmed against a July 2026 Microsoft 365 admin center Agents > All agents > Registry XLSX export. Header matching is case-insensitive. Review this alias map when Microsoft changes the export contract.",
+  "_owner_semantics": "Owner is a UPN/email in the validated export and maps to owner_upn. Creator Id is a distinct GUID and is intentionally not mapped to owner_id or treated as the owner.",
 
   "header_aliases": {
+    "name":                         "agent_name",
+    "bot id":                       "agent_id",
+    "owner":                        "owner_upn",
+    "date created":                 "date_created",
     "synthetic_agent_display_name": "agent_name",
     "synthetic_agent_name":         "agent_name",
     "synthetic_agent_id":           "agent_id",

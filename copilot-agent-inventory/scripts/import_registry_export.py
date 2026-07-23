@@ -30,16 +30,13 @@ Supported formats:
 Output: JSON array of row dicts written to --output or stdout.
 
 # ---------------------------------------------------------------------------
-# TODO — CONFIRM HEADER NAMES AGAINST LAB EXPORT
-#   The exact header names for "Owner" and "Date created" columns in the
-#   Microsoft 365 admin center registry export are UNKNOWN until the lab XLSX
-#   is obtained. The HEADER_ALIASES map is intentionally configurable via the
-#   column-map JSON so the mapping can be updated without modifying this file.
-#   Once the lab export is confirmed:
-#     1. Update templates/registry-columnmap.sample.json with the real headers.
-#     2. Re-run this importer against the live export and verify REQUIRED_FIELDS
-#        are satisfied.
-#     3. Remove this TODO comment.
+# CONFIRMED HEADER CONTRACT — JULY 2026 LAB EXPORT
+#   The validated Microsoft 365 admin center Registry workbook includes exact
+#   headers "Name", "Bot Id", "Owner", "Date created", and "Creator Id".
+#   Owner is UPN-shaped and maps to owner_upn. Creator Id is a distinct GUID and
+#   must not be mapped to owner_id or otherwise treated as the owner.
+#   The alias map remains configurable so export-contract drift fails visibly
+#   without requiring code changes.
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -52,12 +49,11 @@ Output: JSON array of row dicts written to --output or stdout.
 #   data — those routes do not constitute a supported public contract and must
 #   not be used as the integration surface for this solution.
 #
-#   Because the exact column headers (and general availability) of the native
-#   registry export are not yet confirmed, all header mapping is kept behind
-#   the configurable alias map (templates/registry-columnmap.sample.json or a
-#   custom --columnmap path).  Any required canonical column that remains
-#   unmapped after alias resolution is a hard failure with an explicit
-#   header-diff — silent or guessed mappings are not permitted.
+#   Confirmed native headers remain behind the configurable alias map
+#   (templates/registry-columnmap.sample.json or a custom --columnmap path).
+#   Any required canonical column that remains unmapped after alias resolution
+#   is a hard failure with an explicit header-diff — silent or guessed mappings
+#   are not permitted.
 # ---------------------------------------------------------------------------
 """
 
@@ -107,6 +103,7 @@ CANONICAL_TO_DATAVERSE: dict[str, str] = {
 
 # Provenance tags stamped on every emitted row.
 OWNER_SOURCE_LABEL = "Agent Registry Export"
+_UNMAPPED_HEADER_PREFIX = "unmapped__"
 
 
 # ---------------------------------------------------------------------------
@@ -139,10 +136,17 @@ def _normalize_header(header: str, aliases: dict[str, str]) -> str:
     """Map a raw export header to a canonical field name.
 
     Lookup is case-insensitive and strips leading/trailing whitespace.
-    Falls back to a snake_case version of the raw header when no alias matches.
+    Exact canonical names remain valid for programmatic CSV inputs. Other
+    unmapped headers are namespaced so a new display label such as "Owner Id"
+    cannot silently become the canonical owner_id field.
     """
     key = header.strip().lower()
-    return aliases.get(key, key.replace(" ", "_"))
+    mapped = aliases.get(key)
+    if mapped:
+        return mapped
+    if key in CANONICAL_TO_DATAVERSE:
+        return key
+    return f"{_UNMAPPED_HEADER_PREFIX}{key.replace(' ', '_')}"
 
 
 # ---------------------------------------------------------------------------

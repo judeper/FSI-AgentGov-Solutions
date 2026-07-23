@@ -87,4 +87,22 @@ Describe 'Lab harness runtime foundation' {
         $summary.result | Should -Be 'PlanValidatedNotExecuted'
         $summary.executionMode | Should -Be 'PlanOnly'
     }
+
+    It 'validates the copilot-agent-inventory templates PlanOnly against schemas and path confinement' {
+        $planPath = Join-Path -Path $script:repoRoot -ChildPath 'lab-harness\templates\copilot-agent-inventory.plan.json'
+        $result = Invoke-LabValidation -Solution 'copilot-agent-inventory' -PlanPath $planPath -PlanOnly -EvidenceRoot $script:evidenceRoot
+
+        $result.ExitCode | Should -Be 2
+        $result.Result | Should -Be 'PlanValidatedNotExecuted'
+        $result.StepResults.Count | Should -Be 2
+        foreach ($step in $result.StepResults) {
+            $step.status | Should -Be 'not-run-planonly'
+        }
+
+        # Adapters used must all be in the existing allow-list (no new adapter).
+        $catalog = Get-LabValidationAdapterCatalog
+        foreach ($step in $result.StepResults) {
+            $catalog.ContainsKey($step.adapter) | Should -BeTrue
+        }
+    }
 }

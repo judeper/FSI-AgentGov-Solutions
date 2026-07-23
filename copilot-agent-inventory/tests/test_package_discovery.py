@@ -36,13 +36,12 @@ P_19ae1zz1-... convention from Microsoft docs examples.
 from __future__ import annotations
 
 import json
-import logging
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
@@ -71,16 +70,20 @@ pytestmark = pytest.mark.skipif(
 
 def _ctx(
     dry_run: bool = True,
-    enable_package_api: bool = False,
+    agent365_mode: str = "absent",
+    enable_package_api: bool | None = None,
 ) -> "da.ScanContext":
+    if enable_package_api is not None:
+        agent365_mode = "present" if enable_package_api else "absent"
     return da.ScanContext(
         run_id="test-run-pkg-001",
         dry_run=dry_run,
-        enable_package_api=enable_package_api,
+        agent365_requested_mode=agent365_mode,
+        agent365_resolution_source="Test",
     )
 
 
-def _mock_response(json_data: dict, status_code: int = 200) -> MagicMock:
+def _mock_response(json_data: object, status_code: int = 200) -> MagicMock:
     resp = MagicMock()
     resp.status_code = status_code
     resp.json.return_value = json_data
@@ -628,7 +631,7 @@ def test_enable_package_api_off_makes_no_package_catalog_calls() -> None:
     must never be called. The three-layer discovery path is byte-for-byte unchanged."""
     ctx = _ctx(dry_run=True, enable_package_api=False)
 
-    with patch.object(da, "fetch_package_catalog") as mock_fetch:
+    with patch.object(da, "fetch_package_catalog_details") as mock_fetch:
         da.scan_all(ctx)
 
     mock_fetch.assert_not_called(), (
@@ -638,16 +641,17 @@ def test_enable_package_api_off_makes_no_package_catalog_calls() -> None:
 
 
 def test_scan_all_dry_run_flag_on_adds_package_summary_keys() -> None:
-    """With --enable-package-api, summary must include package-layer keys.
-    In dry_run the fetcher returns ([], False), so counts are zero/False."""
+    """Dry-run reports intended package coverage without claiming an API observation."""
     ctx = _ctx(dry_run=True, enable_package_api=True)
     result = da.scan_all(ctx)
     summary = result["summary"]
 
-    assert "packageNewRowCount" in summary
-    assert "packageScanTruncated" in summary
-    assert summary["packageNewRowCount"] == 0
-    assert summary["packageScanTruncated"] is False
+    assert "packageNewRowCount" not in summary
+    assert "packageScanTruncated" not in summary
+    assert summary["agent365"]["packageApiAttempted"] is False
+    assert summary["agent365"]["packagesObserved"] is None
+    assert summary["agent365"]["packageNewRowCount"] is None
+    assert summary["agent365"]["layerStatus"] == da.LAYER_STATUS_DRY_RUN
 
 
 def test_scan_all_dry_run_flag_on_final_agents_has_no_p_rows() -> None:
@@ -666,35 +670,37 @@ def test_scan_all_dry_run_flag_on_final_agents_has_no_p_rows() -> None:
 # Regression: transport / parse errors from Package API do not crash scan_all
 # =============================================================================
 
-@pytest.mark.parametrize("exc_label,exc_instance", [
-    (
-        "ConnectionError",
-        requests.exceptions.ConnectionError("simulated connection refused"),
-    ),
-    (
-        "JSONDecodeError",
-        json.JSONDecodeError("simulated parse failure", "", 0),
-    ),
+@pytest.mark.parametrize("label,outcome,error_code", [
+    ("TransportFailure", da.PackageApiOutcome.TRANSPORT_FAILURE, "TransportFailure"),
+    ("ParseFailure", da.PackageApiOutcome.PARSE_FAILURE, "ParseFailure"),
 ])
 def test_scan_all_package_api_transport_error_marks_incomplete_does_not_raise(
-    exc_label: str, exc_instance: Exception,
+    label: str,
+    outcome: "da.PackageApiOutcome",
+    error_code: str,
 ) -> None:
-    """Non-throttle transport or parse exceptions from the Package API layer must:
-      - set packageScanTruncated=True (INCOMPLETE signal, GATE-1 guard)
-      - NOT propagate out of scan_all (the run continues)
-    Covers requests.ConnectionError and json.JSONDecodeError per Saul Finding 1."""
+    """Failed package outcomes remain fail-visible and keep deprecated mirrors."""
     ctx = _ctx(dry_run=True, enable_package_api=True)
+    failed_fetch = da.PackageApiFetchResult(
+        outcome=outcome,
+        attempted=True,
+        packages=[],
+        paging_truncated=True,
+        error_code=error_code,
+        reason="simulated",
+    )
 
-    with patch.object(da, "fetch_package_catalog", side_effect=exc_instance):
+    with patch.object(da, "fetch_package_catalog_details", return_value=failed_fetch):
         result = da.scan_all(ctx)
 
     summary = result["summary"]
     assert summary.get("packageScanTruncated") is True, (
-        f"packageScanTruncated must be True after {exc_label}; got: {summary}"
+        f"packageScanTruncated must be True after {label}; got: {summary}"
     )
     assert summary.get("packageNewRowCount") == 0, (
-        f"packageNewRowCount must be 0 after {exc_label} guard; got: {summary}"
+        f"packageNewRowCount must be 0 after {label} guard; got: {summary}"
     )
+    assert summary["agent365"]["layerStatus"] == da.LAYER_STATUS_FAILED
 
 
 # =============================================================================
@@ -968,15 +974,14 @@ def test_regression_defect4_sample_json_shape_matches_scan_all_output() -> None:
     ctx_full = da.ScanContext(
         run_id="contract-test-001",
         dry_run=True,
-        enable_package_api=True,
+        agent365_requested_mode="present",
+        agent365_resolution_source="Test",
         registry_export_path="fake-export.xlsx",
         columnmap_path="fake-map.json",
         as_of="2026-07-20T18:00:00Z",
         resolve_entitlement=True,
         entitlement_ps1_path="fake-ps1.ps1",
     )
-
-    scan_outcome = {"agents": [], "features": [], "authShares": []}
 
     with ExitStack() as stack:
         import import_registry_export as ire
@@ -1020,7 +1025,10 @@ def test_regression_defect4_sample_json_shape_matches_scan_all_output() -> None:
     # summary sub-block keys — sample must be a SUPERSET of what scan_all emits
     # (the sample is a full run with all flags; scan_all base keys are always present).
     sample_summary_keys = frozenset(sample["summary"].keys())
+    deferred_sample_keys = {"agent365", "coverageScope"}
     for key in expected_summary_keys:
+        if key in deferred_sample_keys:
+            continue
         assert key in sample_summary_keys, (
             f"summary key '{key}' present in scan_all output but missing from sample. "
             "Defect 4: update package-inventory.sample.json."
@@ -1037,6 +1045,14 @@ def test_regression_defect4_sample_json_shape_matches_scan_all_output() -> None:
     assert isinstance(sample["agents"], list), (
         "sample['agents'] must be a list — Defect 4 regression."
     )
+    sample_run_id = sample["summary"]["runId"]
+    assert sample_run_id.startswith("cai-20260721T020005Z-")
+    assert len(sample_run_id) == 35
+    assert sample["summary"]["coreAgentCount"] == len(sample["agents"])
+    assert all(agent["fsi_runid"] == sample_run_id for agent in sample["agents"])
+    assert sample["summary"]["agent365"]["requestedMode"] == "Present"
+    assert sample["summary"]["agent365"]["detectionConfidence"] == "OperatorDeclared"
+    assert sample["summary"]["agent365"]["reason"] == "Operator declared Agent 365 present."
 
     # Forbidden top-level keys.
     assert "runId" not in sample_toplevel, (
@@ -1233,3 +1249,511 @@ def test_upsert_key_both_keys_present_prefers_agent_env_key() -> None:
             "Branch 1 (agentid + environmentid) must take precedence over Branch 2 "
             "(packageid alone) — this is exactly the transition-duplicate fix."
         )
+
+
+# =============================================================================
+# Agent 365 v0.4 — license probe + mode resolution
+# =============================================================================
+
+
+@pytest.mark.parametrize(
+    "label,sku_part,sku_capability,plans",
+    [
+        ("Microsoft Agent 365", "Microsoft Agent 365", "Enabled", []),
+        ("Agent 365 Frontier", "Agent 365 Frontier", "Enabled", []),
+        (
+            "Frontier display name",
+            "Microsoft 365 Frontier for AI Teammates",
+            "Enabled",
+            [],
+        ),
+        (
+            "E7 plan",
+            "UNRELATED_SKU",
+            "Enabled",
+            [{"servicePlanName": "Microsoft 365 E7", "provisioningStatus": "Success"}],
+        ),
+    ],
+)
+def test_probe_agent365_detects_documented_name_aliases(
+    label: str,
+    sku_part: str,
+    sku_capability: str,
+    plans: list[dict],
+) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    payload = {
+        "value": [
+            {
+                "skuPartNumber": sku_part,
+                "capabilityStatus": sku_capability,
+                "consumedUnits": 1,
+                "prepaidUnits": {"enabled": 10},
+                "servicePlans": plans,
+            }
+        ]
+    }
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(payload)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.DETECTED, label
+
+
+def test_probe_agent365_selects_all_fields_required_for_usability_decision() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response({"value": []})
+    ) as mock_req:
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.NOT_DETECTED
+    called_url = mock_req.call_args.args[2]
+    select_value = parse_qs(urlsplit(called_url).query).get("$select", [""])[0]
+    selected_fields = {field.strip() for field in select_value.split(",") if field.strip()}
+    assert {
+        "skuPartNumber",
+        "capabilityStatus",
+        "prepaidUnits",
+        "consumedUnits",
+        "servicePlans",
+    }.issubset(selected_fields)
+
+
+def test_probe_agent365_alias_requires_enabled_or_consumed_seats() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    payload = {
+        "value": [
+            {
+                "skuPartNumber": "Microsoft Agent 365",
+                "capabilityStatus": "Enabled",
+                "consumedUnits": 0,
+                "prepaidUnits": {"enabled": 0},
+                "servicePlans": [],
+            }
+        ]
+    }
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(payload)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.NOT_DETECTED
+
+
+def test_probe_agent365_ignores_disabled_service_plan_aliases() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    payload = {
+        "value": [
+            {
+                "skuPartNumber": "UNRELATED_SKU",
+                "capabilityStatus": "Enabled",
+                "consumedUnits": 2,
+                "prepaidUnits": {"enabled": 2},
+                "servicePlans": [
+                    {
+                        "servicePlanName": "Microsoft 365 E7",
+                        "provisioningStatus": "Disabled",
+                    }
+                ],
+            }
+        ]
+    }
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(payload)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.NOT_DETECTED
+
+
+def test_probe_agent365_requires_enabled_sku_capability_status() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    payload = {
+        "value": [
+            {
+                "skuPartNumber": "Microsoft Agent 365",
+                "capabilityStatus": "Suspended",
+                "consumedUnits": 4,
+                "prepaidUnits": {"enabled": 10},
+                "servicePlans": [],
+            }
+        ]
+    }
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(payload)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.NOT_DETECTED
+
+
+def test_probe_agent365_heuristic_does_not_assume_undocumented_sku_tokens() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    payload = {
+        "value": [
+            {
+                "skuPartNumber": "MICROSOFT_AGENT_365_GA",
+                "capabilityStatus": "Enabled",
+                "consumedUnits": 5,
+                "prepaidUnits": {"enabled": 5},
+                "servicePlans": [],
+            }
+        ]
+    }
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(payload)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.NOT_DETECTED
+
+
+def test_probe_agent365_operator_override_alias_detects_custom_sku() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    ctx.agent365_alias_overrides = ("CONTOSO_AGENT_365_CUSTOM",)
+    session = MagicMock()
+    payload = {
+        "value": [
+            {
+                "skuPartNumber": "contoso-agent-365-custom",
+                "capabilityStatus": "Enabled",
+                "consumedUnits": 3,
+                "prepaidUnits": {"enabled": 3},
+                "servicePlans": [],
+            }
+        ]
+    }
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(payload)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.DETECTED
+
+
+def test_probe_agent365_operator_override_can_enable_undocumented_tokens() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    ctx.agent365_alias_overrides = ("MICROSOFT_AGENT_365_GA",)
+    session = MagicMock()
+    payload = {
+        "value": [
+            {
+                "skuPartNumber": "MICROSOFT_AGENT_365_GA",
+                "capabilityStatus": "Enabled",
+                "consumedUnits": 2,
+                "prepaidUnits": {"enabled": 2},
+                "servicePlans": [],
+            }
+        ]
+    }
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(payload)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.DETECTED
+
+
+def test_probe_agent365_malformed_response_is_inconclusive() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response({"unexpected": True})
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.INCONCLUSIVE
+    assert result.error_code == "MalformedResponse"
+
+
+@pytest.mark.parametrize("body", [["not-an-object"], 7, None])
+def test_probe_agent365_non_object_json_body_is_inconclusive_malformed(body: object) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(body)
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.INCONCLUSIVE
+    assert result.error_code == "MalformedResponse"
+
+
+def test_probe_agent365_transport_failure_is_inconclusive() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da,
+        "_request_with_backoff",
+        side_effect=da.requests.exceptions.ConnectionError("boom"),
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.INCONCLUSIVE
+
+
+def test_probe_agent365_forbidden_reason_uses_correct_permission_guidance() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da,
+        "_request_with_backoff",
+        return_value=_mock_response(
+            {"error": {"code": "Authorization_RequestDenied"}},
+            status_code=403,
+        ),
+    ):
+        result = da.probe_agent365_license(ctx, session)
+    assert result.outcome == da.Agent365ProbeOutcome.INCONCLUSIVE
+    assert "LicenseAssignment.Read.All" in result.reason
+    assert "Organization.Read.All" in result.reason
+    assert "required" not in result.reason
+
+
+@pytest.mark.parametrize(
+    "status,expected_outcome",
+    [
+        (401, da.PackageApiOutcome.HTTP_401),
+        (403, da.PackageApiOutcome.HTTP_403),
+        (404, da.PackageApiOutcome.HTTP_404_UNSUPPORTED),
+        (429, da.PackageApiOutcome.HTTP_429),
+        (503, da.PackageApiOutcome.HTTP_5XX),
+    ],
+)
+def test_fetch_package_catalog_details_maps_http_outcomes(
+    status: int,
+    expected_outcome: "da.PackageApiOutcome",
+) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da,
+        "_request_with_backoff",
+        return_value=_mock_response({"error": {"code": "TestCode"}}, status_code=status),
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == expected_outcome
+    assert details.paging_truncated is True
+
+
+def test_fetch_package_catalog_details_parse_failure_outcome() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    bad_resp = MagicMock()
+    bad_resp.status_code = 200
+    bad_resp.json.side_effect = ValueError("not json")
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=bad_resp
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == da.PackageApiOutcome.PARSE_FAILURE
+
+
+def test_fetch_package_catalog_details_success_records_http_200() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response({"value": []})
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == da.PackageApiOutcome.SUCCESS_EMPTY
+    assert details.attempted is True
+    assert details.http_status == 200
+
+
+@pytest.mark.parametrize("body", [["not-an-object"], 42, None])
+def test_fetch_package_catalog_details_non_object_first_page_is_parse_failure(
+    body: object,
+) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", return_value=_mock_response(body)
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == da.PackageApiOutcome.PARSE_FAILURE
+    assert details.error_code == "MalformedResponse"
+    assert details.paging_truncated is True
+
+
+@pytest.mark.parametrize("next_page_body", [["not-an-object"], 9, None])
+def test_fetch_package_catalog_details_non_object_next_page_is_parse_failure(
+    next_page_body: object,
+) -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    session = MagicMock()
+    next_url = (
+        "https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages"
+        "?$skiptoken=next-page"
+    )
+
+    def _side_effect(_sess, _method, url, **_kwargs):
+        if url == next_url:
+            return _mock_response(next_page_body)
+        return _mock_response({"value": [_AB_PKG], "@odata.nextLink": next_url})
+
+    with patch.object(da, "_get_token", return_value="fake-token"), patch.object(
+        da, "_request_with_backoff", side_effect=_side_effect
+    ):
+        details = da.fetch_package_catalog_details(ctx, session)
+    assert details.outcome == da.PackageApiOutcome.PARSE_FAILURE
+    assert details.error_code == "MalformedResponse"
+    assert details.paging_truncated is True
+    assert len(details.packages) == 1
+
+
+def test_scan_all_absent_mode_defers_package_layer_and_keeps_complete_status() -> None:
+    ctx = _ctx(dry_run=True, agent365_mode="absent")
+    with patch.object(da, "fetch_package_catalog_details") as mock_fetch, patch.object(
+        da, "probe_agent365_license"
+    ) as mock_probe:
+        result = da.scan_all(ctx)
+    mock_fetch.assert_not_called()
+    mock_probe.assert_not_called()
+    agent365 = result["summary"]["agent365"]
+    assert agent365["resolvedState"] == "Absent"
+    assert agent365["requestedMode"] == "Absent"
+    assert agent365["detectionConfidence"] == "OperatorDeclared"
+    assert agent365["packageApiAttempted"] is False
+    assert agent365["layerStatus"] == da.LAYER_STATUS_DEFERRED
+    assert agent365["packagesObserved"] is None
+    assert agent365["packageNewRowCount"] is None
+    assert result["summary"]["status"] == "Dry Run"
+    assert "packageNewRowCount" not in result["summary"]
+    assert "packageScanTruncated" not in result["summary"]
+
+
+def test_scan_all_auto_not_detected_skips_package_api_and_is_not_absence() -> None:
+    ctx = _ctx(dry_run=True, agent365_mode="auto")
+    probe = da.Agent365LicenseProbeResult(
+        outcome=da.Agent365ProbeOutcome.NOT_DETECTED,
+        attempted=True,
+        reason="none",
+    )
+    with patch.object(da, "probe_agent365_license", return_value=probe), patch.object(
+        da, "fetch_package_catalog_details"
+    ) as mock_fetch:
+        result = da.scan_all(ctx)
+    mock_fetch.assert_not_called()
+    agent365 = result["summary"]["agent365"]
+    assert agent365["resolvedState"] == "NotDetected"
+    assert agent365["requestedMode"] == "Auto"
+    assert agent365["detectionConfidence"] == "Heuristic"
+    assert agent365["packageApiAttempted"] is False
+    assert agent365["layerStatus"] == da.LAYER_STATUS_DEFERRED
+    assert agent365["packagesObserved"] is None
+    assert agent365["packageNewRowCount"] is None
+    assert result["summary"]["status"] == "Dry Run"
+
+
+def test_scan_all_present_mode_package_failure_remains_present_and_fails() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="present")
+    failed_fetch = da.PackageApiFetchResult(
+        outcome=da.PackageApiOutcome.HTTP_403,
+        attempted=True,
+        paging_truncated=True,
+        http_status=403,
+        error_code="Authorization_RequestDenied",
+        reason="forbidden",
+    )
+    with patch.object(da, "probe_arg_resource_type", return_value=False), patch.object(
+        da, "enumerate_environments", return_value=[]
+    ), patch.object(da, "fetch_package_catalog_details", return_value=failed_fetch):
+        result = da.scan_all(ctx)
+    agent365 = result["summary"]["agent365"]
+    assert agent365["resolvedState"] == "Present"
+    assert agent365["requestedMode"] == "Present"
+    assert agent365["detectionConfidence"] == "OperatorDeclared"
+    assert agent365["layerStatus"] == da.LAYER_STATUS_FAILED
+    assert result["summary"]["status"] == "Failed"
+    assert agent365["resolvedState"] not in {"Absent", "NotDetected", "Deferred"}
+
+
+def test_scan_all_auto_inconclusive_attempts_package_api_and_degrades_status() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    probe = da.Agent365LicenseProbeResult(
+        outcome=da.Agent365ProbeOutcome.INCONCLUSIVE,
+        attempted=True,
+        reason="probe failed",
+        error_code="Http503",
+        http_status=503,
+    )
+    ok_fetch = da.PackageApiFetchResult(
+        outcome=da.PackageApiOutcome.SUCCESS_EMPTY,
+        attempted=True,
+        packages=[],
+        paging_truncated=False,
+    )
+    with patch.object(da, "probe_arg_resource_type", return_value=False), patch.object(
+        da, "enumerate_environments", return_value=[]
+    ), patch.object(da, "probe_agent365_license", return_value=probe), patch.object(
+        da, "fetch_package_catalog_details", return_value=ok_fetch
+    ) as mock_fetch:
+        result = da.scan_all(ctx)
+    assert mock_fetch.called
+    assert result["summary"]["agent365"]["resolvedState"] == "Inconclusive"
+    assert result["summary"]["agent365"]["requestedMode"] == "Auto"
+    assert result["summary"]["agent365"]["detectionConfidence"] == "Inconclusive"
+    assert result["summary"]["status"] == "Incomplete"
+
+
+def test_scan_all_coverage_scope_surfaces_subscribed_skus_permission_guidance() -> None:
+    ctx = _ctx(dry_run=False, agent365_mode="auto")
+    probe = da.Agent365LicenseProbeResult(
+        outcome=da.Agent365ProbeOutcome.INCONCLUSIVE,
+        attempted=True,
+        http_status=403,
+        error_code="Authorization_RequestDenied",
+        reason="forbidden",
+    )
+    ok_fetch = da.PackageApiFetchResult(
+        outcome=da.PackageApiOutcome.SUCCESS_EMPTY,
+        attempted=True,
+        packages=[],
+        paging_truncated=False,
+    )
+    with patch.object(da, "probe_arg_resource_type", return_value=False), patch.object(
+        da, "enumerate_environments", return_value=[]
+    ), patch.object(da, "probe_agent365_license", return_value=probe), patch.object(
+        da, "fetch_package_catalog_details", return_value=ok_fetch
+    ):
+        result = da.scan_all(ctx)
+    limitations = result["summary"]["coverageScope"]["limitations"]
+    assert any("LicenseAssignment.Read.All" in item for item in limitations)
+    assert any("Organization.Read.All" in item for item in limitations)
+
+
+def test_scan_all_summary_emits_agent365_and_coverage_scope_contract() -> None:
+    ctx = _ctx(dry_run=True, agent365_mode="present")
+    result = da.scan_all(ctx)
+    summary = result["summary"]
+    assert "agent365" in summary
+    assert "coverageScope" in summary
+    assert summary["status"] == "Dry Run"
+    assert summary["coreAgentCount"] == len(result["agents"])
+    agent365 = summary["agent365"]
+    for key in (
+        "requestedMode",
+        "resolvedState",
+        "resolutionSource",
+        "detectionConfidence",
+        "licenseProbeAttempted",
+        "packageApiAttempted",
+        "layerStatus",
+        "httpStatus",
+        "errorCode",
+        "errorSubcode",
+        "reason",
+        "packagesObserved",
+        "packageNewRowCount",
+        "pagingTruncated",
+    ):
+        assert key in agent365
+    assert agent365["requestedMode"] == "Present"
+    assert agent365["resolvedState"] == "Present"
+    assert agent365["detectionConfidence"] == "OperatorDeclared"
+    assert agent365["packageApiAttempted"] is False
+    assert agent365["packagesObserved"] is None
+    assert agent365["packageNewRowCount"] is None
+    assert "packageNewRowCount" not in summary
+    assert "packageScanTruncated" not in summary
+    scope = summary["coverageScope"]
+    assert scope["layers"]["packageApi"] == da.LAYER_STATUS_DRY_RUN
+    assert "Deferred/NotDetected is not an authoritative Agent Builder catalog." in scope["warning"]

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://judeper.github.io/FSI-AgentGov-Solutions/lab-validation-evidence.schema.json",
+  "title": "Lab Validation Evidence Image Manifest",
+  "description": "Per-solution allow-list of sanitized, hashed PNG evidence images that build-manifest.py publishes into the generated site. Lives at <slug>/docs/lab-validation-evidence.json. Only images listed here are copied to site-docs/solutions/<slug>/img/. Source PNGs are confined under <slug>/docs/img and must already be redacted upstream; build-manifest.py copies bytes verbatim and never alters them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "images"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Contract version. Bump only for breaking changes to this shape."
+    },
+    "solution": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Optional. When present MUST equal the solution folder (slug)."
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Optional free-form provenance note. Keep sanitized: no UPNs, tenant names, GUIDs, or environment URLs."
+    },
+    "images": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Allow-list of committed evidence images. Every .png under <slug>/docs/img MUST appear here exactly once.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256",
+          "sourceClass",
+          "capturedUtc",
+          "caption",
+          "alt"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Forward-slash relative path of the PNG under <slug>/docs/img (for example 'lab-validation/discovery-summary.png'). Must be relative, contain no '.'/'..' segments, and end with a lowercase '.png'. Also used verbatim as the destination path under site-docs/solutions/<slug>/img."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Lowercase hex SHA-256 of the source PNG bytes. build-manifest.py recomputes and compares this in both write and --check modes."
+          },
+          "sourceClass": {
+            "type": "string",
+            "enum": [
+              "portal-screenshot",
+              "config-screenshot",
+              "cli-output",
+              "dataverse-record",
+              "report-excerpt"
+            ],
+            "description": "Evidence/source class describing where the capture came from."
+          },
+          "capturedUtc": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 UTC timestamp of when the evidence was captured. MUST be UTC (end with 'Z' or '+00:00'); validated by build-manifest.py."
+          },
+          "caption": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Human-readable caption rendered under the image in the report. Keep sanitized."
+          },
+          "alt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Accessibility alt text for the image. Keep sanitized."
+          }
+        }
+      }
+    }
+  }
+}

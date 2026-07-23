@@ -64,39 +64,95 @@ application depending on the auth mode):
 |----------|-------|---------|
 | Power Platform API (`https://api.powerplatform.com`) | `https://api.powerplatform.com/.default` | Layer 1 — ARG `resourcequery` against `PowerPlatformResources` |
 | Power Platform Admin / BAP (`https://api.bap.microsoft.com`) | `https://api.bap.microsoft.com/.default` | Environment enumeration |
-| Dataverse (per environment) | `https://<org>.crm.dynamics.com/.default` | Layer 2 — read `bot` / `botcomponent`; write the CAI inventory tables in the governance environment |
+| Dataverse (per environment) | `https://<org>.crm.dynamics.com/.default` | Layer 2 — the **scanner** reads `bot` / `botcomponent` (read-only). The CAI inventory tables are written by the Power Automate flow's Dataverse connection (the **flow-writer** identity), not by the scanner. |
 | Microsoft Graph (`https://graph.microsoft.com`) | `https://graph.microsoft.com/.default` | Layer 4 — Package Management API (`CopilotPackages.Read.All`); owner licensing queries (`User.Read.All`, `Organization.Read.All`, `GroupMember.Read.All`) |
 
 > **Note:** After configuring permissions, a Microsoft Entra admin must grant
 > tenant consent.
 
-## Roles and Permissions (least privilege)
+## Roles and Permissions — the three governance identities
 
-### Tenant / Power Platform (environment enumeration)
+CAI deliberately separates three identities so no single principal holds both
+schema-authoring rights and tenant-wide scan rights, and so the read-only scanner
+never holds write access to the inventory. Keep each identity scoped to only what
+its stage requires. This separation supports the least-privilege expectations of
+OCC 2011-12 and Fed SR 11-7 (privileged-identity segregation); it does not by
+itself satisfy any regulation.
 
-Environment enumeration is required for Layer 2 and Layer 3 and needs one of:
+| Identity | Who / what | Where | Rights | Used for |
+|----------|-----------|-------|--------|----------|
+| **Deployer** | Interactive admin (a person) | Governance environment only | **System Customizer** (or **System Administrator**) | Deploy the Dataverse schema — `create_cai_dataverse_schema.py` (create tables, columns, option sets, alternate keys). One-time / on schema change. |
+| **Scanner** | App-only service principal (or managed identity) | Every in-scope environment | (1) Registered as a **Power Platform management application** for environment enumeration; (2) **read-only application user** on `bot` / `botcomponent`. **No CAI-table write.** | Run `discover_agents.py`. The scanner emits JSON only and never writes to Dataverse. |
+| **Flow-writer** | Power Automate **Dataverse connection** | Governance environment only | Dataverse user with **Create / Write** on the CAI tables (`fsi_copilotagent`, `fsi_caiagentfeature`, …) | The CAI-DailyDiscovery flow persists the scanner JSON into the inventory tables. |
 
-- Power Platform Admin role, **or**
-- Dynamics 365 Service Admin role.
+### Deployer (schema only)
 
-ARM access is also required for the Layer 1 ARG query. These admin roles are
-required **only** for the enumeration and ARG steps.
+The deployer is an **interactive administrator** running the schema script from an
+admin workstation. It needs schema-authoring rights (System Customizer or System
+Administrator) in the **governance environment only** — the environment that hosts
+the CAI tables. It is not used at scan time and needs no access to the in-scope
+environments being inventoried.
 
-> **Least-privilege note:** granting the scanner System Administrator in every
-> environment ("sys-admin-everywhere") is a standing risk and is **not**
-> recommended. Scope the scanner's application user to read-only roles on `bot` /
-> `botcomponent` in target environments, and reserve write access to the
-> governance environment that hosts the CAI tables.
+### Scanner (read-only, app-only)
+
+The scanner is the least-privilege discovery principal. It requires two distinct
+grants, and **no Dataverse write anywhere**:
+
+1. **Environment enumeration** — register the scanner app as a **Power Platform
+   management application** (for example with `New-PowerAppManagementApp
+   -ApplicationId <appId>` from the `Microsoft.PowerApps.Administration.PowerShell`
+   module, or the `pac admin` equivalent). This lets the app-only principal call
+   the BAP admin environment-list API without granting it a Power Platform Admin
+   **user** role. ARM access is also required for the Layer 1 ARG query.
+2. **Per-environment read** — register the scanner app as an **application user**
+   in **every in-scope environment**, with a **read-only** security role scoped to
+   `bot` and `botcomponent`.
+
+> **Least-privilege note:** granting the scanner **System Administrator** in every
+> environment ("sys-admin-everywhere") is a standing privileged-identity risk and
+> is **not** required for read-only discovery. The scanner never needs write access
+> to the CAI tables — writing the inventory is the flow-writer's job.
+
+### Flow-writer (the only writer)
+
+The Power Automate flow authenticates with its own **Dataverse connection**. That
+connection's identity is the **only** identity that writes the CAI tables, and it
+needs Create / Write on those tables in the **governance environment only**. See
+[flow-configuration.md](flow-configuration.md).
+
+### Scanner environment-coverage verification and stop condition
+
+Before go-live, verify the scanner service principal ("SP under test") is present
+as a read-only application user in **every environment that must be inventoried**:
+
+1. Enumerate the in-scope environments (the environments the scan is expected to
+   cover) and record them as the coverage baseline.
+2. For each in-scope environment, confirm the scanner SP exists as an application
+   user and can read `bot` / `botcomponent` — for example, a targeted read returns
+   HTTP 200 (not 403). A first live run is a convenient way to exercise this across
+   all environments at once.
+3. Inspect the scan result: a healthy run reports `summary.status == "Complete"`,
+   `summary.environmentEnumeration.status == "Success"`, and an empty
+   `summary.environmentFailures[]`.
+
+> **Stop condition (required before promotion):** if the scanner SP is missing from
+> any in-scope environment, that environment now surfaces under
+> `summary.environmentFailures[]` (typically HTTP 403 at the `bots` stage) and the
+> overall `summary.status` becomes `Incomplete` or `Failed` — it is **not** reported
+> as a clean, agent-free environment. Treat any such coverage gap as a stop-and-fix
+> condition: grant the missing read-only application user and re-run until every
+> in-scope environment reads cleanly and `summary.status == "Complete"`. Do not treat
+> an inventory produced by an `Incomplete` / `Failed` scan as complete.
 
 ### Dataverse (per environment)
 
-| Role | Environment | Purpose |
-|------|-------------|---------|
-| Read-only role covering `bot`, `botcomponent` | Target environments | Layer 2 feature enumeration |
-| Dataverse User with Create/Write on CAI tables | Governance environment | Write the inventory system-of-record |
+| Role | Identity | Environment | Purpose |
+|------|----------|-------------|---------|
+| Read-only role covering `bot`, `botcomponent` | Scanner | Every in-scope environment | Layer 2 feature enumeration (read-only) |
+| Dataverse user with Create / Write on CAI tables | Flow-writer | Governance environment | Persist the inventory system-of-record (flow only) |
 
 Register the scanner app as an **application user** in each environment it reads,
-and grant the minimum role that allows the reads above.
+and grant it the minimum **read-only** role that allows the reads above.
 
 ## Azure Key Vault (secret storage for dev fallback)
 
@@ -150,42 +206,110 @@ python scripts/create_cai_dataverse_schema.py \
 python scripts/create_cai_dataverse_schema.py --output-docs
 ```
 
-The deployed schema is 8 tables, 11 solution-specific option sets, and 1 shared
-option set. See [dataverse-schema.md](dataverse-schema.md) for the full reference.
+The deployed schema is **nine tables** — the ninth, `fsi_caiscanrun`, and its
+scan-run option sets are added during the v0.4 schema integration. See
+[dataverse-schema.md](dataverse-schema.md) for the full reference, including the
+11 solution-specific option sets and 1 shared option set (regenerated during
+integration).
 
 ## Package Management API — Layer 4 Prerequisites
 
-The Package Management API layer (`--enable-package-api`) is **additive and
-off by default**. It discovers `Microsoft 365 Copilot Agent Builder` packages
-only; Copilot Studio agents are intentionally excluded because existing layers
-(ARG, per-environment Dataverse, and PPAC) already cover Copilot Studio agents,
-and package-to-bot joins are not strong enough to prevent duplicates. The layer
-requires three separate gates — each must be satisfied independently, at
-different administrative levels. Activate this layer only in the **US commercial
-Microsoft 365 cloud** (see cloud scope note below).
+Layer 4 is governed by the license-aware **Agent 365 mode**
+(`--agent365 present|absent|auto`, environment variable `CAI_AGENT365`, default
+**`absent`**; the deprecated `--enable-package-api` flag is a one-release alias
+for `--agent365 present`). It is **additive** and, at the default `absent`, does
+**not** run. It discovers `Microsoft 365 Copilot Agent Builder` packages only;
+Copilot Studio agents are intentionally excluded because existing layers (ARG,
+per-environment Dataverse, and PPAC) already cover Copilot Studio agents, and
+package-to-bot joins are not strong enough to prevent duplicates. When Layer 4
+runs, it requires the gates below — each satisfied independently, at different
+administrative levels. Activate this layer only in the **US commercial
+Microsoft 365 cloud** (see the cloud-scope statement at the top of this
+document).
+
+> **Mode precedence:** explicit `--agent365` flag > `CAI_AGENT365` environment
+> variable > deprecated `--enable-package-api` alias > default (`absent`).
+> Invalid values or contradictions (for example `--agent365 absent` together
+> with `--enable-package-api`) fail argument validation. See
+> [architecture.md](architecture.md#agent-365-mode-selection-license-aware-layer-4).
 
 > **Reference:** [List packages — Microsoft Learn](https://learn.microsoft.com/microsoft-365/copilot/extensibility/api/admin-settings/package/copilotpackages-list)
 > · [copilotPackage resource type](https://learn.microsoft.com/microsoft-365/copilot/extensibility/api/admin-settings/package/resources/copilotpackage)
+> · [subscribedSku resource type](https://learn.microsoft.com/en-us/graph/api/resources/subscribedsku)
 
 ---
 
-### Gate 1 — Microsoft Agent 365 License (tenant product gate)
+### Gate 1 — Agent 365 mode and the Microsoft Agent 365 license (tenant product gate)
 
-The Package Management API is surfaced only when the tenant holds a
-**Microsoft Agent 365** license. This is a tenant-level product gate; the API
-endpoint returns `404` or an empty catalog for tenants without this license.
+The Package Management API requires a tenant **Microsoft Agent 365** license.
+This is a tenant-level product gate set by Microsoft licensing or the enterprise
+agreement — not an admin configuration step. **How Layer 4 treats licensing
+depends on the selected mode:**
 
-- **Who sets this up:** Microsoft licensing or enterprise agreement — not an
-  admin configuration step.
-- **How to verify:** Confirm the tenant has a Microsoft Agent 365 license
-  assignment before enabling Layer 4.
+- **`absent` (default):** the operator authoritatively declares Agent 365 is out
+  of scope. The scanner calls **neither** `subscribedSkus` **nor** the Package
+  API, records Layer 4 as `Deferred`, and keeps Layers 1–3, registry owner
+  attribution, and entitlement resolution available. **A `Deferred` Layer 4 is
+  not "zero Agent Builder agents"** — it means the package catalog was not
+  observed. ARG (Layer 1) can classify authoring surface through `createdIn`;
+  Layer 2 still inventories `bot` rows but does not supply that field. If ARG is
+  unavailable, authoring-surface classification remains unknown.
+- **`present`:** the scanner attempts the Package API directly (no license
+  probe). Provision the Agent 365 license and the Gate 2 permission first.
+- **`auto`:** the scanner performs a **conservative license probe** first (see
+  Gate 1a). It attempts the Package API when the probe matches or, as a
+  best-effort fallback, when the probe is inconclusive. An inconclusive probe
+  keeps `resolvedState = Inconclusive` even if the package request succeeds.
+
+> **API errors are typed, never absence.** An HTTP `401` / `403` / `404` /
+> `429` / `5xx` from the Package API is classified as a `Partial` / `Failed` /
+> `Unsupported` layer outcome and surfaced in `summary.agent365`. It is **never**
+> interpreted as "the tenant has no Agent 365 license" and **never** recorded as
+> `Absent` / `NotDetected` / `Deferred`. Only an explicit operator `absent`
+> declaration yields `Absent`; only a successful `auto` probe with no SKU match
+> yields a heuristic `NotDetected`.
+
+- **How to verify (before selecting `present`):** confirm the tenant holds a
+  Microsoft Agent 365 license assignment
+  ([Microsoft Agent 365 service description](https://learn.microsoft.com/office365/servicedescriptions/microsoft-agent-365/microsoft-agent-365)).
+
+---
+
+### Gate 1a — `auto`-mode license probe permission (only for `--agent365 auto`)
+
+In `auto` mode the scanner calls Graph
+`GET https://graph.microsoft.com/v1.0/subscribedSkus` to look for an Agent 365
+SKU. `subscribedSkus` supports only `$select` (no `$filter`), so the scanner
+enumerates the tenant's SKUs and matches locally.
+
+| Permission | Type | Purpose | Recommendation |
+|-----------|------|---------|----------------|
+| `LicenseAssignment.Read.All` | Application | List subscribed SKUs for the probe | **Recommended — least privileged** for `GET /subscribedSkus` per current Microsoft Learn |
+| `Organization.Read.All` | Application | Also authorizes `GET /subscribedSkus` | Supported but **broader**; already granted for owner-entitlement queries, so it is compatible if you prefer not to add a permission |
+
+> **Least-privilege guidance.** Current Microsoft Learn lists
+> `LicenseAssignment.Read.All` as the least-privileged application permission for
+> `GET /subscribedSkus`; `Organization.Read.All` is also supported but broader.
+> Grant `LicenseAssignment.Read.All` for the probe where practical. If your app
+> already holds `Organization.Read.All` for entitlement classification, the
+> probe works without adding a permission.
+
+> **Heuristic, not authoritative.** The public Microsoft licensing
+> service-plan reference does **not** currently publish `skuPartNumber` /
+> `servicePlanName` mappings for **Agent 365**, **Agent 365 Frontier**, or
+> **Microsoft 365 E7**. Automatic matching is therefore a conservative
+> **exact-name heuristic plus an operator override list**. A successful probe
+> that finds no match is `NotDetected` with **heuristic** confidence — **not**
+> authoritative absence.
 
 ---
 
 ### Gate 2 — `CopilotPackages.Read.All` Application Permission (API gate)
 
 The scanner uses **application** (app-only) permission to read the package
-catalog, which allows unattended automation without a signed-in user.
+catalog, which allows unattended automation without a signed-in user. This gate
+applies when the resolved mode attempts the Package API (`present`, or `auto`
+with a SKU match).
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
@@ -205,12 +329,12 @@ Administrator** must grant tenant-wide admin consent.
    Privileged Role Administrator).
 
 **Additional Graph permissions for owner licensing queries** (required by
-`resolve_owner_entitlement.py`):
+`resolve_owner_entitlement.py`, and reused by the `auto`-mode probe):
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
 | `User.Read.All` | Application | Read owner profile and license assignments |
-| `Organization.Read.All` | Application | Read tenant SKU information for entitlement classification |
+| `Organization.Read.All` | Application | Read tenant SKU information for entitlement classification (also authorizes the `auto` probe) |
 | `GroupMember.Read.All` | Application | Resolve security-group memberships for sharing audience expansion |
 
 Grant admin consent for these at the same time as `CopilotPackages.Read.All`.
@@ -265,14 +389,14 @@ python scripts/discover_agents.py \
     --auth-mode managed-identity
 
 # Full integrated scan — Package API + registry correlation + entitlement
-# (Global commercial cloud only; requires pwsh for entitlement resolution)
+# (US commercial Microsoft 365 cloud only; requires pwsh for entitlement resolution)
 python scripts/discover_agents.py \
     --auth-mode managed-identity \
     --tenant-id <your-tenant-id> \
-    --enable-package-api \
+    --agent365 present \
     --registry-export registry-export.xlsx \
     --columnmap templates/registry-columnmap.sample.json \
-    --as-of 2026-07-20T18:00:00Z \
+    --as-of 2026-07-21T18:00:00Z \
     --resolve-entitlement \
     --output scan.json
 ```

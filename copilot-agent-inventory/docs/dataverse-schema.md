@@ -4,7 +4,7 @@ Auto-generated schema documentation. Do not edit manually — regenerate with `p
 
 ## Overview
 
-The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-specific option sets**, and **1 shared option set(s)**, with **123 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
+The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-specific option sets**, and **1 shared option set(s)**, with **169 custom columns** (plus the auto-created primary key and `fsi_Name` on each table). All entities use the `fsi_` publisher prefix.
 
 > **Logical-name convention.** Dataverse logical names are the SchemaName lowercased with NO underscores between words (`fsi_CopilotAgent` -> `fsi_copilotagent`, `fsi_AgentId` -> `fsi_agentid`). Always use logical names in OData `$select` / `$filter` / `$orderby`.
 
@@ -33,6 +33,11 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_cai_workiqobserved` | Not Observed (100000000), Invoked (100000001), Configured, Not Invoked (100000002), Unknown (100000003) |
 | `fsi_cai_risklevel` | Low (100000000), Medium (100000001), High (100000002), Critical (100000003), Unknown (100000004) |
 | `fsi_cai_scancompleteness` | Complete (100000000), Incomplete Scan (100000001), Failed (100000002) |
+| `fsi_cai_scanrunstatus` | Complete (100000000), Incomplete (100000001), Failed (100000002), Dry Run (100000003) |
+| `fsi_cai_agent365requestedmode` | Present (100000000), Absent (100000001), Auto (100000002) |
+| `fsi_cai_agent365resolvedstate` | Present (100000000), Absent (100000001), NotDetected (100000002), Inconclusive (100000003) |
+| `fsi_cai_agent365detectionconfidence` | OperatorDeclared (100000000), Confirmed (100000001), Heuristic (100000002), Inconclusive (100000003), NotApplicable (100000004) |
+| `fsi_cai_layerstatus` | Full (100000000), Deferred (100000001), Unsupported (100000002), Partial (100000003), Failed (100000004), Dry Run (100000005) |
 | `fsi_cai_detectionsource` | Dataverse Botcomponent Scan (100000000), Declarative Manifest (Local App Package) (100000001), Declarative Manifest (Source/CI Repo) (100000002), Declarative Manifest (Export Adapter - Future) (100000003), Unknown (100000099) |
 | `fsi_cai_detectionconfidence` | Declared (Manifest) (100000000), Configured (Dataverse) (100000001), Inferred (100000002), Unknown (100000099) |
 | `fsi_cai_ownerentitlement` | Paid Copilot (100000000), Copilot Chat Only (100000001), Unknown (100000002) |
@@ -46,9 +51,9 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 
 ### Copilot Agent (`fsi_copilotagent`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_copilotagents`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_copilotagents`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Canonical agent master record (system-of-record) for Copilot Studio and Agent Builder agents discovered across the tenant
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -74,7 +79,7 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_ModifiedOn` | `fsi_modifiedon` | DateTime | No | Agent last-modified timestamp |
 | `fsi_LastPublishedAt` | `fsi_lastpublishedat` | DateTime | No | Last publish timestamp (ARG lastPublishedAt) |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this inventory row was last refreshed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | GUID correlating all records from one scan run |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 | `fsi_RawJson` | `fsi_rawjson` | Memo(100000) | No | Full ARG / bot JSON snapshot for evidence and reparse |
 | `fsi_PackageId` | `fsi_packageid` | String(100) | No | Package Management API package id (P_...). DISTINCT id space from the Copilot Studio bot GUID; used as the stable key for package-sourced rows and reconciliation via fsi_entraappid |
 | `fsi_Publisher` | `fsi_publisher` | String(200) | No | Package vendor/publisher from the Package Management API (not the agent creator or owner) |
@@ -99,9 +104,9 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 
 ### CAI Environment (`fsi_caienvironment`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caienvironments`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caienvironments`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Power Platform environment inventory with zone classification and per-environment delta-change-tracking watermark
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -117,15 +122,15 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_AgentCount` | `fsi_agentcount` | Integer | No | Number of agents discovered in this environment |
 | `fsi_DeltaLink` | `fsi_deltalink` | Memo(100000) | No | Dataverse @odata.deltaLink for incremental change tracking |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this environment was last scanned |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_EnvKey`: (`fsi_environmentid`) — idempotent upsert key.
 
 ### CAI Agent Feature (`fsi_caiagentfeature`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiagentfeatures`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiagentfeatures`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Capability-composition layer: one row per detected feature (botcomponent or many-to-many relationship target) per agent
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -145,15 +150,15 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_DetectionDetail` | `fsi_detectiondetail` | Memo(4000) | No | JSON provenance for manifest-derived rows: source locator, manifest schema version, and capability sub-settings such as the v1.7 People include_related_content flag |
 | `fsi_AgentRefProvisional` | `fsi_agentrefprovisional` | Boolean (default: false) | No | The fsi_agentid is a PROVISIONAL manifest/app id not yet bound to a Dataverse bot GUID (no --id-map match during manifest detection). Downstream joins (Copilot Billing Governance) must reconcile provisional rows before use; queryable so provisional rows can be filtered |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this feature row was last refreshed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_AgentFeatureKey`: (`fsi_agentid`, `fsi_sourceobjectid`) — idempotent upsert key.
 
 ### CAI Auth Share (`fsi_caiauthshare`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiauthshares`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiauthshares`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Per-agent authentication and sharing posture, including the Entra-ID-auth + Require-sign-in audience-control predicate
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -177,15 +182,15 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_AudienceResolutionStatus` | `fsi_audienceresolutionstatus` | String(100) | No | Complete / Partial / WholeTenantNotEnumerated / Failed / NotResolved — outcome of the UPN expansion |
 | `fsi_AudienceResolvedAt` | `fsi_audienceresolvedat` | DateTime | No | When the audience-to-UPN expansion last ran for this agent |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this posture was last scanned |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_AuthShareKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
 
 ### CAI Billing Entitlement (`fsi_caibillingentitlement`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caibillingentitlements`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caibillingentitlements`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Billing / credit entitlement shell (populated downstream by the billing-governance solution); zero-rating defaults fail-closed
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -200,13 +205,13 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_ZeroRatingEligible` | `fsi_zeroratingeligible` | Boolean (default: false) | No | Fail-closed default False pending the June 2026 Licensing Guide; CS-built generative answers and tenant-grounded responses remain billable |
 | `fsi_EntitlementBasis` | `fsi_entitlementbasis` | String(1000) | No | Note on the license + createdIn basis for the entitlement decision |
 | `fsi_LastEvaluatedAt` | `fsi_lastevaluatedat` | DateTime | No | When the entitlement was last evaluated |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 ### CAI Usage Signal (`fsi_caiusagesignal`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiusagesignals`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiusagesignals`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Source-aggregated per-agent usage rollup (30-day interactions, unique users, sessions); never stores transcript rows
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -221,15 +226,15 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_AggregationWindowDays` | `fsi_aggregationwindowdays` | Integer | No | Rollup window length in days (default 30) |
 | `fsi_SignalSource` | `fsi_signalsource` | String(200) | No | Source of the aggregate (e.g., msdyn_botsession, App Insights) |
 | `fsi_LastAggregatedAt` | `fsi_lastaggregatedat` | DateTime | Yes | When the usage rollup was last computed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_UsageSignalKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
 
 ### CAI Work IQ State (`fsi_caiworkiqstate`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caiworkiqstates`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiworkiqstates`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Work IQ config-vs-invoked state shell (populated downstream by work-iq-usage-detection); emits configuredTier
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -244,15 +249,15 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_ConfigSourceComponentType` | `fsi_configsourcecomponenttype` | Integer | No | botcomponent type where config was resolved (18/15/16) — sample to confirm |
 | `fsi_LastObservedUtc` | `fsi_lastobservedutc` | DateTime | No | Most recent observed (invoked) signal timestamp |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this state row was last refreshed |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_WorkIqStateKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
 
 ### CAI Compliance State (`fsi_caicompliancestate`)
 
-**Ownership:** OrganizationOwned  
-**Entity set:** `fsi_caicompliancestates`  
-**Primary name column:** `fsi_name`  
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caicompliancestates`<br>
+**Primary name column:** `fsi_name`<br>
 **Description:** Per-agent risk level, scan completeness (incomplete-scan marker for Lite/Agent-Builder), and violations rollup
 
 | Column (SchemaName) | Logical name | Type | Required | Description |
@@ -266,6 +271,65 @@ The Copilot Agent Inventory solution uses **8 Dataverse tables**, **17 solution-
 | `fsi_ViolationCount` | `fsi_violationcount` | Integer | No | Number of open violations rolled up for the agent |
 | `fsi_ViolationsJson` | `fsi_violationsjson` | Memo(100000) | No | Structured violations[] rollup for the agent |
 | `fsi_LastCheckedUtc` | `fsi_lastcheckedutc` | DateTime | Yes | When compliance state was last evaluated |
-| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating scan run GUID |
+| `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
 
 **Alternate key** `fsi_ComplianceStateKey`: (`fsi_agentid`, `fsi_environmentid`) — idempotent upsert key.
+
+### CAI Scan Run (`fsi_caiscanrun`)
+
+**Ownership:** OrganizationOwned<br>
+**Entity set:** `fsi_caiscanruns`<br>
+**Primary name column:** `fsi_name`<br>
+**Description:** Run-level BI evidence row with layer statuses, counts, and provenance summaries for each discovery execution
+
+| Column (SchemaName) | Logical name | Type | Required | Description |
+|---------------------|--------------|------|----------|-------------|
+| `fsi_Name` | `fsi_name` | String(850) | Yes | Primary name attribute |
+| `fsi_RunId` | `fsi_runid` | String(100) | Yes | Stable cai- run identifier with UTC timestamp and random suffix (36 characters or fewer) |
+| `fsi_StartedAt` | `fsi_startedat` | DateTime | Yes | UTC timestamp when the scan run started |
+| `fsi_CompletedAt` | `fsi_completedat` | DateTime | No | UTC timestamp when the scan run completed |
+| `fsi_Status` | `fsi_status` | Picklist (`fsi_cai_scanrunstatus`) | Yes | Run outcome: Complete / Incomplete / Failed / Dry Run |
+| `fsi_EnvironmentEnumerationStatus` | `fsi_environmentenumerationstatus` | Picklist (`fsi_cai_layerstatus`) | No | Status of environment enumeration for this run |
+| `fsi_DataverseLayerStatus` | `fsi_dataverselayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of per-environment Dataverse scans |
+| `fsi_EnvironmentFailureCount` | `fsi_environmentfailurecount` | Integer | No | Count of per-environment scans that failed |
+| `fsi_EnvironmentEnumerationHttpStatus` | `fsi_environmentenumerationhttpstatus` | Integer | No | HTTP status returned by environment enumeration, when available |
+| `fsi_EnvironmentEnumerationReason` | `fsi_environmentenumerationreason` | Memo(4000) | No | Sanitized reason for environment enumeration failure or partial status |
+| `fsi_Agent365RequestedMode` | `fsi_agent365requestedmode` | Picklist (`fsi_cai_agent365requestedmode`) | No | Requested Agent 365 mode for this run |
+| `fsi_Agent365ResolvedState` | `fsi_agent365resolvedstate` | Picklist (`fsi_cai_agent365resolvedstate`) | No | Resolved Agent 365 state observed during execution |
+| `fsi_Agent365ResolutionSource` | `fsi_agent365resolutionsource` | String(200) | No | Resolver source that produced the Agent 365 state |
+| `fsi_Agent365DetectionConfidence` | `fsi_agent365detectionconfidence` | Picklist (`fsi_cai_agent365detectionconfidence`) | No | Confidence assigned to Agent 365 state detection |
+| `fsi_Agent365LayerStatus` | `fsi_agent365layerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of the Agent 365 detection layer |
+| `fsi_ArgLayerStatus` | `fsi_arglayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of the Azure Resource Graph layer |
+| `fsi_ArgAgentCount` | `fsi_argagentcount` | Integer | No | Count of agents returned by Azure Resource Graph |
+| `fsi_ArgHttpStatus` | `fsi_arghttpstatus` | Integer | No | HTTP status returned by the Azure Resource Graph query |
+| `fsi_CoreAgentCount` | `fsi_coreagentcount` | Integer | No | Total agent rows emitted to the canonical agent table |
+| `fsi_DataverseScannedAgentCount` | `fsi_dataversescannedagentcount` | Integer | No | Count of agents observed via per-environment Dataverse scans |
+| `fsi_FeatureCount` | `fsi_featurecount` | Integer | No | Count of feature rows emitted in this run |
+| `fsi_AuthShareCount` | `fsi_authsharecount` | Integer | No | Count of auth/share posture rows emitted in this run |
+| `fsi_EnvironmentCount` | `fsi_environmentcount` | Integer | No | Count of environments enumerated for this run |
+| `fsi_DataverseEnvironmentCount` | `fsi_dataverseenvironmentcount` | Integer | No | Count of enumerated environments in Layer 2 scope, excluding only environments explicitly classified without Dataverse; malformed URL metadata remains visible as a coverage failure |
+| `fsi_NoDataverseEnvironmentCount` | `fsi_nodataverseenvironmentcount` | Integer | No | Count of enumerated environments explicitly classified with no Dataverse database; Layer 2 is not applicable |
+| `fsi_LicenseProbeAttempted` | `fsi_licenseprobeattempted` | Boolean (default: false) | No | Whether the tenant Agent 365 /subscribedSkus probe was attempted |
+| `fsi_PackageApiLayerStatus` | `fsi_packageapilayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of the Package Management API layer |
+| `fsi_PackageApiAttempted` | `fsi_packageapiattempted` | Boolean (default: false) | No | Whether Package Management API discovery was attempted |
+| `fsi_PackageApiHttpStatus` | `fsi_packageapihttpstatus` | Integer | No | HTTP status returned by the Package Management API |
+| `fsi_PackageApiErrorCode` | `fsi_packageapierrorcode` | String(200) | No | Sanitized Package API error code |
+| `fsi_PackageApiReason` | `fsi_packageapireason` | Memo(4000) | No | Sanitized reason text for Package API partial/failed status |
+| `fsi_PackageCount` | `fsi_packagecount` | Integer | No | Count of packages returned by Package Management API (nullable when deferred) |
+| `fsi_PackageNewRowCount` | `fsi_packagenewrowcount` | Integer | No | Count of package-sourced net-new agent rows |
+| `fsi_PackageScanTruncated` | `fsi_packagescantruncated` | Boolean (default: false) | No | Whether package pagination truncated before full completion |
+| `fsi_RegistryLayerStatus` | `fsi_registrylayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of registry-correlation enrichment |
+| `fsi_RegistryRowCount` | `fsi_registryrowcount` | Integer | No | Count of registry rows provided to correlation |
+| `fsi_RegistryMatchedCount` | `fsi_registrymatchedcount` | Integer | No | Count of registry rows matched to discovered agents |
+| `fsi_RegistryUnmatchedCount` | `fsi_registryunmatchedcount` | Integer | No | Count of registry rows that could not be matched |
+| `fsi_RegistryAmbiguousNameSkippedCount` | `fsi_registryambiguousnameskippedcount` | Integer | No | Count of name-collision candidates intentionally skipped |
+| `fsi_RegistryInvalidDateWarningCount` | `fsi_registryinvaliddatewarningcount` | Integer | No | Count of invalid-date warnings from registry import |
+| `fsi_EntitlementLayerStatus` | `fsi_entitlementlayerstatus` | Picklist (`fsi_cai_layerstatus`) | No | Execution status of owner-entitlement resolution |
+| `fsi_EntitlementOwnersConsideredCount` | `fsi_entitlementownersconsideredcount` | Integer | No | Count of owners considered for entitlement resolution |
+| `fsi_EntitlementPaidCount` | `fsi_entitlementpaidcount` | Integer | No | Count of owners resolved as Paid Copilot |
+| `fsi_EntitlementChatOnlyCount` | `fsi_entitlementchatonlycount` | Integer | No | Count of owners resolved as Copilot Chat Only |
+| `fsi_EntitlementUnknownCount` | `fsi_entitlementunknowncount` | Integer | No | Count of owners with Unknown entitlement |
+| `fsi_CoverageScopeJson` | `fsi_coveragescopejson` | Memo(100000) | No | Structured layer-scope and toggle metadata for this run |
+| `fsi_SummaryJson` | `fsi_summaryjson` | Memo(100000) | No | Structured run summary payload for reproducibility and BI drillthrough |
+
+**Alternate key** `fsi_ScanRunKey`: (`fsi_runid`) — idempotent upsert key.

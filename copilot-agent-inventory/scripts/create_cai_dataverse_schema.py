@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create the Dataverse schema for the Copilot Agent Inventory solution.
 
-Deploys the canonical eight-entity governance store that serves as the
+Deploys the canonical nine-entity governance store that serves as the
 system-of-record for Copilot Studio and Agent Builder agents discovered
 across a tenant. All operations are idempotent (check-then-create), so the
 script is safe to re-run.
@@ -15,6 +15,7 @@ Canonical entity model (logical names):
   - fsi_caiusagesignal        (OrganizationOwned): Source-aggregated usage rollup
   - fsi_caiworkiqstate        (OrganizationOwned): Work IQ config-vs-invoked state
   - fsi_caicompliancestate    (OrganizationOwned): Risk + scan completeness
+  - fsi_caiscanrun            (OrganizationOwned): Run-level BI evidence
 
 ARA boundary (ASSUMPTION — flagged for Jude's ratification): this solution
 owns the NEW canonical entity fsi_copilotagent. It does NOT modify
@@ -204,6 +205,53 @@ CAI_OPTIONSETS = {
             ("Complete", 100000000),
             ("Incomplete Scan", 100000001),
             ("Failed", 100000002),
+        ],
+    },
+    "fsi_cai_scanrunstatus": {
+        "name": "fsi_cai_scanrunstatus",
+        "options": [
+            ("Complete", 100000000),
+            ("Incomplete", 100000001),
+            ("Failed", 100000002),
+            ("Dry Run", 100000003),
+        ],
+    },
+    "fsi_cai_agent365requestedmode": {
+        "name": "fsi_cai_agent365requestedmode",
+        "options": [
+            ("Present", 100000000),
+            ("Absent", 100000001),
+            ("Auto", 100000002),
+        ],
+    },
+    "fsi_cai_agent365resolvedstate": {
+        "name": "fsi_cai_agent365resolvedstate",
+        "options": [
+            ("Present", 100000000),
+            ("Absent", 100000001),
+            ("NotDetected", 100000002),
+            ("Inconclusive", 100000003),
+        ],
+    },
+    "fsi_cai_agent365detectionconfidence": {
+        "name": "fsi_cai_agent365detectionconfidence",
+        "options": [
+            ("OperatorDeclared", 100000000),
+            ("Confirmed", 100000001),
+            ("Heuristic", 100000002),
+            ("Inconclusive", 100000003),
+            ("NotApplicable", 100000004),
+        ],
+    },
+    "fsi_cai_layerstatus": {
+        "name": "fsi_cai_layerstatus",
+        "options": [
+            ("Full", 100000000),
+            ("Deferred", 100000001),
+            ("Unsupported", 100000002),
+            ("Partial", 100000003),
+            ("Failed", 100000004),
+            ("Dry Run", 100000005),
         ],
     },
     # Provenance of a feature row: which acquisition source produced it. Most
@@ -412,12 +460,14 @@ def _picklist_col(
     """Build a picklist column bound to a global option set."""
     defn = {
         "@odata.type": "#Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+        "AttributeType": "Picklist",
+        "AttributeTypeName": {"Value": "PicklistType"},
+        "SourceTypeMask": 0,
         "SchemaName": schema_name,
         "DisplayName": _label(display),
         "RequiredLevel": {
             "Value": "ApplicationRequired" if required else "None"
         },
-        "OptionSet": None,
         "GlobalOptionSet@odata.bind": (
             f"/GlobalOptionSetDefinitions(Name='{global_optionset_name}')"
         ),
@@ -477,7 +527,7 @@ COPILOTAGENT_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this inventory row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="GUID correlating all records from one scan run"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
     _memo_col("fsi_RawJson", "Raw JSON", 100000,
               description="Full ARG / bot JSON snapshot for evidence and reparse"),
     # --- Package Management API fields (fsi_cai_discoverysource = 100000004) ---
@@ -600,7 +650,7 @@ ENVIRONMENT_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this environment was last scanned"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 3. fsi_CaiAgentFeature (one row per detected feature) --------------------
@@ -645,7 +695,7 @@ AGENTFEATURE_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this feature row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 4. fsi_CaiAuthShare -----------------------------------------------------
@@ -699,7 +749,7 @@ AUTHSHARE_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this posture was last scanned"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 5. fsi_CaiBillingEntitlement (downstream-populated shell) ----------------
@@ -726,7 +776,7 @@ BILLINGENTITLEMENT_COLUMNS = [
     _datetime_col("fsi_LastEvaluatedAt", "Last Evaluated At", required=False,
                   description="When the entitlement was last evaluated"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 6. fsi_CaiUsageSignal ---------------------------------------------------
@@ -752,7 +802,7 @@ USAGESIGNAL_COLUMNS = [
     _datetime_col("fsi_LastAggregatedAt", "Last Aggregated At",
                   description="When the usage rollup was last computed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 7. fsi_CaiWorkIqState (downstream-populated by work-iq-usage-detection) --
@@ -780,7 +830,7 @@ WORKIQSTATE_COLUMNS = [
     _datetime_col("fsi_LastScannedAt", "Last Scanned At",
                   description="When this state row was last refreshed"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
 ]
 
 # --- 8. fsi_CaiComplianceState ----------------------------------------------
@@ -805,7 +855,128 @@ COMPLIANCESTATE_COLUMNS = [
     _datetime_col("fsi_LastCheckedUtc", "Last Checked (UTC)",
                   description="When compliance state was last evaluated"),
     _string_col("fsi_RunId", "Run ID", 36, required=False,
-                description="Correlating scan run GUID"),
+                description="Correlating cai- scan run identifier (36 characters or fewer)"),
+]
+
+# --- 9. fsi_CaiScanRun --------------------------------------------------------
+SCANRUN_COLUMNS = [
+    _string_col("fsi_RunId", "Run ID", 100,
+                description="Stable cai- run identifier with UTC timestamp and random suffix (36 characters or fewer)"),
+    _datetime_col("fsi_StartedAt", "Started At",
+                  description="UTC timestamp when the scan run started"),
+    _datetime_col("fsi_CompletedAt", "Completed At", required=False,
+                  description="UTC timestamp when the scan run completed"),
+    _picklist_col("fsi_Status", "Run Status", "fsi_cai_scanrunstatus",
+                  description="Run outcome: Complete / Incomplete / Failed / Dry Run"),
+    _picklist_col("fsi_EnvironmentEnumerationStatus", "Environment Enumeration Status",
+                  "fsi_cai_layerstatus", required=False,
+                  description="Status of environment enumeration for this run"),
+    _picklist_col("fsi_DataverseLayerStatus", "Dataverse Layer Status",
+                  "fsi_cai_layerstatus", required=False,
+                  description="Execution status of per-environment Dataverse scans"),
+    _integer_col("fsi_EnvironmentFailureCount", "Environment Failure Count",
+                 required=False,
+                 description="Count of per-environment scans that failed"),
+    _integer_col("fsi_EnvironmentEnumerationHttpStatus", "Environment Enumeration HTTP Status",
+                 required=False,
+                 description="HTTP status returned by environment enumeration, when available"),
+    _memo_col("fsi_EnvironmentEnumerationReason", "Environment Enumeration Reason", 4000,
+              description="Sanitized reason for environment enumeration failure or partial status"),
+    _picklist_col("fsi_Agent365RequestedMode", "Agent 365 Requested Mode",
+                  "fsi_cai_agent365requestedmode", required=False,
+                  description="Requested Agent 365 mode for this run"),
+    _picklist_col("fsi_Agent365ResolvedState", "Agent 365 Resolved State",
+                  "fsi_cai_agent365resolvedstate", required=False,
+                  description="Resolved Agent 365 state observed during execution"),
+    _string_col("fsi_Agent365ResolutionSource", "Agent 365 Resolution Source", 200,
+                required=False,
+                description="Resolver source that produced the Agent 365 state"),
+    _picklist_col("fsi_Agent365DetectionConfidence", "Agent 365 Detection Confidence",
+                  "fsi_cai_agent365detectionconfidence", required=False,
+                  description="Confidence assigned to Agent 365 state detection"),
+    _picklist_col("fsi_Agent365LayerStatus", "Agent 365 Layer Status",
+                  "fsi_cai_layerstatus", required=False,
+                  description="Execution status of the Agent 365 detection layer"),
+    _picklist_col("fsi_ArgLayerStatus", "ARG Layer Status", "fsi_cai_layerstatus",
+                  required=False,
+                  description="Execution status of the Azure Resource Graph layer"),
+    _integer_col("fsi_ArgAgentCount", "ARG Agent Count", required=False,
+                 description="Count of agents returned by Azure Resource Graph"),
+    _integer_col("fsi_ArgHttpStatus", "ARG HTTP Status", required=False,
+                 description="HTTP status returned by the Azure Resource Graph query"),
+    _integer_col("fsi_CoreAgentCount", "Core Agent Count", required=False,
+                 description="Total agent rows emitted to the canonical agent table"),
+    _integer_col("fsi_DataverseScannedAgentCount", "Dataverse Scanned Agent Count", required=False,
+                 description="Count of agents observed via per-environment Dataverse scans"),
+    _integer_col("fsi_FeatureCount", "Feature Count", required=False,
+                 description="Count of feature rows emitted in this run"),
+    _integer_col("fsi_AuthShareCount", "Auth Share Count", required=False,
+                 description="Count of auth/share posture rows emitted in this run"),
+    _integer_col("fsi_EnvironmentCount", "Environment Count", required=False,
+                 description="Count of environments enumerated for this run"),
+    _integer_col("fsi_DataverseEnvironmentCount", "Dataverse Environment Count",
+                 required=False,
+                 description=(
+                     "Count of enumerated environments in Layer 2 scope, excluding "
+                     "only environments explicitly classified without Dataverse; "
+                     "malformed URL metadata remains visible as a coverage failure"
+                 )),
+    _integer_col("fsi_NoDataverseEnvironmentCount",
+                 "No Dataverse Environment Count", required=False,
+                 description=(
+                     "Count of enumerated environments explicitly classified with "
+                     "no Dataverse database; Layer 2 is not applicable"
+                 )),
+    _boolean_col("fsi_LicenseProbeAttempted", "License Probe Attempted", default=False,
+                 description="Whether the tenant Agent 365 /subscribedSkus probe was attempted"),
+    _picklist_col("fsi_PackageApiLayerStatus", "Package API Layer Status",
+                  "fsi_cai_layerstatus", required=False,
+                  description="Execution status of the Package Management API layer"),
+    _boolean_col("fsi_PackageApiAttempted", "Package API Attempted", default=False,
+                 description="Whether Package Management API discovery was attempted"),
+    _integer_col("fsi_PackageApiHttpStatus", "Package API HTTP Status", required=False,
+                 description="HTTP status returned by the Package Management API"),
+    _string_col("fsi_PackageApiErrorCode", "Package API Error Code", 200, required=False,
+                description="Sanitized Package API error code"),
+    _memo_col("fsi_PackageApiReason", "Package API Reason", 4000,
+              description="Sanitized reason text for Package API partial/failed status"),
+    _integer_col("fsi_PackageCount", "Package Count", required=False,
+                 description="Count of packages returned by Package Management API (nullable when deferred)"),
+    _integer_col("fsi_PackageNewRowCount", "Package New Row Count", required=False,
+                 description="Count of package-sourced net-new agent rows"),
+    _boolean_col("fsi_PackageScanTruncated", "Package Scan Truncated", default=False,
+                 description="Whether package pagination truncated before full completion"),
+    _picklist_col("fsi_RegistryLayerStatus", "Registry Layer Status", "fsi_cai_layerstatus",
+                  required=False,
+                  description="Execution status of registry-correlation enrichment"),
+    _integer_col("fsi_RegistryRowCount", "Registry Row Count", required=False,
+                 description="Count of registry rows provided to correlation"),
+    _integer_col("fsi_RegistryMatchedCount", "Registry Matched Count", required=False,
+                 description="Count of registry rows matched to discovered agents"),
+    _integer_col("fsi_RegistryUnmatchedCount", "Registry Unmatched Count", required=False,
+                 description="Count of registry rows that could not be matched"),
+    _integer_col("fsi_RegistryAmbiguousNameSkippedCount", "Registry Ambiguous Name Skipped Count",
+                 required=False,
+                 description="Count of name-collision candidates intentionally skipped"),
+    _integer_col("fsi_RegistryInvalidDateWarningCount", "Registry Invalid Date Warning Count",
+                 required=False,
+                 description="Count of invalid-date warnings from registry import"),
+    _picklist_col("fsi_EntitlementLayerStatus", "Entitlement Layer Status", "fsi_cai_layerstatus",
+                  required=False,
+                  description="Execution status of owner-entitlement resolution"),
+    _integer_col("fsi_EntitlementOwnersConsideredCount", "Entitlement Owners Considered Count",
+                 required=False,
+                 description="Count of owners considered for entitlement resolution"),
+    _integer_col("fsi_EntitlementPaidCount", "Entitlement Paid Count", required=False,
+                 description="Count of owners resolved as Paid Copilot"),
+    _integer_col("fsi_EntitlementChatOnlyCount", "Entitlement Chat Only Count", required=False,
+                 description="Count of owners resolved as Copilot Chat Only"),
+    _integer_col("fsi_EntitlementUnknownCount", "Entitlement Unknown Count", required=False,
+                 description="Count of owners with Unknown entitlement"),
+    _memo_col("fsi_CoverageScopeJson", "Coverage Scope JSON", 100000,
+              description="Structured layer-scope and toggle metadata for this run"),
+    _memo_col("fsi_SummaryJson", "Summary JSON", 100000,
+              description="Structured run summary payload for reproducibility and BI drillthrough"),
 ]
 
 
@@ -972,6 +1143,25 @@ TABLES = {
             }
         ],
     },
+    "fsi_caiscanrun": {
+        "schema_name": "fsi_CaiScanRun",
+        "display": "CAI Scan Run",
+        "plural": "CAI Scan Runs",
+        "description": (
+            "Run-level BI evidence row with layer statuses, counts, "
+            "and provenance summaries for each discovery execution"
+        ),
+        "ownership": "OrganizationOwned",
+        "columns": SCANRUN_COLUMNS,
+        "entity_set_name": "fsi_caiscanruns",
+        "alt_keys": [
+            {
+                "schema_name": "fsi_ScanRunKey",
+                "display": "Scan Run Key",
+                "key_attributes": ["fsi_runid"],
+            }
+        ],
+    },
 }
 
 
@@ -1121,9 +1311,9 @@ def generate_docs(output_path: str) -> None:
         lines.extend([
             f"### {table_def['display']} (`{logical}`)",
             "",
-            f"**Ownership:** {table_def['ownership']}  ",
-            f"**Entity set:** `{table_def.get('entity_set_name', logical + 's')}`  ",
-            "**Primary name column:** `fsi_name`  ",
+            f"**Ownership:** {table_def['ownership']}<br>",
+            f"**Entity set:** `{table_def.get('entity_set_name', logical + 's')}`<br>",
+            "**Primary name column:** `fsi_name`<br>",
             f"**Description:** {table_def['description']}",
             "",
             "| Column (SchemaName) | Logical name | Type | Required | Description |",

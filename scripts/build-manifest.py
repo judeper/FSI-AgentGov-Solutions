@@ -25,6 +25,11 @@ deterministic artifacts from a single source of truth:
   filename normalization and intra-solution link rewriting.
 * Root doc copy: `DEPLOYMENT-GUIDE.md` -> getting-started, `CHANGELOG.md` ->
   reference.
+* Optional lab-validation evidence images: when `<slug>/docs/lab-validation-evidence.json`
+  is present (schema: scripts/lab-validation-evidence.schema.json), the allow-listed,
+  SHA-256-pinned PNGs under `<slug>/docs/img` are validated and — in write mode —
+  copied byte-for-byte to `site-docs/solutions/<slug>/img`. See the "Lab-validation
+  evidence images" section below for the full contract.
 
 Validation runs on every invocation:
 
@@ -38,6 +43,12 @@ Validation runs on every invocation:
   `Version`, `Status`, `Validated against framework version`, and an optional
   `Upstream Microsoft dependency` line when `manifest.yaml.upstreamDependency`
   is present.
+* Optional `<slug>/docs/lab-validation-evidence.json` — shape, unique relative
+  POSIX `.png` paths (no case-insensitive collisions) confined under
+  `<slug>/docs/img`, structural PNG validity (signature, chunk framing, single
+  IHDR, at least one contiguous IDAT, PLTE/color-type rules, per-chunk CRC,
+  terminal IEND), SHA-256 match, and no unmanifested PNG. Enforced in both
+  write and `--check` modes.
 
 Usage:
 
@@ -104,14 +115,17 @@ are reproducible.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
 import re
 import shutil
 import sys
+import zlib
 from collections import defaultdict
-from pathlib import Path
+from datetime import datetime, timedelta
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import yaml
 
@@ -131,6 +145,38 @@ SOLUTIONS_OUT = SITE_DOCS / "solutions"
 SCHEMA_PATH = ROOT / "scripts" / "manifest.schema.json"
 SOLUTIONS_JSON = ROOT / "solutions.json"
 CONTROLS_COVERED_SCHEMA = ROOT / "scripts" / "controls-covered.schema.json"
+LAB_EVIDENCE_SCHEMA_PATH = ROOT / "scripts" / "lab-validation-evidence.schema.json"
+LAB_EVIDENCE_MANIFEST_NAME = "lab-validation-evidence.json"
+LAB_IMG_DIRNAME = "img"
+MAX_LAB_PNG_BYTES = 64 * 1024 * 1024
+MAX_LAB_PNG_DECODED_BYTES = 256 * 1024 * 1024
+# PNG 8-byte file signature (magic number). Extension checks alone are spoofable,
+# so evidence sources must start with these bytes to be published.
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+LAB_EVIDENCE_SENSITIVE_PATTERNS = (
+    ("UPN/email", re.compile(r"(?i)\b[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}\b")),
+    ("tenant domain", re.compile(r"(?i)\b[a-z0-9\-]+\.onmicrosoft\.com\b")),
+    (
+        "GUID",
+        re.compile(
+            r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-"
+            r"[89ab][0-9a-f]{3}-[0-9a-f]{12}\b"
+        ),
+    ),
+    ("URL", re.compile(r"(?i)\bhttps?://[^\s\"'<>]+")),
+    (
+        "bearer token",
+        re.compile(r"(?i)\bauthorization\s*[:=]\s*bearer\s+\S+"),
+    ),
+    (
+        "JWT",
+        re.compile(r"(?i)\beyJ[a-z0-9_-]{5,}\.[a-z0-9_-]{5,}\.[a-z0-9_-]{5,}\b"),
+    ),
+    (
+        "secret parameter",
+        re.compile(r"(?i)\b(sig|code|token|access_token|client_secret)=([^&\s]+)"),
+    ),
+)
 README = ROOT / "README.md"
 SITE_INDEX = SITE_DOCS / "index.md"
 CONTROL_MAPPING = SITE_DOCS / "reference" / "control-mapping.md"
@@ -1142,6 +1188,696 @@ def copy_root_docs(
 
 
 # ---------------------------------------------------------------------------
+# Lab-validation evidence images (binary publish, outside the text pipeline)
+# ---------------------------------------------------------------------------
+#
+# Contract (schema: scripts/lab-validation-evidence.schema.json)
+# --------------------------------------------------------------
+# A solution MAY ship an OPTIONAL evidence manifest at
+# ``<slug>/docs/lab-validation-evidence.json``. When present it allow-lists the
+# sanitized PNG screenshots that later lab-validation report work references, so
+# that ONLY those images are published into the generated (git-ignored) site at
+# ``site-docs/solutions/<slug>/img/<path>``. Shape (v1.0.0):
+#
+#   {
+#     "schemaVersion": "1.0.0",
+#     "solution": "<slug>",            # optional; must equal the folder when set
+#     "images": [
+#       {
+#         "path": "lab-validation/x.png",   # relative, POSIX, under docs/img, .png
+#         "sha256": "<64 lowercase hex>",   # SHA-256 of the source bytes
+#         "sourceClass": "portal-screenshot",
+#         "capturedUtc": "2026-07-21T10:00:00Z",
+#         "caption": "…",
+#         "alt": "…"
+#       }
+#     ]
+#   }
+#
+# Validation runs in BOTH write and ``--check`` modes and fails the build with
+# actionable errors on: bad JSON shape, duplicate paths, case-insensitive path
+# collisions (Windows/Linux portability), absolute/traversal/non-POSIX paths,
+# sources outside ``<slug>/docs/img``, non-``.png`` sources, structurally invalid
+# PNGs (signature, four-letter chunk types, framing, single IHDR, >=1 contiguous
+# IDAT, PLTE placement/color-type rules, per-chunk CRC-32, no unknown critical
+# chunks, terminal IEND, no truncation/trailing bytes), missing/non-regular
+# sources, SHA-256 mismatches, and any unmanifested PNG under ``<slug>/docs/img``. In WRITE mode the publisher
+# owns the generated ``site-docs/solutions/<slug>/img`` subtree: it re-reads each
+# source ONCE, re-validates structure + SHA-256 on those exact bytes (closing the
+# TOCTOU window), writes the validated bytes, and removes the subtree for slugs
+# whose manifest was deleted. Publishing is deliberately kept out of the text
+# ``record()`` pipeline so PNG bytes never flow through the UTF-8 helpers.
+
+
+def load_lab_evidence_schema() -> dict:
+    return json.loads(LAB_EVIDENCE_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+def load_lab_evidence(slug: str) -> dict | None:
+    """Return the parsed evidence manifest for ``slug`` or ``None`` when absent.
+
+    A JSON parse failure is surfaced as a manifest with a sentinel error marker
+    so ``validate_lab_evidence`` can report it rather than raising.
+    """
+    path = ROOT / slug / "docs" / LAB_EVIDENCE_MANIFEST_NAME
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {"__parse_error__": str(exc)}
+
+
+class LabEvidenceError(RuntimeError):
+    """Raised when evidence images fail revalidation during publishing."""
+
+
+def _png_scanline_layout(
+    width: int,
+    height: int,
+    bit_depth: int,
+    color_type: int,
+    interlace_method: int,
+) -> tuple[list[tuple[int, int, int]], int]:
+    """Return (row-count, row-bytes, pixel-width) groups and decoded length."""
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[color_type]
+    bits_per_pixel = channels * bit_depth
+    passes = (
+        ((0, 0, 1, 1),)
+        if interlace_method == 0
+        else (
+            (0, 0, 8, 8),
+            (4, 0, 8, 8),
+            (0, 4, 4, 8),
+            (2, 0, 4, 4),
+            (0, 2, 2, 4),
+            (1, 0, 2, 2),
+            (0, 1, 1, 2),
+        )
+    )
+    scanlines: list[tuple[int, int, int]] = []
+    expected_size = 0
+    for x_start, y_start, x_step, y_step in passes:
+        pass_width = (
+            (width - x_start + x_step - 1) // x_step
+            if width > x_start
+            else 0
+        )
+        pass_height = (
+            (height - y_start + y_step - 1) // y_step
+            if height > y_start
+            else 0
+        )
+        if pass_width == 0 or pass_height == 0:
+            continue
+        row_bytes = (pass_width * bits_per_pixel + 7) // 8
+        scanlines.append((pass_height, row_bytes, pass_width))
+        expected_size += pass_height * (1 + row_bytes)
+    return scanlines, expected_size
+
+
+def _read_lab_png_bytes(path: Path) -> bytes:
+    """Read one PNG through a stable handle without exceeding the source limit."""
+    with path.open("rb") as handle:
+        initial = os.fstat(handle.fileno())
+        if initial.st_size > MAX_LAB_PNG_BYTES:
+            raise LabEvidenceError("source exceeds the 64 MiB evidence limit")
+        data = handle.read(MAX_LAB_PNG_BYTES + 1)
+        final = os.fstat(handle.fileno())
+    if len(data) > MAX_LAB_PNG_BYTES or final.st_size > MAX_LAB_PNG_BYTES:
+        raise LabEvidenceError("source exceeds the 64 MiB evidence limit")
+    return data
+
+
+def _is_reparse_point(path: Path) -> bool:
+    is_junction = getattr(path, "is_junction", None)
+    return path.is_symlink() or bool(is_junction and is_junction())
+
+
+def _confined_destination(candidate: Path, trusted_root: Path) -> Path:
+    """Resolve a generated destination without following reparse points."""
+    root_absolute = trusted_root.absolute()
+    candidate_absolute = candidate.absolute()
+    try:
+        relative = candidate_absolute.relative_to(root_absolute)
+    except ValueError as exc:
+        raise LabEvidenceError(
+            f"destination {candidate} is outside trusted root {trusted_root}"
+        ) from exc
+
+    current = root_absolute
+    if current.exists() and _is_reparse_point(current):
+        raise LabEvidenceError(f"trusted destination root is a reparse point: {current}")
+    for part in relative.parts:
+        current = current / part
+        if current.exists() and _is_reparse_point(current):
+            raise LabEvidenceError(f"destination path is a reparse point: {current}")
+
+    root_resolved = trusted_root.resolve()
+    candidate_resolved = candidate.resolve()
+    if not _path_is_within(candidate_resolved, root_resolved):
+        raise LabEvidenceError(
+            f"destination {candidate} resolves outside trusted root {trusted_root}"
+        )
+    return candidate_resolved
+
+
+def _validate_png_structure(data: bytes) -> str | None:
+    """Return an error string when ``data`` is not a structurally valid PNG.
+
+    Dependency-free (stdlib ``zlib`` only). Verifies the 8-byte signature and,
+    for every chunk, four-ASCII-letter type bytes, framing without truncation,
+    and a per-chunk CRC-32. Enforces critical-chunk rules so non-renderable
+    files cannot pass as evidence: a single leading 13-byte IHDR (positive
+    dimensions, valid compression/filter/interlace methods, valid bit-depth /
+    color-type pairing); at least one IDAT with all IDATs consecutive; PLTE (if
+    present) exactly once, before IDAT, required for indexed color type 3 and
+    prohibited for grayscale types 0/4, with a length that is a positive
+    multiple of 3; a terminal zero-length IEND; rejection of unknown critical
+    chunks; and no truncation or trailing bytes. Ancillary chunks are permitted.
+    """
+    if len(data) > MAX_LAB_PNG_BYTES:
+        return "PNG source exceeds the 64 MiB evidence limit"
+    if not data.startswith(PNG_SIGNATURE):
+        return "missing PNG signature"
+
+    valid_bit_depths = {
+        0: {1, 2, 4, 8, 16},
+        2: {8, 16},
+        3: {1, 2, 4, 8},
+        4: {8, 16},
+        6: {8, 16},
+    }
+
+    offset = len(PNG_SIGNATURE)
+    total = len(data)
+    first_chunk = True
+    seen_ihdr = False
+    seen_plte = False
+    seen_idat = False
+    idat_ended = False
+    saw_iend = False
+    width: int | None = None
+    height: int | None = None
+    bit_depth: int | None = None
+    color_type: int | None = None
+    interlace_method: int | None = None
+    scanlines: list[tuple[int, int, int]] = []
+    expected_size: int | None = None
+    decompressor = zlib.decompressobj()
+    decoded = bytearray()
+    palette_entries: int | None = None
+
+    while offset < total:
+        if offset + 8 > total:
+            return "truncated chunk header"
+        length = int.from_bytes(data[offset:offset + 4], "big")
+        ctype = data[offset + 4:offset + 8]
+        body_start = offset + 8
+        body_end = body_start + length
+        if body_end + 4 > total:
+            return "truncated chunk data or CRC"
+
+        body = memoryview(data)[body_start:body_end]
+        declared_crc = int.from_bytes(data[body_end:body_end + 4], "big")
+        actual_crc = zlib.crc32(ctype)
+        actual_crc = zlib.crc32(body, actual_crc) & 0xFFFFFFFF
+        if actual_crc != declared_crc:
+            return f"CRC mismatch in {ctype.decode('latin-1', 'replace')} chunk"
+
+        # Chunk type must be four ASCII letters (A-Z / a-z).
+        if not all(65 <= b <= 90 or 97 <= b <= 122 for b in ctype):
+            return "invalid chunk type bytes"
+        is_critical = (ctype[0] & 0x20) == 0
+
+        if first_chunk:
+            if ctype != b"IHDR":
+                return "first chunk must be IHDR"
+            first_chunk = False
+
+        if ctype == b"IHDR":
+            if seen_ihdr:
+                return "duplicate IHDR chunk"
+            seen_ihdr = True
+            if length != 13:
+                return "IHDR length must be 13"
+            width = int.from_bytes(body[0:4], "big")
+            height = int.from_bytes(body[4:8], "big")
+            if width == 0 or height == 0:
+                return "IHDR dimensions must be positive"
+            bit_depth = body[8]
+            color_type = body[9]
+            if body[10] != 0:
+                return "IHDR compression method must be 0"
+            if body[11] != 0:
+                return "IHDR filter method must be 0"
+            interlace_method = body[12]
+            if interlace_method not in (0, 1):
+                return "IHDR interlace method must be 0 or 1"
+            if color_type not in valid_bit_depths:
+                return "IHDR color type is invalid"
+            if bit_depth not in valid_bit_depths[color_type]:
+                return "IHDR bit depth is invalid for the color type"
+            scanlines, expected_size = _png_scanline_layout(
+                width, height, bit_depth, color_type, interlace_method
+            )
+            if expected_size > MAX_LAB_PNG_DECODED_BYTES:
+                return "decoded PNG data exceeds the 256 MiB evidence limit"
+        elif ctype == b"PLTE":
+            if seen_plte:
+                return "duplicate PLTE chunk"
+            if seen_idat:
+                return "PLTE must appear before IDAT"
+            if color_type in (0, 4):
+                return "PLTE prohibited for grayscale color type"
+            if length == 0 or length % 3 != 0:
+                return "PLTE length must be a positive multiple of 3"
+            palette_entries = length // 3
+            if palette_entries > 256:
+                return "PLTE cannot contain more than 256 entries"
+            if color_type == 3 and bit_depth is not None:
+                if palette_entries > (1 << bit_depth):
+                    return "PLTE has too many entries for the indexed bit depth"
+            seen_plte = True
+        elif ctype == b"IDAT":
+            if idat_ended:
+                return "IDAT chunks must be consecutive"
+            seen_idat = True
+            assert expected_size is not None
+            try:
+                remaining = expected_size + 1 - len(decoded)
+                decoded.extend(decompressor.decompress(body, max(remaining, 1)))
+            except zlib.error:
+                return "IDAT data is not a valid zlib stream"
+            if decompressor.unconsumed_tail:
+                return "decoded PNG data exceeds the IHDR dimensions"
+            if decompressor.unused_data:
+                return "IDAT zlib stream has trailing data"
+        elif ctype == b"IEND":
+            if length != 0:
+                return "IEND length must be 0"
+            saw_iend = True
+        elif is_critical:
+            return f"unknown critical chunk {ctype.decode('latin-1', 'replace')}"
+
+        # Any non-IDAT chunk after the IDAT run ends the (required-contiguous) run.
+        if seen_idat and ctype != b"IDAT":
+            idat_ended = True
+
+        offset = body_end + 4
+        if ctype == b"IEND":
+            break
+
+    if not seen_ihdr:
+        return "no IHDR chunk found"
+    if not saw_iend:
+        return "missing terminal IEND chunk"
+    if not seen_idat:
+        return "no IDAT chunk found"
+    if color_type == 3 and not seen_plte:
+        return "PLTE required for indexed color type"
+    if offset != total:
+        return "trailing bytes after IEND"
+
+    assert width is not None
+    assert height is not None
+    assert bit_depth is not None
+    assert color_type is not None
+    assert interlace_method is not None
+
+    assert expected_size is not None
+    try:
+        decoded.extend(decompressor.flush())
+    except zlib.error:
+        return "IDAT data is not a valid zlib stream"
+
+    if not decompressor.eof:
+        return "IDAT zlib stream is incomplete"
+    if decompressor.unused_data:
+        return "IDAT zlib stream has trailing data"
+    if len(decoded) != expected_size:
+        return (
+            "decoded PNG data length does not match the IHDR dimensions "
+            f"(expected {expected_size}, got {len(decoded)})"
+        )
+
+    row_offset = 0
+    if color_type != 3:
+        for pass_height, row_bytes, _ in scanlines:
+            for _ in range(pass_height):
+                filter_type = decoded[row_offset]
+                if filter_type > 4:
+                    return f"invalid PNG scanline filter type {filter_type}"
+                row_offset += 1 + row_bytes
+        return None
+
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[color_type]
+    filter_bpp = max(1, (channels * bit_depth + 7) // 8)
+    for pass_height, row_bytes, pass_width in scanlines:
+        previous = bytearray(row_bytes)
+        for _ in range(pass_height):
+            filter_type = decoded[row_offset]
+            if filter_type > 4:
+                return f"invalid PNG scanline filter type {filter_type}"
+            filtered = decoded[row_offset + 1:row_offset + 1 + row_bytes]
+            reconstructed = bytearray(row_bytes)
+            for index, value in enumerate(filtered):
+                left = reconstructed[index - filter_bpp] if index >= filter_bpp else 0
+                up = previous[index]
+                upper_left = previous[index - filter_bpp] if index >= filter_bpp else 0
+                if filter_type == 0:
+                    predictor = 0
+                elif filter_type == 1:
+                    predictor = left
+                elif filter_type == 2:
+                    predictor = up
+                elif filter_type == 3:
+                    predictor = (left + up) // 2
+                else:
+                    estimate = left + up - upper_left
+                    left_distance = abs(estimate - left)
+                    up_distance = abs(estimate - up)
+                    upper_left_distance = abs(estimate - upper_left)
+                    if left_distance <= up_distance and left_distance <= upper_left_distance:
+                        predictor = left
+                    elif up_distance <= upper_left_distance:
+                        predictor = up
+                    else:
+                        predictor = upper_left
+                reconstructed[index] = (value + predictor) & 0xFF
+
+            assert palette_entries is not None
+            if bit_depth == 8:
+                if any(
+                    sample >= palette_entries
+                    for sample in reconstructed[:pass_width]
+                ):
+                    return "indexed PNG pixel references a missing PLTE entry"
+            else:
+                samples_per_byte = 8 // bit_depth
+                mask = (1 << bit_depth) - 1
+                sample_count = 0
+                for byte in reconstructed:
+                    for sample_index in range(samples_per_byte):
+                        shift = 8 - bit_depth * (sample_index + 1)
+                        sample = (byte >> shift) & mask
+                        if sample >= palette_entries:
+                            return (
+                                "indexed PNG pixel references a missing PLTE entry"
+                            )
+                        sample_count += 1
+                        if sample_count == pass_width:
+                            break
+                    if sample_count == pass_width:
+                        break
+
+            previous = reconstructed
+            row_offset += 1 + row_bytes
+    return None
+
+
+def _path_is_within(candidate: Path, root: Path) -> bool:
+    try:
+        candidate.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _lab_image_path_error(rel: str) -> str | None:
+    """Return an error string when ``rel`` is not a safe relative POSIX PNG path."""
+    if not isinstance(rel, str) or not rel:
+        return "path must be a non-empty string"
+    if "\\" in rel:
+        return f"path {rel!r} must use forward slashes, not backslashes"
+    if len(rel) >= 2 and rel[1] == ":":
+        return f"path {rel!r} must be relative (no drive letter)"
+    posix = PurePosixPath(rel)
+    if posix.is_absolute() or PureWindowsPath(rel).is_absolute():
+        return f"path {rel!r} must be relative (no leading '/')"
+    for part in posix.parts:
+        if part in ("", ".", ".."):
+            return f"path {rel!r} must not contain '.' or '..' segments"
+    if posix.suffix != ".png":
+        return f"path {rel!r} must reference a lowercase '.png' file"
+    return None
+
+
+def _lab_captured_utc_error(value: object) -> str | None:
+    if not isinstance(value, str) or not value:
+        return "must be a non-empty ISO-8601 UTC timestamp"
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return f"{value!r} is not a valid ISO-8601 timestamp"
+    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
+        return f"{value!r} must be in UTC (end with 'Z' or '+00:00')"
+    return None
+
+
+def _lab_sensitive_text_error(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    for label, pattern in LAB_EVIDENCE_SENSITIVE_PATTERNS:
+        if pattern.search(value):
+            return f"contains a sensitive {label}; redact it before committing"
+    return None
+
+
+def validate_lab_evidence(slug: str, solution_dir: Path, evidence: dict) -> list[str]:
+    """Validate a solution's evidence manifest. Returns actionable error strings.
+
+    Runs identically in write and ``--check`` modes: it only reads the source
+    PNG bytes (for hashing) and never reads generated/destination artifacts.
+    """
+    prefix = f"{slug}/docs/{LAB_EVIDENCE_MANIFEST_NAME}"
+    errors: list[str] = []
+
+    if "__parse_error__" in evidence:
+        return [f"{prefix}: invalid JSON: {evidence['__parse_error__']}"]
+
+    validator = Draft202012Validator(load_lab_evidence_schema())
+    schema_errors = sorted(validator.iter_errors(evidence), key=lambda e: list(e.path))
+    for err in schema_errors:
+        loc = "/".join(map(str, err.absolute_path)) or "(root)"
+        errors.append(f"{prefix}: schema error at {loc}: {err.message}")
+    if schema_errors:
+        # Shape is invalid; deeper filesystem/hash checks would be misleading.
+        return errors
+
+    solution_field = evidence.get("solution")
+    if solution_field is not None and solution_field != slug:
+        errors.append(
+            f"{prefix}: solution {solution_field!r} must equal folder name {slug!r}"
+        )
+    notes_error = _lab_sensitive_text_error(evidence.get("notes"))
+    if notes_error:
+        errors.append(f"{prefix}: notes {notes_error}")
+
+    docs_root = (solution_dir / "docs").resolve()
+    img_dir = solution_dir / "docs" / LAB_IMG_DIRNAME
+    img_root = img_dir.resolve()
+    img_root_is_trusted = _path_is_within(img_root, docs_root)
+    if not img_root_is_trusted:
+        errors.append(
+            f"{prefix}: {slug}/docs/{LAB_IMG_DIRNAME} resolves outside "
+            f"the solution docs directory"
+        )
+    seen: dict[str, int] = {}
+    seen_ci: dict[str, tuple[int, str]] = {}
+    listed_sources: set[Path] = set()
+
+    for idx, image in enumerate(evidence.get("images", [])):
+        loc = f"{prefix}: images[{idx}]"
+        rel = image.get("path", "")
+        for field_name in ("path", "caption", "alt"):
+            text_error = _lab_sensitive_text_error(image.get(field_name))
+            if text_error:
+                errors.append(f"{loc}: {field_name} {text_error}")
+        path_error = _lab_image_path_error(rel)
+        if path_error:
+            errors.append(f"{loc}: {path_error}")
+            continue
+
+        if rel in seen:
+            errors.append(
+                f"{loc}: duplicate image path {rel!r} (already declared at images[{seen[rel]}])"
+            )
+            continue
+        lowered = rel.lower()
+        if lowered in seen_ci:
+            prior_idx, prior_rel = seen_ci[lowered]
+            errors.append(
+                f"{loc}: path {rel!r} collides case-insensitively with "
+                f"{prior_rel!r} at images[{prior_idx}]; rename for "
+                f"Windows/Linux portability"
+            )
+            continue
+        seen[rel] = idx
+        seen_ci[lowered] = (idx, rel)
+
+        source = img_dir / PurePosixPath(rel)
+        resolved_source = source.resolve()
+        if (
+            not img_root_is_trusted
+            or not _path_is_within(resolved_source, img_root)
+            or not _path_is_within(resolved_source, docs_root)
+        ):
+            errors.append(
+                f"{loc}: path {rel!r} resolves outside {slug}/docs/{LAB_IMG_DIRNAME}"
+            )
+            continue
+
+        captured_error = _lab_captured_utc_error(image.get("capturedUtc"))
+        if captured_error:
+            errors.append(f"{loc}: capturedUtc {captured_error}")
+
+        if not source.exists():
+            errors.append(f"{loc}: source image not found: {slug}/docs/{LAB_IMG_DIRNAME}/{rel}")
+            continue
+        if not source.is_file():
+            errors.append(
+                f"{loc}: source is not a regular file: {slug}/docs/{LAB_IMG_DIRNAME}/{rel}"
+            )
+            continue
+
+        # Manifest-listed source (tracked so it is not double-flagged below).
+        listed_sources.add(resolved_source)
+
+        try:
+            data = _read_lab_png_bytes(source)
+        except (OSError, LabEvidenceError) as exc:
+            errors.append(f"{loc}: cannot read source {slug}/docs/{LAB_IMG_DIRNAME}/{rel}: {exc}")
+            continue
+
+        structure_error = _validate_png_structure(data)
+        if structure_error:
+            errors.append(
+                f"{loc}: source is not a valid PNG ({structure_error}): "
+                f"{slug}/docs/{LAB_IMG_DIRNAME}/{rel}"
+            )
+            continue
+
+        actual = hashlib.sha256(data).hexdigest()
+        declared = image.get("sha256", "")
+        if actual != declared:
+            errors.append(
+                f"{loc}: sha256 mismatch for {rel} "
+                f"(manifest {declared!r}, actual {actual!r})"
+            )
+
+    # No unmanifested PNG may sit under <slug>/docs/img.
+    if img_dir.is_dir():
+        for found in sorted(img_dir.rglob("*")):
+            if not found.is_file() or found.suffix.lower() != ".png":
+                continue
+            if found.resolve() not in listed_sources:
+                rel = found.resolve().relative_to(img_root).as_posix()
+                errors.append(
+                    f"{prefix}: unmanifested PNG under {slug}/docs/{LAB_IMG_DIRNAME}: {rel} "
+                    f"(add it to the manifest or remove it)"
+                )
+
+    return errors
+
+
+def publish_lab_images(
+    slug: str,
+    solution_dir: Path,
+    dest_solution_dir: Path,
+    trusted_dest_root: Path,
+    evidence: dict,
+) -> list[Path]:
+    """WRITE-MODE ONLY: publish allow-listed PNG bytes into the generated site.
+
+    The generated ``site-docs/solutions/<slug>/img`` subtree is owned solely by
+    this evidence publisher. Removes any stale generated ``img`` content for the
+    slug first, then for each manifest-listed PNG reads the source bytes ONCE,
+    re-validates PNG structure and the declared SHA-256 against those exact
+    bytes, and writes those exact bytes to the destination. Reading once and
+    writing the validated buffer closes the validate-then-copy TOCTOU window: a
+    source mutated after the earlier validation pass fails here (raising
+    ``LabEvidenceError``) BEFORE any mismatched destination byte is written.
+    Deliberately isolated from ``write_if_changed`` / ``check_only`` so image
+    bytes never pass through the UTF-8 text comparison pipeline.
+    """
+    src_img_dir = solution_dir / "docs" / LAB_IMG_DIRNAME
+    docs_root = (solution_dir / "docs").resolve()
+    src_img_root = src_img_dir.resolve()
+    if not _path_is_within(src_img_root, docs_root):
+        raise LabEvidenceError(
+            f"{slug}/docs/{LAB_IMG_DIRNAME}: image root resolves outside "
+            "the solution docs directory"
+        )
+    resolved_dest_solution = _confined_destination(
+        dest_solution_dir, trusted_dest_root
+    )
+    dest_img_dir = resolved_dest_solution / LAB_IMG_DIRNAME
+    _confined_destination(dest_img_dir, trusted_dest_root)
+    if dest_img_dir.exists():
+        shutil.rmtree(dest_img_dir)
+
+    published: list[Path] = []
+    for image in evidence.get("images", []):
+        rel = PurePosixPath(image["path"])
+        source = src_img_dir / rel
+        resolved_source = source.resolve()
+        if (
+            not _path_is_within(resolved_source, src_img_root)
+            or not _path_is_within(resolved_source, docs_root)
+        ):
+            raise LabEvidenceError(
+                f"{slug}/docs/{LAB_IMG_DIRNAME}/{rel}: source resolves outside "
+                "the solution docs directory"
+            )
+        data = _read_lab_png_bytes(source)
+
+        structure_error = _validate_png_structure(data)
+        if structure_error:
+            raise LabEvidenceError(
+                f"{slug}/docs/{LAB_IMG_DIRNAME}/{rel}: source changed after "
+                f"validation and is no longer a valid PNG ({structure_error})"
+            )
+        actual = hashlib.sha256(data).hexdigest()
+        declared = image.get("sha256", "")
+        if actual != declared:
+            raise LabEvidenceError(
+                f"{slug}/docs/{LAB_IMG_DIRNAME}/{rel}: source changed after "
+                f"validation; SHA-256 mismatch (manifest {declared!r}, actual {actual!r})"
+            )
+
+        dest = dest_img_dir / rel
+        _confined_destination(dest.parent, trusted_dest_root)
+        if dest.exists() and _is_reparse_point(dest):
+            raise LabEvidenceError(f"destination path is a reparse point: {dest}")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        published.append(dest)
+    return published
+
+
+def remove_published_lab_images(
+    dest_solution_dir: Path, trusted_dest_root: Path
+) -> bool:
+    """Remove the generated evidence ``img`` subtree for a slug (publisher-owned).
+
+    Used in write mode to clean up after a solution's evidence manifest is
+    deleted, so a removed manifest never leaves stale published images behind.
+    Returns True when a subtree was removed.
+    """
+    resolved_dest_solution = _confined_destination(
+        dest_solution_dir, trusted_dest_root
+    )
+    dest_img_dir = resolved_dest_solution / LAB_IMG_DIRNAME
+    _confined_destination(dest_img_dir, trusted_dest_root)
+    if dest_img_dir.exists():
+        shutil.rmtree(dest_img_dir)
+        return True
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 def write_if_changed(path: Path, content: str, drift: list[str]) -> None:
@@ -1171,6 +1907,18 @@ def run(check: bool) -> int:
 
     errors = validate_manifests(manifests, framework_pillars)
     errors.extend(validate_solution_readme_headers(manifests))
+
+    # Validate optional lab-validation evidence image manifests (both modes).
+    lab_evidence: dict[str, dict] = {}
+    for slug in manifests:
+        evidence = load_lab_evidence(slug)
+        if evidence is None:
+            continue
+        evidence_errors = validate_lab_evidence(slug, ROOT / slug, evidence)
+        errors.extend(evidence_errors)
+        if not evidence_errors:
+            lab_evidence[slug] = evidence
+
     if errors:
         for e in errors:
             log.error(e)
@@ -1265,6 +2013,35 @@ def run(check: bool) -> int:
                 if child.is_dir() and child.name not in valid_slugs:
                     log.info("Removing stale solution dir: %s", child)
                     shutil.rmtree(child)
+
+        # Lab-validation evidence images. The generated
+        # site-docs/solutions/<slug>/img subtree is owned exclusively by the
+        # evidence publisher: publish allow-listed PNGs for slugs that ship a
+        # manifest, and remove any stale generated img subtree for slugs without
+        # one (e.g. after a manifest is deleted). Binary-safe; not part of the
+        # text drift contract (the destination lives under git-ignored site-docs).
+        for slug in manifests:
+            dest_dir = SOLUTIONS_OUT / slug
+            if slug in lab_evidence:
+                try:
+                    published = publish_lab_images(
+                        slug,
+                        ROOT / slug,
+                        dest_dir,
+                        SOLUTIONS_OUT,
+                        lab_evidence[slug],
+                    )
+                except LabEvidenceError as exc:
+                    log.error("%s", exc)
+                    return 1
+                if published:
+                    log.info(
+                        "Published %d lab evidence image(s) for %s",
+                        len(published),
+                        slug,
+                    )
+            elif remove_published_lab_images(dest_dir, SOLUTIONS_OUT):
+                log.info("Removed stale evidence img subtree (no manifest) for %s", slug)
 
     if check:
         if drift:

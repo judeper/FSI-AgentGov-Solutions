@@ -47,11 +47,14 @@ import argparse
 import json
 import logging
 import os
+import re
+import secrets
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
@@ -98,6 +101,11 @@ DISCOVERY_SOURCE_RECONCILED = "Reconciled (multi-source)"
 GRAPH_SCOPE = "https://graph.microsoft.com/.default"
 GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
 PACKAGE_API_PATH = "/copilot/admin/catalog/packages"
+SUBSCRIBED_SKUS_API_PATH = "/subscribedSkus"
+SUBSCRIBED_SKUS_PERMISSION_GUIDANCE = (
+    "Use Microsoft Graph application permission LicenseAssignment.Read.All "
+    "(least privileged). Organization.Read.All is also supported."
+)
 
 # Platforms to query from the Package Management API. Restricted to Agent Builder
 # ONLY — the ARG and Dataverse layers already cover Copilot Studio, and package
@@ -111,6 +119,42 @@ PACKAGE_API_PLATFORMS = [
 # Dataverse sourced rows. Reconciliation joins on appId / manifestId; standalone
 # package-only rows use the package id as fsi_agentid.
 PACKAGE_ID_PREFIX = "P_"
+
+AGENT365_MODE_PRESENT = "present"
+AGENT365_MODE_ABSENT = "absent"
+AGENT365_MODE_AUTO = "auto"
+AGENT365_MODES = (AGENT365_MODE_PRESENT, AGENT365_MODE_ABSENT, AGENT365_MODE_AUTO)
+DEFAULT_AGENT365_MODE = AGENT365_MODE_ABSENT
+AGENT365_MODE_CHOICE_LABELS = {
+    AGENT365_MODE_PRESENT: "Present",
+    AGENT365_MODE_ABSENT: "Absent",
+    AGENT365_MODE_AUTO: "Auto",
+}
+
+AGENT365_STATE_PRESENT = "Present"
+AGENT365_STATE_ABSENT = "Absent"
+AGENT365_STATE_NOT_DETECTED = "NotDetected"
+AGENT365_STATE_INCONCLUSIVE = "Inconclusive"
+
+LAYER_STATUS_FULL = "Full"
+LAYER_STATUS_DEFERRED = "Deferred"
+LAYER_STATUS_UNSUPPORTED = "Unsupported"
+LAYER_STATUS_PARTIAL = "Partial"
+LAYER_STATUS_FAILED = "Failed"
+LAYER_STATUS_DRY_RUN = "Dry Run"
+
+AGENT365_ALIAS_OVERRIDE_ENV = "CAI_AGENT365_LICENSE_ALIASES"
+AGENT365_ALIAS_OVERRIDE_ENV_LEGACY = "CAI_AGENT365_SKU_ALIASES"
+DEFAULT_AGENT365_LICENSE_ALIASES = frozenset(
+    {
+        # Heuristic aliases only, normalized from currently documented
+        # product/display names (not authoritative SKU/service plan IDs).
+        "MICROSOFT_AGENT_365",
+        "MICROSOFT_365_E7",
+        "AGENT_365_FRONTIER",
+        "MICROSOFT_365_FRONTIER_FOR_AI_TEAMMATES",
+    }
+)
 
 # Completeness label written to every package-touched row when the Package
 # Management API enumeration was truncated (paging incomplete). Used by
@@ -188,7 +232,9 @@ class ScanContext:
     tenant_id: Optional[str] = None
     client_id: Optional[str] = None
     auth_mode: str = "managed-identity"
-    enable_package_api: bool = False
+    agent365_requested_mode: str = DEFAULT_AGENT365_MODE
+    agent365_resolution_source: str = "Default"
+    agent365_alias_overrides: tuple[str, ...] = ()
     # Optional registry-correlation + entitlement fields (D).
     registry_export_path: Optional[str] = None
     columnmap_path: Optional[str] = None
@@ -196,6 +242,60 @@ class ScanContext:
     resolve_entitlement: bool = False
     entitlement_ps1_path: Optional[str] = None
     _credential: Any = field(default=None, repr=False)
+
+
+class Agent365ProbeOutcome(str, Enum):
+    """Typed outcomes for the Agent 365 license probe."""
+
+    DETECTED = "detected"
+    NOT_DETECTED = "not-detected"
+    INCONCLUSIVE = "inconclusive"
+    DRY_RUN = "dry-run"
+    NOT_ATTEMPTED = "not-attempted"
+
+
+class PackageApiOutcome(str, Enum):
+    """Typed outcomes for the Package Management API call."""
+
+    SUCCESS_EMPTY = "success-empty"
+    SUCCESS_DATA = "success-data"
+    PAGING_TRUNCATED = "paging-truncated"
+    HTTP_401 = "http-401"
+    HTTP_403 = "http-403"
+    HTTP_404_UNSUPPORTED = "http-404-unsupported"
+    HTTP_429 = "http-429-throttle"
+    HTTP_5XX = "http-5xx"
+    TRANSPORT_FAILURE = "transport-failure"
+    PARSE_FAILURE = "parse-failure"
+    DRY_RUN = "dry-run"
+    DEFERRED = "deferred"
+
+
+@dataclass
+class Agent365LicenseProbeResult:
+    """Normalized result of probing /subscribedSkus."""
+
+    outcome: Agent365ProbeOutcome
+    attempted: bool
+    http_status: Optional[int] = None
+    error_code: str = ""
+    error_subcode: str = ""
+    reason: str = ""
+    matched_aliases: tuple[str, ...] = ()
+
+
+@dataclass
+class PackageApiFetchResult:
+    """Normalized result of querying the Package Management API."""
+
+    outcome: PackageApiOutcome
+    attempted: bool
+    packages: list[dict] = field(default_factory=list)
+    paging_truncated: bool = False
+    http_status: Optional[int] = None
+    error_code: str = ""
+    error_subcode: str = ""
+    reason: str = ""
 
 
 def _build_session() -> requests.Session:
@@ -276,6 +376,177 @@ class ThrottlingExhaustedError(RuntimeError):
     """
 
 
+class EnvironmentEnumerationError(RuntimeError):
+    """Raised when the BAP environment enumeration itself fails.
+
+    Distinct from a genuinely empty (HTTP 200, ``value: []``) tenant: an
+    authorization or API failure on the environment-list call must NEVER be
+    returned as a success-shaped empty list, because that makes a 401/403 look
+    like a clean, agent-free tenant. Carries the HTTP status (when known) and a
+    stage label so the caller can surface the failure in structured output and
+    exit non-zero.
+    """
+
+    def __init__(
+        self, message: str, *, http_status: Optional[int] = None,
+        stage: str = "environment-enumeration",
+    ) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+        self.stage = stage
+
+
+class EnvironmentScanError(RuntimeError):
+    """Raised when a per-environment Dataverse read returns a non-200 response.
+
+    Retained (via `_scan_one_environment`) as a structured per-environment
+    failure so a per-environment authorization failure (401/403) is never
+    indistinguishable from an environment that genuinely contains zero agents.
+    """
+
+    def __init__(
+        self, message: str, *, http_status: Optional[int] = None,
+        stage: str = "bots",
+    ) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+        self.stage = stage
+
+
+class ArgQueryError(RuntimeError):
+    """Raised when the Layer 1 ARG resource query returns a non-200 response.
+
+    A failed ARG query must NOT be treated as an observed zero-agent tenant: the
+    caller records the ARG layer as ``Failed`` (distinct from ``Available`` with
+    zero results) and falls back to the load-bearing Layer 2 per-environment scan.
+    """
+
+    def __init__(self, message: str, *, http_status: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+
+
+# Defensive scrubs for exception strings before they are written to structured
+# output fields.
+_BEARER_RE = re.compile(r"Bearer\s+[A-Za-z0-9\-\._~\+\/]+=*", re.IGNORECASE)
+_UPN_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+_URL_RE = re.compile(r'https?://[^\s"\'<>]+', re.IGNORECASE)
+_SAFE_CODE_RE = re.compile(r"[^A-Za-z0-9_.-]")
+_NON_ALNUM_RE = re.compile(r"[^A-Za-z0-9]+")
+
+
+def _sanitize_reason(text: Any, limit: int = 500) -> str:
+    """Return a bounded, token-free failure reason safe for structured output."""
+    if not text:
+        return ""
+    cleaned = _BEARER_RE.sub("******", str(text))
+    cleaned = _UPN_RE.sub("<redacted-upn>", cleaned)
+    cleaned = _URL_RE.sub("<redacted-url>", cleaned)
+    return cleaned[:limit]
+
+
+def _sanitize_code(text: Any, limit: int = 120) -> str:
+    """Return a bounded machine-safe code field."""
+    if not text:
+        return ""
+    cleaned = _SAFE_CODE_RE.sub("", str(text))
+    return cleaned[:limit]
+
+
+def _normalize_alias_token(value: Any) -> str:
+    """Normalize SKU/service-plan identifiers for exact alias matching."""
+    if value is None:
+        return ""
+    normalized = _NON_ALNUM_RE.sub("_", str(value).strip().upper()).strip("_")
+    return normalized
+
+
+def _parse_agent365_alias_overrides(raw: Optional[str]) -> tuple[str, ...]:
+    """Parse operator-provided Agent 365 alias overrides from environment."""
+    if not raw:
+        return ()
+    aliases: list[str] = []
+    seen: set[str] = set()
+    for token in re.split(r"[,\n\r;]+", raw):
+        token = token.strip()
+        normalized = _normalize_alias_token(token)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        aliases.append(normalized)
+    return tuple(aliases)
+
+
+def _get_agent365_alias_override_raw() -> Optional[str]:
+    """Resolve operator override aliases with legacy env-var compatibility."""
+    primary = os.environ.get(AGENT365_ALIAS_OVERRIDE_ENV)
+    if primary and primary.strip():
+        return primary
+    legacy = os.environ.get(AGENT365_ALIAS_OVERRIDE_ENV_LEGACY)
+    if legacy and legacy.strip():
+        logger.warning(
+            "DEPRECATED: %s is retained for one release. Use %s for comma-separated "
+            "Agent 365 license alias overrides.",
+            AGENT365_ALIAS_OVERRIDE_ENV_LEGACY,
+            AGENT365_ALIAS_OVERRIDE_ENV,
+        )
+        return legacy
+    return None
+
+
+def _coerce_int(value: Any) -> int:
+    """Parse an int from mixed Graph payload values."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _extract_graph_error_fields(payload: Any) -> tuple[str, str]:
+    """Extract sanitized Graph error code/subcode fields."""
+    if not isinstance(payload, dict):
+        return "", ""
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return "", ""
+    code = _sanitize_code(error.get("code"))
+    subcode = ""
+    inner_error = error.get("innerError")
+    if isinstance(inner_error, dict):
+        subcode = _sanitize_code(
+            inner_error.get("code")
+            or inner_error.get("errorCode")
+            or inner_error.get("innerErrorCode")
+        )
+    if not subcode:
+        subcode = _sanitize_code(error.get("subcode") or error.get("innerErrorCode"))
+    return code, subcode
+
+
+def _env_failure(
+    environment_id: str,
+    stage: str,
+    http_status: Optional[int],
+    reason: Any,
+    bot_id: Optional[str] = None,
+) -> dict:
+    """Build one structured per-environment (or per-bot) scan-failure record.
+
+    Preserves the environment identifier/provenance, the failing stage, the HTTP
+    status (when known), and a sanitized reason so a coverage gap is auditable
+    rather than silently collapsing to a zero-agent count.
+    """
+    record: dict = {
+        "environmentId": environment_id,
+        "stage": stage,
+        "httpStatus": http_status,
+        "reason": _sanitize_reason(reason),
+    }
+    if bot_id:
+        record["botId"] = bot_id
+    return record
+
+
 def _request_with_backoff(
     session: requests.Session, method: str, url: str, **kwargs: Any
 ) -> requests.Response:
@@ -303,6 +574,219 @@ def _request_with_backoff(
     raise ThrottlingExhaustedError(
         f"429 throttling persisted after {attempt + 1} attempts on {url}"
     )
+
+
+def _generate_run_id(now: Optional[datetime] = None) -> str:
+    """Generate a sortable, collision-resistant run id."""
+    timestamp = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    return f"cai-{timestamp.strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(7)}"
+
+
+def _agent365_aliases(ctx: ScanContext) -> set[str]:
+    """Return the normalized baseline alias set plus operator overrides."""
+    aliases = set(DEFAULT_AGENT365_LICENSE_ALIASES)
+    aliases.update(ctx.agent365_alias_overrides)
+    return aliases
+
+
+def probe_agent365_license(
+    ctx: ScanContext, session: requests.Session
+) -> Agent365LicenseProbeResult:
+    """Probe /subscribedSkus for Agent 365 license heuristics.
+
+    Permission guidance: LicenseAssignment.Read.All is least-privilege;
+    Organization.Read.All is also supported.
+    """
+    if ctx.dry_run:
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.DRY_RUN,
+            attempted=False,
+            reason="Dry run: skipped /subscribedSkus probe.",
+        )
+
+    url = (
+        f"{GRAPH_API_BASE}{SUBSCRIBED_SKUS_API_PATH}"
+        "?$select=skuPartNumber,capabilityStatus,consumedUnits,prepaidUnits,servicePlans"
+    )
+    try:
+        token = _get_token(ctx, GRAPH_SCOPE)
+    except Exception as exc:
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            error_code="TokenAcquisitionFailed",
+            reason="Agent 365 license probe token acquisition failed.",
+            error_subcode=_sanitize_code(type(exc).__name__),
+        )
+
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    try:
+        resp = _request_with_backoff(session, "GET", url, headers=headers)
+    except ThrottlingExhaustedError:
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            http_status=429,
+            error_code="TooManyRequests",
+            reason="Agent 365 license probe throttled (HTTP 429).",
+        )
+    except requests.exceptions.RequestException as exc:
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            error_code="TransportFailure",
+            reason="Agent 365 license probe transport failure.",
+            error_subcode=_sanitize_code(type(exc).__name__),
+        )
+
+    payload: Any
+    try:
+        payload = resp.json()
+    except ValueError:
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            http_status=resp.status_code,
+            error_code="ParseFailure",
+            reason="Agent 365 license probe returned malformed JSON.",
+        )
+    if not isinstance(payload, dict):
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            http_status=resp.status_code,
+            error_code="MalformedResponse",
+            reason="Agent 365 license probe response must be a JSON object.",
+        )
+
+    graph_code, graph_subcode = _extract_graph_error_fields(payload)
+    if resp.status_code != 200:
+        reason = "Agent 365 license probe failed."
+        if resp.status_code == 401:
+            reason = "Agent 365 license probe unauthorized (HTTP 401)."
+        elif resp.status_code == 403:
+            reason = (
+                "Agent 365 license probe forbidden (HTTP 403). "
+                f"{SUBSCRIBED_SKUS_PERMISSION_GUIDANCE}"
+            )
+        elif resp.status_code == 404:
+            reason = "Agent 365 license probe endpoint unavailable (HTTP 404)."
+        elif resp.status_code == 429:
+            reason = "Agent 365 license probe throttled (HTTP 429)."
+        elif 500 <= resp.status_code <= 599:
+            reason = "Agent 365 license probe server failure (HTTP 5xx)."
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            http_status=resp.status_code,
+            error_code=graph_code or f"Http{resp.status_code}",
+            error_subcode=graph_subcode,
+            reason=reason,
+        )
+
+    rows = payload.get("value")
+    if not isinstance(rows, list):
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.INCONCLUSIVE,
+            attempted=True,
+            http_status=200,
+            error_code="MalformedResponse",
+            reason="Agent 365 license probe missing 'value' array.",
+        )
+
+    aliases = _agent365_aliases(ctx)
+    matched_aliases: set[str] = set()
+    for sku in rows:
+        if not isinstance(sku, dict):
+            continue
+        sku_alias = _normalize_alias_token(sku.get("skuPartNumber"))
+        prepaid_units = sku.get("prepaidUnits")
+        if not isinstance(prepaid_units, dict):
+            prepaid_units = {}
+        enabled_units = _coerce_int(prepaid_units.get("enabled"))
+        consumed_units = _coerce_int(sku.get("consumedUnits"))
+        capability_status = str(sku.get("capabilityStatus") or "").strip().lower()
+        seat_signal_present = enabled_units > 0 or consumed_units > 0
+        sku_usable = capability_status == "enabled" and seat_signal_present
+
+        plan_aliases_success: set[str] = set()
+        for plan in sku.get("servicePlans") or []:
+            if not isinstance(plan, dict):
+                continue
+            normalized = _normalize_alias_token(plan.get("servicePlanName"))
+            if not normalized or normalized not in aliases:
+                continue
+            provisioning = str(plan.get("provisioningStatus") or "").strip().lower()
+            if provisioning == "success":
+                plan_aliases_success.add(normalized)
+
+        if sku_alias and sku_alias in aliases and sku_usable:
+            matched_aliases.add(sku_alias)
+        if plan_aliases_success and sku_usable:
+            matched_aliases.update(plan_aliases_success)
+
+    if matched_aliases:
+        return Agent365LicenseProbeResult(
+            outcome=Agent365ProbeOutcome.DETECTED,
+            attempted=True,
+            reason=(
+                "Heuristic Agent 365 name aliases detected in /subscribedSkus "
+                "with usable SKU signals (capabilityStatus Enabled and "
+                "prepaidUnits.enabled>0 or consumedUnits>0). Service-plan-only "
+                "matches require provisioningStatus Success. "
+                "This signal is non-authoritative."
+            ),
+            matched_aliases=tuple(sorted(matched_aliases)),
+        )
+
+    return Agent365LicenseProbeResult(
+        outcome=Agent365ProbeOutcome.NOT_DETECTED,
+        attempted=True,
+        reason=(
+            "No heuristic Agent 365 name alias met usable SKU criteria in "
+            "/subscribedSkus (capabilityStatus Enabled plus seats/assignments; "
+            "service-plan-only matches require provisioningStatus Success). "
+            "Manual verification or --agent365 present override is recommended."
+        ),
+    )
+
+
+def _resolve_agent365_state(
+    ctx: ScanContext, session: requests.Session
+) -> tuple[str, str, str, Agent365LicenseProbeResult]:
+    """Resolve Agent 365 state from requested mode and optional license probe."""
+    requested = ctx.agent365_requested_mode
+    if requested == AGENT365_MODE_ABSENT:
+        return (
+            AGENT365_STATE_ABSENT,
+            ctx.agent365_resolution_source,
+            "OperatorDeclared",
+            Agent365LicenseProbeResult(
+                outcome=Agent365ProbeOutcome.NOT_ATTEMPTED,
+                attempted=False,
+                reason="Operator declared Agent 365 absent.",
+            ),
+        )
+    if requested == AGENT365_MODE_PRESENT:
+        return (
+            AGENT365_STATE_PRESENT,
+            ctx.agent365_resolution_source,
+            "OperatorDeclared",
+            Agent365LicenseProbeResult(
+                outcome=Agent365ProbeOutcome.NOT_ATTEMPTED,
+                attempted=False,
+                reason="Operator declared Agent 365 present.",
+            ),
+        )
+
+    probe = probe_agent365_license(ctx, session)
+    if probe.outcome == Agent365ProbeOutcome.DETECTED:
+        return (AGENT365_STATE_PRESENT, "LicenseProbe", "Heuristic", probe)
+    if probe.outcome == Agent365ProbeOutcome.NOT_DETECTED:
+        return (AGENT365_STATE_NOT_DETECTED, "LicenseProbe", "Heuristic", probe)
+    if probe.outcome == Agent365ProbeOutcome.DRY_RUN:
+        return (AGENT365_STATE_INCONCLUSIVE, "DryRun", "Inconclusive", probe)
+    return (AGENT365_STATE_INCONCLUSIVE, "LicenseProbe", "Inconclusive", probe)
 
 
 # =============================================================================
@@ -379,8 +863,14 @@ def query_arg_inventory(
         }
         resp = _request_with_backoff(session, "POST", url, headers=headers, json=body)
         if resp.status_code != 200:
-            logger.warning("ARG query HTTP %s; stopping paging", resp.status_code)
-            break
+            # A failed ARG query is NOT an observed zero-agent tenant. Raise so the
+            # caller records the ARG layer as Failed and falls back to Layer 2,
+            # rather than silently returning the (possibly partial) rows gathered
+            # so far as if paging had reached its natural end.
+            raise ArgQueryError(
+                f"ARG query failed with HTTP {resp.status_code}",
+                http_status=resp.status_code,
+            )
         payload = resp.json()
         results.extend(payload.get("value", payload.get("Data", [])))
         skip_token = payload.get("skipToken") or payload.get("SkipToken")
@@ -399,6 +889,13 @@ def enumerate_environments(ctx: ScanContext, session: requests.Session) -> list[
     """Enumerate environments via the BAP admin REST API (proven path).
 
     GET /providers/Microsoft.BusinessAppPlatform/scopes/admin/environments
+
+    Raises EnvironmentEnumerationError on a non-200 response, a non-JSON body, or
+    a payload missing a valid ``value`` array. This is deliberate: a soft break
+    that returned the rows gathered so far (often none) would make an
+    authorization/API failure indistinguishable from a genuinely empty tenant. A
+    successful HTTP 200 with ``value: []`` is a genuinely empty result and is
+    returned as an empty list (the caller distinguishes it in the summary).
     """
     if ctx.dry_run:
         logger.info("[DRY RUN] would GET %s/providers/Microsoft.BusinessAppPlatform"
@@ -413,15 +910,57 @@ def enumerate_environments(ctx: ScanContext, session: requests.Session) -> list[
     while url:
         resp = _request_with_backoff(session, "GET", url, headers=headers)
         if resp.status_code != 200:
-            logger.warning("Environment enumeration HTTP %s; stopping",
-                           resp.status_code)
-            break
-        payload = resp.json()
-        environments.extend(payload.get("value", []))
+            raise EnvironmentEnumerationError(
+                f"Environment enumeration failed with HTTP {resp.status_code}",
+                http_status=resp.status_code,
+            )
+        try:
+            payload = resp.json()
+        except ValueError as exc:
+            raise EnvironmentEnumerationError(
+                "Environment enumeration returned a non-JSON body"
+            ) from exc
+        value = payload.get("value")
+        if not isinstance(value, list):
+            raise EnvironmentEnumerationError(
+                "Environment enumeration response is missing a valid 'value' array"
+            )
+        environments.extend(value)
         url = payload.get("nextLink") or payload.get("@odata.nextLink")
         headers = {"Authorization": f"Bearer {token}"}
     logger.info("Enumerated %d environments", len(environments))
     return environments
+
+
+def _environment_dataverse_url(environment: dict) -> str:
+    """Return the Dataverse instance URL from supported BAP response shapes."""
+    properties = environment.get("properties")
+    if not isinstance(properties, dict):
+        properties = {}
+    linked_metadata = properties.get("linkedEnvironmentMetadata")
+    if not isinstance(linked_metadata, dict):
+        linked_metadata = {}
+
+    for candidate in (
+        environment.get("url"),
+        environment.get("instanceUrl"),
+        properties.get("instanceUrl"),
+        linked_metadata.get("instanceUrl"),
+    ):
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip().rstrip("/")
+    return ""
+
+
+def _environment_has_no_dataverse(environment: dict) -> bool:
+    """Return True when BAP explicitly classifies the environment as database-free."""
+    properties = environment.get("properties")
+    if not isinstance(properties, dict):
+        return False
+    return (
+        not _environment_dataverse_url(environment)
+        and str(properties.get("databaseType") or "").strip().casefold() == "none"
+    )
 
 
 def _dataverse_url(environment_url: str, path: str) -> str:
@@ -462,8 +1001,15 @@ def scan_environment_bots(
     while url:
         resp = _request_with_backoff(session, "GET", url, headers=headers)
         if resp.status_code != 200:
-            logger.warning("bot scan HTTP %s for %s", resp.status_code, environment_url)
-            break
+            # A non-200 bot read is a per-environment scan failure, NOT an empty
+            # environment. Raise so `_scan_one_environment` records a structured
+            # coverage-gap entry instead of returning the (possibly partial) rows
+            # gathered so far as if the environment simply had few/no agents.
+            raise EnvironmentScanError(
+                f"bot scan failed with HTTP {resp.status_code} for {environment_url}",
+                http_status=resp.status_code,
+                stage="bots",
+            )
         payload = resp.json()
         bots.extend(payload.get("value", []))
         new_delta = payload.get("@odata.deltaLink") or new_delta
@@ -506,9 +1052,15 @@ def scan_bot_features(
     while url:
         resp = _request_with_backoff(session, "GET", url, headers=headers)
         if resp.status_code != 200:
-            logger.warning("botcomponent scan HTTP %s for bot %s",
-                           resp.status_code, bot_id)
-            break
+            # A non-200 botcomponent read is a per-bot feature-scan failure. Raise
+            # so the caller can retain a structured failure and mark the agent's
+            # scan incomplete, rather than silently returning fewer features.
+            raise EnvironmentScanError(
+                f"botcomponent scan failed with HTTP {resp.status_code} "
+                f"for bot {bot_id}",
+                http_status=resp.status_code,
+                stage="botcomponents",
+            )
         payload = resp.json()
         for component in payload.get("value", []):
             features.extend(_components_to_features(ctx, bot_id, component))
@@ -659,7 +1211,8 @@ def classify_scan_completeness(agent: dict) -> tuple[str, str]:
     Agent Builder agents discovered via the Graph Package Management API (GA
     v1.0, application permission CopilotPackages.Read.All, admin-consented) are
     classified as Complete: the catalog endpoint returns their package definition.
-    Enable the API layer with --enable-package-api.
+    Enable the API layer with --agent365 present (or --agent365 auto when
+    license detection resolves to Present).
 
     Agent Builder agents discovered only via ARG or Dataverse without Package API
     enrichment remain Incomplete Scan: ARG/Dataverse do not return their full
@@ -675,7 +1228,7 @@ def classify_scan_completeness(agent: dict) -> tuple[str, str]:
         return (
             "Incomplete Scan",
             "Agent Builder agent discovered without Package API enrichment. "
-            "Enable --enable-package-api (GA v1.0, CopilotPackages.Read.All) "
+            "Enable --agent365 present (GA v1.0, CopilotPackages.Read.All) "
             "to upgrade scan completeness when catalog data is available.",
         )
     return ("Complete", "")
@@ -772,32 +1325,115 @@ def build_dataverse_batch(environment_url: str, operations: list[dict]) -> str:
 def _scan_one_environment(
     ctx: ScanContext, session: requests.Session, environment: dict
 ) -> dict:
-    """Scan a single environment: bots + per-bot features. Fail-open per env."""
-    env_url = environment.get("url") or environment.get("instanceUrl") or ""
+    """Scan a single environment: bots + per-bot features.
+
+    A per-environment failure is RETAINED as structured output (``failures`` +
+    ``status``) rather than being swallowed. This is the core fix for the
+    silent-authorization-failure gap: an environment that 401/403s on its bot
+    read must surface as ``status="Failed"`` with a coverage-gap record, never as
+    a ``status="Complete"`` environment that merely contributed zero agents.
+
+    ``status`` is one of:
+      * ``"Complete"``   — bots read and every per-bot feature read succeeded.
+      * ``"Incomplete"`` — bots read, but at least one per-bot feature read failed
+                           (the agent row is kept and flagged Incomplete Scan).
+      * ``"Failed"``     — the bot read itself failed; the environment contributed
+                           no trustworthy agent rows.
+    """
+    env_url = _environment_dataverse_url(environment)
     env_id = environment.get("name") or environment.get("id") or ""
-    result = {"environmentId": env_id, "agents": [], "features": [],
-              "authShares": [], "deltaLink": None}
+    result: dict = {
+        "environmentId": env_id,
+        "environmentUrl": env_url,
+        "agents": [],
+        "features": [],
+        "authShares": [],
+        "deltaLink": None,
+        "failures": [],
+        "status": "Complete",
+    }
+    if not env_url:
+        exc = ValueError(
+            "BAP environment metadata is missing a Dataverse instance URL"
+        )
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "environment", None, exc))
+        logger.warning(
+            "Environment %s has no Dataverse instance URL; recorded as a "
+            "coverage gap.",
+            env_id,
+        )
+        return result
     try:
         bots, delta_link = scan_environment_bots(ctx, session, env_url)
-        # Thread the delta link into the result instead of discarding it; a
-        # future persistence layer can store it for incremental reads (L-4).
-        result["deltaLink"] = delta_link
+    except EnvironmentScanError as exc:
+        result["status"] = "Failed"
+        result["failures"].append(
+            _env_failure(env_id, exc.stage, exc.http_status, exc)
+        )
+        logger.warning("Environment %s bot scan FAILED (HTTP %s); recorded as a "
+                       "coverage gap, not a zero-agent environment.",
+                       env_id, exc.http_status)
+        return result
+    except ThrottlingExhaustedError as exc:
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "bots", None, exc))
+        logger.warning("Environment %s bot scan throttled to exhaustion; recorded "
+                       "as a coverage gap (Failed).", env_id)
+        return result
+    except Exception as exc:  # one bad env must not abort the whole tenant scan
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "environment", None, exc))
+        logger.warning("Environment %s scan failed (recorded as coverage gap): %s",
+                       env_id, exc)
+        return result
+
+    # Thread the delta link into the result instead of discarding it; a future
+    # persistence layer can store it for incremental reads (L-4).
+    result["deltaLink"] = delta_link
+    try:
         for bot in bots:
             agent = map_agent_record(ctx, bot, DISCOVERY_SOURCE_DATAVERSE)
             agent["fsi_environmentid"] = agent.get("fsi_environmentid") or env_id
             result["agents"].append(agent)
             bot_id = bot.get("botid", "")
-            if bot_id:
+            if not bot_id:
+                continue
+            try:
                 result["features"].extend(
                     scan_bot_features(ctx, session, env_url, bot_id)
                 )
-                authshare = _authshare_record(ctx, bot)
-                authshare["fsi_environmentid"] = (
-                    authshare.get("fsi_environmentid") or env_id
+            except (EnvironmentScanError, ThrottlingExhaustedError) as exc:
+                # The agent exists but its features could not be fully read: keep
+                # the agent row, flag it Incomplete Scan, and downgrade the
+                # environment to Incomplete (never silently drop features as if
+                # the agent had none).
+                if result["status"] == "Complete":
+                    result["status"] = "Incomplete"
+                stage = getattr(exc, "stage", "botcomponents")
+                http_status = getattr(exc, "http_status", None)
+                result["failures"].append(
+                    _env_failure(env_id, stage, http_status, exc, bot_id=bot_id)
                 )
-                result["authShares"].append(authshare)
-    except Exception as exc:  # one bad env must not abort the tenant scan
-        logger.warning("Environment %s scan failed (fail-open): %s", env_id, exc)
+                agent["fsi_scancompleteness"] = "Incomplete Scan"
+                agent["fsi_scancompletenessreason"] = (
+                    agent.get("fsi_scancompletenessreason")
+                    or f"botcomponent feature read failed "
+                       f"(stage={stage}, http={http_status})"
+                )
+                logger.warning("Bot %s in environment %s: feature scan FAILED "
+                               "(HTTP %s); agent flagged Incomplete Scan.",
+                               bot_id, env_id, http_status)
+            authshare = _authshare_record(ctx, bot)
+            authshare["fsi_environmentid"] = (
+                authshare.get("fsi_environmentid") or env_id
+            )
+            result["authShares"].append(authshare)
+    except Exception as exc:  # unexpected per-env error: retain, don't abort scan
+        result["status"] = "Failed"
+        result["failures"].append(_env_failure(env_id, "environment", None, exc))
+        logger.warning("Environment %s scan failed mid-iteration (recorded as a "
+                       "coverage gap): %s", env_id, exc)
     return result
 
 
@@ -839,7 +1475,7 @@ def reconcile_sources(arg_agents: list[dict], scanned_agents: list[dict]) -> dic
 
 
 # =============================================================================
-# Layer 4 — Package Management API (feature-flagged, --enable-package-api)
+# Layer 4 — Package Management API (Agent 365 mode-gated)
 # =============================================================================
 
 
@@ -922,24 +1558,25 @@ def map_package_record(ctx: ScanContext, pkg: dict) -> dict:
     return agent_dict
 
 
-def fetch_package_catalog(
+def _package_outcome_from_http_status(status_code: int) -> PackageApiOutcome:
+    """Classify HTTP status into a typed Package API outcome."""
+    if status_code == 401:
+        return PackageApiOutcome.HTTP_401
+    if status_code == 403:
+        return PackageApiOutcome.HTTP_403
+    if status_code == 404:
+        return PackageApiOutcome.HTTP_404_UNSUPPORTED
+    if status_code == 429:
+        return PackageApiOutcome.HTTP_429
+    if 500 <= status_code <= 599:
+        return PackageApiOutcome.HTTP_5XX
+    return PackageApiOutcome.PAGING_TRUNCATED
+
+
+def fetch_package_catalog_details(
     ctx: ScanContext, session: requests.Session
-) -> tuple[list[dict], bool]:
-    """Fetch agent packages from the Graph Package Management API (Layer 4).
-
-    Calls GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages
-    with $filter=platform eq '<platform>' for each entry in PACKAGE_API_PLATFORMS.
-
-    Application permission: CopilotPackages.Read.All (GA v1.0, admin-consented).
-    Ref: learn.microsoft.com/microsoft-365/copilot/extensibility/api/
-         admin-settings/package/copilotpackages-list
-
-    Paging: follows @odata.nextLink defensively. Pagination is not documented
-    for this endpoint; any paging failure (HTTP error, throttle exhaustion) is
-    treated as INCOMPLETE (GATE-1) — a truncated pull is never a silent empty.
-
-    Returns (packages, paging_was_truncated).
-    """
+) -> PackageApiFetchResult:
+    """Fetch Package API data with typed outcome metadata."""
     if ctx.dry_run:
         for platform in PACKAGE_API_PLATFORMS:
             logger.info(
@@ -947,18 +1584,33 @@ def fetch_package_catalog(
                 "(app permission: CopilotPackages.Read.All)",
                 GRAPH_API_BASE, PACKAGE_API_PATH, platform,
             )
-        return [], False
+        return PackageApiFetchResult(
+            outcome=PackageApiOutcome.DRY_RUN,
+            attempted=False,
+            packages=[],
+            paging_truncated=False,
+            reason="Dry run: skipped Package Management API HTTP call.",
+        )
 
-    token = _get_token(ctx, GRAPH_SCOPE)
+    try:
+        token = _get_token(ctx, GRAPH_SCOPE)
+    except Exception as exc:
+        return PackageApiFetchResult(
+            outcome=PackageApiOutcome.TRANSPORT_FAILURE,
+            attempted=True,
+            paging_truncated=True,
+            error_code="TokenAcquisitionFailed",
+            error_subcode=_sanitize_code(type(exc).__name__),
+            reason="Package API token acquisition failed.",
+        )
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
     }
     all_packages: list[dict] = []
-    any_truncated = False
 
     for platform in PACKAGE_API_PLATFORMS:
-        platform_truncated = False
         url: Optional[str] = (
             f"{GRAPH_API_BASE}{PACKAGE_API_PATH}"
             f"?$filter=platform eq '{platform}'"
@@ -966,40 +1618,137 @@ def fetch_package_catalog(
         while url:
             try:
                 resp = _request_with_backoff(session, "GET", url, headers=headers)
-            except ThrottlingExhaustedError as exc:
-                logger.warning(
-                    "Package API 429 exhausted for platform '%s'; "
-                    "marking layer INCOMPLETE (GATE-1): %s", platform, exc
+            except ThrottlingExhaustedError:
+                return PackageApiFetchResult(
+                    outcome=PackageApiOutcome.HTTP_429,
+                    attempted=True,
+                    packages=all_packages,
+                    paging_truncated=True,
+                    http_status=429,
+                    error_code="TooManyRequests",
+                    reason="Package API throttled (HTTP 429).",
                 )
-                platform_truncated = True
-                break
+            except requests.exceptions.RequestException as exc:
+                return PackageApiFetchResult(
+                    outcome=PackageApiOutcome.TRANSPORT_FAILURE,
+                    attempted=True,
+                    packages=all_packages,
+                    paging_truncated=True,
+                    error_code="TransportFailure",
+                    error_subcode=_sanitize_code(type(exc).__name__),
+                    reason="Package API transport failure.",
+                )
+
+            payload: Any
+            try:
+                payload = resp.json()
+            except ValueError:
+                return PackageApiFetchResult(
+                    outcome=PackageApiOutcome.PARSE_FAILURE,
+                    attempted=True,
+                    packages=all_packages,
+                    paging_truncated=True,
+                    http_status=resp.status_code,
+                    error_code="ParseFailure",
+                    reason="Package API returned malformed JSON.",
+                )
+            if not isinstance(payload, dict):
+                return PackageApiFetchResult(
+                    outcome=PackageApiOutcome.PARSE_FAILURE,
+                    attempted=True,
+                    packages=all_packages,
+                    paging_truncated=True,
+                    http_status=resp.status_code,
+                    error_code="MalformedResponse",
+                    reason="Package API response must be a JSON object.",
+                )
+
             if resp.status_code != 200:
-                logger.warning(
-                    "Package API HTTP %s for platform '%s'; "
-                    "marking layer INCOMPLETE (GATE-1).",
-                    resp.status_code, platform,
+                graph_code, graph_subcode = _extract_graph_error_fields(payload)
+                outcome = _package_outcome_from_http_status(resp.status_code)
+                reason = "Package API request failed."
+                if outcome == PackageApiOutcome.HTTP_401:
+                    reason = "Package API unauthorized (HTTP 401)."
+                elif outcome == PackageApiOutcome.HTTP_403:
+                    reason = (
+                        "Package API forbidden (HTTP 403). "
+                        "CopilotPackages.Read.All is required."
+                    )
+                elif outcome == PackageApiOutcome.HTTP_404_UNSUPPORTED:
+                    reason = "Package API unsupported or unavailable (HTTP 404)."
+                elif outcome == PackageApiOutcome.HTTP_429:
+                    reason = "Package API throttled (HTTP 429)."
+                elif outcome == PackageApiOutcome.HTTP_5XX:
+                    reason = "Package API server failure (HTTP 5xx)."
+                return PackageApiFetchResult(
+                    outcome=outcome,
+                    attempted=True,
+                    packages=all_packages,
+                    paging_truncated=True,
+                    http_status=resp.status_code,
+                    error_code=graph_code or f"Http{resp.status_code}",
+                    error_subcode=graph_subcode,
+                    reason=reason,
                 )
-                platform_truncated = True
-                break
-            payload = resp.json()
+
             page_items = payload.get("value", [])
             if not isinstance(page_items, list):
-                logger.warning(
-                    "Package API unexpected 'value' shape for platform '%s'; "
-                    "marking layer INCOMPLETE.", platform,
+                return PackageApiFetchResult(
+                    outcome=PackageApiOutcome.PARSE_FAILURE,
+                    attempted=True,
+                    packages=all_packages,
+                    paging_truncated=True,
+                    http_status=200,
+                    error_code="MalformedResponse",
+                    reason="Package API response missing a list 'value' property.",
                 )
-                platform_truncated = True
-                break
             all_packages.extend(page_items)
             url = payload.get("@odata.nextLink")
-        any_truncated = any_truncated or platform_truncated
 
     logger.info(
-        "Package Management API: %d packages across %d platform(s) "
-        "(paging_truncated=%s)",
-        len(all_packages), len(PACKAGE_API_PLATFORMS), any_truncated,
+        "Package Management API: %d packages across %d platform(s)",
+        len(all_packages), len(PACKAGE_API_PLATFORMS),
     )
-    return all_packages, any_truncated
+    return PackageApiFetchResult(
+        outcome=(
+            PackageApiOutcome.SUCCESS_DATA
+            if all_packages
+            else PackageApiOutcome.SUCCESS_EMPTY
+        ),
+        attempted=True,
+        packages=all_packages,
+        paging_truncated=False,
+        http_status=200,
+    )
+
+
+def fetch_package_catalog(
+    ctx: ScanContext, session: requests.Session
+) -> tuple[list[dict], bool]:
+    """Backward-compatible package fetch wrapper.
+
+    Returns only (packages, paging_was_truncated). Use
+    fetch_package_catalog_details() for typed status metadata.
+    """
+    details = fetch_package_catalog_details(ctx, session)
+    return details.packages, details.paging_truncated
+
+
+def _package_layer_status(fetch: PackageApiFetchResult) -> str:
+    """Map typed Package API outcomes to coverage layer status."""
+    if fetch.outcome == PackageApiOutcome.DRY_RUN:
+        return LAYER_STATUS_DRY_RUN
+    if fetch.outcome in (PackageApiOutcome.SUCCESS_EMPTY, PackageApiOutcome.SUCCESS_DATA):
+        return LAYER_STATUS_FULL
+    if fetch.outcome == PackageApiOutcome.HTTP_404_UNSUPPORTED:
+        return LAYER_STATUS_UNSUPPORTED
+    if fetch.outcome == PackageApiOutcome.DEFERRED:
+        return LAYER_STATUS_DEFERRED
+    if fetch.paging_truncated and fetch.packages:
+        return LAYER_STATUS_PARTIAL
+    if fetch.outcome == PackageApiOutcome.PAGING_TRUNCATED:
+        return LAYER_STATUS_PARTIAL
+    return LAYER_STATUS_FAILED
 
 
 def reconcile_package_catalog(
@@ -1164,77 +1913,140 @@ def _apply_registry_owner(
 def scan_all(ctx: ScanContext) -> dict:
     """Run the discovery layers and return the canonical record set.
 
-    Three-layer behavior (ARG + Dataverse + reconciliation) is unchanged when
-    --enable-package-api is off (default). Layer 4 (Package Management API) is
-    strictly additive and activated only by the feature flag.
+    ARG + Dataverse remain load-bearing. Agent 365 Package API behavior is
+    license-aware and controlled by ctx.agent365_requested_mode.
     """
     session = _build_session()
     logger.info("Scan run %s (dry_run=%s, max_workers=%d)",
                 ctx.run_id, ctx.dry_run, ctx.max_workers)
 
+    # Layer 1 — ARG. Track a distinct layer status so a failed query is never
+    # mistaken for an observed zero-agent tenant: unavailable / failed / zero are
+    # each separately representable in the summary (argLayer.status).
     arg_agents: list[dict] = []
-    if ctx.use_arg and probe_arg_resource_type(ctx, session):
-        try:
-            arg_agents = [
-                map_agent_record(ctx, item, DISCOVERY_SOURCE_ARG)
-                for item in query_arg_inventory(ctx, session)
-            ]
-        except ThrottlingExhaustedError as exc:
-            # ARG throttled to exhaustion: discard the partial (and therefore
-            # misleading) ARG results and rely on the Layer 2 per-environment
-            # scan instead of aborting the run (L-3).
-            logger.warning("ARG layer throttled to exhaustion; discarding partial "
-                           "ARG results and falling back to Layer 2: %s", exc)
-            arg_agents = []
-    elif ctx.use_arg:
-        logger.info("ARG path unavailable — using Layer 2 per-environment scan "
-                    "as the load-bearing default.")
+    arg_layer_status = "Disabled"    # --no-arg
+    arg_query_http: Optional[int] = None
+    if ctx.use_arg:
+        arg_layer_status = "Unavailable"
+        if probe_arg_resource_type(ctx, session):
+            try:
+                arg_agents = [
+                    map_agent_record(ctx, item, DISCOVERY_SOURCE_ARG)
+                    for item in query_arg_inventory(ctx, session)
+                ]
+                arg_layer_status = "Available"
+            except ThrottlingExhaustedError as exc:
+                # ARG throttled to exhaustion: discard the partial (and therefore
+                # misleading) ARG results and rely on the Layer 2 per-environment
+                # scan instead of aborting the run (L-3). Recorded as Failed, NOT
+                # as an observed zero.
+                logger.warning("ARG layer throttled to exhaustion; discarding "
+                               "partial ARG results and falling back to Layer 2: "
+                               "%s", exc)
+                arg_agents = []
+                arg_layer_status = "Failed"
+            except ArgQueryError as exc:
+                logger.warning("ARG query failed (HTTP %s); falling back to Layer 2. "
+                               "The ARG layer is Failed, not an observed zero.",
+                               exc.http_status)
+                arg_agents = []
+                arg_layer_status = "Failed"
+                arg_query_http = exc.http_status
+            except requests.exceptions.RequestException as exc:
+                logger.warning("ARG query transport error; falling back to "
+                               "Layer 2: %s", exc)
+                arg_agents = []
+                arg_layer_status = "Failed"
+        else:
+            logger.info("ARG path unavailable — using Layer 2 per-environment scan "
+                        "as the load-bearing default.")
 
-    environments = enumerate_environments(ctx, session)
+    # Layer 2 — per-environment enumeration + scan. Enumeration failure is an
+    # explicit, non-success outcome: a 401/403/5xx or malformed environment list
+    # must never look like a genuinely empty tenant. A real HTTP 200 with an
+    # empty list is a genuine (representable) empty result.
+    enumeration_failed = False
+    enumeration_http: Optional[int] = None
+    enumeration_reason = ""
+    try:
+        environments = enumerate_environments(ctx, session)
+    except (EnvironmentEnumerationError, ThrottlingExhaustedError,
+            requests.exceptions.RequestException) as exc:
+        enumeration_failed = True
+        enumeration_http = getattr(exc, "http_status", None)
+        enumeration_reason = _sanitize_reason(exc)
+        environments = []
+        logger.error("Environment enumeration FAILED (HTTP %s): %s — the scan is "
+                     "marked Failed, NOT a clean empty tenant.",
+                     enumeration_http, exc)
+
     scanned_agents: list[dict] = []
     features: list[dict] = []
     auth_shares: list[dict] = []
+    env_failures: list[dict] = []
+    env_statuses: list[str] = []
+
+    # Power Platform can return environments that explicitly have no Dataverse
+    # database. Layer 2 does not apply to those environments; they remain part of
+    # the enumeration count but are not submitted as malformed relative URLs.
+    scan_environments = [
+        environment
+        for environment in environments
+        if not _environment_has_no_dataverse(environment)
+    ]
+    skipped_no_dataverse = len(environments) - len(scan_environments)
+    if skipped_no_dataverse:
+        logger.info(
+            "Skipping %d environment(s) explicitly classified without Dataverse; "
+            "Layer 2 is not applicable to them.",
+            skipped_no_dataverse,
+        )
 
     # Throttled concurrent per-environment fan-out (~10 workers, 429 backoff).
     with ThreadPoolExecutor(max_workers=ctx.max_workers) as pool:
         futures = {
             pool.submit(_scan_one_environment, ctx, session, env): env
-            for env in environments
+            for env in scan_environments
         }
         for future in as_completed(futures):
             outcome = future.result()
             scanned_agents.extend(outcome["agents"])
             features.extend(outcome["features"])
             auth_shares.extend(outcome.get("authShares", []))
+            env_failures.extend(outcome.get("failures", []))
+            env_statuses.append(outcome.get("status", "Complete"))
 
-    # --- Layer 4 — Package Management API (feature-flagged; default OFF) -----------
-    # When --enable-package-api is set, fetch the GA v1.0 catalog endpoint and
-    # reconcile packages against the existing bot-GUID agent set. Off by default
-    # so the three-layer behavior is byte-for-byte unchanged without the flag.
+    (
+        agent365_resolved_state,
+        agent365_resolution_source,
+        agent365_detection_confidence,
+        sku_probe,
+    ) = _resolve_agent365_state(ctx, session)
+
     package_new_rows: list[dict] = []
-    package_truncated = False
-    if ctx.enable_package_api:
+    package_fetch = PackageApiFetchResult(
+        outcome=PackageApiOutcome.DEFERRED,
+        attempted=False,
+        packages=[],
+        paging_truncated=False,
+        reason="Package API deferred for the requested Agent 365 mode.",
+    )
+    if agent365_resolved_state in {AGENT365_STATE_PRESENT, AGENT365_STATE_INCONCLUSIVE}:
         primary_agents = arg_agents if arg_agents else scanned_agents
-        try:
-            raw_packages, package_truncated = fetch_package_catalog(ctx, session)
-        except (requests.exceptions.RequestException, json.JSONDecodeError) as exc:
-            # Transport or parse failure from the Package API layer: mirror the
-            # ARG-layer throttle guard (L-3) — mark INCOMPLETE and continue
-            # rather than aborting the whole scan.
-            logger.warning(
-                "Package Management API layer failed with a transport or parse "
-                "error; marking layer INCOMPLETE (GATE-1): %s", exc,
-            )
-            raw_packages = []
-            package_truncated = True
+        package_fetch = fetch_package_catalog_details(ctx, session)
         _, package_new_rows = reconcile_package_catalog(
-            ctx, raw_packages, primary_agents, truncated=package_truncated
+            ctx,
+            package_fetch.packages,
+            primary_agents,
+            truncated=package_fetch.paging_truncated,
         )
-        if package_truncated:
+        if package_fetch.paging_truncated:
             logger.warning(
                 "Package Management API paging was truncated; "
-                "package-layer discovery is INCOMPLETE (GATE-1)."
+                "package-layer discovery is INCOMPLETE."
             )
+
+    package_layer_status = _package_layer_status(package_fetch)
 
     reconciliation = reconcile_sources(arg_agents, scanned_agents)
 
@@ -1243,18 +2055,111 @@ def scan_all(ctx: ScanContext) -> dict:
     final_agents = list(arg_agents or scanned_agents)
     final_agents.extend(package_new_rows)
 
+    # Derive the overall scan status/completeness. Enumeration and per-environment
+    # failures degrade the overall status so a partial or authorization-blocked
+    # scan is never indistinguishable from a clean, complete one.
+    if enumeration_failed:
+        overall_status = "Failed"
+    elif env_statuses and all(s == "Failed" for s in env_statuses):
+        overall_status = "Failed"
+    elif (any(s in ("Failed", "Incomplete") for s in env_statuses)
+          or arg_layer_status == "Failed"):
+        overall_status = "Incomplete"
+    else:
+        overall_status = "Complete"
+
+    if package_layer_status in {LAYER_STATUS_FAILED, LAYER_STATUS_UNSUPPORTED}:
+        if ctx.agent365_requested_mode == AGENT365_MODE_PRESENT:
+            overall_status = "Failed"
+        elif overall_status != "Failed":
+            overall_status = "Incomplete"
+    elif package_layer_status == LAYER_STATUS_PARTIAL and overall_status == "Complete":
+        overall_status = "Incomplete"
+
+    if (
+        ctx.agent365_requested_mode == AGENT365_MODE_AUTO
+        and agent365_resolved_state == AGENT365_STATE_INCONCLUSIVE
+        and not ctx.dry_run
+        and overall_status == "Complete"
+    ):
+        overall_status = "Incomplete"
+    if ctx.dry_run:
+        overall_status = "Dry Run"
+
+    if enumeration_failed:
+        enumeration_status = "Failed"
+    elif ctx.dry_run:
+        enumeration_status = "Dry Run"
+    else:
+        enumeration_status = "Success"
+
+    agent365_http_status = package_fetch.http_status or sku_probe.http_status
+    agent365_error_code = package_fetch.error_code or sku_probe.error_code
+    agent365_error_subcode = package_fetch.error_subcode or sku_probe.error_subcode
+    agent365_reason = package_fetch.reason or sku_probe.reason
+    if (
+        ctx.agent365_requested_mode == AGENT365_MODE_AUTO
+        and agent365_resolved_state == AGENT365_STATE_NOT_DETECTED
+    ):
+        agent365_reason = (
+            "No heuristic Agent 365 name aliases detected; this is non-authoritative. "
+            "Manual verification or --agent365 present override is recommended."
+        )
+    packages_observed: Optional[int] = (
+        len(package_fetch.packages) if package_fetch.attempted else None
+    )
+    package_new_row_count: Optional[int] = (
+        len(package_new_rows) if package_fetch.attempted else None
+    )
+    requested_mode_label = AGENT365_MODE_CHOICE_LABELS.get(
+        ctx.agent365_requested_mode,
+        AGENT365_MODE_CHOICE_LABELS[DEFAULT_AGENT365_MODE],
+    )
+
     summary: dict = {
         "runId": ctx.run_id,
+        "status": overall_status,
         "argAgentCount": len(arg_agents),
         "scannedAgentCount": len(scanned_agents),
+        "coreAgentCount": len(final_agents),
         "featureCount": len(features),
         "authShareCount": len(auth_shares),
         "environmentCount": len(environments),
+        "environmentEnumeration": {
+            "status": enumeration_status,
+            "environmentCount": len(environments),
+            "dataverseEnvironmentCount": len(scan_environments),
+            "skippedNoDataverseCount": skipped_no_dataverse,
+            "httpStatus": enumeration_http,
+            "reason": enumeration_reason,
+        },
+        "argLayer": {
+            "status": arg_layer_status,
+            "agentCount": len(arg_agents),
+            "httpStatus": arg_query_http,
+        },
+        "agent365": {
+            "requestedMode": requested_mode_label,
+            "resolvedState": agent365_resolved_state,
+            "resolutionSource": agent365_resolution_source,
+            "detectionConfidence": agent365_detection_confidence,
+            "licenseProbeAttempted": sku_probe.attempted,
+            "packageApiAttempted": package_fetch.attempted,
+            "layerStatus": package_layer_status,
+            "httpStatus": agent365_http_status,
+            "errorCode": _sanitize_code(agent365_error_code),
+            "errorSubcode": _sanitize_code(agent365_error_subcode),
+            "reason": _sanitize_reason(agent365_reason),
+            "packagesObserved": packages_observed,
+            "packageNewRowCount": package_new_row_count,
+            "pagingTruncated": bool(package_fetch.paging_truncated),
+        },
+        "environmentFailures": env_failures,
         "reconciliation": reconciliation,
     }
-    if ctx.enable_package_api:
+    if package_fetch.attempted:
         summary["packageNewRowCount"] = len(package_new_rows)
-        summary["packageScanTruncated"] = package_truncated
+        summary["packageScanTruncated"] = bool(package_fetch.paging_truncated)
 
     # -------------------------------------------------------------------------
     # Step 5 — Registry correlation (optional; only when --registry-export set).
@@ -1499,6 +2404,85 @@ def scan_all(ctx: ScanContext) -> dict:
                 "status": _ent_status,
             }
 
+    if not ctx.use_arg:
+        arg_scope_status = LAYER_STATUS_DEFERRED
+    elif ctx.dry_run:
+        arg_scope_status = LAYER_STATUS_DRY_RUN
+    elif arg_layer_status == "Available":
+        arg_scope_status = LAYER_STATUS_FULL
+    elif arg_layer_status == "Unavailable":
+        arg_scope_status = LAYER_STATUS_UNSUPPORTED
+    else:
+        arg_scope_status = LAYER_STATUS_FAILED
+
+    if ctx.dry_run:
+        env_scope_status = LAYER_STATUS_DRY_RUN
+    elif enumeration_failed or (env_statuses and all(s == "Failed" for s in env_statuses)):
+        env_scope_status = LAYER_STATUS_FAILED
+    elif any(s in ("Failed", "Incomplete") for s in env_statuses):
+        env_scope_status = LAYER_STATUS_PARTIAL
+    else:
+        env_scope_status = LAYER_STATUS_FULL
+
+    if not ctx.registry_export_path:
+        registry_scope_status = LAYER_STATUS_DEFERRED
+    else:
+        reg_status = str(summary.get("registryCorrelation", {}).get("status") or "")
+        registry_scope_status = (
+            LAYER_STATUS_FULL
+            if reg_status == "Complete"
+            else LAYER_STATUS_PARTIAL
+            if reg_status == "Incomplete"
+            else LAYER_STATUS_FAILED
+        )
+
+    if not ctx.resolve_entitlement:
+        entitlement_scope_status = LAYER_STATUS_DEFERRED
+    else:
+        ent_status = str(summary.get("entitlementResolution", {}).get("status") or "")
+        if ent_status == "Skipped (dry-run)":
+            entitlement_scope_status = LAYER_STATUS_DRY_RUN
+        elif ent_status == "Complete":
+            entitlement_scope_status = LAYER_STATUS_FULL
+        elif ent_status == "Failed":
+            entitlement_scope_status = LAYER_STATUS_FAILED
+        else:
+            entitlement_scope_status = LAYER_STATUS_PARTIAL
+
+    authoritative_for = [
+        "Copilot Studio inventory from ARG and per-environment Dataverse layers."
+    ]
+    if package_layer_status == LAYER_STATUS_FULL:
+        authoritative_for.append(
+            "Agent Builder package catalog from the Microsoft Graph Package API."
+        )
+
+    limitations = [
+        "Deferred or NotDetected Agent 365 state is not an authoritative Agent Builder catalog."
+    ]
+    if package_layer_status in {LAYER_STATUS_PARTIAL, LAYER_STATUS_FAILED, LAYER_STATUS_UNSUPPORTED}:
+        limitations.append(
+            "Package API layer was not fully successful; review summary.agent365 before treating Agent Builder coverage as complete."
+        )
+    if sku_probe.http_status in {401, 403}:
+        limitations.append(
+            "Agent 365 license probe permission guidance: "
+            f"{SUBSCRIBED_SKUS_PERMISSION_GUIDANCE}"
+        )
+
+    summary["coverageScope"] = {
+        "layers": {
+            "arg": arg_scope_status,
+            "environmentDataverse": env_scope_status,
+            "packageApi": package_layer_status,
+            "registry": registry_scope_status,
+            "entitlement": entitlement_scope_status,
+        },
+        "authoritativeFor": authoritative_for,
+        "limitations": limitations,
+        "warning": "Deferred/NotDetected is not an authoritative Agent Builder catalog.",
+    }
+
     logger.info("Scan summary: %s", json.dumps(summary, default=str))
     return {
         "summary": summary,
@@ -1511,6 +2495,60 @@ def scan_all(ctx: ScanContext) -> dict:
 # =============================================================================
 # CLI Entry Point
 # =============================================================================
+
+
+def _resolve_requested_agent365_mode(
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,
+) -> tuple[str, str, tuple[str, ...]]:
+    """Resolve requested Agent 365 mode with precedence + contradiction checks."""
+    cli_mode = args.agent365
+    env_raw = os.environ.get("CAI_AGENT365")
+    env_mode: Optional[str] = None
+    if env_raw and env_raw.strip():
+        env_mode = env_raw.strip().lower()
+        if env_mode not in AGENT365_MODES:
+            parser.error(
+                f"CAI_AGENT365 must be one of {', '.join(AGENT365_MODES)}; got {env_raw!r}."
+            )
+
+    alias_requested = bool(args.enable_package_api)
+    if cli_mode and env_mode and cli_mode != env_mode:
+        parser.error(
+            f"Conflicting Agent 365 modes: --agent365 {cli_mode} and CAI_AGENT365={env_mode}."
+        )
+    if alias_requested and cli_mode and cli_mode != AGENT365_MODE_PRESENT:
+        parser.error(
+            "--enable-package-api is a deprecated alias for '--agent365 present' and "
+            "cannot be combined with '--agent365 absent|auto'."
+        )
+    if alias_requested and not cli_mode and env_mode and env_mode != AGENT365_MODE_PRESENT:
+        parser.error(
+            "--enable-package-api (present) conflicts with CAI_AGENT365="
+            f"{env_mode}. Use only one mode declaration."
+        )
+
+    if cli_mode:
+        requested_mode = cli_mode
+        resolution_source = "CLI"
+    elif env_mode:
+        requested_mode = env_mode
+        resolution_source = "Environment"
+    elif alias_requested:
+        requested_mode = AGENT365_MODE_PRESENT
+        resolution_source = "DeprecatedAlias"
+    else:
+        requested_mode = DEFAULT_AGENT365_MODE
+        resolution_source = "Default"
+
+    if alias_requested:
+        logger.warning(
+            "DEPRECATED: --enable-package-api is retained for one release and maps to "
+            "--agent365 present. Use --agent365 present explicitly."
+        )
+
+    overrides = _parse_agent365_alias_overrides(_get_agent365_alias_override_raw())
+    return requested_mode, resolution_source, overrides
 
 
 def main() -> None:
@@ -1526,7 +2564,7 @@ def main() -> None:
             "  python discover_agents.py --auth-mode managed-identity \\\n"
             "    --tenant-id <tenant> --output scan.json\n\n"
             "  # Full integrated scan with registry correlation + entitlement\n"
-            "  python discover_agents.py --enable-package-api \\\n"
+            "  python discover_agents.py --agent365 present \\\n"
             "    --registry-export export.xlsx \\\n"
             "    --columnmap templates/registry-columnmap.sample.json \\\n"
             "    --as-of 2026-07-20T18:00:00Z \\\n"
@@ -1555,15 +2593,21 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true",
                         help="Log planned API calls without contacting any service")
     parser.add_argument(
+        "--agent365",
+        choices=list(AGENT365_MODES),
+        default=None,
+        help=(
+            "Agent 365 mode: present | absent | auto. "
+            "Precedence: explicit CLI > CAI_AGENT365 > --enable-package-api alias > default absent."
+        ),
+    )
+    parser.add_argument(
         "--enable-package-api",
         action="store_true",
         default=False,
         help=(
-            "Enable the Layer 4 Package Management API discovery "
-            "(GET /v1.0/copilot/admin/catalog/packages, application permission "
-            "CopilotPackages.Read.All, admin-consented). Default OFF. "
-            "When OFF, three-layer behavior is byte-for-byte unchanged. "
-            "Prerequisite: Microsoft Agent 365 license on the tenant."
+            "DEPRECATED one-release alias for '--agent365 present'. "
+            "Use --agent365 present instead."
         ),
     )
     # Registry correlation flags (D).
@@ -1637,6 +2681,15 @@ def main() -> None:
         parser.error("--tenant-id is required for live scans unless using "
                      "system-assigned managed identity")
 
+    # --resolve-entitlement has no owner source without a registry export, so it
+    # would otherwise perform no entitlement work silently. Fail fast.
+    if args.resolve_entitlement and not args.registry_export:
+        parser.error("--resolve-entitlement requires --registry-export: owner "
+                     "entitlement is resolved only for owners attributed by the "
+                     "registry correlation step. Provide --registry-export (and, "
+                     "if needed, --columnmap / --as-of), or drop "
+                     "--resolve-entitlement.")
+
     # Validate --as-of before constructing the context.
     as_of_validated: Optional[str] = None
     if args.as_of:
@@ -1645,7 +2698,13 @@ def main() -> None:
         except ValueError as exc:
             parser.error(f"--as-of: {exc}")
 
-    run_id = f"cai-{int(time.time())}"
+    (
+        requested_agent365_mode,
+        agent365_resolution_source,
+        alias_overrides,
+    ) = _resolve_requested_agent365_mode(args, parser)
+
+    run_id = _generate_run_id()
     ctx = ScanContext(
         run_id=run_id,
         dry_run=args.dry_run,
@@ -1656,7 +2715,9 @@ def main() -> None:
         tenant_id=args.tenant_id,
         client_id=args.client_id,
         auth_mode=args.auth_mode,
-        enable_package_api=args.enable_package_api,
+        agent365_requested_mode=requested_agent365_mode,
+        agent365_resolution_source=agent365_resolution_source,
+        agent365_alias_overrides=alias_overrides,
         registry_export_path=args.registry_export or None,
         columnmap_path=args.columnmap if args.registry_export else None,
         as_of=as_of_validated,
@@ -1674,6 +2735,20 @@ def main() -> None:
         out_path = Path(args.output)
         out_path.write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")
         logger.info("Wrote scan result to %s", out_path)
+
+    # Fail the process when environment enumeration or the full environment scan
+    # fails. Partial environment gaps remain usable output with an explicit
+    # Incomplete status and warning. Evidence (if requested) is written first.
+    status = result.get("summary", {}).get("status")
+    if status == "Failed":
+        logger.error("Scan status is Failed (see summary.environmentEnumeration / "
+                     "summary.environmentFailures); exiting non-zero.")
+        sys.exit(1)
+    if status == "Incomplete":
+        logger.warning("Scan status is Incomplete: %d environment failure(s) "
+                       "recorded (see summary.environmentFailures). Review the "
+                       "coverage gap before treating the inventory as complete.",
+                       len(result.get("summary", {}).get("environmentFailures", [])))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # Architecture - Copilot Agent Inventory
 
-> **Status:** `0.3.0-preview`. This document describes the intended architecture
+> **Status:** `0.4.0-preview`. This document describes the intended architecture
 > of the discovery scanner and the canonical Dataverse system-of-record. Several
 > build-time facts are tagged for live verification (see
 > [Assumptions and build-time verifications](#assumptions-and-build-time-verifications));
@@ -61,6 +61,10 @@ For each environment returned by admin enumeration, the scanner queries the
 environment's Dataverse instance for `bot` records and their `botcomponent`
 children to enumerate agent features.
 
+The `bot` table does not supply the ARG `createdIn` authoring-surface field.
+Layer 2 can preserve inventory coverage when ARG is unavailable, but it cannot
+by itself distinguish Copilot Studio from Microsoft 365 Copilot Agent Builder.
+
 - **Lookup correction (✅ verified):** the `botcomponent` → `bot` parent is
   **`parentbotid` (`_parentbotid_value`)** via the `botcomponent_parent_bot`
   relationship — **not** `_botid_value`. Filtering on `_botid_value` returns
@@ -100,8 +104,12 @@ written to the inventory so coverage gaps are auditable rather than silent.
 
 ### Layer 4 — Package Management API (Agent Builder catalog, GA v1.0)
 
-> **Activation:** requires `--enable-package-api` (off by default) and the
-> `CopilotPackages.Read.All` application permission. See
+> **Activation:** selected by the license-aware **Agent 365 mode**
+> (`--agent365 present|absent|auto`, env `CAI_AGENT365`, default `absent`; the
+> deprecated `--enable-package-api` flag is a one-release alias for
+> `--agent365 present`). See
+> [Agent 365 mode selection](#agent-365-mode-selection-license-aware-layer-4)
+> below and
 > [prerequisites.md](prerequisites.md#package-management-api-layer-4-prerequisites).
 
 - **Scope — Agent Builder only:** this layer queries packages filtered to
@@ -112,18 +120,29 @@ written to the inventory so coverage gaps are auditable rather than silent.
 - **Endpoint:** `GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages`
   with `$filter=platform eq 'Microsoft 365 Copilot Agent Builder'`. The
   `platform` field supports `$filter` with `eq`.
+- **Documentation caveat:** the list-method documentation explicitly enumerates
+  `Copilot Studio` and `Microsoft 365 Copilot Agent Builder` as the supported
+  `platform` filter values, while the resource property's generic description
+  uses host-platform examples such as `web`. This implementation follows the
+  list-method contract. The licensed result remains **Static/Mock — Not Observed
+  Live** until the filter and an observed-empty response can be verified in an
+  Agent 365-licensed tenant.
 - **Auth:** application (app-only) permission `CopilotPackages.Read.All`
-  (admin-consented). No signed-in user required for unattended automation.
+  (admin-consented) with a Microsoft Agent 365 license. No signed-in user
+  required for unattended automation.
 - **Response envelope:** `{ "value": [ copilotPackage ] }`.
 - **Fields captured per package:** `id` (`P_...`), `displayName`, `type`
   (`microsoft` / `external` / `shared` / `custom`), `platform`, `publisher`,
   `version`, `manifestId`, `manifestVersion`, `appId`, `availableTo`,
   `deployedTo`, `supportedHosts[]`, `elementTypes[]`
   (`Bots` / `DeclarativeAgent` / `CustomEngineAgent`), `isBlocked`.
-  **No `owner`, `creator`, or `createdDate` field is returned by this API.**
+  **No `owner`, `creator`, or `createdDate` field is returned by this API — the
+  v1 list and detail resources expose none.** Owner attribution stays sourced
+  from the Agent Registry export (a temporary identity bridge), and is referred
+  to as the **owner**, never the creator.
 - **Pagination:** `@odata.nextLink` is handled defensively. A truncated pull
-  is recorded as an `Incomplete Scan` (GATE-1), never treated as a complete or
-  silently empty result.
+  is recorded as `pagingTruncated: true` and an `Incomplete Scan` (GATE-1),
+  never treated as a complete or silently empty result.
 - **Reconciliation rule:** packages are joined to existing `fsi_copilotagent`
   rows (Agent Builder rows only — Copilot Studio rows are not enriched by this
   layer) via `appId` (Package.appId == `fsi_entraappid`) then `manifestId`. On
@@ -135,6 +154,127 @@ written to the inventory so coverage gaps are auditable rather than silent.
 - **Id-space isolation:** package `P_...` ids occupy a distinct space from
   Copilot Studio bot GUIDs. `reconcile_sources()` guards against cross-id-space
   false drift (see [Reconciliation limitation](#reconciliation-limitation) below).
+- **API errors are typed, never absence.** An HTTP `401` / `403` / `404` /
+  `429` / `5xx` from this endpoint is recorded as a `Partial` / `Failed` /
+  `Unsupported` layer outcome. It is **never** interpreted as "the tenant has no
+  Agent 365 license" and **never** maps to `Absent` / `NotDetected` / `Deferred`
+  (see [Agent 365 mode selection](#agent-365-mode-selection-license-aware-layer-4)).
+
+## Agent 365 Mode Selection (license-aware Layer 4)
+
+Whether Layer 4 runs is an **operator decision**, expressed as a three-valued
+mode. The mode never blocks Layers 1–3: a tenant with Agent Builder agents is
+always discoverable through ARG and the per-environment Dataverse scan
+regardless of the Agent 365 mode.
+
+### Modes, environment variable, and precedence
+
+- **`--agent365 present|absent|auto`** — the primary control. It may also be set
+  by the **`CAI_AGENT365`** environment variable. The **default is `absent`**.
+- **Precedence (deterministic):** **explicit CLI flag > `CAI_AGENT365`
+  environment variable > deprecated `--enable-package-api` alias > default
+  (`absent`)**.
+- **Contradictions fail closed.** An invalid value, or a contradiction such as
+  `--agent365 absent` together with `--enable-package-api` (which means
+  `present`), **fails argument validation** — the scanner does not silently pick
+  a winner. `--enable-package-api` with no `--agent365` resolves to `present`
+  for one release and logs a deprecation warning.
+- **No interactive prompt.** The operator selects the mode up front (CLI, env,
+  or the flow's `Agent365Mode` variable); the scanner never prompts at runtime.
+
+### What each mode does
+
+| Mode | License probe (`subscribedSkus`) | Package API | Resolved state | Layer status |
+|------|----------------------------------|-------------|----------------|--------------|
+| `absent` (default) | No | No | `Absent` (authoritative operator declaration) | `Deferred` |
+| `present` | No | Yes (attempted) | `Present` (declared) | `Full` on success; `Partial` / `Failed` / `Unsupported` on a typed API outcome |
+| `auto`, SKU matched | Yes | Yes (attempted) | `Present` | `Full` / `Partial` / `Failed` / `Unsupported` |
+| `auto`, successful no-match | Yes | No | `NotDetected` (heuristic) | `Deferred` |
+| `auto`, probe failed | Yes (failed) | Yes (best-effort attempt) | `Inconclusive` | `Full` / `Partial` / `Failed` / `Unsupported` per the Package API outcome; overall run is `Incomplete` |
+
+- **`absent` is an authoritative declaration**, not an inference. It calls
+  **neither** `subscribedSkus` **nor** the Package API, keeps Layers 1–3,
+  registry owner attribution, and entitlement resolution fully available, and
+  marks Layer 4 `Deferred`. **A `Deferred` Layer 4 never means zero Agent
+  Builder agents** — it means the package catalog was not observed. ARG
+  (Layer 1) can classify Agent Builder agents through `createdIn`; Layer 2 still
+  inventories `bot` rows but does not supply that field. If ARG is unavailable,
+  authoring-surface classification remains unknown.
+- **`auto` probes licensing conservatively.** It calls Graph
+  `GET /v1.0/subscribedSkus` (which supports only `$select`, not `$filter`, so
+  the scanner enumerates SKUs and matches locally). Because the public Microsoft
+  licensing-service-plan reference does **not** currently publish
+  `skuPartNumber` / `servicePlanName` mappings for **Agent 365**, **Agent 365
+  Frontier**, or **Microsoft 365 E7**, matching is a **conservative exact-name
+  heuristic plus an operator-supplied override list**. A successful probe that
+  finds no matching SKU is **`NotDetected` with heuristic confidence — not
+  authoritative absence.** Only an operator's explicit `absent` declaration
+  produces `Absent`.
+- **`present` attempts the Package API directly** without a license probe.
+
+### `summary.agent365`
+
+The scanner always emits an `agent365` resolution block in its JSON `summary`:
+
+| Field | Meaning |
+|-------|---------|
+| `requestedMode` | `Present` / `Absent` / `Auto` — the mode after precedence resolution (the scanner emits title-case; the `--agent365` CLI flag stays lower-case). |
+| `resolvedState` | `Present` / `Absent` / `NotDetected` / `Inconclusive`. |
+| `resolutionSource` | A plain **String** naming what determined the state — one of `CLI`, `Environment`, `DeprecatedAlias`, `Default`, `LicenseProbe`, or `DryRun`. Persisted directly to `fsi_agent365resolutionsource` (no option-set conversion). |
+| `detectionConfidence` | `OperatorDeclared` (explicit `present` / `absent`), `Heuristic` (`auto` exact-name license match or no-match), or `Inconclusive` (`auto` probe could not decide). `Confirmed` and `NotApplicable` are reserved schema labels for additional resolvers. |
+| `licenseProbeAttempted` | Whether `subscribedSkus` was called (`auto` only). |
+| `packageApiAttempted` | Whether the Package API was called. |
+| `layerStatus` | `Full` / `Deferred` / `Unsupported` / `Partial` / `Failed` / `Dry Run`. |
+| `httpStatus` | Last Package-API / probe HTTP status (nullable). |
+| `errorCode` / `errorSubcode` / `reason` | Sanitized error classification (token material scrubbed); empty on success. |
+| `packagesObserved` | Count of Agent Builder packages returned by the API (`null` when not attempted). |
+| `packageNewRowCount` | New package-only rows created (`null` when not attempted). |
+| `pagingTruncated` | `true` if `@odata.nextLink` paging was truncated. |
+
+> **Null vs zero.** `packagesObserved` / `packageNewRowCount` are **`null`** when
+> the Package API was **not observed** (deferred / not attempted) and **`0`** when
+> the API **was** attempted and returned an **empty** catalog. A null count is
+> "we did not look"; a zero count is "we looked and found none." Never collapse
+> the two.
+
+`summary.packageNewRowCount` and `summary.packageScanTruncated` remain as
+**deprecated top-level mirrors** for one release, populated **only when the
+Package API is attempted**. Read the `summary.agent365` fields instead.
+
+### `summary.coverageScope`
+
+The scanner always emits a `coverageScope` block describing what the run does and
+does not authoritatively cover. Per-layer statuses are nested under
+`coverageScope.layers`; `authoritativeFor`, `limitations`, and `warning` sit at
+the `coverageScope` top level:
+
+| Field | Meaning |
+|-------|---------|
+| `layers.arg` | Layer 1 status (`Full` / `Partial` / `Failed` / `Unsupported` / `Dry Run`). |
+| `layers.environmentDataverse` | Layer 2 status. |
+| `layers.packageApi` | Layer 4 status (`Full` / `Deferred` / `Unsupported` / `Partial` / `Failed` / `Dry Run`). |
+| `layers.registry` | Registry-correlation status. |
+| `layers.entitlement` | Entitlement-resolution status. |
+| `authoritativeFor` | The dimensions this run authoritatively covers (for example Copilot Studio agents, environment inventory, registry-owner correlation). |
+| `limitations` | Named coverage limits for this run. |
+| `warning` | An explicit statement that a `Deferred` / `NotDetected` Layer 4 **is not an authoritative Agent Builder catalog** and must not be read as an absence of Agent Builder agents. |
+
+### Run-status impact (what degrades a run, what only informs)
+
+Run-level status (`summary.status`) and notifications distinguish *expected*
+declared-scope outcomes from *failures*:
+
+- **Do not degrade** an otherwise complete declared-scope run: `Deferred` and a
+  heuristic `NotDetected`. In `absent` mode a clean run is still
+  `summary.status == "Complete"` with Layer 4 `Deferred`.
+- **Do degrade** the run: a `Partial`, `Failed`, or `Unsupported` layer outcome
+  (an `Unsupported` *attempted* layer is a coverage failure the platform could not
+  satisfy), or an overall `Incomplete` / `Failed` run.
+- **Alert** (Step 9 of the flow) on `Partial` / `Failed` / `Unsupported`
+  requested-layer outcomes, an `Inconclusive` resolution, or an overall
+  `Incomplete` / `Failed` run — **not** on `Deferred` / `NotDetected`, which are
+  informational. A
+  `Deferred` Layer 4 is **never** reported as "zero Agent Builder agents."
 
 ## Scan Completeness
 
@@ -150,6 +290,41 @@ successful match. Full feature enumeration (instructions, knowledge sources,
 capabilities) remains unavailable via any public API for Agent Builder agents;
 `fsi_caicompliancestate.fsi_scancompletenessreason` records the specific
 gap.
+
+### Run status and coverage gaps (fail-visible discovery)
+
+Per-agent scan completeness (above) is distinct from the **run-level status** the
+scanner reports in its JSON `summary`. Discovery is fail-visible: an
+authorization or API failure must never look like a clean, agent-free tenant.
+
+- **`summary.status`** — `Complete` / `Incomplete` / `Failed` for the whole run.
+- **`summary.environmentEnumeration`** — `status` (`Success` / `Failed` /
+  `Dry Run`), `environmentCount`, `dataverseEnvironmentCount`,
+  `skippedNoDataverseCount`, `httpStatus`, `reason`. The two scoped counts make
+  the Layer 2 denominator auditable: total enumerated = Layer 2-scoped +
+  explicitly no-Dataverse. A failed environment
+  list (401/403/5xx or malformed body) is a `Failed` enumeration, **not** an empty
+  tenant, and the scanner exits non-zero.
+- **`summary.argLayer`** — `status` (`Available` / `Unavailable` / `Failed` /
+  `Disabled`) and `agentCount`. `Failed` (a query error or throttle-exhaustion) is
+  distinct from `Available` with `agentCount: 0` (an observed zero); a failed ARG
+  query falls back to the load-bearing Layer 2 scan rather than being treated as
+  zero agents.
+- **`summary.environmentFailures[]`** — one structured record per per-environment
+  coverage gap (`environmentId`, `stage` = `bots` / `botcomponents` /
+  `environment`, `httpStatus`, sanitized `reason`, and `botId` for feature-scan
+  gaps). A per-environment `bots` failure degrades the run to `Incomplete` (or
+  `Failed` if every environment failed) and the agent count from that environment
+  is **not** counted as an observed zero. Token material is scrubbed from reasons;
+  ordinary environment identifiers are retained for provenance.
+- The BAP environment response exposes the Dataverse URL at
+  `properties.linkedEnvironmentMetadata.instanceUrl`; the scanner normalizes that
+  nested value before building OData URLs. Environments explicitly classified
+  with `databaseType: "None"` remain in `environmentCount` but are not submitted
+  to Layer 2 because the Dataverse scan is not applicable.
+
+Downstream persistence (the Power Automate flow) reads these fields to alert on
+coverage gaps rather than silently recording a partial inventory as complete.
 
 ## Package API — Owner Attribution and Entitlement
 
@@ -208,7 +383,7 @@ Reconciliation code guards against cross-id-space false positives; the
 ### BI dataset — three governance questions
 
 The combined output of the integrated scanner (`discover_agents.py
---enable-package-api --registry-export ... --resolve-entitlement --output
+--agent365 present --registry-export ... --resolve-entitlement --output
 scan.json`) answers three governance questions directly from `fsi_copilotagent`
 and includes two new top-level summary blocks in the JSON output:
 
@@ -232,12 +407,19 @@ is handled by the Power Automate flow described in
 Filter results by `fsi_ownermatchconfidence` to exclude or flag low-confidence
 owner attributions in reports.
 
-## 8-Entity Data Model
+## 9-Entity Data Model
 
-The canonical store is eight Dataverse tables (logical names below; all
+The canonical store is nine Dataverse tables (logical names below; all
 `OrganizationOwned`). See [dataverse-schema.md](dataverse-schema.md) for the
 full column and option-set reference (auto-generated from
 `scripts/create_cai_dataverse_schema.py`).
+
+> **Preview note.** `fsi_caiscanrun` is introduced in v0.4.0-preview. The schema
+> script and the generated `dataverse-schema.md` reference are updated during the
+> companion scanner/schema integration; until that integration lands, treat the
+> `fsi_caiscanrun` column names below as the proposed contract (logical name =
+> SchemaName lowercased, no inserted underscores) and defer exact option-set
+> numeric values to the generated reference.
 
 | Logical name | Role |
 |--------------|------|
@@ -249,11 +431,67 @@ full column and option-set reference (auto-generated from
 | `fsi_caiusagesignal` | Aggregated usage/invocation signal (counts aggregated at source, not per-event). |
 | `fsi_caiworkiqstate` | Downstream shell — Work IQ tier (MCP-in-Copilot-Studio vs Direct Work IQ API) and observed invocation state. Populated by a later solution. |
 | `fsi_caicompliancestate` | Per-agent risk level, scan completeness, and violation rollup. |
+| `fsi_caiscanrun` | **Run ledger** — exactly one row per scan run: timing, overall status, the full `summary.agent365` resolution, `summary.coverageScope`, per-layer statuses/counts, and the complete summary JSON. See below. |
 
 `fsi_caibillingentitlement` and `fsi_caiworkiqstate` are deliberately scaffolded
 as **downstream shells** in this preview: their columns exist so the canonical
 model is stable, but the billing-entitlement and Work IQ resolvers are owned by
 later solutions in the build graph.
+
+### `fsi_caiscanrun` — run ledger (new in v0.4)
+
+`fsi_caiscanrun` is an `OrganizationOwned` table with entity set
+`fsi_caiscanruns`. It carries an **alternate key `fsi_ScanRunKey` on the single
+column `fsi_runid`**, so the Power Automate flow can upsert
+**exactly one** run row per scan deterministically. Agent rows join to their run
+row on `fsi_runid` (`fsi_copilotagent.fsi_runid == fsi_caiscanrun.fsi_runid`).
+
+Run IDs are **collision-resistant and sortable** — a synthetic identity built
+from a UTC timestamp prefix plus a random suffix, at most 36 characters (for
+example `cai-20260721T020005Z-7f3b9c21a4e6d8`). The timestamp prefix keeps runs
+naturally ordered while the random suffix prevents concurrent or replayed runs
+from ever sharing a key.
+
+Columns (Dataverse logical names):
+
+| Logical name | Holds |
+|--------------|-------|
+| `fsi_runid` | Collision-resistant, sortable run identity (alternate-key column). |
+| `fsi_startedat` / `fsi_completedat` | Run start / completion timestamps (captured by the flow; the scanner JSON carries no run timing). |
+| `fsi_status` | Overall run status Choice (`Complete` / `Incomplete` / `Failed` / `Dry Run`). |
+| `fsi_environmentenumerationstatus` | Layer 1 environment-enumeration status Choice (mapped `Success`→`Full` / `Failed`→`Failed` / `Dry Run`→`Dry Run`). |
+| `fsi_environmentfailurecount` | Count of per-environment coverage failures. |
+| `fsi_environmentenumerationhttpstatus` / `fsi_environmentenumerationreason` | Enumeration HTTP status / sanitized reason (nullable). |
+| `fsi_dataverselayerstatus` | Layer 2 (per-environment Dataverse) status Choice (`summary.coverageScope.layers.environmentDataverse`). |
+| `fsi_environmentcount` / `fsi_dataverseenvironmentcount` / `fsi_nodataverseenvironmentcount` / `fsi_dataversescannedagentcount` | Environments enumerated / Layer 2-scoped / explicitly no-Dataverse / agents scanned through the Dataverse layer. |
+| `fsi_agent365requestedmode` | `summary.agent365.requestedMode` (Choice). |
+| `fsi_agent365resolvedstate` | `summary.agent365.resolvedState` (Choice). |
+| `fsi_agent365resolutionsource` | `summary.agent365.resolutionSource` (**String**, written directly — no option-set conversion). |
+| `fsi_agent365detectionconfidence` | `summary.agent365.detectionConfidence` (Choice). |
+| `fsi_agent365layerstatus` | `summary.agent365.layerStatus` (Choice). |
+| `fsi_licenseprobeattempted` | Whether `subscribedSkus` was called (Boolean). |
+| `fsi_packageapilayerstatus` | Layer 4 (Package API) coverage status Choice (`summary.coverageScope.layers.packageApi`). |
+| `fsi_packageapiattempted` | Whether the Package API was called (Boolean). |
+| `fsi_packageapihttpstatus` | Package-API HTTP status (nullable; `summary.agent365.httpStatus`). |
+| `fsi_packageapierrorcode` / `fsi_packageapireason` | Sanitized Package-API error code / reason (nullable). |
+| `fsi_packagecount` | Packages returned (**nullable** — null when not observed, 0 when observed-empty; `summary.agent365.packagesObserved`). |
+| `fsi_packagenewrowcount` | New package rows (**nullable**, same null-vs-zero rule). |
+| `fsi_packagescantruncated` | Package paging-truncated flag (`summary.agent365.pagingTruncated`). |
+| `fsi_arglayerstatus` | Layer 1 (ARG) coverage status Choice (`summary.coverageScope.layers.arg`). |
+| `fsi_argagentcount` / `fsi_arghttpstatus` | Agents discovered via ARG / ARG query HTTP status (nullable). |
+| `fsi_coreagentcount` / `fsi_featurecount` / `fsi_authsharecount` | Total canonical agent rows (including package-only rows), feature rows, and auth/share rows. |
+| `fsi_registrylayerstatus` | Registry-correlation coverage status Choice (`summary.coverageScope.layers.registry`). |
+| `fsi_registryrowcount` / `fsi_registrymatchedcount` / `fsi_registryunmatchedcount` | Registry rows read / matched / unmatched (nullable). |
+| `fsi_registryambiguousnameskippedcount` / `fsi_registryinvaliddatewarningcount` | Ambiguous-name rows skipped / invalid as-of date warnings (nullable). |
+| `fsi_entitlementlayerstatus` | Entitlement-resolution coverage status Choice (`summary.coverageScope.layers.entitlement`). |
+| `fsi_entitlementownersconsideredcount` / `fsi_entitlementpaidcount` / `fsi_entitlementchatonlycount` / `fsi_entitlementunknowncount` | Entitlement-resolution owner counts (nullable). |
+| `fsi_coveragescopejson` | Full `summary.coverageScope` JSON. |
+| `fsi_summaryjson` | Full scanner `summary` JSON (audit evidence). |
+
+> The scanner itself stays **read-only JSON** — it never writes to Dataverse.
+> The Power Automate flow persists agent rows and then writes **exactly one**
+> `fsi_caiscanrun` row (idempotent upsert on `fsi_ScanRunKey` / `fsi_runid`).
+> See [flow-configuration.md](flow-configuration.md).
 
 ## Scale Engine (target: ~2,000 agents)
 
@@ -276,16 +514,33 @@ schema doc), so re-runs upsert rather than duplicate.
 
 ## Scanner Identity (least privilege)
 
+CAI separates three governance identities so no principal holds both
+schema-authoring and tenant-wide scan rights, and so the read-only scanner never
+holds inventory-write access. See
+[prerequisites.md](prerequisites.md#roles-and-permissions-the-three-governance-identities)
+for the full split (deployer / scanner / flow-writer).
+
 - The scanner authenticates **managed-identity-first**
   (`DefaultAzureCredential` / `ManagedIdentityCredential`); any client secret is
   a dev-only fallback held in Key Vault and accessed via the managed identity.
-- Environment **enumeration** requires a Power Platform admin **or** Dynamics 365
-  admin role plus ARM access (✅ verified). Per-environment Dataverse **reads**
-  require only read access to `bot` / `botcomponent` in each target environment.
+- Environment **enumeration** is done by registering the scanner as a **Power
+  Platform management application** (app-only) plus ARM access for the Layer 1 ARG
+  query (✅ verified) — this avoids granting the scanner a Power Platform admin
+  **user** role. Per-environment Dataverse **reads** require only a **read-only**
+  application user on `bot` / `botcomponent` in each in-scope environment.
+- The scanner emits JSON and performs **no Dataverse write**. The CAI inventory
+  tables are written only by the Power Automate flow's Dataverse connection (the
+  **flow-writer** identity), scoped to the governance environment.
 - **POLP note (🔎):** granting the scanner System Administrator in every
-  environment ("sys-admin-everywhere") is a standing risk. The recommended
-  posture is a least-privilege application user with read-only roles scoped to
-  the inventory tables; the admin role is required only for the enumeration step.
+  environment ("sys-admin-everywhere") is a standing privileged-identity risk. The
+  recommended posture is a read-only application user scoped to `bot` /
+  `botcomponent`; the management-application registration covers enumeration.
+- **Coverage is verified, not assumed:** a per-environment authorization failure
+  (a missing scanner application user) surfaces as a structured
+  `environmentFailures[]` entry and degrades `summary.status` to `Incomplete` /
+  `Failed` — it is never reported as a clean, agent-free environment. See the
+  scanner environment-coverage stop condition in
+  [prerequisites.md](prerequisites.md#scanner-environment-coverage-verification-and-stop-condition).
 
 ## ARA Boundary — flagged for ratification
 
