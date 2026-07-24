@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "solution": "copilot-agent-inventory",
+  "notes": "Sanitized Power Automate run-history evidence for the no-Agent-365 persistence replay. The crop excludes tenant, account, environment, and flow identifiers.",
+  "images": [
+    {
+      "path": "lab-validation/power-automate-run-success.png",
+      "sha256": "ee188d24c9acb1765ad42d2fee991c1330dad67193f60852f8f8334ba332357b",
+      "sourceClass": "portal-screenshot",
+      "capturedUtc": "2026-07-24T03:02:22Z",
+      "caption": "Published validation flow replay succeeded in 1 minute 32 seconds.",
+      "alt": "Sanitized Power Automate run history showing a successful run with a duration of 1 minute 32 seconds."
+    }
+  ]
+}
