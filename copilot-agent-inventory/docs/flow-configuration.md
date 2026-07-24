@@ -20,12 +20,14 @@ This guide covers one flow:
 > **Persistence contract:** The discovery scanner emits a combined JSON file
 > (via `--output`) and does **not** itself write to Dataverse. The scanner emits
 > option-set fields as LABEL strings (e.g. `"Paid Copilot"`, `"Reconciled (multi-source)"`);
-> this flow converts each label to its Dataverse option-set integer via Switch /
-> Compose actions before writing (see Step 7a below). This flow reads the scanner
-> JSON output, iterates over `agents[]` to upsert each record into
+> this flow converts each label to its Dataverse option-set integer via Compose
+> actions before writing (see Step 7a below). This flow reads the scanner
+> JSON output, iterates over `agents[]` to reconcile each record into
 > `fsi_copilotagent` (including all new package, owner, and entitlement fields),
-> and then writes **exactly one** `fsi_caiscanrun` run-ledger row (Step 8). All
-> Dataverse persistence is the responsibility of this flow.
+> and then writes **exactly one** `fsi_caiscanrun` run-ledger row (Step 8). The
+> validated connector pattern is **List rows -> Add when missing -> capture the
+> primary GUID -> Update a row by GUID**. All Dataverse persistence is the
+> responsibility of this flow.
 
 ## Prerequisites
 
@@ -100,6 +102,7 @@ the placeholders (`{{...}}`) with your organization's values.
 | `AutomationAccount` | String | `{{AUTOMATION_ACCOUNT}}` | Azure Automation Account name |
 | `TeamsGroupId` | String | `{{TEAMS_GROUP_ID}}` | Teams group ID for run notifications (optional) |
 | `TeamsChannelId` | String | `{{TEAMS_CHANNEL_ID}}` | Teams channel ID for run notifications (optional) |
+| `UnmappedRows` | Array | `[]` | Sanitized keyless-row and unknown-Choice-label errors collected across agent and run-ledger persistence |
 
 > **`Agent365Mode` is an operator declaration.** Validate it to exactly one of
 > `present` / `absent` / `auto` before Step 3 (add a **Condition** or a small
@@ -333,56 +336,95 @@ the placeholders (`{{...}}`) with your organization's values.
 ### Step 7: Persist Agent Records to Dataverse
 
 The scanner emits each discovered agent as an object in `agents[]`. Use an
-**Apply to each** action to upsert every agent row into `fsi_copilotagent`.
+**Apply to each** action to reconcile every agent row into `fsi_copilotagent`.
 
-1. Add action: **Control** > **Apply to each**.
-2. Select output: expression `body('Parse_Summary')?['agents']` (the top-level
-   `agents` array from the full scanner output; `agents` is **not** nested inside `summary`).
-3. Inside the loop, add a **Condition** action to select the correct
-   alternate key using the following deterministic precedence:
+> **Connector behavior validated live.** The Dataverse connector's **Update a
+> row** action executes an update against its Row ID. Supplying an alternate-key
+> value does not create a missing row; the observed connector returned HTTP 404.
+> Use the lookup/create/GUID-update sequence below rather than treating **Update
+> a row** as an alternate-key upsert.
 
-   * **Branch A — environment-scoped rows (PRIMARY)** — condition:
-     `and(not(empty(items('Apply_to_each')?['fsi_agentid'])), not(empty(items('Apply_to_each')?['fsi_environmentid'])))` evaluates to `true`:
-     add action **Dataverse** > **Update a row** and select the
-     **fsi_AgentEnvKey** alternate key. Supply **both** `fsi_agentid` **and**
-     `fsi_environmentid`; omitting either column causes the upsert to fail
-     because fsi_AgentEnvKey is a composite key requiring both components.
-     This branch covers both pre-existing ARG/Dataverse rows and
-     package-enriched versions of those rows, helping prevent transition
-     duplicates when Package API enrichment begins on an existing tenant.
+1. Before the loop, initialize a String variable named `AgentRowId` and a
+   Boolean variable named `IsUnmappedLabel`.
+2. Add action: **Control** > **Apply to each**.
+3. Select output: expression `body('Parse_Summary')?['agents']` (the top-level
+   `agents` array from the full scanner output; `agents` is **not** nested inside
+   `summary`).
+4. Set **Apply to each** concurrency to **Off** (or degree `1`). The flow uses the
+   shared `AgentRowId` variable, so parallel iterations can update the wrong row.
+5. Inside the loop, reset `AgentRowId` to an empty string and
+   `IsUnmappedLabel` to `false`. Complete every Step 7a Choice mapping
+   **before** any List rows, Add, or Update action. If any mapping Compose
+   returns `-1`, quarantine the row and skip the persistence branches.
+6. Add a
+   **Condition** action to select the correct key using this deterministic
+   precedence:
 
-   * **Branch B — package-only rows (FALLBACK)** — `else if`
-     `not(empty(items('Apply_to_each')?['fsi_packageid']))` evaluates to `true`:
-     add action **Dataverse** > **Update a row** and select the
-     **fsi_PackageKey** alternate key. Supply only `fsi_packageid` as the
-     key column. Do **not** supply `fsi_environmentid`; package-only rows
-     (where `fsi_agentid` equals `fsi_packageid`) have no environment scope,
-     and including an empty value causes the key lookup to fail.
+   * **Branch A — environment-scoped rows (PRIMARY)** — when both
+     `fsi_agentid` and `fsi_environmentid` are populated:
+     1. Add **Dataverse** > **List rows** for `fsi_copilotagent`.
+     2. Filter on both key columns:
+        `fsi_agentid eq '<current fsi_agentid>' and fsi_environmentid eq '<current fsi_environmentid>'`.
+        Set **Row count** to `1` and select only `fsi_copilotagentid`.
+     3. If the returned `value` array is non-empty, set `AgentRowId` to
+        `first(body('List_Agent_By_Env_Key')?['value'])?['fsi_copilotagentid']`.
+     4. Otherwise, add **Dataverse** > **Add a new row** with:
+        - `fsi_name` and `fsi_agentname` set to the agent name, falling back to
+          `fsi_agentid`;
+        - `fsi_agentid` and `fsi_environmentid` from the current item;
+        - `fsi_lastscannedat` set to `utcNow()`;
+        - `fsi_runid` from the current item.
+        Then set `AgentRowId` from the created row's `fsi_copilotagentid`.
+
+   * **Branch B — package-only rows (FALLBACK)** — when Branch A does not apply
+     and `fsi_packageid` is populated:
+     1. Add **Dataverse** > **List rows** for `fsi_copilotagent`.
+     2. Filter on `fsi_packageid eq '<current fsi_packageid>'`. Set **Row
+        count** to `1` and select only `fsi_copilotagentid`.
+     3. If the returned `value` array is non-empty, set `AgentRowId` to the
+        first row's `fsi_copilotagentid`.
+     4. Otherwise, add **Dataverse** > **Add a new row** with:
+        - `fsi_name` and `fsi_agentname` set to the package display name,
+         falling back to `fsi_packageid`;
+        - `fsi_agentid` and `fsi_packageid` set to the package ID;
+        - `fsi_lastscannedat` set to `utcNow()`;
+        - `fsi_runid` from the current item.
+        Then set `AgentRowId` from the created row's `fsi_copilotagentid`.
+     5. Do **not** supply `fsi_environmentid`; package-only rows have no
+        environment scope.
 
    * **Branch C — unpersistable rows (ERROR)** — when neither condition is
-     true, add a **Terminate** action (status: Failed) or append the row to
-     an error collection variable for post-run review. Do **not** add a
-     generic **Add a new row** action without an idempotency key; doing so
-     accumulates unkeyed duplicate rows on every scheduled run.
+     true, add a **Terminate** action (status: Failed) or append the row to an
+     error collection variable for post-run review. Do **not** add a generic
+     **Add a new row** action without an idempotency key.
 
-   > **Note:** A newly created alternate key (fsi_PackageKey) must reach
-   > Active status in Dataverse before scheduled upserts begin.
+   Both alternate keys must reach `Active` before scheduled persistence begins.
+   The keys protect uniqueness, but the connector lookup and create operations
+   are not atomic. Configure trigger concurrency to allow only one active flow
+   run; overlapping runs can cause one run to fail on an alternate-key collision
+   even though duplicate rows are blocked.
 
-   This deterministic precedence helps prevent transition duplicates (existing
-   rows whose `fsi_packageid` is subsequently populated) and package-only
-   duplicates (rows lacking `fsi_environmentid`) from accumulating across
-   scheduled runs.
+   > **Existing v0.4 preview deployments:** fresh deployments define
+   > `fsi_environmentid` as optional because package-only rows have no
+   > environment. The schema deployer skips metadata for columns that already
+   > exist. If an earlier preview deployment still shows **Environment ID** as
+   > Business Required, change its Requirement to **Optional** in the Dataverse
+   > table designer and publish before authoring Branch B.
 
-4. Table: `fsi_copilotagent`.
-5. Map the columns below. Use `items('Apply_to_each')` to reference the current
+7. After Branch A or B sets `AgentRowId`, add **Dataverse** > **Update a row**.
+   Table: `fsi_copilotagent`. Set **Row ID** to `variables('AgentRowId')`.
+8. Map the columns below. Use `items('Apply_to_each')` to reference the current
    agent object. All column names are Dataverse **logical** names (lowercase, no
    underscores between words).
 
 | Flow Expression | Dataverse Column (logical) | Type | Notes |
 |----------------|----------------------------|------|-------|
-| `items('Apply_to_each')?['fsi_agentid']` | `fsi_agentid` | String | PRIMARY key component of fsi_AgentEnvKey; required together with fsi_environmentid (Branch A — checked first) |
+| `coalesce(items('Apply_to_each')?['fsi_agentname'], items('Apply_to_each')?['fsi_agentid'], items('Apply_to_each')?['fsi_packageid'])` | `fsi_name` | String | Required Dataverse primary name; also set during **Add a new row** |
+| `coalesce(items('Apply_to_each')?['fsi_agentid'], items('Apply_to_each')?['fsi_packageid'])` | `fsi_agentid` | String | Agent ID; package-only rows use the package ID. PRIMARY key component of fsi_AgentEnvKey for Branch A |
 | `items('Apply_to_each')?['fsi_environmentid']` | `fsi_environmentid` | String | PRIMARY key component of fsi_AgentEnvKey; present for environment-scoped and package-enriched rows (Branch A); absent for package-only rows (Branch B) |
-| `items('Apply_to_each')?['fsi_agentname']` | `fsi_agentname` | String | Display name |
+| `coalesce(items('Apply_to_each')?['fsi_agentname'], items('Apply_to_each')?['fsi_agentid'], items('Apply_to_each')?['fsi_packageid'])` | `fsi_agentname` | String | Required display name |
+| `utcNow()` | `fsi_lastscannedat` | DateTime | Required refresh timestamp; update on every run |
+| `items('Apply_to_each')?['fsi_runid']` | `fsi_runid` | String | Correlates the current agent state to `fsi_caiscanrun` |
 | `items('Apply_to_each')?['fsi_agenttype']` | `fsi_agenttype` | Choice | Agent type; convert label to integer — see Step 7a |
 | `items('Apply_to_each')?['fsi_createdin']` | `fsi_createdin` | Choice | Platform origin; convert label to integer — see Step 7a |
 | `items('Apply_to_each')?['fsi_discoverysource']` | `fsi_discoverysource` | Picklist | Discovery layer |
@@ -406,22 +448,25 @@ The scanner emits each discovered agent as an object in `agents[]`. Use an
 | `items('Apply_to_each')?['fsi_ownerasofdatetime']` | `fsi_ownerasofdatetime` | DateTime | Export as-of timestamp (staleness signal) |
 | `items('Apply_to_each')?['fsi_ownerentitlement']` | `fsi_ownerentitlement` | Picklist | Paid Copilot / Copilot Chat Only / Unknown |
 | `items('Apply_to_each')?['fsi_ownerentitlementevidence']` | `fsi_ownerentitlementevidence` | Memo | Service-plan GUIDs as JSON array (no PII) |
-| `items('Apply_to_each')?['fsi_scancompleteness']` | `fsi_scancompleteness` | Picklist | Complete / Incomplete Scan / Failed |
 
 > **Column naming:** always use Dataverse **logical** names (lowercase, no
 > underscores between words) in flow column mappings — for example
 > `fsi_agentid`, `fsi_ownerupn`, `fsi_packagetype`. See
 > [dataverse-schema.md](dataverse-schema.md) for the authoritative list.
 
-6. Configure **Run after**: `Parse_Summary` — set to **Succeeded**.
-7. Rename action: `Persist_Agent_Records`.
+9. Configure **Run after**: `Parse_Summary` — set to **Succeeded**.
+10. Rename the loop `Persist_Agent_Records` and the common GUID update action
+   `Update_Agent_Record`.
+11. After the loop, add `Validate_Agent_Persistence`. If `UnmappedRows` contains
+   any entry (from an unknown Choice label or a keyless row), send a sanitized
+   notification and terminate as Failed before writing the scan-run ledger.
 
 #### Step 7a — Label-to-Integer Conversion for Choice Fields
 
-Before the **upsert (Update a row) action** in the loop, add a **Switch** action for
-each Choice column to convert the scanner's label string to the Dataverse option-set
-integer. The scanner emits labels; Dataverse requires integers. `fsi_isblocked` is a
-Two-Options (Boolean) field — pass `true` / `false` directly, no Switch needed.
+At Step 7.5, before any lookup or write, add a **Compose** action for each Choice
+column to convert the scanner's label string to the Dataverse option-set integer.
+The scanner emits labels; Dataverse requires integers. `fsi_isblocked` is a
+Two-Options (Boolean) field — pass `true` / `false` directly.
 
 | Choice Column (logical name) | Scanner Label | Dataverse Integer |
 |---|---|---|
@@ -454,33 +499,29 @@ Two-Options (Boolean) field — pass `true` / `false` directly, no Switch needed
 | `fsi_ownermatchconfidence` | `Exact` | `100000000` |
 | `fsi_ownermatchconfidence` | `Heuristic` | `100000001` |
 | `fsi_ownermatchconfidence` | `Unmatched` | `100000002` |
-| `fsi_scancompleteness` | `Complete` | `100000000` |
-| `fsi_scancompleteness` | `Incomplete Scan` | `100000001` |
-| `fsi_scancompleteness` | `Failed` | `100000002` |
 
-> **Implementation tip:** Add a **Switch** action before `Persist_Agent_Records`.
-> Set the **On** value to the scanner label
-> (e.g. `items('Apply_to_each')?['fsi_discoverysource']`). Each **Case** sets a
-> variable to the corresponding integer. Reference that variable in the
-> **Update a row** column mapping instead of the raw label string.
-
-> **Every Switch MUST have a fail-visible Default case.** Do **not** leave the
-> **Default** case empty and do **not** let it fall through to a default integer
-> such as `0` / `100000000` or a null. An unmapped label means the scanner emitted
-> a value this flow does not recognize — almost always platform drift (a new
-> option-set value added by Microsoft). Silently mapping it to a default would write
-> a **wrong or blank** governance signal (for example mislabelling an unknown
-> `fsi_discoverysource` as `Azure Resource Graph`). Instead, in the **Default** case
-> of every label Switch, **quarantine the row**: set an `IsUnmappedLabel` boolean
-> variable to `true` (and optionally append the row + the offending column/label to
-> the `UnmappedRows` error-collection variable), then **skip the upsert for that row**
-> and let Branch C's error path handle it. Review quarantined rows and extend the
-> Switch cases before the next run.
+> **Implementation pattern:** use a nested `if(...)` expression in each Compose.
+> Return `json('null')` when an optional source label is empty, the listed
+> integer for a known label, and `-1` for a non-empty unknown label. For example,
+> `Map_DiscoverySource` starts with:
 >
-> **Keyless / unmapped rows are never inserted.** A row is upserted only when it
+> `if(empty(items('Apply_to_each')?['fsi_discoverysource']), json('null'), if(equals(items('Apply_to_each')?['fsi_discoverysource'], 'Azure Resource Graph'), 100000000, ... -1))`
+>
+> Compose outputs are evaluated independently for each loop iteration, so a null
+> value cannot reuse an integer from the prior agent. After all mapping Composes,
+> add a Condition that checks whether any output equals `-1`. If so, set
+> `IsUnmappedLabel` to `true`, append the row and offending label to
+> `UnmappedRows`, and skip the key-selection/persistence branches. Reference the
+> Compose outputs in the final **Update a row by GUID** mapping.
+>
+> A non-empty unknown label almost always indicates platform drift. Do not map it
+> to `0`, the first option, or null; those choices would record an incorrect or
+> missing governance signal.
+>
+> **Keyless / unmapped rows are never inserted.** A row is persisted only when it
 > resolves a valid alternate key (Branch A `fsi_AgentEnvKey` or Branch B
 > `fsi_PackageKey`) **and** every Choice label mapped to a known integer. Rows that
-> hit Branch C (no key) or a Switch Default (unmapped label) are routed to the error
+> hit Branch C (no key) or a `-1` mapping result (unmapped label) are routed to the error
 > collection / Terminate path — never written with a generic **Add a new row** action
 > and never written with a guessed default option value. This helps keep the
 > inventory free of unkeyed duplicates and mislabelled governance signals.
@@ -493,18 +534,28 @@ Two-Options (Boolean) field — pass `true` / `false` directly, no Switch needed
 > whether notification succeeds, supporting compliance with the record-keeping
 > expectations of FINRA Rule 4511 and SEC Rule 17a-3.
 
-After all agent rows are persisted (Step 7), write **exactly one** row to the
-canonical run-ledger table **`fsi_caiscanrun`**. Use **Dataverse** >
-**Update a row** against the **`fsi_ScanRunKey`** alternate key (which is defined
-on the single column `fsi_runid`). Upserting on the alternate key makes the write
-**idempotent**: a re-run of the *same* `runId` updates the same one row, and a
-new run (new collision-resistant `runId`) creates a new row. Never use **Add a
-new row** here — that would accumulate duplicate ledger rows.
+After all agent rows are persisted (Step 7), reconcile **exactly one** row in the
+canonical run-ledger table **`fsi_caiscanrun`**.
 
-1. Add action: **Dataverse** > **Update a row**.
-2. Table: `fsi_caiscanrun`. **Row ID / alternate key:** select **`fsi_ScanRunKey`**
-   and supply `body('Parse_Summary')?['summary']?['runId']` as `fsi_runid`.
-3. Map the columns below. All names are Dataverse **logical** names (lowercase, no
+1. Before the Scope, initialize a String variable named `ScanRunRowId`.
+2. Add a Scope named `Persist_And_Verify_Scan_Run`. Inside it, complete every
+   Step 8a Choice mapping, naming the `fsi_status` Compose `Map_RunStatus`.
+   Any unmapped label terminates before a scan-run row is created.
+3. Add **Dataverse** > **List rows** for `fsi_caiscanrun`. Filter on
+   `fsi_runid eq '<summary runId>'`, set **Row count** to `1`, and select only
+   `fsi_caiscanrunid`.
+4. Add a Condition:
+   - If a row exists, set `ScanRunRowId` to
+     `first(body('List_Scan_Run_By_RunId')?['value'])?['fsi_caiscanrunid']`.
+   - If no row exists, add **Dataverse** > **Add a new row** with:
+     - `fsi_name` and `fsi_runid` set to
+       `body('Parse_Summary')?['summary']?['runId']`;
+     - `fsi_startedat` set to `variables('RunStartedAt')`;
+     - `fsi_status` set to `outputs('Map_RunStatus')`.
+     Then set `ScanRunRowId` from the created row's `fsi_caiscanrunid`.
+5. Add **Dataverse** > **Update a row** for `fsi_caiscanrun`. Set **Row ID** to
+   `variables('ScanRunRowId')`.
+6. Map the columns below. All names are Dataverse **logical** names (lowercase, no
    underscores between words). Choice columns are converted label→integer in
    **Step 8a** (do not write raw label strings to Choice columns).
 
@@ -566,21 +617,38 @@ new row** here — that would accumulate duplicate ledger rows.
 > **deprecated top-level mirrors**, populated only when the Package API is
 > attempted; prefer the `summary.agent365.*` fields.
 
-4. Configure **Run after**: `Persist_Agent_Records` — set to **Succeeded**.
-5. Rename action: `Write_Scan_Run`.
+7. Configure **Run after**: `Validate_Agent_Persistence` — set to **Succeeded**.
+8. Rename the GUID update action: `Write_Scan_Run`.
+
+> **Do not paste expression text into a plain field.** In the new designer,
+> open the **Expression** editor and enter the formula without a leading `@`.
+> Confirm the field renders one expression token such as `body(...)`,
+> `outputs(...)`, or `length(...)`, not visible `@body(...)` text. Flow Checker
+> can report zero errors for literal text that later fails Dataverse type
+> conversion. If the editor rejects a chained nested path, the equivalent
+> single-path form
+> `outputs('Parse_Summary')?['body/summary/environmentEnumeration/dataverseEnvironmentCount']`
+> is valid.
 
 #### Step 8a — Label-to-Integer Conversion for `fsi_caiscanrun` Choice Fields
 
 `fsi_caiscanrun` introduces **Choice columns** in v0.4. As in Step 7a, the scanner
 emits **label strings** and Dataverse requires **option-set integers**, so add one
-fail-visible **Switch** per Choice column below. `fsi_agent365resolutionsource` is
+fail-visible **Compose** per Choice column below. `fsi_agent365resolutionsource` is
 **not** in this list — it is a plain **String** column written **directly** from
 `summary.agent365.resolutionSource` (one of `CLI` / `Environment` /
 `DeprecatedAlias` / `Default` / `LicenseProbe` / `DryRun`) with **no** conversion.
+Complete these mappings before the Step 8 lookup/create sequence. Use the same
+Step 7a Compose pattern: `json('null')` for an empty nullable source, the listed
+integer for a known label, and `-1` for an unknown non-empty label. `fsi_status`
+is required, so its Compose returns `-1` for null or any value outside its four
+listed labels. Name that Compose `Map_RunStatus` because the create, update, and
+read-back actions reuse its output. Terminate before List rows if any mapping
+Compose returns `-1`.
 
 > **Option-set integers (locked in the v0.4 schema).** The values below are the
-> **canonical** option-set integers for the `fsi_caiscanrun` Choice columns — wire
-> each **Switch** case to the exact integer shown. The shared **layer-status**
+> **canonical** option-set integers for the `fsi_caiscanrun` Choice columns — map
+> each known label to the exact integer shown. The shared **layer-status**
 > option set applies to `fsi_agent365layerstatus`, `fsi_arglayerstatus`,
 > `fsi_packageapilayerstatus`, `fsi_registrylayerstatus`,
 > `fsi_entitlementlayerstatus`, and `fsi_dataverselayerstatus`.
@@ -650,38 +718,57 @@ layer-status integers:
 | `Failed` | `Failed` | `100000004` |
 | `Dry Run` | `Dry Run` | `100000005` |
 
-> **Every Switch MUST have a fail-visible Default case.** Provide an explicit
-> **Case** for **each** label above, and in the **Default** case **quarantine the
-> run row** (set `IsUnmappedLabel = true`, append the column + offending label to
-> the `UnmappedRows` error collection) and **terminate** (`Terminate`, status
-> Failed) rather than writing a guessed integer. An unrecognized label almost
-> always means the scanner emitted a new option-set value — writing a default such
-> as `0` would silently record a **wrong** governance status. Extend the Switch
-> cases (using the values in [dataverse-schema.md](dataverse-schema.md)) before
-> re-running.
+> **Fail visibly.** If any run-level mapping Compose returns `-1`, append the
+> column and offending label to `UnmappedRows`, send a sanitized notification,
+> and terminate with status **Failed** before creating the run row. Extend the mapping using
+> [dataverse-schema.md](dataverse-schema.md) before re-running.
 
 #### Step 8b — Read-back and idempotency verification
 
 After `Write_Scan_Run`, confirm the single ledger row persisted:
 
 1. Add action: **Dataverse** > **Get a row by ID**, table `fsi_caiscanrun`,
-   using the **`fsi_ScanRunKey`** alternate key with the same
-   `body('Parse_Summary')?['summary']?['runId']`.
-2. Add a **Condition** that the returned `fsi_runid` **equals** the summary
-   `runId`. If it does not match (or the row is not found), route to the error /
-   notification path — the run evidence did not persist.
+   using `variables('ScanRunRowId')` as the primary Row ID.
+2. Add a **Condition** that all critical fields equal the parsed payload:
+   - `fsi_runid` equals `summary.runId`;
+   - `fsi_status` equals `outputs('Map_RunStatus')`;
+   - `fsi_coreagentcount` equals `summary.coreAgentCount`;
+   - `fsi_dataverseenvironmentcount` equals
+     `summary.environmentEnumeration.dataverseEnvironmentCount`;
+   - `fsi_dataversescannedagentcount` equals `summary.scannedAgentCount`;
+   - `fsi_environmentfailurecount` equals the length of
+     `summary.environmentFailures`;
+   - `fsi_nodataverseenvironmentcount` equals
+     `summary.environmentEnumeration.skippedNoDataverseCount`;
+   - `fsi_packageapiattempted` equals
+     `summary.agent365.packageApiAttempted`;
+   - `fsi_packagecount` equals `summary.agent365.packagesObserved`, preserving
+     null versus zero.
+   If any comparison fails, use the false branch to send a sanitized
+   verification-failure notification and then **Terminate** the flow as Failed.
+   A technical Get-row failure is caught by the Scope failure path in Step 9.
 3. Rename actions: `ReadBack_Scan_Run` and `Verify_Scan_Run`.
 
-> **Exactly one row per run.** Because the write is an upsert on
-> `fsi_ScanRunKey` / `fsi_runid`, replays of the same run converge on the same
-> row (idempotent) and never fan out into duplicates. A distinct, collision-
-> resistant `runId` per scheduled run supports a separate ledger row for each
-> run while agent rows join back via `fsi_runid`.
+> **Exactly one row per run.** The lookup/create/GUID-update sequence reuses the
+> same row for a repeated `runId`, while the active `fsi_ScanRunKey` uniqueness
+> constraint blocks duplicate ledger rows. Configure the trigger for one active
+> run because lookup and create are separate connector calls. A distinct,
+> collision-resistant `runId` per scheduled run supports a separate ledger row
+> for each run while agent rows join back via `fsi_runid`.
 
-### Step 9: Notify on Coverage Gaps and Reconciliation Gaps (optional)
+### Step 9: Notify on Persistence Failures and Coverage Gaps
 
-1. Add action: **Condition**.
-2. Condition — fire when the scan is not cleanly complete, a **requested** layer
+The persistence-failure path is required. The normal coverage-gap notification
+is optional.
+
+1. Add a Scope named `Persistence_Failure_Notification` after
+   `Persist_And_Verify_Scan_Run`. Configure **Run after** for **Failed**,
+   **Timed out**, and **Skipped**. Send a sanitized persistence-failure
+   notification from this Scope using action names/statuses rather than raw
+   connector response bodies, then terminate the flow as Failed.
+2. Add the normal coverage **Condition** after
+   `Persist_And_Verify_Scan_Run`, configured for **Succeeded** only.
+3. Condition — fire when the scan is not cleanly complete, a **requested** layer
    failed, **or** a reconciliation gap exists:
    - `body('Parse_Summary')?['summary']?['status']` is **not equal to** `Complete`
    - **or** `length(body('Parse_Summary')?['summary']?['environmentFailures'])` is greater than `0`
@@ -691,8 +778,6 @@ After `Write_Scan_Run`, confirm the single ledger row persisted:
    - **or** `body('Parse_Summary')?['summary']?['agent365']?['resolvedState']` is **equal to** `Inconclusive`
    - **or** `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_arg_only'])` is greater than `0`
    - **or** `length(body('Parse_Summary')?['summary']?['reconciliation']?['in_dataverse_only'])` is greater than `0`.
-3. Configure **Run after**: `Verify_Scan_Run` — set to run after **Succeeded**
-   and **Failed** so notification proceeds even if the write or read-back fails.
 4. In the **Yes** branch, add **Microsoft Teams** > **Post adaptive card in a
    chat or channel** (or **Send an email**) summarizing the gap. Include the
    overall `summary.status`, `summary.environmentEnumeration.status`, the

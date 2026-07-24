@@ -25,6 +25,27 @@ generated `docs/dataverse-schema.md` reference is regenerated.
 
 ### Fixed
 
+- **Power Automate connector persistence contract.** Live validation confirmed
+  that Dataverse **Update a row** returns HTTP 404 for a missing row when given
+  an alternate-key value; it does not create the row. The flow guide now uses
+  `List rows → Add missing row → capture primary GUID → Update by GUID` for
+  agent and scan-run records, requires sequential agent iterations, and limits
+  the trigger to one active run to avoid lookup/create races.
+- **Run-ledger expression mappings.** Five Layer 2 count fields that initially
+  persisted as null were re-authored as Power Automate expression tokens.
+  Guidance now distinguishes expression tokens from visible `@body(...)`
+  literal text because Flow Checker can report zero errors for the latter even
+  though Dataverse integer conversion fails at runtime.
+- **Package-only Dataverse persistence contract.** `fsi_environmentid` is now
+  optional for fresh schema deployments because Package Management API-only
+  rows have no Power Platform environment. The flow guide now supplies required
+  create-time agent/run fields, refreshes `fsi_lastscannedat` and `fsi_runid`,
+  uses per-row Compose outputs for nullable Choice mappings, validates labels
+  before creating either agent or scan-run rows, verifies critical read-back
+  fields, and notifies on technical persistence failures. Existing v0.4 preview
+  deployments must change the Environment ID requirement to Optional before
+  authoring the package-only branch; this licensed path was not observed in the
+  no-Agent-365 lab.
 - **BAP Dataverse URL normalization.** Live environment enumeration returns the
   Dataverse base URL at
   `properties.linkedEnvironmentMetadata.instanceUrl`, not at the top level.
@@ -51,9 +72,9 @@ generated `docs/dataverse-schema.md` reference is regenerated.
 
 - **Sanitized v0.4 lab validation report.** Documents the observed-live
   no-license fallback, nine-table schema, alternate-key activation, Registry
-  header contract, direct Dataverse persistence, static licensed-path coverage,
-  deferred Power Automate/entitlement work, and the remaining screenshot
-  checklist.
+  header contract, direct and Power Automate persistence, stable replay IDs,
+  corrected run-ledger counts, static licensed-path coverage, deferred
+  entitlement work, and the remaining screenshot checklist.
 - **License-aware mode selection (`--agent365 present|absent|auto`).** A new
   three-valued mode replaces the single `--enable-package-api` switch as the
   primary control for Layer 4. The mode may also be supplied by the

@@ -33,6 +33,7 @@ import pytest
 SOLUTION_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = SOLUTION_ROOT / "scripts" / "create_cai_dataverse_schema.py"
 SCHEMA_DOC_FILE = SOLUTION_ROOT / "docs" / "dataverse-schema.md"
+FLOW_DOC_FILE = SOLUTION_ROOT / "docs" / "flow-configuration.md"
 
 # Column declared via _string_col("fsi_AgentId", ...) — first arg already has
 # the prefix. _picklist_col's option-set arg is a LATER arg, so it is not
@@ -360,6 +361,39 @@ def test_dataverse_schema_doc_has_no_trailing_whitespace() -> None:
     )
 
 
+def test_flow_doc_validates_choices_before_creating_rows() -> None:
+    text = FLOW_DOC_FILE.read_text(encoding="utf-8")
+    agent_section = text.split("### Step 7:", 1)[1].split("### Step 8:", 1)[0]
+    run_section = text.split("### Step 8:", 1)[1].split("### Step 9:", 1)[0]
+    notification_section = text.split("### Step 9:", 1)[1]
+
+    assert "| `UnmappedRows` | Array | `[]` |" in text
+    assert agent_section.index("Complete every Step 7a Choice mapping") < (
+        agent_section.index("**List rows**")
+    )
+    assert run_section.index("Step 8a Choice mapping") < (
+        run_section.index("**List rows**")
+    )
+    assert "json('null')" in agent_section
+    assert "Compose outputs are evaluated independently" in agent_section
+    assert "Switch Default" not in agent_section
+    assert "Default case" not in agent_section
+    assert "Switch Default" not in run_section
+    assert "Default case" not in run_section
+    assert "`fsi_lastscannedat` set to `utcNow()`" in agent_section
+    assert "`fsi_runid` from the current item" in agent_section
+    assert "| `utcNow()` | `fsi_lastscannedat`" in agent_section
+    assert "| `items('Apply_to_each')?['fsi_runid']` | `fsi_runid`" in agent_section
+    assert "fsi_coreagentcount" in run_section
+    assert "fsi_packagecount" in run_section
+    assert "Name that Compose `Map_RunStatus`" in run_section
+    assert run_section.index("naming the `fsi_status` Compose `Map_RunStatus`") < (
+        run_section.index("outputs('Map_RunStatus')")
+    )
+    assert run_section.count("outputs('Map_RunStatus')") >= 2
+    assert "Persistence_Failure_Notification" in notification_section
+
+
 @_schema_skip
 def test_fsi_copilotagent_has_agent_env_key() -> None:
     """fsi_AgentEnvKey (agentid + environmentid) must be present — pre-existing key."""
@@ -384,6 +418,19 @@ def test_fsi_copilotagent_has_package_key() -> None:
     assert matches[0]["key_attributes"] == ["fsi_packageid"], (
         f"fsi_PackageKey key_attributes mismatch: {matches[0]['key_attributes']!r}"
     )
+
+
+@_schema_skip
+def test_fsi_copilotagent_allows_package_only_environment() -> None:
+    """Package-only rows must not require an environment identifier."""
+    columns = _cai_schema.TABLES["fsi_copilotagent"]["columns"]
+    matches = [
+        column
+        for column in columns
+        if column.get("SchemaName") == "fsi_EnvironmentId"
+    ]
+    assert len(matches) == 1
+    assert matches[0]["RequiredLevel"]["Value"] == "None"
 
 
 @_schema_skip

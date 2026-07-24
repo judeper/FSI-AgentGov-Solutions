@@ -628,11 +628,24 @@ def test_publish_fails_when_source_becomes_structurally_invalid(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# No-manifest solutions are unaffected
+# Repository manifest regression and no-manifest solutions
 # ---------------------------------------------------------------------------
-def test_no_manifest_solution_is_unaffected():
-    # copilot-agent-inventory ships no committed evidence manifest yet.
-    assert bm.load_lab_evidence("copilot-agent-inventory") is None
+def test_repository_cai_manifest_is_valid():
+    evidence = bm.load_lab_evidence("copilot-agent-inventory")
+
+    assert evidence is not None
+    assert evidence["solution"] == "copilot-agent-inventory"
+    assert [image["path"] for image in evidence["images"]] == [
+        "lab-validation/power-automate-run-success.png"
+    ]
+    assert (
+        bm.validate_lab_evidence(
+            "copilot-agent-inventory",
+            bm.ROOT / "copilot-agent-inventory",
+            evidence,
+        )
+        == []
+    )
 
 
 def test_load_lab_evidence_returns_none_for_missing(tmp_path, monkeypatch):

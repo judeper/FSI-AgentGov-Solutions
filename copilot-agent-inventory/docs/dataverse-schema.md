@@ -61,7 +61,7 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_Name` | `fsi_name` | String(850) | Yes | Primary name attribute |
 | `fsi_AgentId` | `fsi_agentid` | String(100) | Yes | Copilot Studio bot GUID (ARG 'name' / Dataverse botid) |
 | `fsi_AgentName` | `fsi_agentname` | String(500) | Yes | Agent display name (ARG properties.displayName) |
-| `fsi_EnvironmentId` | `fsi_environmentid` | String(100) | Yes | Power Platform environment GUID this agent lives in |
+| `fsi_EnvironmentId` | `fsi_environmentid` | String(100) | No | Power Platform environment GUID; null for package-only rows |
 | `fsi_SchemaName` | `fsi_schemaname` | String(200) | No | Dataverse schemaName of the agent |
 | `fsi_OwnerUpn` | `fsi_ownerupn` | String(200) | No | Agent owner user principal name |
 | `fsi_OwnerId` | `fsi_ownerid` | String(100) | No | Agent owner Microsoft Entra ID object GUID |

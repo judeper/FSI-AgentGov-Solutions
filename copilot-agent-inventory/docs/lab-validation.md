@@ -1,6 +1,6 @@
 # Copilot Agent Inventory v0.4 Lab Validation
 
-**Validation date:** July 22, 2026  
+**Validation date:** July 22-24, 2026<br>
 **Version:** v0.4.0-preview  
 **Tenant profile:** Microsoft 365 lab without Microsoft Agent 365  
 **Report source:** `d062d50`  
@@ -15,17 +15,21 @@ to Dataverse, skipped one environment explicitly without Dataverse, and
 returned 209 Layer 2 agent records with no environment failures.
 
 The nine-table Dataverse schema also passed live deployment, alternate-key
-activation, repeat-deployment idempotency, and direct Web API persistence
-validation. The direct writer persisted 209 agent rows and one
-`fsi_caiscanrun` row; replay retained the same Dataverse row IDs and preserved a
-null package count when the Package API was not attempted.
+activation, repeat-deployment idempotency, direct Web API persistence, and
+published Power Automate persistence. The final flow replay retained 209 agent
+rows and one `fsi_caiscanrun` row with stable Dataverse row IDs, preserved a
+null package count when the Package API was not attempted, and populated all
+five previously missing Layer 2 count fields. A final documentation review also
+corrected the fresh-deployment schema and flow instructions for package-only
+rows; that licensed path was not redeployed or observed live.
 
 The licensed Package Management API path remains **Static/Mock - Not Observed
 Live** because the lab has no Microsoft Agent 365 license. Registry header
 structure was observed from the actual confidential workbook, but its data rows
-were not downloaded. Owner correlation, entitlement classification, the
-published Power Automate flow, and portal screenshots therefore remain
-**Deferred**.
+were not downloaded. Owner correlation and entitlement classification therefore
+remain **Deferred**. One sanitized Power Automate run-history screenshot is
+published below; the remaining portal screenshots are still Deferred or
+conditional.
 
 ## Evidence classes
 
@@ -51,7 +55,9 @@ published Power Automate flow, and portal screenshots therefore remain
 | Registry row correlation | Deferred | Deferred | Confidential workbook rows were not downloaded |
 | Owner entitlement classification | Deferred | Deferred | No real Registry owners were passed to the resolver |
 | Dataverse row persistence | Pass | Observed Live - Direct Dataverse Writer | 209 agents plus 1 scan-run row; stable IDs on replay |
-| Power Automate publication/run | Deferred | Deferred | Requires a user-present authenticated browser session |
+| Power Automate publication/run | Pass | Observed Live | Flow published and enabled; identical 209-agent payload replay succeeded in 1 minute 32 seconds |
+| Power Automate read-back/idempotency | Pass | Observed Live | 209 agents plus 1 scan-run row; stable GUID sets; corrected Layer 2 counts |
+| Package-only Dataverse flow persistence | Not observed live | Static/Mock | Environment ID is optional for fresh deployments; required create fields and pre-write Choice validation are documented |
 | Package Management API success path | Pass | Static/Mock | Success, empty, paging, reconciliation, and typed failure paths covered |
 
 ## Final no-license scan results
@@ -142,19 +148,63 @@ the mutable `Owner` UPN.
 
 ## Dataverse persistence and BI readiness
 
-The documented field and alternate-key contract was exercised through a direct
-Dataverse Web API writer because Power Automate could not be opened without a
-user-present browser session.
+The Dataverse contract was first exercised through a direct Web API writer and
+then through the published Power Automate flow. Both paths persisted 209 agent
+rows and one `fsi_caiscanrun` row and retained the same row identities on replay.
 
-The direct writer:
+Live connector testing found that Dataverse **Update a row** does not create a
+missing row when supplied an alternate-key value; the missing-row request
+returned HTTP 404. The validated connector-only pattern is:
 
-- upserted 209 agent rows through `fsi_AgentEnvKey`;
-- upserted one `fsi_caiscanrun` row through `fsi_ScanRunKey`;
-- replayed the same payload;
-- retained every agent row ID and the scan-run row ID;
-- read back `packageApiAttempted = false`;
-- read back a null package count;
-- read back `coreAgentCount = 209` and `environmentFailureCount = 0`.
+`List rows by business key → Add missing row → capture primary GUID → Update by GUID`
+
+The active alternate keys still protect uniqueness. Because lookup and create
+are separate connector calls, the flow uses sequential agent iterations and
+allows only one active flow run.
+
+The first connector-only run succeeded but read-back found five null run-ledger
+counts. A repair attempted in the legacy designer stored `@body(...)` text as a
+literal string even though Flow Checker reported zero errors, and the replay
+failed when Dataverse converted that text to an integer. The fields were
+re-authored as expression tokens in the new designer and the identical payload
+was replayed successfully.
+
+Independent read-back after the corrected replay confirmed:
+
+- 209 agent rows and one scan-run row;
+- `coreAgentCount = 209`;
+- `dataverseEnvironmentCount = 30`;
+- `dataverseScannedAgentCount = 209`;
+- `environmentFailureCount = 0`;
+- `noDataverseEnvironmentCount = 1`;
+- `packageApiAttempted = false`;
+- package count remains null because the Package API was Deferred.
+
+The stable GUID-set hashes were:
+
+- agents:
+  `56ee1003fc0af9e71ae91b0f113d2a3244706d19f69f0d4a217df896a0aab626`;
+- scan run:
+  `5750d9018b4ccadec634bda2b9eab9dc49cba0abcd322f3758527e2dc5bea269`.
+
+![Sanitized Power Automate run history showing the successful 209-agent persistence replay](img/lab-validation/power-automate-run-success.png)
+
+*The published validation flow replay succeeded in 1 minute 32 seconds. The
+capture is tightly cropped to exclude tenant, account, environment, and flow
+identifiers.*
+
+Final diff review found that the documented fresh-row paths omitted
+`fsi_lastscannedat`, `fsi_runid`, and other create-time fields, and that
+`fsi_environmentid` was marked Business Required even though package-only rows
+legitimately have no environment. The source schema now makes that column
+optional for fresh deployments; the guide maps the required fields, uses
+per-row Compose outputs for nullable Choice values, validates labels before any
+row is created, verifies the critical read-back counts/null semantics, and
+routes technical persistence failures to notification. The deployed no-license
+lab contained no package-only rows, so these final guide/schema corrections
+remain **Static/Mock - Not Observed Live**. Earlier v0.4 preview deployments
+must change the Environment ID column requirement to Optional before authoring
+the package-only flow branch.
 
 Read-back found `fsi_createdin` unpopulated on all 209 rows. The Layer 2
 Dataverse `bot` scan inventories agents but does not supply the ARG `createdIn`
@@ -168,8 +218,8 @@ were not downloaded. A null entitlement means not evaluated; it is distinct
 from a computed `Unknown` classification. BI consumers should use the
 `fsi_caiscanrun` coverage fields before interpreting any of these dimensions.
 
-This result validates the Dataverse contract but is **not** evidence that the
-documented Power Automate flow was built, published, or executed.
+This result validates the documented lookup/create/GUID-update persistence
+pattern and the BI-ready run-ledger mapping in the available no-license lab.
 
 ## Static licensed-path assurance
 
@@ -178,7 +228,7 @@ The automated suite covers Package Management API:
 - successful Agent Builder inventory;
 - successful empty catalog;
 - pagination and truncation;
-- package-only and existing-row reconciliation;
+- package-only and existing-row scanner reconciliation;
 - HTTP 401, 403, 404, 429, and 5xx responses;
 - transport and parse failures;
 - conservative status handling that never converts an API error into license
@@ -188,22 +238,21 @@ These cases remain **Static/Mock - Not Observed Live**.
 
 ## Deferred work and coverage limits
 
-- **Power Automate:** build, publish, run history, and replay remain Deferred.
 - **Registry rows:** the confidential workbook was not downloaded into the lab
   evidence store; owner correlation remains Deferred.
 - **Entitlement:** no real Registry owner identities were processed; Paid
   Copilot, Copilot Chat Only, and Unknown are not claimed as observed live.
 - **Package API:** no Agent 365 license was available, so a successful live
-  package catalog was not observed.
+  package catalog or package-only Dataverse flow write was not observed.
 - **ARG:** unsuccessful requests left the attempted ARG layer `Unsupported`.
   Layer 2 provided the complete declared-scope inventory, but not
   authoring-surface classification.
 
 ## Screenshot capture checklist
 
-No screenshots are committed yet. Capture them only in a user-present,
-authenticated lab browser session, then crop, redact, flatten, strip metadata,
-hash, and review them before commit.
+One sanitized run-history screenshot is committed. Capture any additional
+screenshots only in a user-present, authenticated lab browser session, then
+crop, redact, flatten, strip metadata, hash, and review them before commit.
 
 Place approved PNGs under `copilot-agent-inventory/docs/img/` and register each
 one in `copilot-agent-inventory/docs/lab-validation-evidence.json` with its
@@ -214,8 +263,9 @@ SHA-256 hash, source class, UTC capture time, caption, and alt text. Run
 | Screenshot | Requirement | Status |
 |---|---|---|
 | Dataverse alternate keys | Show all CAI keys Active, including `fsi_ScanRunKey`; exclude tenant/account chrome | Required - Deferred |
-| Published flow run | Show the published flow and one successful run for the explicit-absent payload | Required - Deferred |
-| `fsi_caiscanrun` read-back | Show requested mode Absent, Package API attempted false, Package API layer Deferred, and package count blank/null | Required - Browser capture deferred; live row exists |
+| Successful flow replay | Show one successful run for the explicit-absent payload without tenant, account, environment, or flow identifiers | Completed - sanitized run-history image published |
+| Published/enabled flow state | Show the validation flow is published and enabled without exposing tenant/account chrome | Optional - live state verified; screenshot Deferred |
+| `fsi_caiscanrun` read-back | Show requested mode Absent, Package API attempted false, Package API layer Deferred, and package count blank/null | Required - Browser capture Deferred; sanitized JSON read-back is authoritative |
 | Registry headers | Prefer the sanitized table in this report; capture only if the header row can be isolated from every data row | Optional |
 | Graph application permissions | Capture only if a dedicated scanner application is provisioned; no application was created for this delegated lab run | Conditional |
 
@@ -231,7 +281,9 @@ Raw evidence remains outside Git in evidence set
   idempotency;
 - environment access remediation;
 - Registry header-only inspection;
-- direct Dataverse persistence and replay.
+- direct Dataverse persistence and replay;
+- published Power Automate persistence, corrected replay, and independent
+  Dataverse read-back.
 
 Manifest files:
 
@@ -245,6 +297,7 @@ Manifest files:
 - `live-remediated-sha256.txt`
 - `registry-header-sha256.txt`
 - `dataverse-persistence-sha256.txt`
+- `power-automate-persistence-sha256.txt`
 
 ## Retained lab state
 
@@ -252,12 +305,11 @@ The non-production sandbox retains one shared Choice, 22 CAI Choices, nine CAI
 tables, active alternate keys, 209 agent rows, and one scan-run row as a
 reusable validation baseline. The current lab administrator also retains System
 Administrator access in the four non-production environments used to close the
-Layer 2 coverage gaps; review and revoke that standing access when the remaining
-flow validation is complete. PAC 2.9.3 is the active CLI version.
+Layer 2 coverage gaps; review and revoke that standing access now that flow
+validation is complete. PAC 2.9.3 is the active CLI version.
 
-Before validating Power Automate, clear the retained CAI validation rows or use
-a separate environment. Otherwise the flow can upsert the direct-writer rows
-and mask whether the flow itself created the expected records.
+The published `CAI - Manual Persistence Validation` flow remains enabled pending
+report review. Disable or delete it when no further replay evidence is needed.
 
 These controls and evidence support governance review and BI interpretation;
 they do not by themselves establish regulatory compliance.
