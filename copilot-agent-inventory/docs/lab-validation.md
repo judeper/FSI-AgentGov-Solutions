@@ -1,9 +1,9 @@
 # Copilot Agent Inventory v0.4 Lab Validation
 
 **Validation date:** July 22-24, 2026<br>
-**Version:** v0.4.0-preview  
-**Tenant profile:** Microsoft 365 lab without Microsoft Agent 365  
-**Report source:** `d062d50`  
+**Version:** v0.4.0-preview
+**Tenant profile:** Microsoft 365 lab without Microsoft Agent 365
+**Report source:** `d062d50`
 **Live scan source:** `de86ded`
 
 ## Executive result
