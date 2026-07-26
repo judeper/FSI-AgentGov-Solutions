@@ -6,6 +6,7 @@ All notable changes to this solution will be documented in this file.
 
 ### Changed
 
+- **Evidence-export framework stamp now `v1.6.0`.** `Export-UnifiedComplianceEvidence.ps1` stamped `frameworkVersion = 'v1.4.0'` into every exported evidence manifest while the repository's solution READMEs declare validation against framework **v1.6.0** and CI now pins `FRAMEWORK_REF` to `v1.6.0`. Exported evidence asserted a framework version the repository no longer builds against. The stamp and the accompanying `docs/evidence-export.md` sample now read `v1.6.0`. `scripts/powershell/Export-UnifiedComplianceEvidence.ps1:330`. (issue #325, F10)
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
 
 ### Fixed

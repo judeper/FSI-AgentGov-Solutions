@@ -92,7 +92,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.2.1 | team, enterprise |
 | [Agent Cost Reporting](./agent-cost-reporting/) | 2 | v0.1.0-preview | team, enterprise |
 | [Agent Eligibility Gateway](./agent-eligibility-gateway/) | 3 | v0.1.0-preview | enterprise |
-| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.3 | personal, team, enterprise |
+| [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.4 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.1 | personal, team, enterprise |
 | [Agent Sharing Access Restriction Detector](./agent-sharing-access-restriction-detector/) | 2 | v2.0.2 | team, enterprise |
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.2 | team, enterprise |

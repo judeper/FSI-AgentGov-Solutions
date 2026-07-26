@@ -20,7 +20,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | agent-communication-restriction-detector | v1.2.1 | 2.17 | Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration |
 | agent-cost-reporting | v0.1.0-preview | 1.7, 3.1, 3.2 | Consolidated, on-demand, point-in-time cost/consumption evidence report for AI agents across Azure Cost Management, Microsoft Graph, the Power Platform API, and Purview audit logs, normalized to a cost-fact dataset and rendered as a self-contained HTML evidence artifact |
 | agent-eligibility-gateway | v0.1.0-preview | 1.1, 1.18, 3.8 | Optional runtime allow/deny gateway (Azure API Management) for owned custom-web and Direct Line agent channels |
-| agent-knowledge-source-scanner | v1.1.3 | 4.3, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
+| agent-knowledge-source-scanner | v1.1.4 | 4.8, 1.4, 1.5 | Item-level permission scanning for agent knowledge source SharePoint libraries |
 | agent-registry-automation | v2.1.1 | 1.2, 1.7, 2.1, 2.13 | Automated discovery, registration, approval, and lifecycle governance of AI agents |
 | agent-observability-foundation | v1.2.4 | 1.7, 2.8, 2.9, 3.2 | Foundational observability infrastructure for agent monitoring |
 | agent-sharing-access-restriction-detector | v2.0.2 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |

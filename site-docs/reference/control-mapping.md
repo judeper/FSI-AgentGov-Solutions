@@ -94,12 +94,12 @@ Complete mapping of the [FSI Agent Governance Framework](https://judeper.github.
 |---------|-------------|-----------|
 | <span id="control-4-1"></span>4.1 | SharePoint Information Access Governance (IAG) / Restricted Content Discovery | _No solution yet_ |
 | <span id="control-4-2"></span>4.2 | Site Access Reviews and Certification | _No solution yet_ |
-| <span id="control-4-3"></span>4.3 | Site and Document Retention Management | [Agent Knowledge Source Scanner](../solutions/agent-knowledge-source-scanner/index.md) |
+| <span id="control-4-3"></span>4.3 | Site and Document Retention Management | _No solution yet_ |
 | <span id="control-4-4"></span>4.4 | Guest and External User Access Controls | _No solution yet_ |
 | <span id="control-4-5"></span>4.5 | SharePoint Security and Compliance Monitoring | _No solution yet_ |
 | <span id="control-4-6"></span>4.6 | Grounding Scope Governance | _No solution yet_ |
 | <span id="control-4-7"></span>4.7 | Microsoft 365 Copilot Data Governance | _No solution yet_ |
-| <span id="control-4-8"></span>4.8 | Item-Level Permission Scanning for Agent Knowledge Sources | _No solution yet_ |
+| <span id="control-4-8"></span>4.8 | Item-Level Permission Scanning for Agent Knowledge Sources | [Agent Knowledge Source Scanner](../solutions/agent-knowledge-source-scanner/index.md) |
 | <span id="control-4-9"></span>4.9 | Embedded File Content Governance | _No solution yet_ |
 
 ## Coverage Summary
