@@ -12,10 +12,10 @@ coe_function: govern
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Preview — Copilot Studio credential-oversharing detection is currently listed by Microsoft for public preview and should be validated in a non-production tenant before regulated production use.
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-07-26
 
 >
-> ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, which the Microsoft release plan currently lists for public preview in July 2026 and general availability in September 2026. Verify current feature status at the [Microsoft release plan](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing) before production deployment.
+> ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, published as **Microsoft 365 Roadmap ID 566873**. Microsoft currently lists a preview target of July 2026 and a general availability target of September 2026, with roadmap status *In development*. Microsoft has retired the Copilot Studio pages under the Power Platform release plan — those URLs now redirect to the Microsoft 365 Roadmap, which is the current source for Copilot Studio feature timing. Verify current feature status on the [Microsoft 365 Roadmap (Microsoft Copilot Studio)](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) before production deployment.
 
 ## Overview
 
@@ -183,15 +183,17 @@ See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 ## Known Limitations
 
-1. **Preview feature dependency** — Credential oversharing signals from Copilot Studio depend on a Microsoft feature currently listed for public preview in July 2026 and general availability in September 2026. Release-plan timelines may change, and signal availability may vary by tenant.
+1. **Preview feature dependency** — Credential oversharing signals from Copilot Studio depend on a Microsoft feature currently listed on the Microsoft 365 Roadmap (ID 566873) with a preview target of July 2026 and general availability target of September 2026, at roadmap status *In development*. Roadmap timelines may change, and signal availability may vary by tenant.
 2. **Connector scope visibility** — Not all connector types expose OAuth scope details through the admin API.
 3. **Service principal resolution** — Cross-environment credential detection requires consistent service principal IDs across environments.
 4. **Scan performance** — Large tenants (100+ environments) may require environment filters or batched scanning.
 
 ## Microsoft References
 
-- [Enforce safe sharing by detecting credential oversharing](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing)
-- [Copilot Studio 2026 Release Wave 1](https://learn.microsoft.com/en-us/power-platform/release-plan/2026wave1/microsoft-copilot-studio/planned-features)
+- [Enforce safe sharing by detecting credential oversharing — Microsoft 365 Roadmap ID 566873](https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=566873)
+- [Microsoft 365 Roadmap — Microsoft Copilot Studio](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) (Microsoft's redirect target for the retired Copilot Studio release-plan pages: <https://aka.ms/MCStoM365Roadmap>)
+- [Release plans for Dynamics 365, Power Platform, and Copilot](https://learn.microsoft.com/en-us/dynamics365/release-plans/)
+- [Conditional Access for workload identities](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity)
 - [Power Platform Preview Terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/)
 
 ## Version History
