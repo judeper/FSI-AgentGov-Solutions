@@ -6,11 +6,11 @@ This file provides guidance for autonomous AI agents working on this repository.
 
 **FSI-AgentGov-Solutions** — Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **43 solution implementations (35 live, 8 preview)** mapped to the 78-control framework across all 4 pillars
+- **43 solution implementations (35 live, 8 preview)** mapped to the 79-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 
-**Companion Repository:** `FSI-AgentGov` (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation (78 controls, 312 playbooks, MkDocs site).
+**Companion Repository:** `FSI-AgentGov` (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework documentation (79 controls, 312 playbooks, MkDocs site).
 
 ## Solution Catalog
 
@@ -29,7 +29,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | agent-sharing-access-restriction-detector | v2.0.2 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
 | audit-compliance-manager | v1.0.6 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
 | coi-testing | v1.1.2 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | v1.0.5 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
+| compliance-dashboard | v1.0.5 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across the framework control baseline with Exchange coverage |
 | conditional-access-automation | v2.0.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
 | content-moderation-monitor | v1.1.2 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
 | copilot-agent-inventory | v0.4.0-preview | 1.2, 1.7, 2.1, 2.13 | Foundation system-of-record for Copilot agents — license-aware four-layer tenant-wide discovery (operator-selected Agent 365 mode) feeding a canonical nine-entity governance store |
@@ -256,7 +256,7 @@ When writing documentation in this repository:
 
 The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in two steps by CI (`.github/workflows/publish_docs.yml`):
 
-1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root), the README solutions table (between `<!-- BEGIN:SOLUTIONS -->` markers), `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), the home-page hero metrics block, and copies `{slug}/docs/*.md` with filename normalization (lowercase, hyphens).
+1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root), the README solutions table (between `<!-- BEGIN:SOLUTIONS -->` markers), `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 79 framework controls), the home-page hero metrics block, and copies `{slug}/docs/*.md` with filename normalization (lowercase, hyphens).
 2. `mkdocs build --strict` — renders the site from `site-docs/`.
 
 **Critical:** `site-docs/solutions/*/` is **gitignored** and regenerated on every build. Manual edits to those files are discarded. Never edit under `site-docs/solutions/{slug}/` directly.

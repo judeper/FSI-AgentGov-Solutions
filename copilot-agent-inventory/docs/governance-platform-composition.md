@@ -493,4 +493,4 @@ above is a human-readable projection only.
 - Work IQ Usage Detection — <https://judeper.github.io/FSI-AgentGov-Solutions/solutions/work-iq-usage-detection/>
 - Copilot Billing Governance — <https://judeper.github.io/FSI-AgentGov-Solutions/solutions/copilot-billing-governance/>
 - Agent Eligibility Gateway — <https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-eligibility-gateway/>
-- Control mapping (all 78 framework controls) — <https://judeper.github.io/FSI-AgentGov-Solutions/reference/control-mapping/>
+- Control mapping (all 79 framework controls) — <https://judeper.github.io/FSI-AgentGov-Solutions/reference/control-mapping/>

@@ -8,6 +8,12 @@ tier: '2'
 controls:
 - '1.18'
 - '2.8'
+# controls_partial: ASARD stays PARTIAL on both controls — it covers only part
+# of the agent sharing plane. Evidence:
+# LAB-VALIDATION.md#sharing-plane-coverage-scope-honesty
+controls_partial:
+- '1.18'
+- '2.8'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-sharing-access-restriction-detector/
 prerequisites:
   power-platform-admin: "Power Platform admin or Entra Global Admin for BAP Admin API access, Dataverse setup, and remediation flows."

@@ -1,6 +1,6 @@
 id: compliance-dashboard
 name: Compliance Dashboard
-description: Aggregated compliance reporting dashboard designed to report across the 78-control FSI Agent Governance Framework baseline when those control records are loaded into Dataverse, with zone-based filtering and Exchange evidence coverage.
+description: Aggregated compliance reporting dashboard designed to report across the FSI Agent Governance Framework control baseline when those control records are loaded into Dataverse, with zone-based filtering and Exchange evidence coverage.
 version: 1.0.5
 status: live
 domain: compliance-audit
@@ -16,7 +16,7 @@ prerequisites:
   compliance-admin: "Microsoft Purview Compliance Administrator for compliance evidence review and export."
   m365-admin: "Power BI workspace owner or capacity admin with M365 E5 or E5 Compliance licensing for dashboard access."
   global-reader: "Read-only tenant visibility for configuration validation and troubleshooting."
-verification: "Confirm fsi_controlmasters contains the 78-control baseline, then open the Power BI dashboard and verify the latest Dataverse-synced tiles refresh successfully."
+verification: "Confirm fsi_controlmasters is populated with your control baseline, then open the Power BI dashboard and verify the latest Dataverse-synced tiles refresh successfully."
 dependencies:
 - agent-observability-foundation
 - cross-solution-integration

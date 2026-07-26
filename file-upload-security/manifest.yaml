@@ -9,6 +9,13 @@ controls:
 - '1.14'
 - '1.8'
 - '1.4'
+# controls_partial: FUS stays PARTIAL on all three controls — runtime upload
+# enforcement requires a live tenant to confirm. Evidence:
+# LAB-VALIDATION.md#runtime-only-caveats-require-a-live-tenant-to-confirm
+controls_partial:
+- '1.14'
+- '1.8'
+- '1.4'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/file-upload-security/
 prerequisites:
   power-platform-admin: Power Platform admin, Dynamics 365 Service Admin, or Global Admin to enumerate environments and write Dataverse baseline and violation records.

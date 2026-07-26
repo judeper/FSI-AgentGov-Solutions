@@ -8,6 +8,14 @@ tier: '2'
 controls:
 - '2.12'
 - '1.10'
+# controls_partial: ACA stays PARTIAL on both controls. The 2026-06-13 live leg
+# used a SYNTHETIC hand-written YAML topic fixture; the two real agents exposed
+# 0 of 18 topic components, so detection against authentic in-product Copilot
+# Studio topics is unproven. Evidence:
+# LAB-VALIDATION.md#runtime-only-verification-items-cannot-confirm-statically
+controls_partial:
+- '2.12'
+- '1.10'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/action-confirmation-auditor/
 prerequisites:
   power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.

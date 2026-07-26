@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-Q3 — 43-solution review (issue #205)
+
+### Fixed
+- **Partial control coverage no longer silently upgraded to full.** Six solutions (`action-confirmation-auditor`, `agent-access-monitor`, `agent-sharing-access-restriction-detector`, `content-moderation-monitor`, `file-upload-security`, `generative-ai-config-auditor`) carried hand-edited `coverage: "partial"` values in their **generated** `controls-covered.json`, while their `manifest.yaml` declared no partial coverage. Any run of `scripts/build-manifest.py` rewrote all 12 control claims across those six solutions to `coverage: "full"` and deleted the supporting gap notes — overstating compliance coverage in an artifact consumed by the framework `solutions-lock.json` contract. Each manifest now declares `controls_partial`, so the partial claims survive regeneration. The narrative evidence remains in each solution's `LAB-VALIDATION.md` (all six anchors verified to resolve).
+- **`controls-covered.json` files now satisfy their own schema.** The hand-edited `coverageScope`/`notes` keys violated `scripts/controls-covered.schema.json` (`additionalProperties: false`) — 17 schema errors across the six files, now zero.
+- **Framework control count reconciled 78 → 79.** The framework baseline grew to 79 controls with the addition of 2.27 (Consumption-Entitlement Governance) at framework SHA `66d3d8bd9ad19fbc3d8907b888408fba39559202`. Regenerated artifacts plus hand-authored references in `README`/`AGENTS.md`/`.github/copilot-instructions.md`/`DEPLOYMENT-GUIDE.md`/`site-docs` now read 79. Descriptions that hardcoded a control count were made count-neutral so future framework releases do not silently re-introduce the same drift.
+- Resolved 4 unused-import (F401) lint findings in per-solution `tests/` directories.
+
+### Added
+- `manifest.yaml.controls_partial` is now documented in `scripts/manifest.schema.json`. The field was already read by `build-manifest.py` and used by two manifests, but was undocumented — which is why authors edited the generated file instead.
+- `build-manifest.py` now fails validation when a `controls_partial` entry is absent from `controls[]`, instead of silently discarding the partial claim.
+- `scripts/tests/test_build_manifest_partial_controls.py` — regression tests pinning partial-coverage round-tripping, manifest-as-source-of-truth, the subset guard, and schema conformance of the generated exports.
+
+### Changed
+- CI ruff scope widened from `scripts */scripts` to the whole repository. The previous globs skipped per-solution `tests/` directories, where the 4 findings above had accumulated unreported.
+
+### Notes
+- The `compliance-dashboard` sample dataset (`sample-data/control-master.json`) still ships 78 controls and does **not** include control 2.27. Its counts are accurate and were deliberately **not** rewritten to 79; documentation now states the 78-of-79 position explicitly. Regenerating the dataset is a data/behavioural change tracked separately.
+- No new solutions were invented for the 38 orphan controls; they are reported as prioritised gaps.
+
+---
+
 ## [Unreleased] - 2026-Q3 — Lab harness foundation
 
 ### Added

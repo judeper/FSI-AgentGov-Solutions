@@ -12,7 +12,7 @@ coe_function: optimize
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 
-Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the control records loaded into Dataverse with zone-based filtering. The included sample dataset contains the full 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4).
+Aggregated compliance reporting dashboard for the FSI Agent Governance Framework, providing unified visibility across the control records loaded into Dataverse with zone-based filtering. The included sample dataset contains 78 controls (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4). The framework baseline has since grown to 79 controls; the shipped sample does not yet include control 2.27 (Consumption-Entitlement Governance) — see [Known Limitations](#known-limitations).
 
 ## Overview
 
@@ -25,7 +25,7 @@ The Compliance Dashboard aggregates compliance data from Dataverse tables (popul
 | **Executive Summary** | Overall compliance score with trend indicators |
 | **Pillar Breakdown** | Compliance status by pillar (Security, Management, Reporting, SharePoint) |
 | **Zone Filtering** | Filter by governance zone (Zone 1/2/3) |
-| **Control Drill-Down** | Detailed status for each control loaded into Dataverse (the shipped sample dataset contains the full 78-control framework baseline) |
+| **Control Drill-Down** | Detailed status for each control loaded into Dataverse (the shipped sample dataset contains 78 of the 79 framework controls) |
 | **Trend Analysis** | Historical compliance tracking over time |
 | **Exception Tracking** | Open exceptions with remediation status |
 
@@ -137,7 +137,7 @@ python scripts/load_sample_data.py --export
 
 > **Note:** The `--environment` mode currently uploads control master data only. Use `--export` to generate assessment, score, and exception JSON files, then import them via Power Apps or the Dataverse API.
 
-> **Baseline Note:** Confirm the control master dataset reflects the validated 78-control framework baseline before importing it into Dataverse.
+> **Baseline Note:** Confirm the control master dataset reflects the current validated framework baseline before importing it into Dataverse. The framework baseline is now 79 controls; the shipped sample contains 78 and does not include control 2.27 (Consumption-Entitlement Governance).
 
 **Production Deployment:** Clear sample data before production use.
 
@@ -313,7 +313,7 @@ This section documents limitations and design decisions for the v1.0.x release.
 |------------|-------------|------------|
 | **Manual .pbit creation** | Power BI template must be created manually using Power BI Desktop following [Power BI Template Specification](docs/power-bi-template-spec.md) | The specification provides step-by-step page-by-page build instructions |
 | **Manual flow build** | Power Automate flows must be built manually following [Flow Configuration](docs/flow-configuration.md); no exported flow JSON ships in this solution per repository content policy | Use the manual build instructions; build once and optionally export to your own managed solution |
-| **Sample dataset distribution** | The shipped `sample-data/control-master.json` contains the full 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4). | The `PillarDimension` DATATABLE in `docs/dax-measures.md` reflects these counts; update both if the framework baseline grows in a future release. |
+| **Sample dataset lags the framework baseline** | The shipped `sample-data/control-master.json` contains 78 controls (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4). The framework baseline has grown to 79 controls: control 2.27 (Consumption-Entitlement Governance) is not present in the sample. | Load your own control master reflecting the current 79-control baseline, or add control 2.27 manually. Regenerating the sample also requires updating the `PillarDimension` DATATABLE in `docs/dax-measures.md` so the Pillar 2 count stays in step. |
 | **Evidence collector flow not yet shipped** | The third flow `CD-EvidenceCollector` is documented as planned in `docs/flow-configuration.md` but not implemented | Import Exchange and other evidence JSON manually via Power Apps or the Dataverse Web API until the flow ships |
 | **No automated validation** | Deployment validation uses manual checklist only, no automated testing scripts | Use [Deployment Checklist](docs/deployment-checklist.md) to verify each deployment step |
 | **RLS not pre-configured** | Row-Level Security roles must be created by customer to match organizational structure | See [Power BI Setup](docs/power-bi-setup.md) for example RLS DAX patterns |

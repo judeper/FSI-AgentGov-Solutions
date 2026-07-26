@@ -8,6 +8,12 @@ tier: '2'
 controls:
 - '1.27'
 - '1.8'
+# controls_partial: CMM stays PARTIAL on both controls — runtime moderation
+# behaviour cannot be confirmed without a live tenant. Evidence:
+# LAB-VALIDATION.md#runtime-only-caveats-not-verifiable-without-a-live-tenant
+controls_partial:
+- '1.27'
+- '1.8'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/content-moderation-monitor/
 prerequisites:
   power-platform-admin: Power Platform admin, Dynamics 365 Service Admin, or Global Admin to enumerate environments and read bot records; Dataverse access requires System Administrator or System Customizer in each target environment.

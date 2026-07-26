@@ -4,7 +4,7 @@
 
 Deployable Power Platform solutions for the [FSI Agent Governance Framework](https://github.com/judeper/FSI-AgentGov). These solutions help Financial Services organizations implement operational controls and monitoring for AI agents (Copilot Studio, Agent Builder).
 
-- **43 solution implementations (35 live, 8 preview)** mapped to the 78-control framework across all 4 pillars
+- **43 solution implementations (35 live, 8 preview)** mapped to the 79-control framework across all 4 pillars
 - **Target regulations:** FINRA 4511/3110/25-07, SEC 17a-3/4, SOX 302/404, GLBA 501(b), OCC 2011-12, Fed SR 11-7, CFTC 1.31
 - **Technologies:** PowerShell, Python, KQL, Dataverse (documentation-only for Power Automate — no exported flow artifacts)
 - **Audience:** M365 administrators and DevOps engineers in US financial services
@@ -26,7 +26,7 @@ Deployable Power Platform solutions for the [FSI Agent Governance Framework](htt
 | agent-sharing-access-restriction-detector | v2.0.2 | 1.18, 2.8 | Zone-based agent sharing policy enforcement with approval workflows |
 | audit-compliance-manager | v1.0.6 | 1.7 | Unified audit compliance — validates configs, detects gaps, remediates |
 | coi-testing | v1.1.2 | 2.18, 2.11, 2.5 | Conflict of interest testing for agent recommendations |
-| compliance-dashboard | v1.0.5 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across 78 controls with Exchange coverage |
+| compliance-dashboard | v1.0.5 | 3.3, 3.1, 3.2, 3.4 | Aggregated compliance reporting across the framework control baseline with Exchange coverage |
 | conditional-access-automation | v2.0.2 | 1.11, 1.23, 1.18 | CA policy deployment, compliance monitoring, and drift detection |
 | content-moderation-monitor | v1.1.2 | 1.27, 1.8 | Per-agent content moderation validation against zone requirements |
 | copilot-agent-inventory | v0.4.0-preview | 1.2, 1.7, 2.1, 2.13 | Foundation system-of-record for Copilot agents — license-aware four-layer tenant-wide discovery (operator-selected Agent 365 mode) feeding a canonical nine-entity governance store |
@@ -147,7 +147,7 @@ The single source of truth for column names is each solution's `create_*_dataver
 
 **FSI-AgentGov** (`/Users/admin/dev/FSI-AgentGov`) contains the governance framework:
 - `docs/framework/` — Governance principles
-- `docs/controls/` — 78 control specifications (10-section format)
+- `docs/controls/` — 79 control specifications (10-section format)
 - `docs/playbooks/` — Implementation guides referencing solutions here
 - `docs/reference/solutions-index.md` — Complete solutions catalog
 - `docs/framework/solutions-integration.md` — Framework-to-solutions mapping
@@ -158,7 +158,7 @@ When updating solution READMEs, ensure Related Controls sections match the contr
 
 The MkDocs site at https://judeper.github.io/FSI-AgentGov-Solutions/ is built in two steps by CI (`.github/workflows/publish_docs.yml`):
 
-1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root, including canonical per-solution `solutions[*].controls` coverage), the README solutions table, any solution README blocks opted into manifest-managed implemented-controls markers, `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 78 framework controls), and the home-page hero metrics block. Sub-docs from `{slug}/docs/*.md` are copied with filename normalization.
+1. `python scripts/build-manifest.py` — reads each `<slug>/manifest.yaml` (canonical source of truth), validates against `scripts/manifest.schema.json` and the framework `controls.json`, then emits `solutions.json` (repo root, including canonical per-solution `solutions[*].controls` coverage), the README solutions table, any solution README blocks opted into manifest-managed implemented-controls markers, `site-docs/solutions/index.md`, every per-solution detail page at `site-docs/solutions/{slug}/index.md`, `site-docs/reference/control-mapping.md` (all 79 framework controls), and the home-page hero metrics block. Sub-docs from `{slug}/docs/*.md` are copied with filename normalization.
 2. `mkdocs build --strict` — renders the site from `site-docs/`.
 
 A separate CI gate, `.github/workflows/manifest-check.yml`, runs `build-manifest.py --check` on every PR and fails when manifests reference unknown framework control IDs or generated artifacts drift.

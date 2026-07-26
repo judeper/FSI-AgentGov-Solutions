@@ -12,7 +12,7 @@ This query library provides production-ready KQL queries for extracting governan
 - **Phase 4:** Power BI dashboards (executive reporting)
 - **Ad-hoc analysis:** Direct Log Analytics queries for incident investigation
 
-All queries align with the [FSI-AgentGov framework](https://github.com/judeper/FSI-AgentGov) 78-control governance model and include inline control references for audit traceability.
+All queries align with the [FSI-AgentGov framework](https://github.com/judeper/FSI-AgentGov) 79-control governance model and include inline control references for audit traceability.
 
 ## Query Organization
 

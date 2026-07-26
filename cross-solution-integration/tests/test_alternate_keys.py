@@ -7,8 +7,6 @@ Dataverse naming conventions (no snake_case in logical names).
 from __future__ import annotations
 
 import importlib.util
-import re
-import sys
 from pathlib import Path
 
 import pytest

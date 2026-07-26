@@ -11,7 +11,6 @@ Addresses Council Review 2026-04-16 finding #1: column-name drift is the
 
 from __future__ import annotations
 
-import ast
 import re
 from pathlib import Path
 

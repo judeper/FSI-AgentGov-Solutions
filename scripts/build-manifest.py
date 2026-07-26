@@ -18,7 +18,7 @@ deterministic artifacts from a single source of truth:
   `<!-- END:SOLUTIONS -->` markers.
 * `site-docs/solutions/index.md` — Solutions Catalog grouped by domain.
 * `site-docs/solutions/<slug>/index.md` — per-solution detail pages.
-* `site-docs/reference/control-mapping.md` — all 78 framework controls grouped
+* `site-docs/reference/control-mapping.md` — all 79 framework controls grouped
   by pillar; controls without solutions render "No solution yet".
 * `site-docs/index.md` — hero metric counts derived from data (never hardcoded).
 * Sub-doc copy from `<slug>/docs/*.md` to `site-docs/solutions/<slug>/` with
@@ -363,6 +363,17 @@ def validate_manifests(
             if ctrl not in framework_controls:
                 errors.append(
                     f"{slug}/manifest.yaml: control {ctrl!r} not in framework controls.json"
+                )
+        # controls_partial[] must be a subset of controls[]. An id listed here
+        # that is absent from controls[] is silently ignored by
+        # emit_controls_covered_json(), which would downgrade a documented
+        # partial-coverage claim to "full" without warning.
+        declared_controls = set(m.get("controls", []))
+        for ctrl in m.get("controls_partial", []):
+            if ctrl not in declared_controls:
+                errors.append(
+                    f"{slug}/manifest.yaml: controls_partial entry {ctrl!r} is not "
+                    "listed in controls[]; partial coverage would be silently dropped"
                 )
         # dependencies refer to known slugs
         for dep in m.get("dependencies", []):
