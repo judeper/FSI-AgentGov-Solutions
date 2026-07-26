@@ -10,13 +10,13 @@ coe_function: govern
 > **Version:** v1.2.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-07-26
 
-Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Work IQ / semantic search) for Copilot Studio agents against zone-specific governance policies.
+Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Tenant graph grounding with semantic search) for Copilot Studio agents against zone-specific governance policies.
 
 ## Overview
 
-The Generative AI Config Auditor (GAC) validates that Copilot Studio agents comply with organization-specific generative AI governance policies. It detects unauthorized Azure OpenAI integrations, unapproved generative orchestration modes, unvetted knowledge sources, unauthorized Allow ungrounded responses (AI general knowledge) usage, and unapproved Work IQ (semantic search) enablement across Power Platform environments.
+The Generative AI Config Auditor (GAC) validates that Copilot Studio agents comply with organization-specific generative AI governance policies. It detects unauthorized Azure OpenAI integrations, unapproved generative orchestration modes, unvetted knowledge sources, unauthorized Allow ungrounded responses (AI general knowledge) usage, and unapproved Tenant graph grounding with semantic search enablement across Power Platform environments.
 
 Unlike the Content Moderation Monitor which validates moderation levels, GAC audits the generative AI feature configuration itself -- which AI capabilities are enabled, how they are configured, and whether connections to Azure OpenAI are on the approved whitelist.
 
@@ -31,7 +31,11 @@ Each governance zone defines which generative AI features are permitted and unde
 | Generative Answers Nodes | Explicit allowlist per topic | Allowed | Allowed |
 | AOAI Connection Whitelist | Enforced (critical) | Enforced (high) | Advisory (warning) |
 | Allow ungrounded responses (AI general knowledge) | Disabled (only approved knowledge sources) | Requires approval | Allowed |
-| Work IQ (semantic search) | Requires explicit approval | Allowed with logging | Allowed |
+| Tenant graph grounding with semantic search | Requires explicit approval | Allowed with logging | Allowed |
+
+> **Product naming note (verified 2026-07-26).** Microsoft documents the agent-level semantic search toggle as **Tenant graph grounding with semantic search**, on the Copilot Studio **Generative AI** settings page ([Knowledge sources summary](https://learn.microsoft.com/microsoft-copilot-studio/knowledge-copilot-studio#tenant-graph-grounding-with-semantic-search)). Earlier releases of this solution labeled it *Work IQ*; the Dataverse column (`fsi_semanticsearchenabled`) and the detector key (`aISettings.isSemanticSearchEnabled`) are unchanged. It is a distinct capability from the separately documented [Work IQ MCP tools](https://learn.microsoft.com/microsoft-copilot-studio/use-work-iq) (preview), which are covered by the `work-iq-usage-detection` solution.
+
+> **Orchestration and authentication dependency (verified 2026-07-26).** Microsoft documents that both **Allow ungrounded responses** and **Tenant graph grounding with semantic search** require the agent to have [generative orchestration](https://learn.microsoft.com/microsoft-copilot-studio/advanced-generative-actions) turned on, and that tenant graph grounding additionally requires the agent's user authentication to be set to **Authenticate with Microsoft**. Zone reviews are recommended to read these two toggles together with the agent's orchestration mode and authentication setting rather than in isolation.
 
 ### Violation Severity Matrix
 
@@ -41,7 +45,7 @@ Each governance zone defines which generative AI features are permitted and unde
 | Generative Orchestration (unauthorized) | Critical | Medium | Warning |
 | Generative Answers (unauthorized) | High | Medium | Warning |
 | Allow ungrounded responses (unauthorized) | Critical | Medium | Warning |
-| Work IQ / semantic search (unauthorized) | High | Medium | Warning |
+| Tenant graph grounding with semantic search (unauthorized) | High | Medium | Warning |
 | Unknown Configuration | High | Medium | Warning |
 
 ## Features
@@ -150,17 +154,18 @@ The following placeholder values in solution files must be replaced with your or
 
 ## Platform Update Notes
 
-### Admin Path Change (April 2026)
+### Admin Path Change (April 2026, re-verified 2026-07-26)
 
-Power Platform admin center now exposes a centralized **Copilot > Settings** area for Power Platform Copilot and agent settings. Copilot Studio also retains environment-level **Generative AI features** controls and the tenant-level **Publish Copilots with AI features** setting, while Microsoft 365 admin center controls govern agents and AI actions surfaced in Microsoft 365 Copilot.
+Power Platform admin center now exposes a centralized [**Copilot > Settings**](https://learn.microsoft.com/power-platform/admin/copilot/copilot-hub#settings) area for Power Platform Copilot and agent settings. Copilot Studio also retains the environment-level [**Generative AI features**](https://learn.microsoft.com/power-platform/admin/geographical-availability-copilot#turn-on-data-movement-bing-search-microsoft-365-services-and-flex-routing) pane and the tenant-level [**Publish Copilots with AI features**](https://learn.microsoft.com/power-platform/admin/tenant-settings) setting, while [Microsoft 365 admin center controls](https://learn.microsoft.com/microsoft-copilot-studio/copilot-plugins-enable-admin) govern agents and AI actions surfaced in Microsoft 365 Copilot.
 
 **Impact on this solution:** Manual verification should distinguish Power Platform admin center `Copilot > Settings`, environment **Generative AI features**, and Microsoft 365 admin center agent/action controls. Automated validation via Dataverse bot records and Power Platform cmdlets is unaffected.
 
-### Voice Feature Enablement (April 2026)
+### Voice Feature Enablement (April 2026, re-verified 2026-07-26)
 
-Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-configuration) with Basic and Realtime voice modes, barge-in support, and DTMF navigation. Voice enablement introduces additional governance considerations:
+Copilot Studio supports [interactive voice response (IVR)](https://learn.microsoft.com/microsoft-copilot-studio/voice-overview) through two types of voice-enabled agent: [basic voice agents](https://learn.microsoft.com/microsoft-copilot-studio/voice-basic-overview), which use classic orchestration and natural language understanding models, and [real-time voice agents](https://learn.microsoft.com/microsoft-copilot-studio/voice-realtime-voice-agents), which are used in generative orchestration scenarios and run on a speech-to-speech model. Both types support [barge-in](https://learn.microsoft.com/microsoft-copilot-studio/voice-configuration#turn-on-barge-in) and [DTMF](https://learn.microsoft.com/microsoft-copilot-studio/voice-dtmf) input. Voice enablement introduces additional governance considerations:
 
-- **Zone 1 (Enterprise) agents** with voice capabilities may require explicit approval before enabling real-time voice mode, due to telephony channel exposure
+- Voice track selection is coupled to the orchestration mode this solution already audits: Microsoft documents basic voice agents as using classic orchestration and real-time voice agents as a generative orchestration scenario, so an agent held to classic orchestration in Zone 1 falls into the basic voice track
+- **Zone 1 (Enterprise) agents** with voice capabilities may require explicit approval before enabling real-time voice, due to telephony channel exposure
 - Voice-enabled agents generate speech transcripts that may fall under FINRA Rule 4511 and SEC Rule 17a-4 record-keeping requirements
 - Organizations should evaluate whether voice feature toggles require the same zone-based governance as other GenAI features audited by this solution
 
