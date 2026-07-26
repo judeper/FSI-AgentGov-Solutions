@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: judeper/FSI-AgentGov
-          ref: ${{ vars.FRAMEWORK_REF || 'v1.4.0' }}
+          ref: ${{ vars.FRAMEWORK_REF || 'v1.6.0' }}
           path: fsi-agentgov
 
       - name: Set up Python

@@ -1,12 +1,12 @@
 id: agent-knowledge-source-scanner
 name: Agent Knowledge Source Scanner
 description: Item-level permission scanning for SharePoint libraries backing Copilot Studio agent knowledge sources.
-version: 1.1.3
+version: 1.1.4
 status: live
 domain: content-data
 tier: '2'
 controls:
-- '4.3'
+- '4.8'
 - '1.4'
 - '1.5'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-knowledge-source-scanner/

@@ -10,7 +10,7 @@ coe_function: govern
 > **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-07-26
 
 > **Note:** This is a scaffold release. The scenario library, the result
 > schema, and the runner shell are implemented; the agent-interaction layer
@@ -119,9 +119,9 @@ Detects inappropriate product bundling suggestions.
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Power Automate flows (planned scheduled runner) |
+| **Power Automate Premium** | Power Automate cloud flows using premium connectors (planned scheduled runner) |
 | **Dataverse capacity** | Test results storage |
-| **Copilot Studio** | Agent API access (when Direct Line integration ships) |
+| **Copilot Studio (standalone subscription)** | Agent API access over the Direct Line channel (when Direct Line integration ships). The Copilot Studio for Teams plan included in select Microsoft 365 subscriptions publishes only to Teams and cannot generate web channel security secrets. |
 
 ### Permissions
 
@@ -140,7 +140,7 @@ Create the `fsi_coitestresults` Dataverse table using the column definitions in 
 
 Use managed identity for production scheduled execution whenever possible. Assign the identity as a Dataverse application user with Create and Read access to `fsi_coitestresults`. For user-assigned managed identity, set:
 
-```bash
+```powershell
 $env:AZURE_MANAGED_IDENTITY_CLIENT_ID = "<managed-identity-client-id>"
 ```
 
