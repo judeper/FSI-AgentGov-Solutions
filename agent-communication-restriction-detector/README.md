@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.2.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-07-26
 
 Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration.
 
@@ -79,6 +79,7 @@ agent-communication-restriction-detector/
 │   ├── deploy.py
 │   ├── requirements.txt
 │   ├── Test-CommRestrictionCompliance.ps1
+│   ├── Compare-CommRestrictionCompliance.ps1
 │   ├── Export-CommViolationEvidence.ps1
 │   ├── Test-EvidenceIntegrity.ps1
 │   ├── Start-CommRestrictionValidationRunbook.ps1
