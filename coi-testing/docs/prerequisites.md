@@ -92,9 +92,9 @@ Dataverse authorization for this runner is based on Dataverse application users 
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Planned Power Automate or pipeline-driven scheduled test execution |
+| **Power Automate Premium** | Planned Power Automate cloud flows using premium connectors, or pipeline-driven scheduled test execution |
 | **Dataverse capacity** | Storage for test results (`fsi_coitestresults` table) |
-| **Copilot Studio** | Agent API access via Direct Line or Microsoft 365 Agents SDK in a future release |
+| **Copilot Studio (standalone subscription)** | Agent API access over the Direct Line channel or Microsoft 365 Agents SDK in a future release. The Copilot Studio for Teams plan included in select Microsoft 365 subscriptions publishes only to Teams and cannot generate web channel security secrets. |
 
 ## Dataverse Requirements
 
