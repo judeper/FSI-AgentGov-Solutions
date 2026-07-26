@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — Coverage-claim accuracy (issue #325)
+
+### Fixed
+- **`agent-knowledge-source-scanner` claimed control 4.3 but implements control 4.8.** The solution declared **4.3 — Site and Document Retention Management** while its entire implementation is **4.8 — Item-Level Permission Scanning for Agent Knowledge Sources**. The claim was wrong; the implementation was correct and unchanged. Control 4.8's checks (`4.8.a` item-level permissions scanned, `4.8.b` no oversharing detected) are collected via `Get-MgSiteDriveItemPermission`, and `Invoke-GraphPermissionScan.ps1` calls exactly that endpoint (`v1.0/drives/{driveId}/items/{itemId}/permissions`) while the risk model scores Anyone links, external/guest grants, and the Everyone / Everyone-except-external claims. Control 4.3's checks are retention-policy checks collected via `Get-RetentionCompliancePolicy`; this solution contains no retention logic and never calls that API. The previous Related Controls row was self-contradicting — it paired the 4.3 title with the description "Prevent agents from accessing overshared content". Control 4.8 was claimed by no solution in this repository before this change. **Control 4.3 is correspondingly not covered by any solution here and never was** — the retag removes a claim that was never backed by implementation rather than removing working coverage. Solution bumped to v1.1.4.
+- **`FRAMEWORK_REF` pin was stale, not the validation claim overstated.** CI pinned the framework checkout to `v1.4.0` while every solution README declares "Validated against framework version: **v1.6.0**". The claim is substantiated: each README carries a `# v1.6.0 CAPE alignment metadata` frontmatter block (`applicable_patterns`, `applicable_drivers`, `coe_function`), and framework release v1.6.0 is titled "consume CAPE-alignment tags from companion solutions" — it is the release that introduced the `applicable_drivers` / `applicable_patterns` / `pattern_critical` fields into `controls.json`. The pin now reads `v1.6.0` in `manifest-check.yml`, `publish_docs.yml`, and `docs-autonomy.yml`, with `THREAT-MODEL.md` and the `build-manifest.py` docstring updated to match. The bump is artifact-neutral: control `id`, `pillar`, and `title` are byte-identical between v1.4.0 and v1.6.0 (78 controls in both), so no generated output changes. The pin was deliberately *not* advanced to the newest release (v1.6.2), because no solution has been validated against it — that would replace a stale pin with an unsupported claim.
+- **Exported compliance evidence stamped a framework version the repo no longer builds against.** `cross-solution-integration/scripts/powershell/Export-UnifiedComplianceEvidence.ps1` wrote `frameworkVersion = 'v1.4.0'` into every export manifest; now `v1.6.0`, consistent with the pin.
+
+### Added
+- `scripts/tests/test_framework_ref_pin.py` — regression tests pinning the framework-reference contract so this drift cannot silently recur: the pin must be an explicit release tag (never `main`), all three framework-checkout workflows must pin the *same* tag, solution READMEs must agree on one validated-against version, and the pin must equal that version. Verified by mutation — reintroducing the original F10 state (all pins at `v1.4.0`, READMEs claiming `v1.6.0`) fails `test_pin_matches_readme_validated_version`.
+
+### Notes
+- **78 remains the correct control count in this repository.** Confirmed again against v1.4.0, v1.6.0, and v1.6.2 — all 78 controls, identical ID sets, and control 2.27 absent from every released tag. No change was made to the count.
+- `model-risk-management-automation/templates/agent-card-content.sample.json` deliberately retains `FSI-AgentGov-v1.4.0`. It is a point-in-time sample whose `generatedDate` (2026-05-05) predates the v1.6.0 release (2026-05-10), so v1.4.0 is the accurate stamp for that record.
+
+---
+
 ## [Unreleased] - 2026-Q3 — 43-solution review (issue #205)
 
 ### Fixed

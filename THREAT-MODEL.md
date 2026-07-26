@@ -51,7 +51,7 @@ The model uses a lightweight STRIDE-by-asset framing.
 | Secret committed to repo (token, client secret, certificate) | `gitleaks` workflow on every push/PR; `SECURITY.md` private reporting; reviewer checklist. |
 | Compliance language drift creating legal exposure | `language-rules.yml` workflow bans "ensures compliance" / "guarantees compliance". |
 | Manifest referencing unknown framework controls | `manifest-check.yml` validates against pinned framework `controls.json`. |
-| Stale framework reference creating control drift | Both manifest-check and publish-docs workflows pin the framework to `${{ vars.FRAMEWORK_REF \|\| 'v1.4.0' }}`. |
+| Stale framework reference creating control drift | Both manifest-check and publish-docs workflows pin the framework to `${{ vars.FRAMEWORK_REF \|\| 'v1.6.0' }}`, matching the framework version solution READMEs declare they were validated against. |
 | Dataverse logical-name typos in OData queries causing silent failures or unfiltered reads | `odata-lint.yml` (soft-gate) plus AGENTS.md / CLAUDE.md naming rule; promote to `--strict` once the 5 known bugs are fixed. |
 
 ### Customer-side execution (E/I/D)

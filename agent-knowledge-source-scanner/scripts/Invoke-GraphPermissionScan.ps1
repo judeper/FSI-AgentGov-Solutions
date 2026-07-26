@@ -49,7 +49,7 @@
     Version:    1.1.3
     Author:     FSI Agent Governance
     Framework:  FSI Agent Governance
-    Controls:   4.3, 1.4, 1.5
+    Controls:   4.8, 1.4, 1.5
 
     Required Microsoft Graph permissions (application or delegated) for the
     list-permissions endpoint (https://learn.microsoft.com/graph/api/driveitem-list-permissions):
