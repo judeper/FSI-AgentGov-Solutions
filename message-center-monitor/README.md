@@ -11,7 +11,7 @@ coe_function: scale
 > **Version:** v2.5.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-07-26
 >
 > **For AI agents and engineers** working in this solution: see [`AGENTS.md`](AGENTS.md)
 > for current operational state, cross-machine resume runbook, and
@@ -62,8 +62,8 @@ tears down cleanly.
 
 Create an app registration for Message Center access:
 
-1. Go to [Microsoft Entra admin center](https://entra.microsoft.com) > **Applications** > **App registrations**
-2. Create new registration (single tenant)
+1. Go to [Microsoft Entra admin center](https://entra.microsoft.com) > **Entra ID** > **App registrations**
+2. Select **New registration** and choose **Single tenant only**
 3. Under "API permissions":
    - Add permission > Microsoft Graph > **Application permissions**
    - Select `ServiceMessage.Read.All`
@@ -118,11 +118,11 @@ See [Secrets Management](docs/secrets-management.md) for detailed steps.
 
 The PowerShell governance scripts (`Invoke-MessageCenterSync.ps1`, `Get-MessageCenterAssessmentStatus.ps1`, `Export-MessageCenterEvidence.ps1`) accept an `-AuthMode` parameter with values `ManagedIdentity` (default), `WorkloadIdentity`, `Interactive`, `DeviceCode`, or `ClientSecret`. The Python schema/setup scripts use the shared `scripts/shared/dataverse_client.py`, which accepts an MSAL token from any source (managed identity, device-code, or client secret). Pick the strongest auth method available in your environment.
 
-### Microsoft Learn validation notes (2026-Q2)
+### Microsoft Learn validation notes (2026-Q3)
 
 - The flow and sync script use the Microsoft Graph **v1.0** service communications endpoint: `GET /admin/serviceAnnouncement/messages`.
 - `ServiceMessage.Read.All` is the only Graph application permission required for Message Center posts. Do not request `ServiceHealth.Read.All` unless you extend this solution to call `healthOverviews` or `issues`.
-- Message Center message categories are Graph enum values (`planForChange`, `stayInformed`, `preventOrFixIssue`) mapped to Dataverse choice integers in `create_mcm_dataverse_schema.py`.
+- Message Center message categories are Graph enum values (`planForChange`, `stayInformed`, `preventOrFixIssue`) mapped to Dataverse choice integers in `create_mcm_dataverse_schema.py`. `category` and `severity` (`normal`, `high`, `critical`) are both evolvable enums that also declare an `unknownFutureValue` sentinel; the shipped maps in `Invoke-MessageCenterSync.ps1` cover the three concrete values of each.
 - `services[]` and `tags[]` are Microsoft-provided strings. Use configurable routing rules for service names such as Power Platform or Microsoft Copilot Studio instead of hard-coding a closed taxonomy.
 - Power Platform release plans are not ingested by this solution. Review the Microsoft Learn release plan pages and Release planner separately during release-wave readiness.
 
@@ -135,7 +135,7 @@ The PowerShell governance scripts (`Invoke-MessageCenterSync.ps1`, `Get-MessageC
 
 The PowerShell governance scripts call the Dataverse Web API as the same app registration used for Microsoft Graph. Without an application user with read/write access to `fsi_messagecenterlog`, the scripts will fail with `401 Unauthorized` or `403 Forbidden`.
 
-1. Power Platform admin center → **Environments** → select your environment → **Settings** → **Users + permissions** → **Application users** → **+ New app user**
+1. Power Platform admin center → **Manage** → **Environments** → select your environment → **Settings** → **Users + permissions** → **Application users** → **+ New app user**
 2. Add the app from Step 1 by Application (client) ID
 3. Assign a security role with read/write/append/append-to access to `fsi_messagecenterlog` (a custom role scoped to the table is recommended; **System Administrator** is acceptable for non-prod)
 4. Confirm the application user appears under **Application users** with status **Enabled**
@@ -144,7 +144,7 @@ The PowerShell governance scripts call the Dataverse Web API as the same app reg
 
 If your environment has DLP policies:
 
-1. Go to Power Platform Admin Center > Data policies
+1. Go to Power Platform admin center > **Security** > **Data and privacy** > **Data policy**
 2. Ensure HTTP connector can access `graph.microsoft.com`
 3. Ensure Azure Key Vault connector is allowed (if using Key Vault for secrets)
 4. Or add both connectors to the "Business" group
@@ -195,7 +195,7 @@ See [Flow Configuration](docs/flow-configuration.md) for complete flow creation 
 **Summary:**
 
 1. Trigger: Daily recurrence (e.g., 9 AM)
-2. HTTP with Microsoft Entra ID action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
+2. HTTP with Microsoft Entra ID (preauthorized) action: GET `https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/messages`
 3. Parse JSON: Extract message fields
 4. For each message: Upsert to Dataverse using `fsi_messagecenterid`
 5. Condition: If severity = high/critical OR actionRequiredByDateTime is set
@@ -310,7 +310,7 @@ This solution is designed to be modified:
 - **Change notifications:** Route to Slack, email, or ServiceNow
 - **Add views:** Filter by service, category, or date
 - **Integrate:** Connect to your change management system
-- **Plain-text body:** The `body` field stores HTML from Microsoft. For search or cleaner display, add a `bodyPlainText` column and use Power Automate's `stripHtml()` expression or a custom function to convert content
+- **Plain-text body:** The `body` field stores HTML from Microsoft. For search or cleaner display, add a `bodyPlainText` column and populate it at ingestion time. Power Automate has no built-in HTML-stripping expression — use the [Content Conversion](https://learn.microsoft.com/en-us/connectors/conversionservice/) connector's **Html to text** action (currently in preview, Standard tier), the workflow [string functions](https://learn.microsoft.com/en-us/azure/logic-apps/workflow-definition-language-functions-reference#string-functions), or convert in PowerShell before the Dataverse upsert
 
 > **Security note:** The `fsi_body` field stores raw HTML from Microsoft Graph. Do not render it directly in custom HTML web resources or canvas-app HTML controls without sanitization. The shipped Teams adaptive card intentionally excludes the body field. If you add a `bodyPlainText` column, prefer that for display surfaces.
 

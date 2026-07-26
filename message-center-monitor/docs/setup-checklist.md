@@ -90,7 +90,7 @@ The schema script creates the table, columns, option sets, **and the alternate k
 
 The PowerShell governance scripts call the Dataverse Web API as the same Entra app used for Microsoft Graph. Without an application user, the scripts fail with `401 Unauthorized` or `403 Forbidden`.
 
-- [ ] Power Platform admin center → **Environments** → select your environment → **Settings** → **Users + permissions** → **Application users** → **+ New app user**
+- [ ] Power Platform admin center → **Manage** → **Environments** → select your environment → **Settings** → **Users + permissions** → **Application users** → **+ New app user**
 - [ ] Add the Entra app from Step 1 by Application (client) ID
 - [ ] Assign a custom security role with **read / write / append / append-to** access on `fsi_messagecenterlog`
 - [ ] (Non-prod only) **System Administrator** is acceptable; for production, scope a custom role to the table
@@ -148,7 +148,7 @@ This provisions connection references for: Microsoft Dataverse, Microsoft Teams,
 
 ### Step 11: Verify DLP policy
 
-- [ ] Power Platform admin center > **Data policies**
+- [ ] Power Platform admin center > **Security** > **Data and privacy** > **Data policy**
 - [ ] Verify HTTP connector can access `graph.microsoft.com`
 - [ ] Verify Azure Key Vault connector is allowed
 - [ ] If blocked, add to the allowed endpoints or move to the **Business** group
