@@ -11,7 +11,7 @@ coe_function: optimize
 > **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-07-26
 
 Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.
 
@@ -129,13 +129,15 @@ This means:
 
 ## Platform Update Notes
 
-### Voice Agent Moderation Considerations (April 2026)
+### Voice Agent Moderation Considerations (updated July 2026)
 
-Copilot Studio now supports [real-time voice agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-configuration) with Basic and Realtime voice modes, barge-in support, and DTMF navigation. Voice-enabled agents introduce additional content moderation considerations:
+Copilot Studio supports [interactive voice response through two types of voice-enabled agents](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-overview): **basic voice agents** (classic orchestration, natural language understanding models) and [**real-time agents**](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-realtime-voice-agents) (generative orchestration, speech-to-speech models). Both accept speech and dual-tone multi-frequency (DTMF) input; real-time agents additionally support barge-in and voice activity detection over PSTN and SIP. Voice-enabled agents introduce additional content moderation considerations:
 
 - **Speech-to-text transcription** may not be subject to the same content moderation filters as text input — organizations should verify that moderation applies equally to both modalities
 - **Barge-in behavior** (user interrupting agent speech) may bypass moderation checkpoints if the interrupted content is not fully evaluated
 - **DTMF input** is numeric-only and lower risk, but agents that combine DTMF with natural language voice require full moderation coverage
+- **Elevated harmful-content risk.** Microsoft's [real-time agents overview](https://learn.microsoft.com/en-us/microsoft-copilot-studio/voice-realtime-voice-agents) states that its safety and responsible AI evaluations found safety-relevant behavioral limitations that might result in a higher risk of the agent producing potentially harmful content, and directs customers to the [transparency note for real-time agents](https://learn.microsoft.com/en-us/dynamics365/contact-center/implement/transparency-note) for mitigations
+- **Transcript logging gaps.** Microsoft documents that conversation transcript logging for Text LLM voice agents is limited and that some conversation turns and agent responses might not be captured — supervision evidence drawn from call transcripts may therefore be incomplete
 - **Zone 1 agents** with telephony channels are customer-facing by definition and should maintain High moderation regardless of voice mode
 
 > **Note:** This solution currently validates content moderation levels for text-based agent interactions only. Voice-specific moderation validation is not yet automated. Organizations deploying voice-enabled agents should include voice moderation coverage in their manual governance reviews.
@@ -161,19 +163,24 @@ expectations honest, please note:
   manual or automated checks beyond this solution.
 - **Moderation label normalization.** CMM normalizes Copilot Studio labels into
   `Low`, `Medium`, `High`, or `Unknown`. Current Copilot Studio documentation
-  describes moderation choices ranging from **Lowest** to **Highest**; CMM maps
-  `Lowest` to `Low` and `Highest` to `High` because the Dataverse evidence
-  schema stores the three-level canonical scale.
+  describes [moderation choices ranging from **Lowest** to **Highest**](https://learn.microsoft.com/en-us/microsoft-copilot-studio/knowledge-copilot-studio#moderation)
+  (platform default: **High**); CMM maps `Lowest` to `Low` and `Highest` to
+  `High` because the Dataverse evidence schema stores the three-level canonical
+  scale.
 - **Azure AI Content Safety runtime APIs.** This solution does **not** call the
   Azure AI Content Safety text or image analysis APIs, Prompt Shields,
   Groundedness detection, Protected Material detection, or Task Adherence APIs.
   Use those services separately when runtime prompt/response inspection is
   required for Control 1.8 evidence.
-- **Microsoft Graph agent package APIs.** Microsoft 365 Copilot package
-  management APIs are currently preview and provide tenant inventory/package
-  metadata rather than the Copilot Studio agent-default moderation field. CMM
-  therefore continues to use Power Platform admin enumeration and Dataverse
-  `bot.configuration` reads for moderation discovery.
+- **Agent package management APIs.** The Microsoft Graph agent catalog endpoints
+  are now documented as the [Agent 365 Package Management API](https://learn.microsoft.com/en-us/microsoft-365-copilot/extensibility/api/admin-settings/package/overview),
+  which requires a Microsoft Agent 365 license and the AI Administrator or
+  Global Administrator role. They return tenant agent inventory and package
+  metadata (host, platform, element types) rather than the Copilot Studio
+  agent-default moderation field, and their write operations (update, block,
+  unblock, reassign) are preview. CMM therefore continues to use Power Platform
+  admin enumeration and Dataverse `bot.configuration` reads for moderation
+  discovery.
 - **Generative AI feature toggles.** Power Platform environment settings for
   data movement, Bing/web search, Microsoft 365 services, public website
   knowledge, ungrounded responses, and generative orchestration are adjacent

@@ -6,7 +6,7 @@ Complete all prerequisites before deploying the Model Risk Management Automation
 
 | Requirement | Purpose |
 |-------------|---------|
-| Power Platform Premium | Power Automate flows with Dataverse, HTTP, Approvals, SharePoint, Word Online connectors |
+| Power Automate Premium | Power Automate cloud flows using premium connectors (Dataverse, HTTP, Approvals, SharePoint, Word Online) |
 | Dataverse capacity | 6 custom tables for MRM data storage |
 | Managed Environment | Required for Dataverse Long-Term Retention (LTR) |
 | Microsoft 365 E3+ | Teams notifications, Graph API, SharePoint |
@@ -20,7 +20,7 @@ Complete all prerequisites before deploying the Model Risk Management Automation
 |------|--------------|
 | Power Platform Admin | Environment enumeration, Dataverse `bot` table access, and Managed Environment configuration |
 | System Administrator (Dataverse) | Dataverse table creation, solution import, and alternate key configuration |
-| Microsoft Entra Global Administrator or Application Administrator | Managed identity creation and API permission grants |
+| Microsoft Entra Global Administrator or Privileged Role Administrator | Managed identity creation and tenant-wide admin consent for Microsoft Graph application permissions (Application Administrator and Cloud Application Administrator cannot consent to Microsoft Graph app roles) |
 | SharePoint Admin | MRM Governance site creation and permission configuration |
 
 > **Important:** These roles are required during initial deployment. Day-to-day operation requires only the service account / Managed Identity permissions listed below.
@@ -55,7 +55,7 @@ Optional Agent 365 registry enrichment depends on which Microsoft Graph preview 
 1. Navigate to **Microsoft Entra ID** → **Enterprise Applications** → locate the managed identity
 2. Select **API Permissions** → **Add a permission**
 3. Add the application permissions listed above
-4. Select **Grant admin consent** (requires Microsoft Entra Global Administrator or Application Administrator)
+4. Select **Grant admin consent** (the Microsoft Graph application permissions above require Microsoft Entra Global Administrator or Privileged Role Administrator)
 5. For `CopilotPackages.Read.All`, use a delegated administrator connection or offline export until Microsoft supports application permissions for the Agent 365 package APIs.
 
 > **Note:** Agent 365 / Agent ID registry permissions are only required when `IsAgent365LifecycleEnabled` is set to `"true"`. If Agent 365 registry APIs are unavailable in your tenant or cloud, keep the flag disabled and rely on `agent-registry-automation` as the source of registered agents.

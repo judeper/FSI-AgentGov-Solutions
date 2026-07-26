@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.0.4
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-07-26
 
 Automated model risk management workflows for AI agents deployed on Power Platform, aligned to OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) and Fed SR 26-2 (formerly Fed SR 11-7) principles where applicable. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation.
 
@@ -109,13 +109,13 @@ This solution addresses three operational gaps that examiners consistently cite:
 | Dependency | Required | Notes |
 |-----------|----------|-------|
 | `agent-registry-automation` | **Yes (mandatory)** | Must be deployed first — Flow 1 reads from `fsi_agentinventory` |
-| `agent-365-lifecycle-governance` | No (optional) | Enables Agent 365 / Microsoft Entra Agent ID cross-reference when preview registry APIs are available |
+| `agent-365-lifecycle-governance` | No (optional) | Enables Agent 365 / Microsoft Entra Agent ID cross-reference. The Agent 365 agent registry Graph APIs are in preview and require the AI Administrator or Global Administrator role |
 
 ### Licensing
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Power Automate flows with Dataverse and HTTP connectors |
+| **Power Automate Premium** | Power Automate cloud flows using premium connectors (Dataverse, HTTP) |
 | **Dataverse capacity** | 6 custom tables for MRM data |
 | **Managed Environment** | Required for Dataverse Long-Term Retention (LTR) |
 | **Microsoft 365 E3+** | Teams notifications and Graph API access |
@@ -126,7 +126,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 |------|--------------|
 | **Power Platform Admin** | Environment enumeration and Dataverse `bot` table access |
 | **System Administrator** | Dataverse table creation and security role configuration |
-| **Microsoft Entra Global Administrator** or **Application Administrator** | Managed identity API permission grants |
+| **Microsoft Entra Global Administrator** or **Privileged Role Administrator** | Granting tenant-wide admin consent for the managed identity's Microsoft Graph *application* permissions. Application Administrator and Cloud Application Administrator can consent to any other API, but not to Microsoft Graph app roles |
 
 See [Prerequisites](docs/prerequisites.md) for complete details.
 
@@ -253,6 +253,8 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 
 Microsoft Entra Agent ID (Control 2.26) introduces a new identity model for AI agents. Organizations migrating from legacy Copilot Studio app registrations to Entra Agent IDs must maintain an auditable trail of the migration for model risk examinations informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7).
 
+Copilot Studio automatically creates a Microsoft Entra Agent ID for each new agent created after the Entra Agent ID rollout in July 2026. Agents created before that rollout continue to use app registrations and are scheduled for migration to Agent IDs by Microsoft; governance capabilities work for both Agent IDs and App Registration IDs during the transition period. The Entra Agent ID is a **GUID** — retrieve it in Copilot Studio under **Settings** → **Advanced** → **Metadata** → **Entra Agent ID**, then use that GUID in the Microsoft Entra admin center.
+
 The MRM model inventory (`fsi_modelinventory`) stores an `fsi_agentid` column that references the agent's identity. When migrating from a legacy Bot Framework app registration to an Entra Agent ID, the old and new identifiers must be linked to preserve the validation history chain.
 
 ### Migration Evidence Requirements
@@ -278,7 +280,7 @@ Store migration evidence as JSON records in `fsi_mrmcomplianceevent` with `fsi_e
   "fsi_details": {
     "legacyAgentId": "cr8a5_customerServiceBot",
     "legacyAppRegistrationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "newEntraAgentId": "urn:ms:agent:contoso:customer-service-assistant",
+    "newEntraAgentId": "7f3c1d92-4a8b-4e6f-9c25-3b81d0a4f612",
     "migrationDate": "2026-06-15T14:30:00Z",
     "approvedBy": "mrm-officer@contoso.com",
     "approvalTicket": "CHG-2026-0451",
@@ -295,8 +297,8 @@ Store migration evidence as JSON records in `fsi_mrmcomplianceevent` with `fsi_e
 
 ```csv
 AgentName,LegacyAgentId,LegacyAppRegistrationId,NewEntraAgentId,MigrationDate,ApprovedBy,ApprovalTicket,ValidationHistoryPreserved,PreMigrationValidations,PostMigrationVerification
-Customer Service Assistant,cr8a5_customerServiceBot,a1b2c3d4-e5f6-7890-abcd-ef1234567890,urn:ms:agent:contoso:customer-service-assistant,2026-06-15T14:30:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,4,Passed
-Loan Officer Assist,cr8a5_loanOfficerAssist,b2c3d4e5-f6a7-8901-bcde-f12345678901,urn:ms:agent:contoso:loan-officer-assist,2026-06-15T15:00:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,2,Passed
+Customer Service Assistant,cr8a5_customerServiceBot,a1b2c3d4-e5f6-7890-abcd-ef1234567890,7f3c1d92-4a8b-4e6f-9c25-3b81d0a4f612,2026-06-15T14:30:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,4,Passed
+Loan Officer Assist,cr8a5_loanOfficerAssist,b2c3d4e5-f6a7-8901-bcde-f12345678901,2c9e4b17-63da-4f80-8a55-91c7e2d6b043,2026-06-15T15:00:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,2,Passed
 ```
 
 ### Generating Migration Evidence
