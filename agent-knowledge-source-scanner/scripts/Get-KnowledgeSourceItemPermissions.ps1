@@ -136,7 +136,7 @@
     Requires:   PnP.PowerShell 2.5.0+ (3.x supported with -ClientId)
     Requires:   PowerShell 7.2+ (7.4+ for PnP.PowerShell 3.x)
     Framework:  FSI Agent Governance
-    Controls:   4.3, 1.4, 1.5
+    Controls:   4.8, 1.4, 1.5
 
     Known limitations (documented in .ralph-config.json and docs/troubleshooting.md):
     - PnP.PowerShell 3.x uses Get-PnPEntraIDGroupMember -Transitive for nested

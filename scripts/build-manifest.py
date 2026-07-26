@@ -108,7 +108,8 @@ Framework version pinning
 `build-manifest.py` reads `controls.json` from the path given by the
 `FRAMEWORK_CONTROLS` env var (preferred) or a sibling `FSI-AgentGov` checkout.
 CI workflows pin the framework checkout to a release tag via the
-`FRAMEWORK_REF` repository variable (default `v1.4.0`). Local development
+`FRAMEWORK_REF` repository variable (default `v1.6.0`, the framework release that
+consumes the CAPE-alignment metadata solution READMEs carry). Local development
 should also point at a tagged checkout — never `main` — so build artifacts
 are reproducible.
 """
