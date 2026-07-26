@@ -122,7 +122,7 @@ $env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
 
 ### Run Sample Data Loader
 
-- [ ] Confirm the control master source matches your control inventory (the shipped sample contains 78 of the 79 framework controls — control 2.27 is not included) before loading data
+- [ ] Confirm the control master source matches your control inventory (the shipped sample contains the 78-control framework baseline) before loading data
 - [ ] Navigate to `scripts/` directory
 - [ ] Run: `python load_sample_data.py --environment "https://your-org.crm.dynamics.com"`
 - [ ] Verify output: "Loaded X control master records"

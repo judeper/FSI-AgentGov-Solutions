@@ -18,7 +18,7 @@ deterministic artifacts from a single source of truth:
   `<!-- END:SOLUTIONS -->` markers.
 * `site-docs/solutions/index.md` — Solutions Catalog grouped by domain.
 * `site-docs/solutions/<slug>/index.md` — per-solution detail pages.
-* `site-docs/reference/control-mapping.md` — all 79 framework controls grouped
+* `site-docs/reference/control-mapping.md` — all 78 framework controls grouped
   by pillar; controls without solutions render "No solution yet".
 * `site-docs/index.md` — hero metric counts derived from data (never hardcoded).
 * Sub-doc copy from `<slug>/docs/*.md` to `site-docs/solutions/<slug>/` with

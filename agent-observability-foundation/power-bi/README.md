@@ -215,7 +215,7 @@ The Power BI solution connects to Application Insights telemetry via Azure Data 
 - **[Governance Mapping](../governance-mapping.md)** - Controls-to-observability artifact mapping
 
 ### FSI-AgentGov Framework
-- **[Control Catalog](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/CONTROL-INDEX.md)** - Complete 79-control framework
+- **[Control Catalog](https://github.com/judeper/FSI-AgentGov/blob/main/docs/controls/CONTROL-INDEX.md)** - Complete 78-control framework
 - **[Framework Documentation](https://judeper.github.io/FSI-AgentGov/)** - Published documentation site
 - **[Regulatory Mappings](https://github.com/judeper/FSI-AgentGov/blob/main/docs/reference/regulatory-mappings.md)** - Control-to-regulation cross-reference
 

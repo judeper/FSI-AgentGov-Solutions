@@ -25,7 +25,7 @@ Microsoft Copilot Studio and Power Platform.
     <span class="metric-label">Solutions</span>
   </div>
   <div class="metric">
-    <span class="metric-number">79</span>
+    <span class="metric-number">78</span>
     <span class="metric-label">Framework Controls</span>
   </div>
   <div class="metric">
@@ -137,7 +137,7 @@ Evidence export
 
 | Site | Description |
 |------|-------------|
-| [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/) | Governance principles, 79 control specifications, playbooks |
+| [FSI Agent Governance Framework](https://judeper.github.io/FSI-AgentGov/) | Governance principles, 78 control specifications, playbooks |
 | [FSI Agent Governance Solutions](https://judeper.github.io/FSI-AgentGov-Solutions/) | This site — deployable reference implementations |
 
 ---

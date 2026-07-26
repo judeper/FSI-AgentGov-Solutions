@@ -36,17 +36,34 @@ jobs:
 
       - run: pip install pyyaml jsonschema
 
+      - name: Verify committed artifacts are in sync with manifests
+        # MUST run BEFORE any step that regenerates artifacts. `--check`
+        # compares freshly generated content against the files ON DISK, so a
+        # preceding `build-manifest.py` run would overwrite the committed
+        # artifacts and make this gate compare generator output to itself --
+        # silently passing on any committed drift (found in issue #205).
+        working-directory: solutions
+        env:
+          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
+        run: python scripts/build-manifest.py --check
+
       - name: Generate artifacts (writes gitignored site-docs)
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
         run: python scripts/build-manifest.py
 
-      - name: Verify generator is deterministic and committed artifacts are in sync
+      - name: Verify generator is deterministic
+        # Second `--check`, this time against the just-generated output, so a
+        # non-deterministic generator still fails the build.
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
         run: python scripts/build-manifest.py --check
+
+      - name: Confirm generation left no uncommitted changes to tracked files
+        working-directory: solutions
+        run: git diff --exit-code
 
       - name: Verify AGENTS.md and copilot-instructions.md inventory tables match solutions.json
         working-directory: solutions
