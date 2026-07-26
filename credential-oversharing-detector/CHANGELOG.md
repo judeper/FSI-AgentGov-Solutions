@@ -4,6 +4,10 @@ All notable changes to this solution are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **README technical re-verification (`Last Verified` 2026-05-25 → 2026-07-26).** Re-checked every Microsoft product claim in `README.md` against current Microsoft sources. **One claim had drifted:** Microsoft retired the Copilot Studio pages under the Power Platform release plan, and both cited `learn.microsoft.com/power-platform/release-plan/2026wave1/microsoft-copilot-studio/*` URLs now issue an HTTP 301 to `https://aka.ms/MCStoM365Roadmap`, which resolves to the Microsoft 365 Roadmap filtered on Microsoft Copilot Studio. The archived Copilot Studio release-plan content on Microsoft Learn now states it "is not being updated" and points to [Release plans for Dynamics 365, Power Platform, and Copilot](https://learn.microsoft.com/en-us/dynamics365/release-plans/). Replaced both dead references with the Microsoft 365 Roadmap entry (**ID 566873**) and reworded the preview-dependency callout and Known Limitation #1 to cite the roadmap rather than the retired release plan. The underlying **dates are unchanged and still accurate**: preview target July 2026, general availability target September 2026, roadmap status *In development*. Also confirmed still accurate: Conditional Access for workload identities supports both location-based policies and risk-based policies via the **Service principal risk** condition (backing the "location or risk-based" workload-identity CA detection feature claim); `Get-MgApplicationFederatedIdentityCredential` still ships in the `Microsoft.Graph.Applications` module on the v1.0 Graph profile; and the Power Platform Preview Terms URL still resolves. No regulatory or compliance wording was added, removed, or reinterpreted.
+
 ## [2.1.2] - 2026-06-15
 
 ### Added
