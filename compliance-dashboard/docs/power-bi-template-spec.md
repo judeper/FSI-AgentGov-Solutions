@@ -796,7 +796,7 @@ Provide these instructions in the template:
    ```
    Compliance Dashboard for FSI Agent Governance Framework v1.0.5
 
-   Provides aggregated compliance reporting across the controls loaded into Dataverse, with zone-based filtering. The shipped sample dataset contains the full 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4).
+   Provides aggregated compliance reporting across the controls loaded into Dataverse, with zone-based filtering. The shipped sample dataset contains the 78-control framework baseline (29 Pillar 1 + 26 Pillar 2 + 14 Pillar 3 + 9 Pillar 4).
 
    Required parameters:
    - DataverseEnvironmentUrl: Your Dataverse environment URL

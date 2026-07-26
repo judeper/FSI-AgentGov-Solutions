@@ -7,6 +7,11 @@ domain: agent-config
 tier: '2'
 controls:
 - '2.24'
+# controls_partial: GAC stays PARTIAL — feature-enablement auditing is proven
+# only within the documented lab scope. Evidence:
+# LAB-VALIDATION.md#known-lab-scope-limitation
+controls_partial:
+- '2.24'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/generative-ai-config-auditor/
 prerequisites:
   power-platform-admin: Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix.

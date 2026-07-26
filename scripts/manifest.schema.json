@@ -66,6 +66,12 @@
       "uniqueItems": true,
       "description": "Framework control IDs implemented by this solution. Projected verbatim into solutions.json solutions[*].controls and the generated README catalog Controls column."
     },
+    "controls_partial": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+      "uniqueItems": true,
+      "description": "Subset of controls[] the solution contributes to but does not primarily/fully implement. Each listed id is exported to <slug>/controls-covered.json with \"coverage\": \"partial\"; controls omitted here default to \"full\". This manifest field is the ONLY supported way to declare partial coverage — controls-covered.json is generated and MUST NOT be hand-edited, or the partial claim is silently upgraded to full on the next build. Record the supporting evidence (for example a LAB-VALIDATION.md anchor) in a YAML comment above this field."
+    },
     "dependencies": {
       "type": "array",
       "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },

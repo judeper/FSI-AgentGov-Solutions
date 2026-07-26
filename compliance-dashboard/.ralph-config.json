@@ -2,7 +2,7 @@
   "domainFacts": [
     "fsi_cd_evidencetype deliberately uses values 1-6 rather than Dataverse default 100000000+ values; Test Result is 5 and cross-solution-integration hardcodes that mapping.",
     "The Control Assessment table is UserOwned and uses fsi_controlmasterid as a lookup to fsi_controlmaster plus fsi_assessor as a systemuser lookup.",
-    "The Control Master baseline is 78 controls, with README counts of 29 security, 26 operations, 14 monitoring, and 9 data governance controls.",
+    "The shipped sample-data/control-master.json contains the 78-control baseline, with README counts of 29 security, 26 operations, 14 monitoring, and 9 data governance controls. This matches every RELEASED framework version through v1.6.2. Control 2.27 (Consumption-Entitlement Governance) exists only on the framework's unreleased main branch — do NOT 'correct' these counts to 79 until a framework release ships 2.27, and regenerate the dataset plus the PillarDimension DATATABLE in docs/dax-measures.md together when that happens.",
     "Get-ExchangeComplianceData.ps1 treats inactive shared or unused mailboxes as mailboxSettings.userPurpose-based or disabled-account signals, not mailbox permission-grant enumeration.",
     "docs/dataverse-schema.md is the deployment source for Compliance Dashboard option values; renumbering fsi_cd_evidencetype requires a coordinated minor-bump with cross-solution-integration."
   ]

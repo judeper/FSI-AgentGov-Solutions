@@ -37,12 +37,38 @@ jobs:
       - run: pip install pyyaml jsonschema
 
       - name: Generate artifacts (writes gitignored site-docs)
+        # Generation must run first: site-docs/solutions/** is gitignored and
+        # absent from a fresh checkout, so `--check` alone would report those
+        # missing files as drift.
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
         run: python scripts/build-manifest.py
 
-      - name: Verify generator is deterministic and committed artifacts are in sync
+      - name: Verify committed artifacts are in sync with manifests
+        # THE drift gate. `build-manifest.py --check` cannot serve this purpose
+        # after a generate step, because it compares generated content against
+        # the files on disk -- which generation has just overwritten, so it
+        # would compare generator output to itself and pass unconditionally
+        # (issue #205: CI ran a 78-control framework against 79-control
+        # committed artifacts and still reported success).
+        # git is the right oracle here: tracked artifacts that generation
+        # changed show up as a diff, while gitignored site-docs stay invisible.
+        working-directory: solutions
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Committed generated artifacts are stale. Run 'python scripts/build-manifest.py' and commit the result."
+            exit 1
+          fi
+          untracked="$(git ls-files --others --exclude-standard)"
+          if [ -n "$untracked" ]; then
+            echo "::error::Generation produced untracked files that are not gitignored:"
+            echo "$untracked"
+            exit 1
+          fi
+
+      - name: Verify generator is deterministic
+        # Re-running against the just-generated output must be a no-op.
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json

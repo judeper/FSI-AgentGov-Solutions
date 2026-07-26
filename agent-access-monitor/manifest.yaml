@@ -7,6 +7,13 @@ domain: access-identity
 tier: '2'
 controls:
 - '3.8'
+# controls_partial: AAM stays PARTIAL. Lab detection resolved to
+# NotManaged -> ScopeOutOfBand on the target environment; the Managed-key
+# detect-and-persist path was evidenced read-only and on a disposable synthetic
+# Managed environment, and Azure Automation hosting is deferred. Evidence:
+# LAB-VALIDATION.md#known-lab-scope-limitation
+controls_partial:
+- '3.8'
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/agent-access-monitor/
 prerequisites:
   power-platform-admin: "Power Platform admin or Dynamics 365 Service Admin for tenant queries, baseline capture, and Dataverse schema setup."

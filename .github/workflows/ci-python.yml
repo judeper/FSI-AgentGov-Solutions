@@ -33,7 +33,11 @@ jobs:
       - name: Ruff (lint)
         # Wave 6 P6 (2026-05-23): flipped strict. pyproject.toml pins the
         # active rule set (E4, E7, E9, F, W). Baseline cleared to 0 findings.
-        run: ruff check scripts */scripts
+        # Issue #205 (2026-07-25): widened from `scripts */scripts` to the whole
+        # repo. The old globs skipped per-solution `*/tests/` directories, which
+        # had accumulated 4 unreported F401 findings while the baseline was
+        # still described as clear. Whole-repo scope removes the glob blind spot.
+        run: ruff check .
 
       - name: Pytest - message-center-monitor (HARD-GATED)
         # Hard gate: message-center-monitor v2.4.0 schema script (create_keys

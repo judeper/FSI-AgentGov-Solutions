@@ -105,7 +105,7 @@
 
 **Logical Name:** `fsi_controlmaster`  
 **Ownership:** Organization  
-**Description:** Master list of 78 FSI Agent Governance Framework controls
+**Description:** Master list of FSI Agent Governance Framework controls
 
 | SchemaName | Logical Name | Type | Required | Description |
 |-----------|-------------|------|----------|-------------|

@@ -118,7 +118,7 @@ TABLES: dict[str, dict] = {
     "fsi_controlmaster": {
         "schema_name": "fsi_ControlMaster",
         "display": "Control Master",
-        "description": "Master list of 78 FSI Agent Governance Framework controls",
+        "description": "Master list of FSI Agent Governance Framework controls",
         "ownership": "Organization",
         "columns": [
             {"SchemaName": "fsi_ControlId", "LogicalName": "fsi_controlid", "Type": "String(10)", "Required": True, "Description": "Control identifier (e.g., 1.1, 2.12)"},

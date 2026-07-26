@@ -5,32 +5,18 @@
   "solutionName": "File Upload Security",
   "solutionVersion": "1.1.2",
   "status": "live",
-  "coverageScope": {
-    "summary": "FUS supports compliance with Control 1.14 (Data Minimization and Agent Scope Control) by reading each Copilot Studio agent's file-upload posture from the Dataverse bot configuration (the nested aISettings.isFileAnalysisEnabled state) and comparing it to per-zone governance policy under canonical zone semantics (Zone 1 Enterprise = most restrictive = 100000001 ... Zone 3 Personal = least restrictive = 100000003); it contributes complementary cross-check evidence to Control 1.8 (Content Moderation Configuration) and Control 1.4 (Connector and DLP Policies). Coverage is PARTIAL: the detector has been reconciled to the canonical Option A zone/severity decision, is static-gate-green (the canonical-zone unit assertion passes 11/11), and was validated live against the lab validation tenant on 2026-06-13 — disposable-bot fixtures exercised the bot-config-STATE detection path positively (an upload-enabled Enterprise/Zone 1 fixture flagged Critical and persisted with fsi_zone=100000001 and fsi_severity written as a String label), negatively (an upload-disabled fixture produced no violation row), and indeterminately (an absent nested node resolved to Indeterminate, never a false Compliant), with a real-agent cross-check; the SHA-256 evidence recomputed to an integrity match and every disposable fixture was torn down (all three FUS tables returned to zero, the deployed schema retained as the deliverable). Coverage remains PARTIAL because the remaining items are scope boundaries, not un-run validation: only bot-config STATE is in scope — runtime upload telemetry and Purview DLP evidence are out of lab scope. The disposable-bot detection is lab evidence gathered on the lab validation tenant, not proof of behavior in a customer's production tenant; customer-tenant evidence comes from running the solution against the customer tenant. FUS does not by itself satisfy Control 1.14 in isolation.",
-    "reference": "LAB-VALIDATION.md#runtime-only-caveats-require-a-live-tenant-to-confirm",
-    "gaps": [
-      "Live validation on the lab validation tenant (2026-06-13) exercised the detect-and-persist leg against the Dataverse bot table and the fsi_* tables using disposable-bot fixtures only; all fixtures were then torn down (the three fsi_* tables returned to zero) and the deployed schema is the retained deliverable, so no violation rows persist in the tenant.",
-      "The nested key aISettings.isFileAnalysisEnabled was confirmed read-only and then exercised live on disposable-bot fixtures: an upload-enabled Enterprise/Zone 1 fixture resolved to a violation, an upload-disabled fixture produced no row, and a fixture with the node absent resolved to Indeterminate (never a false Compliant), with a real-agent cross-check. It remains an undocumented internal field whose shape is confirmed against the lab validation tenant only; agents on other tenants should still be confirmed before a positive Compliant read is relied upon (see LAB-VALIDATION.md runtime-only caveats).",
-      "Scope is limited to bot-config STATE; runtime upload telemetry and Purview DLP evidence are out of lab scope.",
-      "fsi_severity is a free String (mirroring CMM), which resolved the prior bound-set write rejection; the corrected write path was exercised live on 2026-06-13 (the violation fixture persisted fsi_severity as the label text Critical).",
-      "Runbook authentication caveats apply: the MSAL.PS dependency is deprecated and the certificate-only runbook auth path is documented but unverified against the live tenant (see LAB-VALIDATION.md)."
-    ]
-  },
   "controls": [
     {
       "id": "1.14",
-      "coverage": "partial",
-      "notes": "Supports compliance with Data Minimization and Agent Scope Control by detecting Copilot Studio agents with file uploads enabled in governance zones where uploads should be restricted, under canonical zone semantics (most restrictive = Zone 1 = 100000001). Coverage is PARTIAL: the detector is reconciled, static-gate-green, and live-validated on the lab validation tenant (2026-06-13) within bot-config-STATE scope — disposable-bot fixtures proved positive/negative/indeterminate detection with SHA-256 evidence and verified teardown (schema retained). It remains PARTIAL because runtime upload telemetry and Purview DLP evidence are out of lab scope. Does not by itself satisfy the control."
+      "coverage": "partial"
     },
     {
       "id": "1.8",
-      "coverage": "partial",
-      "notes": "Supports compliance with Content Moderation Configuration as a cross-check that file-upload-enabled agents carry appropriate moderation posture, under canonical zone semantics. Coverage is PARTIAL: reconciled, static-gate-green, and live-validated on the lab validation tenant (2026-06-13) for bot-config STATE only; runtime moderation telemetry remains out of lab scope. Does not by itself satisfy the control."
+      "coverage": "partial"
     },
     {
       "id": "1.4",
-      "coverage": "partial",
-      "notes": "Supports compliance with Connector and DLP Policies as a data-boundary cross-check on per-agent file-upload exposure. Coverage is PARTIAL: reconciled, static-gate-green, and live-validated on the lab validation tenant (2026-06-13) for bot-config STATE only; the connector/DLP evidence leg remains out of lab scope. Does not by itself satisfy the control."
+      "coverage": "partial"
     }
   ],
   "controlCount": 3

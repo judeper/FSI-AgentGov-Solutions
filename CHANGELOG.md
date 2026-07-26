@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] - 2026-Q3 — 43-solution review (issue #205)
+
+### Fixed
+- **Partial control coverage no longer silently upgraded to full.** Six solutions (`action-confirmation-auditor`, `agent-access-monitor`, `agent-sharing-access-restriction-detector`, `content-moderation-monitor`, `file-upload-security`, `generative-ai-config-auditor`) carried hand-edited `coverage: "partial"` values in their **generated** `controls-covered.json`, while their `manifest.yaml` declared no partial coverage. Any run of `scripts/build-manifest.py` rewrote all 12 control claims across those six solutions to `coverage: "full"` and deleted the supporting gap notes — overstating compliance coverage in an artifact consumed by the framework `solutions-lock.json` contract. Each manifest now declares `controls_partial`, so the partial claims survive regeneration. The narrative evidence remains in each solution's `LAB-VALIDATION.md` (all six anchors verified to resolve).
+- **`controls-covered.json` files now satisfy their own schema.** The hand-edited `coverageScope`/`notes` keys violated `scripts/controls-covered.schema.json` (`additionalProperties: false`) — 17 schema errors across the six files, now zero.
+- **`manifest-check` could not detect committed-artifact drift.** The workflow ran `build-manifest.py` (which overwrites the committed artifacts on disk) *before* `build-manifest.py --check`, and `--check` compares generated content against the files on disk. The gate therefore compared generator output to itself and passed unconditionally on any committed drift, despite the step being named "…and committed artifacts are in sync". `--check` now runs first against the committed tree, generation follows, a second `--check` still proves determinism, and `git diff --exit-code` confirms generation left tracked files untouched.
+- Resolved 4 unused-import (F401) lint findings in per-solution `tests/` directories.
+
+### Added
+- `manifest.yaml.controls_partial` is now documented in `scripts/manifest.schema.json`. The field was already read by `build-manifest.py` and used by two manifests, but was undocumented — which is why authors edited the generated file instead.
+- `build-manifest.py` now fails validation when a `controls_partial` entry is absent from `controls[]`, instead of silently discarding the partial claim.
+- `scripts/tests/test_build_manifest_partial_controls.py` — regression tests pinning partial-coverage round-tripping, manifest-as-source-of-truth, the subset guard, and schema conformance of the generated exports.
+
+### Changed
+- CI ruff scope widened from `scripts */scripts` to the whole repository. The previous globs skipped per-solution `tests/` directories, where the 4 findings above had accumulated unreported.
+- Solution descriptions that hardcoded a framework control count are now count-neutral, so a future framework release cannot silently re-introduce control-count drift into the published catalog.
+
+### Notes
+- **The 79-versus-78 control count was investigated and deliberately left at 78.** Control 2.27 (Consumption-Entitlement Governance) exists only on the FSI-AgentGov `main` branch; it is absent from every released framework tag (v1.4.0, v1.5.0, v1.6.0, v1.6.1, v1.6.2 — all 78 controls). This repository pins a released framework tag by design (`FRAMEWORK_REF`, "Do NOT use 'main'"), so 78 is the correct baseline here until a framework release ships 2.27. Reconciling to 79 now would have published a control count no released framework version has.
+- No new solutions were invented for the 38 orphan controls; they are reported as prioritised gaps.
+
+---
+
 ## [Unreleased] - 2026-Q3 — Lab harness foundation
 
 ### Added
