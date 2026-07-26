@@ -45,7 +45,7 @@ evidence-export-YYYY-MM-DD-HHmmss/
     "periodStart": "YYYY-MM-DD",
     "periodEnd": "YYYY-MM-DD",
     "framework": "FSI Agent Governance Framework",
-    "frameworkVersion": "v1.4.0",
+    "frameworkVersion": "v1.6.0",
     "solutions": {
         "acv": {
             "validationCount": 150,

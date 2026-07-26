@@ -4,6 +4,12 @@ All notable changes to agent-knowledge-source-scanner will be documented in this
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-07-26
+
+### Fixed
+
+- **Control claim corrected from 4.3 to 4.8.** This solution claimed control **4.3 — Site and Document Retention Management** while implementing control **4.8 — Item-Level Permission Scanning for Agent Knowledge Sources**. The claim was wrong, not the implementation. Evidence: (a) control 4.8's checks are `4.8.a` "Item-level permissions scanned on knowledge source files" and `4.8.b` "No oversharing detected (no Everyone or Everyone-except-external)", both collected via `Get-MgSiteDriveItemPermission` — `Invoke-GraphPermissionScan.ps1` calls exactly that endpoint (`v1.0/drives/{driveId}/items/{itemId}/permissions`) and the risk model scores Anyone links, external/guest grants, and the Everyone / Everyone-except-external claims; (b) control 4.3's checks are `4.3.a`/`4.3.b` retention-policy checks collected via `Get-RetentionCompliancePolicy` — this solution contains no retention logic and never calls that API; (c) the prior Related Controls row was self-contradicting, pairing the 4.3 title with the description "Prevent agents from accessing overshared content". Control 4.8 was previously claimed by no solution in this repository. Control 4.3 (retention) is correspondingly **not** covered by this solution and was never implemented here. `manifest.yaml`, `README.md`, `LAB-VALIDATION.md`, `docs/prerequisites.md`, both scripts' `.NOTES`, and `templates/item-scope-config.sample.json`. (issue #325, F7)
+
 ## [1.1.3] - 2026-06-05
 
 ### Fixed

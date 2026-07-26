@@ -19,7 +19,7 @@ jobs:
         with:
           repository: judeper/FSI-AgentGov
           # Pinned to a framework release tag; bump deliberately. Do NOT use 'main'.
-          ref: ${{ vars.FRAMEWORK_REF || 'v1.4.0' }}
+          ref: ${{ vars.FRAMEWORK_REF || 'v1.6.0' }}
           path: fsi-agentgov
 
       - name: Reject stale framework pillar path segments

@@ -13,7 +13,7 @@ mismatches) and produces a risk-scored CSV.
 
 | Control | Pillar | Relationship |
 |---------|--------|--------------|
-| 4.3 | SharePoint | Primary — oversharing prevention for agent knowledge sources |
+| 4.8 | SharePoint | Primary — item-level permission scanning for agent knowledge sources |
 | 1.4 | Security | Related — data boundary enforcement |
 | 1.5 | Security | Related — DLP and sensitivity labels |
 
