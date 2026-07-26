@@ -36,34 +36,43 @@ jobs:
 
       - run: pip install pyyaml jsonschema
 
-      - name: Verify committed artifacts are in sync with manifests
-        # MUST run BEFORE any step that regenerates artifacts. `--check`
-        # compares freshly generated content against the files ON DISK, so a
-        # preceding `build-manifest.py` run would overwrite the committed
-        # artifacts and make this gate compare generator output to itself --
-        # silently passing on any committed drift (found in issue #205).
-        working-directory: solutions
-        env:
-          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
-        run: python scripts/build-manifest.py --check
-
       - name: Generate artifacts (writes gitignored site-docs)
+        # Generation must run first: site-docs/solutions/** is gitignored and
+        # absent from a fresh checkout, so `--check` alone would report those
+        # missing files as drift.
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
         run: python scripts/build-manifest.py
 
+      - name: Verify committed artifacts are in sync with manifests
+        # THE drift gate. `build-manifest.py --check` cannot serve this purpose
+        # after a generate step, because it compares generated content against
+        # the files on disk -- which generation has just overwritten, so it
+        # would compare generator output to itself and pass unconditionally
+        # (issue #205: CI ran a 78-control framework against 79-control
+        # committed artifacts and still reported success).
+        # git is the right oracle here: tracked artifacts that generation
+        # changed show up as a diff, while gitignored site-docs stay invisible.
+        working-directory: solutions
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Committed generated artifacts are stale. Run 'python scripts/build-manifest.py' and commit the result."
+            exit 1
+          fi
+          untracked="$(git ls-files --others --exclude-standard)"
+          if [ -n "$untracked" ]; then
+            echo "::error::Generation produced untracked files that are not gitignored:"
+            echo "$untracked"
+            exit 1
+          fi
+
       - name: Verify generator is deterministic
-        # Second `--check`, this time against the just-generated output, so a
-        # non-deterministic generator still fails the build.
+        # Re-running against the just-generated output must be a no-op.
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
         run: python scripts/build-manifest.py --check
-
-      - name: Confirm generation left no uncommitted changes to tracked files
-        working-directory: solutions
-        run: git diff --exit-code
 
       - name: Verify AGENTS.md and copilot-instructions.md inventory tables match solutions.json
         working-directory: solutions
