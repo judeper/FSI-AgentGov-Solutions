@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.3.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-05-25
+> **Last Verified:** 2026-08-02
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
@@ -97,11 +97,11 @@ The recommended production path is a system- or user-assigned managed identity. 
 
 | Identity grant | Scope | Required for |
 |----------------|-------|--------------|
-| **Microsoft Graph application permission `Sites.Read.All`** (or `Files.Read.All`) | Tenant, admin-consented | Reading SharePoint / OneDrive `driveItem` content for hash validation |
+| **Microsoft Graph application permission `Files.Read.All`** (or `Sites.Read.All`) | Tenant, admin-consented | Reading SharePoint / OneDrive `driveItem` content for hash validation |
 | **Dataverse application user with a security role** granting create/read/write on `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange` | Target environment | Reading the source registry and writing validation results, source changes, and status updates |
 | **Storage Blob Data Reader** | Target storage account | Azure Blob source access (optional; planned source type) |
 
-> **Permission references:** Downloading `driveItem` content requires a Graph permission such as `Sites.Read.All` or `Files.Read.All` ([Get driveItem content](https://learn.microsoft.com/graph/api/driveitem-get-content)). The managed identity must be registered as a Dataverse [application user associated with a security role](https://learn.microsoft.com/power-apps/developer/data-platform/use-multi-tenant-server-server-authentication#create-an-application-user-associated-with-the-registered-application-in-dataverse) before it can read or write the registry tables.
+> **Permission references:** Downloading `driveItem` content requires a Graph permission such as `Files.Read.All` (least privileged for application permissions) or `Sites.Read.All` ([Get driveItem content](https://learn.microsoft.com/graph/api/driveitem-get-content)). The managed identity must be registered as a Dataverse [application user associated with a security role](https://learn.microsoft.com/power-apps/developer/data-platform/use-multi-tenant-server-server-authentication#create-an-application-user-associated-with-the-registered-application-in-dataverse) before it can read or write the registry tables.
 >
 > The legacy client-secret development fallback uses the same Entra app registration and Dataverse application-user role; it is for local development only (see [Deployment](#deployment)).
 
@@ -131,7 +131,7 @@ The script automatically captures baselines on first run for sources without an 
 ## Deployment
 
 1. Create the Dataverse schema manually in your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema-manual) for current status)
-2. Grant the Azure-hosted job's managed identity Dataverse access to `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange` (via a Dataverse application user and security role), plus the Microsoft Graph application permission `Sites.Read.All` (or `Files.Read.All`) for SharePoint or OneDrive content retrieval
+2. Grant the Azure-hosted job's managed identity Dataverse access to `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange` (via a Dataverse application user and security role), plus the Microsoft Graph application permission `Files.Read.All` (or `Sites.Read.All`) for SharePoint or OneDrive content retrieval
 3. Register knowledge sources via the model-driven app or Dataverse API
 4. Run `Invoke-SourceValidation.ps1 -UseManagedIdentity` to capture baselines and validate
 5. Configure scheduled execution via Azure Automation, Azure Functions, or a VM-hosted scheduled job with managed identity enabled
