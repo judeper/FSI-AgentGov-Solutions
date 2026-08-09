@@ -11,11 +11,23 @@ coe_function: optimize
 > **Version:** v1.2.0
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-06-09
+> **Last Verified:** 2026-08-09
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
+
+## Verification Notes (Last Re-Verified: 2026-08-09)
+
+**Technical claims verified against current Microsoft Learn documentation:**
+- ✅ Managed Environment agent sharing settings documented in [Limit sharing](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits)
+- ✅ Agent sharing rules configuration options ([Agent sharing rules section](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules))
+- ✅ Setting names: `bot-limitSharingMode`, `bot-authoringSharingDisabled`, `bot-maxLimitUserSharing` confirmed in PowerShell examples
+- ✅ Enforcement timing: "up to an hour" for sharing rules to begin enforcement (confirmed in official docs)
+- ✅ Microsoft.PowerApps.Administration.PowerShell module for administration ([Get started using the Power Apps admin module](https://learn.microsoft.com/power-platform/admin/powerapps-powershell))
+- ✅ Copilot Studio security and governance controls ([Key concepts - Copilot Studio security and governance](https://learn.microsoft.com/microsoft-copilot-studio/security-and-governance))
+
+All technical product claims remain accurate as of the verification date above. No drift detected.
 
 ## Overview
 

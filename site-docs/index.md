@@ -25,7 +25,7 @@ Microsoft Copilot Studio and Power Platform.
     <span class="metric-label">Solutions</span>
   </div>
   <div class="metric">
-    <span class="metric-number">78</span>
+    <span class="metric-number">79</span>
     <span class="metric-label">Framework Controls</span>
   </div>
   <div class="metric">
