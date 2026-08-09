@@ -10,6 +10,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 
 ### Documentation
 
+- Re-verified every Microsoft product/technical claim in `README.md` (Managed Environment agent sharing limits, M365 Copilot Agent Store, 28-day Power Automate approval wait limit) against current Microsoft Learn documentation; all claims remain accurate. Updated `Last Verified` from 2026-06-09 to 2026-08-09.
 - Corrected `docs/prerequisites.md` to point to this solution's own `scripts/` folder for the schema-creation and supporting scripts (previously mislabeled as the companion FSI-AgentGov repository).
 - Added the `scripts/` subtree to the README Components listing so the Python and PowerShell automation is discoverable from the directory map.
 - Added `LAB-VALIDATION.md` documenting static lab-readiness validation, authoritative Microsoft Learn source verification (Dataverse `bot.accesscontrolpolicy`/`authorizedsecuritygroupids`, Managed Environment sharing limits, 28-day approval wait, Power Apps admin cmdlets), and runtime-only caveats.
