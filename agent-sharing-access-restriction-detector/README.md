@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-08-09 — lab validation. Detection proven on a real Dataverse row with SHA-256 evidence; runtime enforcement proven at the data plane only (Flow B remediation runtime not yet exercised end-to-end). See [Scope and validation status](#scope-and-validation-status).
+> **Technical claims last verified:** 2026-08-09 | **Last lab validation:** 2026-06-09. Detection was proven on a real Dataverse row with SHA-256 evidence; runtime enforcement was proven at the data plane only (Flow B remediation runtime not yet exercised end-to-end). See [Scope and validation status](#scope-and-validation-status).
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 
