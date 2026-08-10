@@ -12,7 +12,7 @@ coe_function: optimize
 > **Status:** Preview
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — Copilot Credits consumption billing from June 16 2026; credit policies Chat-only today
-> **Last Verified:** 2026-06-09
+> **Last Verified:** 2026-08-09
 
 Governance for **Copilot consumption billing** — the two policy objects
 (pay-as-you-go and prepaid credits), a switch-on-pathway entitlement engine,
@@ -39,7 +39,7 @@ CBG reads — rather than re-discovers — the agent dimension from
 
 A focused application of this engine is the **FNF People-Sweep lens**
 (`scripts/Get-FnfPeopleSweepReport.ps1`): it identifies declarative agents with the
-"Reference org chart and profile info" (declarative-manifest `People`) capability that are
+"Reference people in organization" (declarative-manifest `People`) capability that are
 shared with users who hold **no paid Microsoft 365 Copilot license and no PAYG coverage**,
 and reports the blocked users per agent with an explicit coverage-scope statement. For the
 agents whose manifest is not readable by any supported API, the **owner-attestation
