@@ -84,7 +84,7 @@ Operational caveats from Microsoft Learn:
 
 - Sharing limits are applied when users attempt new sharing changes; they do not remove users or groups that already had access before the rules were configured.
 - Enforcement can take up to one hour after settings are saved.
-- Sharing rules are evaluated against the agents that the configured sharing context targets; Microsoft Learn does not restrict the limits to agents that require authentication. Consult [agent sharing limits](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules) for the authoritative scope.
+- Sharing limits only apply to agents that require authentication. Consult [Control how agents are shared](https://learn.microsoft.com/en-us/microsoft-copilot-studio/admin-sharing-controls-limits) for the authoritative scope.
 - Dataverse for Teams environments have a publish-to-Team exception; limits apply when sharing outside the team bound to the environment.
 
 **Relationship to ASARD:** Managed Environment sharing limits provide the preventive control layer. ASARD provides zone-specific detective controls, validates `bot.accesscontrolpolicy` and `bot.authorizedsecuritygroupids` against approved group policy, manages time-bound exceptions with approval workflows, and generates evidence for review. FSI organizations should configure Managed Environment sharing limits as the primary preventive layer and use ASARD for granular zone-based compliance auditing and exception management.
