@@ -10,11 +10,12 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 
 ### Documentation
 
+- Re-verified every Microsoft product/technical claim in `README.md` (Managed Environment agent sharing limits, M365 Copilot Agent Store, 28-day Power Automate approval wait limit) against current Microsoft Learn documentation; corrected the sharing-limits authentication scope and confirmed the remaining claims. Recorded technical-claim verification as 2026-08-09 while retaining the last lab-validation date of 2026-06-09.
 - Corrected `docs/prerequisites.md` to point to this solution's own `scripts/` folder for the schema-creation and supporting scripts (previously mislabeled as the companion FSI-AgentGov repository).
 - Added the `scripts/` subtree to the README Components listing so the Python and PowerShell automation is discoverable from the directory map.
 - Added `LAB-VALIDATION.md` documenting static lab-readiness validation, authoritative Microsoft Learn source verification (Dataverse `bot.accesscontrolpolicy`/`authorizedsecuritygroupids`, Managed Environment sharing limits, 28-day approval wait, Power Apps admin cmdlets), and runtime-only caveats.
 - Recorded ASARD's sharing-plane coverage in `LAB-VALIDATION.md`: plane #1 (runtime chat ACL) is validated; the authoring-share (`PrincipalObjectAccess` Editor/Viewer) and M365 Copilot Agent Store planes are documented as known gaps. ASARD is not presented as complete sharing-governance coverage.
-- Removed the unverified "sharing limits apply to agents that require authentication" claim from `README.md` and replaced it with an authoritative-scope pointer to Microsoft Learn agent sharing limits.
+- Corrected `README.md` to state that Managed Environment sharing limits apply only to agents that require authentication, per Microsoft Learn.
 - Added `docs/approvals-limits.md` capturing the 28-day approval ceiling, the `Create an approval`/`Wait for an approval` adjacency build invariant, and the >4-agent batch/child-flow overflow pattern.
 - Added `docs/option-set-integers.md` requiring in-env verification of the custom `100000000`-series option-set integers via `GlobalOptionSetDefinitions`, and flagging the `fsi_acv_zone` `0`-`3` (script) vs `100000000`-`100000003` (in-env, lab-verified) drift for live reconciliation; added an in-situ pointer comment at the hardcoded sites in `Invoke-SharingComplianceScan.ps1`.
 - Softened residual FSI vocabulary in `README.md` "Known Limitations" (operational notes now read "avoid"/"verify"/"remove" instead of "prevent"/"ensure"/"eliminate").
