@@ -11,7 +11,7 @@ coe_function: optimize
 > **Version:** v1.2.0
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-06-09
+> **Last Verified:** 2026-08-09
 
 Automated validation of Power Platform environment agent access settings against zone-specific governance requirements.
 
@@ -72,7 +72,7 @@ Add-PowerAppsAccount
 
 ## Scope and Microsoft Learn Alignment
 
-AAM validates Managed Environment agent sharing settings documented in [Power Platform limit sharing](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits). It does not enumerate individual Copilot Studio shares or Microsoft 365 Copilot package assignments. Microsoft Learn does not restrict these sharing limits to agents that require authentication; consult the authoritative [agent sharing rules](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules) for scope. The documented sharing semantics note that limit changes can take up to an hour to enforce and do not immediately revoke existing access.
+AAM validates Managed Environment agent sharing settings documented in [Power Platform limit sharing](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits). It does not enumerate individual Copilot Studio shares or Microsoft 365 Copilot package assignments. Microsoft Learn states that these sharing limits only apply to [agents that require authentication](https://learn.microsoft.com/microsoft-copilot-studio/admin-sharing-controls-limits); consult the authoritative [agent sharing rules](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules) for control details. The documented sharing semantics note that limit changes can take up to an hour to enforce and do not immediately revoke existing access.
 
 Broad-sharing values from adjacent APIs (`all`, `AllUsers`, `OrgWide`, and tenant-wide variants) are normalized to the Managed Environment `noLimit` value during severity evaluation. Future inventory expansion should treat Microsoft Graph package and Agent Registry APIs as preview sources until production support is confirmed.
 
