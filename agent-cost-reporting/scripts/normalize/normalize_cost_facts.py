@@ -21,7 +21,8 @@ import json
 import logging
 import os
 import sys
-from typing import Optional
+from contextlib import contextmanager
+from typing import Iterator, Optional, TextIO
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "shared"))
 import cost_report_lib as lib  # noqa: E402
@@ -39,6 +40,20 @@ FILENAME_SURFACE_MAP = {
     lib.SURFACE_PURVIEW_AUDIT: ("audit_interaction", "supplementary_audit"),
     lib.SURFACE_MANUAL_CSV: ("manual_credit_consumption", "manual"),
 }
+
+
+@contextmanager
+def _private_text_file(path: str, *, newline: Optional[str] = None) -> Iterator[TextIO]:
+    """Open a sensitive evidence file with owner-only permissions where supported."""
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.chmod(path, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline=newline) as handle:
+            descriptor = -1
+            yield handle
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
 
 
 def _base_fact(surface: str, fact_type: str, confidence: str, record_id: str, period: tuple, snapshot_id: str, tenant_id: Optional[str]) -> dict:
@@ -179,12 +194,12 @@ def write_outputs(facts: list, out_dir: str) -> tuple:
     os.makedirs(out_dir, exist_ok=True)
     jsonl_path = os.path.join(out_dir, "cost_facts.jsonl")
     csv_path = os.path.join(out_dir, "cost_facts.csv")
-    with open(jsonl_path, "w", encoding="utf-8") as handle:
+    with _private_text_file(jsonl_path) as handle:
         for fact in facts:
             handle.write(json.dumps(fact, sort_keys=True, default=str))
             handle.write("\n")
     fieldnames = sorted({k for fact in facts for k in fact}) if facts else []
-    with open(csv_path, "w", newline="", encoding="utf-8") as handle:
+    with _private_text_file(csv_path, newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for fact in facts:

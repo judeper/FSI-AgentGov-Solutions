@@ -72,6 +72,10 @@ matrix in [docs/api-surface-matrix.md](docs/api-surface-matrix.md).
 - The HTML format alone is not an approved recordkeeping format. Defensibility comes from immutable
   (WORM) storage, dataset hashing, and retention of the raw extracts alongside the report.
   Organizations should consult records-management counsel.
+- The raw extracts, normalized dataset, and rendered report contain sensitive financial and tenant
+  metadata. The normalizer creates dataset files with owner-only permissions where the operating
+  system supports them, but file permissions and WORM controls do not provide encryption. Store the
+  working directory and final package only on encrypted storage with least-privilege access.
 
 ## Related controls
 

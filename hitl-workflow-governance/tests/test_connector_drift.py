@@ -254,7 +254,7 @@ class TestOptionSetValues:
         )
         violations: list[str] = []
         for lineno, line in enumerate(flow_config_text.splitlines(), start=1):
-            for m in zero_indexed_pattern.finditer(line):
+            if zero_indexed_pattern.search(line):
                 violations.append(
                     f"  line {lineno}: {line.strip()[:100]}"
                 )

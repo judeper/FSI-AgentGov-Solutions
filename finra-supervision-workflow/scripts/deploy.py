@@ -427,16 +427,15 @@ def main() -> None:
     client = DataverseClient(args.environment_url, access_token)
 
     # Deploy components
-    deploy_all = not (args.tables_only or args.roles_only or args.config_only)
     failures = 0
 
-    if deploy_all or args.tables_only:
+    if args.tables_only or not (args.tables_only or args.roles_only or args.config_only):
         failures += deploy_tables(client, args.dry_run)
 
-    if deploy_all or args.roles_only:
+    if args.roles_only or not (args.tables_only or args.roles_only or args.config_only):
         deploy_security_roles(client, args.dry_run)
 
-    if deploy_all or args.config_only:
+    if args.config_only or not (args.tables_only or args.roles_only or args.config_only):
         failures += deploy_default_configs(client, args.dry_run)
 
     print("\n" + "=" * 60)

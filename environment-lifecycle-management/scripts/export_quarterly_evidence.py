@@ -176,6 +176,7 @@ Examples:
         datetime.strptime(args.end_date, "%Y-%m-%d")
     except ValueError as e:
         parser.error(f"Invalid date format: {e}")
+        return
 
     # Determine quarter for filenames
     quarter = get_quarter(start_date)

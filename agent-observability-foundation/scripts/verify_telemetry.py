@@ -250,6 +250,7 @@ def query_telemetry_data(
     | order by EventCount desc
     """
 
+    response = None
     try:
         # Extract workspace GUID from ARM resource ID
         # Format: /subscriptions/.../providers/Microsoft.OperationalInsights/workspaces/{name}
@@ -284,6 +285,10 @@ def query_telemetry_data(
         if last_error is not None:
             print(f"  Telemetry query: FAILED after {max_retries} retries - {last_error}")
             return (False, False, [])
+
+    if response is None:
+        print("  Telemetry query: FAILED - no response returned")
+        return (False, False, [])
 
     if response.status == LogsQueryStatus.PARTIAL:
         print("  Telemetry query: PARTIAL results (query may have timed out)")
