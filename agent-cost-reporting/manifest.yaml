@@ -1,7 +1,7 @@
 id: agent-cost-reporting
 name: Agent Cost Reporting
 description: Consolidated, on-demand, point-in-time cost and consumption evidence report for AI agents across Azure Cost Management, Microsoft Graph, the Power Platform API, and Purview audit logs. Decoupled ingestion to a normalized cost-fact dataset rendered as a self-contained HTML evidence artifact.
-version: 0.1.0-preview
+version: 0.1.1-preview
 status: preview
 domain: monitoring-analytics
 tier: '2'

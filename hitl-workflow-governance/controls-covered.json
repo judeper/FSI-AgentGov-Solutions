@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "hitl-workflow-governance",
   "solutionName": "HITL Workflow Governance",
-  "solutionVersion": "1.1.2",
+  "solutionVersion": "1.1.3",
   "status": "live",
   "controls": [
     {

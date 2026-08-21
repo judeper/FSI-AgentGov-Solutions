@@ -1,7 +1,7 @@
 id: environment-lifecycle-management
 name: Environment Lifecycle Management
 description: Automated Power Platform environment provisioning with zone-based governance.
-version: 1.2.2
+version: 1.2.3
 status: live
 domain: lifecycle-ops
 tier: '2'

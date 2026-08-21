@@ -109,14 +109,6 @@ def test_pipeline_smoke() -> None:
 
         pkg_dir = os.path.join(work, "pkg")
         os.makedirs(pkg_dir, exist_ok=True)
-        if os.name == "posix":
-            for name in ("cost_facts.jsonl", "cost_facts.csv"):
-                path = os.path.join(pkg_dir, name)
-                with open(path, "w", encoding="utf-8"):
-                    pass
-                # Start owner-only but non-canonical so write_outputs must
-                # tighten away the execute bit without exposing test data.
-                os.chmod(path, 0o700)
         with open(os.path.join(pkg_dir, "report.html"), "w", encoding="utf-8") as handle:
             handle.write(html)
         jsonl_path, csv_path = normalize.write_outputs(facts, pkg_dir)

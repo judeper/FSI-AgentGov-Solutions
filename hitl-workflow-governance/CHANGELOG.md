@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-08-21
+
 ### Fixed
 
+- Record at most one connector option-set drift violation per source line, removing redundant match iteration while preserving the regression gate.
 - **botcomponent parent lookup (`_parentbotid_value`):** Second-pass command-existence audit corrected the Copilot Studio `botcomponents` parent-bot filter/select in `Get-AgentHitlSettings.ps1`, `governance/Test-HitlCheckpointConfiguration.ps1`, and `private/HWGClient.psm1` (`Get-BotHitlSettings`) from `_botid_value` to `_parentbotid_value`. Per the authoritative [Microsoft Dataverse botcomponent reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent), `botcomponent` exposes exactly one bot lookup — `parentbotid` (referenced attribute `bot.botid`), OData `_parentbotid_value`. There is no `botid` lookup, so a query on `_botid_value` returns an OData *"Could not find a property named '_botid_value'"* error and the scan never reaches the topic content. This reverses the earlier M-5 decision and the related `.ralph-config.json` domain fact, both of which were not reproducible against the documented schema.
 - **botcomponent componenttype filter:** Corrected the Copilot Studio `botcomponents` `componenttype` filter in `Get-AgentHitlSettings.ps1` and `governance/Test-HitlCheckpointConfiguration.ps1`. The scripts filtered `componenttype eq 12 or componenttype eq 2` with a comment claiming "12 = Topic, 2 = Dialog/Skill". Per the authoritative [Microsoft Dataverse botcomponent reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent), those values are **Bot variable (V2) = 12** and **Bot variable = 2** — neither holds the topic/dialog action content the scan parses, so HITL checkpoints could be silently missed. The filter now targets `componenttype eq 0` (Topic), `9` (Topic V2), `4` (Dialog), and `1` (Skill).
 

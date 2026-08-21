@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Agent Cost Reporting
 
-> **Version:** v0.1.0-preview
+> **Version:** v0.1.1-preview
 > **Status:** Preview
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — Azure Cost Management and Microsoft Graph usage/license APIs are GA; the Power Platform API is GA but delegated-only (service principal + RBAC, no managed identity); Power Platform capacity-allocation endpoints, the Purview audit-log query API, and Agent 365 APIs are preview/beta. Per-agent end-to-end USD is not attributable through supported public APIs today.

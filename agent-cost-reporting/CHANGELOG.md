@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1-preview] - 2026-08-21
+
+### Fixed
+
+- Create normalized JSONL and CSV evidence with owner-only permissions (`0600`) and verify the emitted artifacts without introducing an intentionally executable test fixture.
+- Clarify required Azure Cost Management and Microsoft Graph permissions in the deployment prerequisites.
+
 ## [0.1.0-preview] - 2026-06-16
 
 ### Added
