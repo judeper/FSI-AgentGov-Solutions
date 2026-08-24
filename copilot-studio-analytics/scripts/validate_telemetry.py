@@ -230,6 +230,7 @@ def verify_copilot_session_events(
         AutonomousCount=countif(tostring(EventProperties["agentMode"]) == "Autonomous")
     """
 
+    response = None
     try:
         response = _run_query()
     except HttpResponseError as e:
@@ -258,6 +259,10 @@ def verify_copilot_session_events(
         if last_error is not None:
             print(f"  Telemetry query: FAILED after {max_retries} retries - {last_error}")
             return (False, False, False, [])
+
+    if response is None:
+        print("  Telemetry query: FAILED - no response returned")
+        return (False, False, False, [])
 
     if response.status == LogsQueryStatus.PARTIAL:
         print("  Telemetry query: PARTIAL results (query may have timed out)")

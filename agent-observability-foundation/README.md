@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Agent Observability Foundation
 
-> **Version:** v1.2.4
+> **Version:** v1.2.5
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 

@@ -4,6 +4,16 @@ All notable changes to the Environment Lifecycle Management solution.
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-08-21
+
+### Fixed
+
+- Make the invalid-date parser branch explicitly return after `argparse` reports the error, satisfying static control-flow analysis.
+
+### Security
+
+- Stop writing client-secret identifiers, Key Vault secret names, and secret-version fragments to console logs.
+
 ## [1.2.2] - 2026-05-23
 
 ### Fixed

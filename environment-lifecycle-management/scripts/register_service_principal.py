@@ -177,7 +177,7 @@ def create_client_secret(
     secret = response.json()
 
     expiry_date = datetime.fromisoformat(secret["endDateTime"].replace("Z", "+00:00"))
-    print(f"  Secret ID: {secret['keyId']}")
+    print("  Client secret created")
     print(f"  Expiry: {expiry_date.strftime('%Y-%m-%d')} ({expiry_days} days)")
 
     return secret
@@ -218,7 +218,7 @@ def remove_existing_secrets(
 
     # legacy: dev-only — replace with managed identity in production
     if dry_run:
-        print(f"  [DRY RUN] Would revoke {len(credentials)} existing secret(s)")
+        print("  [DRY RUN] Would revoke existing client secrets")
         return len(credentials)
 
     for cred in credentials:
@@ -227,7 +227,7 @@ def remove_existing_secrets(
             headers=headers,
             json={"keyId": cred["keyId"]},
         ).raise_for_status()
-        print(f"  Revoked secret: {cred['keyId']}")
+        print("  Revoked an existing client secret")
 
     return len(credentials)
 
@@ -257,15 +257,14 @@ def store_in_keyvault(
     # legacy: dev-only — replace with managed identity in production
     if dry_run:
         print(f"  [DRY RUN] Would store secret in {vault_url}")
-        print(f"  [DRY RUN] Secret name: {secret_name}")
+        print("  [DRY RUN] Secret metadata will not be written to logs")
         return "dry-run-version"
 
     client = SecretClient(vault_url=vault_url, credential=credential)
     result = client.set_secret(secret_name, secret_value)
 
     print(f"  Vault: {vault_name}")
-    print(f"  Secret: {secret_name}")
-    print(f"  Version: {result.properties.version[:8]}...")
+    print("  Client secret stored; name and version omitted from logs")
 
     return result.properties.version
 
@@ -406,7 +405,7 @@ Examples:
         print(f"      Application ID: {app['appId']}")
         print(f"      Tenant ID: {args.tenant_id}")
         print(f"      Key Vault: {args.key_vault_name}")
-        print(f"      Secret Name: {args.secret_name}")
+        print("      Secret metadata: omitted from logs")
         print()
         print("      NEXT STEP (MANUAL):")
         print("      Register as Power Platform Management Application:")

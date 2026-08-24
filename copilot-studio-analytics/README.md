@@ -8,7 +8,7 @@ coe_function: optimize
 ---
 # Copilot Studio Analytics
 
-> **Version:** v2.0.2
+> **Version:** v2.0.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 

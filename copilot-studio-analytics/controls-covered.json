@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "copilot-studio-analytics",
   "solutionName": "Copilot Studio Analytics",
-  "solutionVersion": "2.0.2",
+  "solutionVersion": "2.0.3",
   "status": "live",
   "controls": [
     {

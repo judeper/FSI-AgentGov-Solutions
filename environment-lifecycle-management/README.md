@@ -8,7 +8,7 @@ coe_function: enable
 ---
 # Environment Lifecycle Management
 
-> **Version:** v1.2.2
+> **Version:** v1.2.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 

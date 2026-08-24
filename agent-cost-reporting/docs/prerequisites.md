@@ -41,4 +41,7 @@ See `scripts/shared/auth_powerplatform.py` and the Microsoft Learn article
 The HTML report is an evidence package, not an approved recordkeeping format in itself. To aid in
 meeting SEC 17a-4 / FINRA 4511 expectations, store the full package (report, dataset, manifest,
 hashes, and raw extracts) in immutable (WORM) storage per your retention schedule. Organizations
-should consult records-management counsel to confirm acceptability for their obligations.
+should consult records-management counsel to confirm acceptability for their obligations. These
+artifacts contain sensitive financial and tenant metadata: use an encrypted working volume and
+encrypted archive with least-privilege access. WORM storage protects integrity and retention, not
+confidentiality.

@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "agent-cost-reporting",
   "solutionName": "Agent Cost Reporting",
-  "solutionVersion": "0.1.0-preview",
+  "solutionVersion": "0.1.1-preview",
   "status": "preview",
   "controls": [
     {

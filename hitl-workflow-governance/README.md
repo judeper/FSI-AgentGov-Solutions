@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # HITL Workflow Governance
 
-> **Version:** v1.1.2
+> **Version:** v1.1.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — The Request for Information action reached general availability on Jan 30, 2026 (Power Platform release plan), though the Human in the Loop connector reference still labels it preview; Run a Multistage Approval remains preview in Microsoft Learn. Review the Power Platform preview terms before using any preview action with regulated data.

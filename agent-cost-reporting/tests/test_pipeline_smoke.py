@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import stat
 import sys
 import tempfile
 
@@ -110,7 +111,16 @@ def test_pipeline_smoke() -> None:
         os.makedirs(pkg_dir, exist_ok=True)
         with open(os.path.join(pkg_dir, "report.html"), "w", encoding="utf-8") as handle:
             handle.write(html)
-        normalize.write_outputs(facts, pkg_dir)
+        jsonl_path, csv_path = normalize.write_outputs(facts, pkg_dir)
+        with open(jsonl_path, encoding="utf-8") as handle:
+            persisted_facts = [json.loads(line) for line in handle if line.strip()]
+        persisted_azure = next(f for f in persisted_facts if f["fact_type"] == "azure_cost")
+        assert persisted_azure["amount"] == 184.0
+        assert persisted_azure["currency_code"] == "USD"
+        assert persisted_azure["azure_subscription_id"] == SUB
+        if os.name == "posix":
+            assert stat.S_IMODE(os.stat(jsonl_path).st_mode) == 0o600
+            assert stat.S_IMODE(os.stat(csv_path).st_mode) == 0o600
         manifest_path = os.path.join(pkg_dir, "manifest.json")
         with open(manifest_path, "w", encoding="utf-8") as handle:
             json.dump(manifest, handle)

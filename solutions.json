@@ -112,7 +112,7 @@
     "agent-cost-reporting": {
       "id": "agent-cost-reporting",
       "name": "Agent Cost Reporting",
-      "version": "0.1.0-preview",
+      "version": "0.1.1-preview",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "preview",
@@ -229,7 +229,7 @@
     "agent-observability-foundation": {
       "id": "agent-observability-foundation",
       "name": "Agent Observability Foundation",
-      "version": "1.2.4",
+      "version": "1.2.5",
       "domain": "monitoring-analytics",
       "tier": "1",
       "status": "live",
@@ -505,7 +505,7 @@
     "copilot-studio-analytics": {
       "id": "copilot-studio-analytics",
       "name": "Copilot Studio Analytics",
-      "version": "2.0.2",
+      "version": "2.0.3",
       "domain": "monitoring-analytics",
       "tier": "2",
       "status": "live",
@@ -705,7 +705,7 @@
     "environment-lifecycle-management": {
       "id": "environment-lifecycle-management",
       "name": "Environment Lifecycle Management",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "domain": "lifecycle-ops",
       "tier": "2",
       "status": "live",
@@ -788,7 +788,7 @@
     "finra-supervision-workflow": {
       "id": "finra-supervision-workflow",
       "name": "FINRA Supervision Workflow",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",
@@ -865,7 +865,7 @@
     "hitl-workflow-governance": {
       "id": "hitl-workflow-governance",
       "name": "HITL Workflow Governance",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "domain": "compliance-audit",
       "tier": "2",
       "status": "live",

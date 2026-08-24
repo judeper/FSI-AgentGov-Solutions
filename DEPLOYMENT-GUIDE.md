@@ -65,7 +65,7 @@ These solutions provide shared infrastructure that other solutions depend on:
 | Solution | Role | Version |
 |----------|------|---------|
 | [Agent Intake](./agent-intake/) | Pre-build maker intake (Express + Standard + Full paths) with sponsor 1-click approval, parallel reviewer quorum, MRM handoff, and Entra Agent ID minting | v1.0.1-preview |
-| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.4 |
+| [Agent Observability Foundation](./agent-observability-foundation/) | FSI-compliant telemetry infrastructure for Microsoft Copilot Studio agents with long-term audit retention, operational workbooks, and proactive alerting. | v1.2.5 |
 | [Copilot Agent Inventory](./copilot-agent-inventory/) | Foundation system-of-record for Copilot Studio and Agent Builder agents — four-layer tenant-wide discovery (Azure Resource Graph, per-environment Dataverse, PPAC reconciliation, Package Management API) feeding a canonical nine-entity governance store keyed on fsi_copilotagent. Layer 4 is selected by a license-aware Agent 365 mode (--agent365 present|absent|auto, default absent) so a deferred or not-detected Agent Builder catalog is never mistaken for absence; a ninth table (fsi_caiscanrun) persists one tamper-evident scan-run row with the Agent 365 resolution and coverage-scope contract. Retains temporary owner attribution from the manual Agent Registry export and owner Copilot entitlement classification. | v0.4.0-preview |
 
 ### Layer 2: Tier 2 Governance Solutions
@@ -90,7 +90,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.2.1 | personal, team, enterprise |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.5 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.2.1 | team, enterprise |
-| [Agent Cost Reporting](./agent-cost-reporting/) | 2 | v0.1.0-preview | team, enterprise |
+| [Agent Cost Reporting](./agent-cost-reporting/) | 2 | v0.1.1-preview | team, enterprise |
 | [Agent Eligibility Gateway](./agent-eligibility-gateway/) | 3 | v0.1.0-preview | enterprise |
 | [Agent Knowledge Source Scanner](./agent-knowledge-source-scanner/) | 2 | v1.1.4 | personal, team, enterprise |
 | [Agent Registry Automation](./agent-registry-automation/) | 2 | v2.1.1 | personal, team, enterprise |
@@ -98,19 +98,19 @@ All other solutions operate independently and can be deployed in any order based
 | [Conflict of Interest Testing](./coi-testing/) | 2 | v1.1.2 | team, enterprise |
 | [Compliance Dashboard](./compliance-dashboard/) | 2 | v1.0.5 | enterprise |
 | [Copilot Billing Governance](./copilot-billing-governance/) | 2 | v0.1.0-preview | team, enterprise |
-| [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.2 | personal, team, enterprise |
+| [Copilot Studio Analytics](./copilot-studio-analytics/) | 2 | v2.0.3 | personal, team, enterprise |
 | [Credential Oversharing Detector](./credential-oversharing-detector/) | 2 | v2.1.2 | personal, team, enterprise |
 | [Cross-Solution Integration](./cross-solution-integration/) | 2 | v2.0.3 | personal, team, enterprise |
 | [Cross-Tenant External Sharing Governance](./cross-tenant-external-sharing-governance/) | 2 | v1.1.0 | enterprise |
 | [Deny Event Correlation Report](./deny-event-correlation-report/) | 2 | v2.0.4 | team, enterprise |
 | [DR Testing Framework](./dr-testing-framework/) | 2 | v2.0.2 | enterprise |
 | [Early-Release Validation](./early-release-validation/) | 2 | v0.1.0-preview | enterprise |
-| [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.2 | personal, team, enterprise |
+| [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.3 | personal, team, enterprise |
 | [Eval Gate](./eval-gate/) | 2 | v0.1.0-preview | enterprise |
-| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.1 | enterprise |
+| [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.2 | enterprise |
 | [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.1 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
-| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.2 | personal, team, enterprise |
+| [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.3 | personal, team, enterprise |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.2 | team, enterprise |
 | [Message Center Monitor](./message-center-monitor/) | 2 | v2.5.1 | enterprise |
 | [MIME Type Restrictions for File Uploads](./mime-type-restrictions/) | 2 | v1.2.1 | personal, team, enterprise |
