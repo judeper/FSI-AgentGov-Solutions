@@ -1,21 +1,47 @@
 # Lab Validation Report — Action Confirmation Auditor (ACA)
 
-> **Validation type:** Static (parse-validity + authoritative Microsoft source
-> verification + documentation completeness, 2026-06-04) **followed by live tenant
-> validation of the detection path on the lab validation tenant (2026-06-13) with a
-> SYNTHETIC YAML topic fixture — coverage remains PARTIAL.** The static report below is
-> retained as the historical record; the live outcome is in its own dated section.
+> **Validation type:** Static verification (2026-06-04), a bounded live tenant leg
+> using a synthetic YAML fixture (2026-06-13), and offline Topic V2 regressions for
+> the maintainer backport (2026-09-08). The June fixture did not prove authentic
+> Copilot Studio Topic V2 retrieval; that provenance is corrected below.
 > **Original static validation date:** 2026-06-04
 > **Live tenant validation date:** 2026-06-13 (see "Live tenant validation outcome — 2026-06-13" below)
-> **Solution version:** v1.2.1 (fixes recorded under CHANGELOG `[Unreleased]`)
+> **Offline backport validation date:** 2026-09-08
+> **Solution version:** v1.2.2
+
+## Maintainer backport outcome — 2026-09-08
+
+The ACA-only backport corrects all three approved call sites:
+
+- `Get-AgentActionSettings.ps1` and `governance/Test-UserDefinedActionMessages.ps1`
+  query `componenttype` 9/0 topic rows, select `data` and `content`, and prefer
+  nonblank `data`.
+- Both canonical paths fail closed before page-one classification when
+  `@odata.nextLink` is present.
+- Empty or otherwise unassessable topics make the result inconclusive even when
+  another topic was assessed successfully.
+- `private/ACAClient.psm1` uses the same payload precedence while preserving its
+  existing all-component pagination loop.
+
+`tests/TopicV2Detection.Tests.ps1` provides offline behavioral coverage with mocked
+Dataverse/network boundaries. The suite covers authentic-shape type-9 `data` payloads,
+legacy type-0 fallback, precedence and whitespace cases, Present/Missing discrimination,
+mixed unassessable content, unavailable YAML parsing, canonical incomplete pages,
+401/403/timeout/429/5xx failures, stable result properties, downstream policy treatment,
+and the exported client's existing page-two aggregation.
+
+No tenant, credential, persistence, or agent-configuration access was used for this
+backport. Controls 2.12 and 1.10 remain **PARTIAL**. A separately approved owner-attended
+live proof against authentic in-product Topic V2 components is still required for full
+detector acceptance.
 
 ## Live tenant validation outcome — 2026-06-13
 
-On 2026-06-13 the detection path was validated live against the lab validation tenant
-using a **synthetic, hand-written YAML topic fixture**. This supersedes the "no live
-tenant" framing of the 2026-06-04 static report for the parts proven below; the static
-report is retained as the historical record. **Coverage remains PARTIAL** — see the
-synthetic-YAML boundary at the end of this section.
+On 2026-06-13 selected detection and persistence behavior was exercised against the lab
+validation tenant using a **synthetic, hand-written YAML fixture**. The fixture was stored
+in the same variable-type/legacy-content shape selected by the then-current defective
+query, so this leg did not validate authentic Copilot Studio Topic V2 retrieval. The
+static report is retained as a historical record, with the corrected boundary below.
 
 **What was deployed.** The three `fsi_action*` Dataverse tables (scan-run, audit-result,
 confirmation-exception) with their columns, the two shared option sets (`fsi_acv_zone`,
@@ -43,21 +69,20 @@ disposable test fixtures below were all removed afterward.
   deleted. **No disposable rows persist in the lab validation tenant**; the real agents were never mutated.
 
 **Correction to the 2026-06-04 static "Verified Healthy" note.** The static report below
-recorded the core scanner as healthy "queries `botcomponents` with `_botid_value`,
-`componenttype` 12/2 … endpoint shape correct". That `_botid_value` lookup was in fact a
-defect (it returned HTTP 400 live); the detector was subsequently **re-pathed to
-`_parentbotid_value` with topic component types `0`/`9`** and that fix was proven live on
-2026-06-13. The static note is left in place as the historical record, corrected here.
+recorded both the wrong `_botid_value` foreign key and variable component types `12`/`2`
+as healthy. The June leg proved the `_parentbotid_value` re-path, but its synthetic
+fixture exercised the still-defective type/content selection against itself. The type
+`0`/`9` and Topic V2 `data` fixes were implemented in the September maintainer backport
+and validated offline; no live proof was performed for this repository release.
 
-**Synthetic-YAML boundary (why ACA stays PARTIAL).** The topic content authored on the
-disposable fixtures was **synthetic hand-written YAML**, NOT an authentic in-product
-Copilot Studio-authored topic. The two real agents exposed **0 of 18 topic components**, so
-there was no genuine in-product topic to scan. This live leg therefore proves the FK query,
-the YAML parser, the confirmation-node policy, and Dataverse persistence are **real**, but it
-does **NOT** prove end-to-end detection of authentic in-product topics. `controls-covered.json`
-stays `coverage: "partial"` on **both 2.12 and 1.10**; closing the gap requires a future live
-leg against a genuine Copilot Studio-authored fixture (a real confirmation-bearing topic plus a
-second topic with no confirmation node).
+**Synthetic-YAML boundary (why ACA stays PARTIAL).** The disposable fixture was not an
+authentic in-product Copilot Studio-authored topic. The reported **0 of 18** result on the
+two real agents was later identified as evidence of the wrong type/content query, not
+evidence that authentic topics were absent. This live leg supports the FK, parser
+heuristic, confirmation-policy, persistence, integrity, and teardown claims only within
+that synthetic boundary. `controls-covered.json` stays `coverage: "partial"` on both
+2.12 and 1.10; closing the gap requires a separately approved live leg against authentic
+Topic V2 components with comparable confirmed and unconfirmed actions.
 
 **Honest framing.** This is **lab evidence** from disposable fixtures on the lab validation tenant — not a
 production guarantee. A customer's tenant evidence is produced by running the solution against
@@ -157,10 +182,10 @@ action type, and supports exception management with Maker/Checker gating.
 
 ## Verified Healthy (no change needed)
 
-- Core scanner `Get-AgentActionSettings.ps1`: queries `botcomponents` with
-  `_botid_value`, `componenttype` 12/2, Dataverse Web API `v9.2` — endpoint
-  shape correct. Per-environment Dataverse tokens are acquired via
-  `Connect-EnvironmentDataverse.ps1` (Az/MI, correct audience).
+- Core scanner authentication and Dataverse Web API version remain unchanged.
+  Topic retrieval now uses `_parentbotid_value`, component types 9/0, and
+  Topic V2 `data` with legacy `content` fallback; this selection is covered by
+  the September offline regression suite.
 - `Export-ActionAuditEvidence.ps1`, `ACAClient.psm1`,
   `Test-UserDefinedActionMessages.ps1`, `Start-ActionConfirmationValidationRunbook.ps1`,
   `docs/flow-configuration.md`: all Dataverse column references and option-set
@@ -171,14 +196,15 @@ action type, and supports exception management with Maker/Checker gating.
 ## Runtime-Only Verification Items (cannot confirm statically)
 
 - **Topic-content parsing fidelity.** `Get-AgentActionSettings.ps1` detects
-  action nodes and confirmation patterns with regular expressions over
-  `botcomponent.content`. The exact `kind` values (`InvokeFlowAction`,
+  action nodes and confirmation patterns with regular expressions over the
+  selected `botcomponent.data` or legacy `content` payload. The exact `kind` values (`InvokeFlowAction`,
   `InvokeConnectorAction`, `InvokeSkillAction`, etc.) and the confirmation
   heuristics were exercised live on 2026-06-13 against a **synthetic** YAML
   topic fixture; parsing fidelity against **authentic in-product** Copilot
-  Studio-authored topic content is still unproven (the real agents exposed 0/18
-  topic components) and remains the PARTIAL gap. Node schemas can change and are
-  not publicly versioned.
+  Studio-authored Topic V2 content is still unproven and remains the PARTIAL gap.
+  The fallback regex can recognize signatures in some malformed payloads and is
+  not universal semantic YAML validation. Node schemas can change and are not
+  publicly versioned.
 - **`Add-PowerAppsAccount -AccessToken` with a managed-identity token.** Microsoft
   documents service-principal auth as the supported automation path; passing an
   MI-issued Power Apps-audience token is a reasonable pattern but is not
@@ -193,14 +219,12 @@ action type, and supports exception management with Maker/Checker gating.
 
 ## Final Lab-Readiness Assessment
 
-**Lab-ready, live-validated PARTIAL.** All scripts parse/compile; the two functional
+**Lab-ready, offline-regression-validated PARTIAL.** All scripts parse/compile; the two functional
 authentication defects (Purview evidence script and the MI runbook) and the schema column
 mismatch are fixed and verified against authoritative Microsoft sources. The core scan path
-and evidence export were aligned to the schema, and the detection path was **live-validated
-against the lab validation tenant on 2026-06-13** with a synthetic YAML fixture (FK re-path, YAML parser,
-confirmation-node policy, fail-closed Indeterminate, Dataverse persistence, SHA-256 evidence
-integrity, and teardown all proven — see "Live tenant validation outcome — 2026-06-13" above).
-Coverage stays **PARTIAL**: authentic in-product Copilot Studio topic detection is not yet
-proven (synthetic-YAML boundary; real topic content 0/18). The remaining items are inherently
-runtime-verification concerns (authentic-content parsing fidelity and service availability),
-documented above rather than assumed.
+and evidence export were aligned to the schema. The June 13 tenant leg supports the bounded
+synthetic-fixture claims above, while the September 8 offline suite covers the corrected
+Topic V2 query/payload behavior and fail-closed regressions without tenant access.
+Coverage stays **PARTIAL**: authentic in-product Copilot Studio Topic V2 detection is not
+yet proven. The remaining items are runtime-verification concerns (authentic-content parsing
+fidelity and service availability), documented above rather than assumed.

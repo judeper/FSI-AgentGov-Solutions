@@ -76,7 +76,7 @@
 
 .NOTES
     File: Test-UserDefinedActionMessages.ps1
-    Version: 1.2.1
+    Version: 1.2.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -320,12 +320,22 @@ function Test-UserDefinedActionMessages {
         }
 
         try {
-            # Query botcomponent for action-related components (componenttype 12 = Topic, 2 = Dialog/Skill)
+            # componenttype 9 = Topic (V2, modern Copilot Studio); 0 = Topic (legacy).
+            # componenttype 12/2 are Bot variable V2/V1 records, not topics.
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
-                "`$select=name,content,componenttype,botcomponentid"
+                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 9 or componenttype eq 0)&" +
+                "`$select=name,data,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
+
+            if ($componentsResponse.'@odata.nextLink') {
+                return [PSCustomObject]@{
+                    HasUserDefinedActionMessages = $false
+                    ActionComponentCount         = 0
+                    ComponentsWithMessages       = 0
+                    Details                      = 'Incomplete scan: additional botcomponent pages were not assessed'
+                }
+            }
 
             if (-not $componentsResponse.value -or $componentsResponse.value.Count -eq 0) {
                 return [PSCustomObject]@{
@@ -338,11 +348,22 @@ function Test-UserDefinedActionMessages {
 
             $actionComponentCount = 0
             $componentsWithMessages = 0
+            $unassessableContentSeen = $false
 
             foreach ($component in $componentsResponse.value) {
-                if (-not $component.content) { continue }
+                # Prefer modern Topic V2 data, with legacy content as a fallback only when data is blank.
+                $contentStr = if (-not [string]::IsNullOrWhiteSpace([string]$component.data)) {
+                    [string]$component.data
+                } elseif (-not [string]::IsNullOrWhiteSpace([string]$component.content)) {
+                    [string]$component.content
+                } else {
+                    $null
+                }
 
-                $contentStr = $component.content
+                if (-not $contentStr) {
+                    $unassessableContentSeen = $true
+                    continue
+                }
 
                 # Detect action invocation nodes (JSON "kind": "X" or YAML kind: X)
                 $hasActions = $contentStr -match '["'']?kind["'']?\s*:\s*["'']?(InvokeFlowAction|InvokeConnectorAction|InvokeSkillAction|HttpRequest|InvokePlugin|InvokeCustomAction)\b'
@@ -369,13 +390,19 @@ function Test-UserDefinedActionMessages {
             }
 
             # Agent has user-defined action messages if all action components include them
-            $hasMessages = ($actionComponentCount -gt 0 -and $componentsWithMessages -eq $actionComponentCount)
+            $hasMessages = (
+                -not $unassessableContentSeen -and
+                $actionComponentCount -gt 0 -and
+                $componentsWithMessages -eq $actionComponentCount
+            )
 
             return [PSCustomObject]@{
                 HasUserDefinedActionMessages = $hasMessages
                 ActionComponentCount         = $actionComponentCount
                 ComponentsWithMessages       = $componentsWithMessages
-                Details                      = if ($actionComponentCount -eq 0) {
+                Details                      = if ($unassessableContentSeen) {
+                                                   'Incomplete assessment: one or more topic components had empty data/content'
+                                               } elseif ($actionComponentCount -eq 0) {
                                                    'No action invocation components found'
                                                } elseif ($hasMessages) {
                                                    "All $actionComponentCount action component(s) have user-defined messages"

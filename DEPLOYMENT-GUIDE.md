@@ -87,7 +87,7 @@ All other solutions operate independently and can be deployed in any order based
 
 | Solution | Tier | Version | Zones |
 |----------|------|---------|-------|
-| [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.2.1 | personal, team, enterprise |
+| [Action Confirmation Auditor](./action-confirmation-auditor/) | 2 | v1.2.2 | personal, team, enterprise |
 | [Agent 365 Lifecycle Governance](./agent-365-lifecycle-governance/) | 2 | v1.1.5 | enterprise |
 | [Agent Communication Restriction Detector](./agent-communication-restriction-detector/) | 2 | v1.2.1 | team, enterprise |
 | [Agent Cost Reporting](./agent-cost-reporting/) | 2 | v0.1.1-preview | team, enterprise |

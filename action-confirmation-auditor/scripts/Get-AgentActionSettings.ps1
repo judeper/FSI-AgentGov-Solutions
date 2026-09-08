@@ -16,7 +16,7 @@
 
 .NOTES
     File: Get-AgentActionSettings.ps1
-    Version: 1.2.1
+    Version: 1.2.2
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
 #>
@@ -225,8 +225,8 @@ function Get-AgentActionSettings {
         .SYNOPSIS
             Extracts action invocation nodes and confirmation status from bot topic definitions.
         .DESCRIPTION
-            Queries botcomponent filtered by _parentbotid_value for topic definitions (componenttype 12),
-            parses content (YAML or JSON) for action invocation nodes (connector calls, cloud flow calls,
+            Queries botcomponent filtered by _parentbotid_value for topic definitions (componenttype 0/9),
+            parses topic data or legacy content (YAML or JSON) for action invocation nodes (connector calls, cloud flow calls,
             plugin invocations, HTTP requests), and checks for preceding confirmation/approval
             patterns. Conservative parsing returns 'Unable to Determine' for unrecognized structures.
         #>
@@ -258,27 +258,41 @@ function Get-AgentActionSettings {
         #region Query botcomponent for topic definitions
 
         try {
-            # componenttype 12 = Topic, componenttype 2 = Dialog/Skill
+            # componenttype 9 = Topic (V2, modern Copilot Studio); 0 = Topic (legacy).
+            # componenttype 12/2 are Bot variable V2/V1 records, not topics.
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
-                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 12 or componenttype eq 2)&" +
-                "`$select=name,content,componenttype,botcomponentid"
+                "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 9 or componenttype eq 0)&" +
+                "`$select=name,data,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
 
-            if ($componentsResponse.value) {
+            # Canonical scan paths intentionally do not classify a partial first page. A complete
+            # pagination implementation is deferred; fail closed instead of returning partial evidence.
+            if ($componentsResponse.'@odata.nextLink') {
+                $unassessableContentSeen = $true
+                Write-Verbose "Incomplete botcomponent result for '$($Bot.name)' -- additional pages were not assessed"
+            } elseif ($componentsResponse.value) {
                 foreach ($component in $componentsResponse.value) {
                     $topicName = $component.name
                     $topicId = $component.botcomponentid
 
-                    # Empty content cannot be assessed for action/confirmation posture. Track it so
-                    # the agent is never scored falsely Compliant on content we never actually saw.
-                    if (-not $component.content) {
-                        $unassessableContentSeen = $true
-                        Write-Verbose "Empty botcomponent content for '$topicName' in bot '$($Bot.name)' -- cannot assess"
-                        continue
+                    # Modern Topic V2 records store YAML in data. Legacy topics may use content.
+                    # Select the authoritative nonblank payload before parsing; malformed data must
+                    # not silently fall back to a different legacy content payload.
+                    $contentStr = if (-not [string]::IsNullOrWhiteSpace([string]$component.data)) {
+                        [string]$component.data
+                    } elseif (-not [string]::IsNullOrWhiteSpace([string]$component.content)) {
+                        [string]$component.content
+                    } else {
+                        $null
                     }
 
-                    $contentStr = $component.content
+                    # Empty topic payload cannot be assessed for action/confirmation posture.
+                    if (-not $contentStr) {
+                        $unassessableContentSeen = $true
+                        Write-Verbose "Empty botcomponent data/content for '$topicName' in bot '$($Bot.name)' -- cannot assess"
+                        continue
+                    }
 
                     # Copilot Studio topics are authored as YAML; exported/legacy components may be
                     # JSON. Determine a parse format defensively. A failed parse must NOT silently
@@ -419,18 +433,17 @@ function Get-AgentActionSettings {
             $unassessableContentSeen = $true
         }
 
-        # Fail-closed: if we saw content we could not assess (empty, unparseable, or a failed
-        # query) and detected no actions at all, surface a single Indeterminate marker so the
-        # agent is never scored Compliant by omission. Real YAML detection is best-effort; this
-        # guarantees unseen content reads as UnableToDetermine, not as silent compliance.
-        if ($actions.Count -eq 0 -and $unassessableContentSeen) {
+        # Fail-closed: if any topic was not assessed (empty, unparseable, incomplete page, or a
+        # failed query), append one Indeterminate marker even when other topics produced actions.
+        # This prevents an assessable Present action from hiding unreadable topic content.
+        if ($unassessableContentSeen) {
             $actions.Add([PSCustomObject]@{
                 ActionName         = 'IndeterminateContent'
                 ActionType         = 'Unknown'
                 ConnectorName      = $null
                 HttpMethod         = $null
                 ConfirmationStatus = 'UnableToDetermine'
-                TopicName          = '(unparseable or empty topic content)'
+                TopicName          = '(unassessable or incomplete topic content)'
                 TopicId            = $null
             })
         }
