@@ -365,10 +365,30 @@ function Test-UserDefinedActionMessages {
                     continue
                 }
 
+                $contentFormat = 'Unparseable'
+                try {
+                    $contentStr | ConvertFrom-Json -ErrorAction Stop | Out-Null
+                    $contentFormat = 'Json'
+                } catch {
+                    if (Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue) {
+                        try {
+                            $contentStr | ConvertFrom-Yaml -ErrorAction Stop | Out-Null
+                            $contentFormat = 'Yaml'
+                        } catch {
+                            $contentFormat = 'Unparseable'
+                        }
+                    }
+                }
+
                 # Detect action invocation nodes (JSON "kind": "X" or YAML kind: X)
                 $hasActions = $contentStr -match '["'']?kind["'']?\s*:\s*["'']?(InvokeFlowAction|InvokeConnectorAction|InvokeSkillAction|HttpRequest|InvokePlugin|InvokeCustomAction)\b'
 
-                if (-not $hasActions) { continue }
+                if (-not $hasActions) {
+                    if ($contentFormat -eq 'Unparseable') {
+                        $unassessableContentSeen = $true
+                    }
+                    continue
+                }
 
                 $actionComponentCount++
 
@@ -401,7 +421,7 @@ function Test-UserDefinedActionMessages {
                 ActionComponentCount         = $actionComponentCount
                 ComponentsWithMessages       = $componentsWithMessages
                 Details                      = if ($unassessableContentSeen) {
-                                                   'Incomplete assessment: one or more topic components had empty data/content'
+                                                   'Incomplete assessment: one or more topic components had empty or unreadable data/content'
                                                } elseif ($actionComponentCount -eq 0) {
                                                    'No action invocation components found'
                                                } elseif ($hasMessages) {

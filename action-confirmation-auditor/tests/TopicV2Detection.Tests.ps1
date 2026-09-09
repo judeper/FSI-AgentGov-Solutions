@@ -745,6 +745,147 @@ Describe 'Test-BotHasUserDefinedActionMessages Topic V2 behavior' {
         $result.ComponentsWithMessages | Should -Be 1
         $result.Details | Should -Match 'Incomplete assessment'
     }
+
+    It 'forces false when a valid message topic is mixed with malformed nonblank no-action data and YAML parsing is unavailable' {
+        Mock Get-Command { $null } -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' }
+        Mock Invoke-RestMethod {
+            [PSCustomObject]@{
+                value = @(
+                    [PSCustomObject]@{
+                        name = 'Message topic'
+                        botcomponentid = '23232323-2323-2323-2323-232323232323'
+                        componenttype = 9
+                        data = $script:MessageYaml
+                        content = $null
+                    },
+                    [PSCustomObject]@{
+                        name = 'Malformed no-action topic'
+                        botcomponentid = '24242424-2424-2424-2424-242424242424'
+                        componenttype = 9
+                        data = '{'
+                        content = $null
+                    }
+                )
+            }
+        }
+
+        $result = Test-BotHasUserDefinedActionMessages -Bot $script:Bot -EnvDataverseUrl 'https://example.crm.dynamics.com' -EnvToken 'offline'
+
+        $result.HasUserDefinedActionMessages | Should -BeFalse
+        $result.ActionComponentCount | Should -Be 1
+        $result.ComponentsWithMessages | Should -Be 1
+        $result.Details | Should -Match 'Incomplete assessment'
+    }
+
+    It 'remains true when a valid message topic is mixed with successfully parsed action-free content' {
+        Mock Invoke-RestMethod {
+            [PSCustomObject]@{
+                value = @(
+                    [PSCustomObject]@{
+                        name = 'Message topic'
+                        botcomponentid = '25252525-2525-2525-2525-252525252525'
+                        componenttype = 9
+                        data = $script:MessageYaml
+                        content = $null
+                    },
+                    [PSCustomObject]@{
+                        name = 'Action-free JSON topic'
+                        botcomponentid = '26262626-2626-2626-2626-262626262626'
+                        componenttype = 9
+                        data = '{"kind":"AdaptiveDialog","nodes":[]}'
+                        content = $null
+                    }
+                )
+            }
+        }
+
+        $result = Test-BotHasUserDefinedActionMessages -Bot $script:Bot -EnvDataverseUrl 'https://example.crm.dynamics.com' -EnvToken 'offline'
+
+        $result.HasUserDefinedActionMessages | Should -BeTrue
+        $result.ActionComponentCount | Should -Be 1
+        $result.ComponentsWithMessages | Should -Be 1
+        $result.Details | Should -Match 'All 1 action component\(s\) have user-defined messages'
+    }
+
+    It 'remains true when optional YAML parsing is available and action-free YAML is parseable' {
+        try {
+            $script:YamlParseCalls = 0
+            function ConvertFrom-Yaml {
+                param(
+                    [Parameter(ValueFromPipeline)]
+                    [AllowNull()]
+                    [object]$InputObject
+                )
+
+                process {
+                    $script:YamlParseCalls++
+                    [PSCustomObject]@{ kind = 'AdaptiveDialog'; nodes = @() }
+                }
+            }
+
+            Mock Invoke-RestMethod {
+                [PSCustomObject]@{
+                    value = @(
+                        [PSCustomObject]@{
+                            name = 'Message topic'
+                            botcomponentid = '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a'
+                            componenttype = 9
+                            data = $script:MessageYaml
+                            content = $null
+                        },
+                        [PSCustomObject]@{
+                            name = 'Action-free YAML topic'
+                            botcomponentid = '2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b'
+                            componenttype = 9
+                            data = "kind: AdaptiveDialog`nactions: []"
+                            content = $null
+                        }
+                    )
+                }
+            }
+
+            $result = Test-BotHasUserDefinedActionMessages -Bot $script:Bot -EnvDataverseUrl 'https://example.crm.dynamics.com' -EnvToken 'offline'
+
+            $result.HasUserDefinedActionMessages | Should -BeTrue
+            $result.ActionComponentCount | Should -Be 1
+            $result.ComponentsWithMessages | Should -Be 1
+            $result.Details | Should -Match 'All 1 action component\(s\) have user-defined messages'
+            $script:YamlParseCalls | Should -Be 2
+        } finally {
+            Remove-Item Function:\ConvertFrom-Yaml -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'does not fall back to valid legacy content after malformed nonblank data and returns incomplete assessment' {
+        Mock Get-Command { $null } -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' }
+        Mock Invoke-RestMethod {
+            [PSCustomObject]@{
+                value = @(
+                    [PSCustomObject]@{
+                        name = 'Message topic'
+                        botcomponentid = '27272727-2727-2727-2727-272727272727'
+                        componenttype = 9
+                        data = $script:MessageYaml
+                        content = $null
+                    },
+                    [PSCustomObject]@{
+                        name = 'Malformed authoritative data topic'
+                        botcomponentid = '28282828-2828-2828-2828-282828282828'
+                        componenttype = 9
+                        data = '{'
+                        content = $script:MessageYaml
+                    }
+                )
+            }
+        }
+
+        $result = Test-BotHasUserDefinedActionMessages -Bot $script:Bot -EnvDataverseUrl 'https://example.crm.dynamics.com' -EnvToken 'offline'
+
+        $result.HasUserDefinedActionMessages | Should -BeFalse
+        $result.ActionComponentCount | Should -Be 1
+        $result.ComponentsWithMessages | Should -Be 1
+        $result.Details | Should -Match 'Incomplete assessment'
+    }
 }
 
 Describe 'ACAClient Topic V2 behavior' {
