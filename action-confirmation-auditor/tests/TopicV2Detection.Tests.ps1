@@ -819,6 +819,7 @@ Describe 'Test-BotHasUserDefinedActionMessages Topic V2 behavior' {
 
                 process {
                     $script:YamlParseCalls++
+                    $null = $InputObject
                     [PSCustomObject]@{ kind = 'AdaptiveDialog'; nodes = @() }
                 }
             }
