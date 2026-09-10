@@ -8,7 +8,7 @@ coe_function: govern
 ---
 # Action Confirmation Auditor
 
-> **Version:** v1.2.1
+> **Version:** v1.2.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Last Verified:** 2026-07-26
@@ -83,6 +83,8 @@ When a required confirmation is missing, severity is classified as:
 ## Features
 
 - **Per-Action Validation** -- Inspects each action node in agent topics for confirmation steps
+- **Modern Topic V2 Retrieval** -- Reads Copilot Studio Topic V2 records (`componenttype` 9) from the `data` attribute, with legacy Topic (`componenttype` 0) `content` fallback
+- **Fail-Closed Incomplete Assessment** -- Returns `UnableToDetermine` when canonical topic retrieval is paginated or any retrieved topic is empty/unassessable, including mixed-topic agents
 - **User-Defined Action Messages (UDAM)** -- ACA's internal name for the user-facing disclosure shown before a tool runs. Validates that agents surface such a message per zone policy (Zone 1 required, Zone 2 recommended, Zone 3 optional). In Copilot Studio this maps to the tool's **Ask the end user before running** setting plus the tool **Description** displayed at the confirmation prompt -- Microsoft does not document a setting literally named "user-defined action messages"
 - **Zone Compliance** -- Applies zone-specific confirmation requirements using ELM zone classification
 - **Exception Management** -- Approval workflow for legitimate confirmation bypasses
@@ -96,6 +98,13 @@ When a required confirmation is missing, severity is classified as:
 - **v1.1 Risk Classification Import** -- Stub for custom risk rules per connector/action (deferred)
 - **Managed Identity Runbook** -- Sample Azure Automation runbook using system-assigned or user-assigned managed identity authentication (Azure Automation Run As accounts were retired on 30 September 2023 and are replaced by managed identities)
 - **Microsoft Purview DSPM Integration** -- Cross-references action confirmation events with Microsoft Purview AI activity collected from the unified audit log and Activity Explorer, producing dual-confirmation evidence. The capability formerly branded *AI hub* is now **Data Security Posture Management (DSPM)**; the earlier releases appear in the Purview portal as *DSPM for AI (classic)* and *Data Security Posture Management (classic)*. The script file name (`Get-PurviewAIHubEvidence.ps1`) retains the historical name
+
+## Detection Boundaries
+
+- ACA prefers a nonblank Topic V2 `data` payload and uses legacy `content` only when `data` is blank. It does not substitute legacy content after a malformed nonblank Topic V2 payload.
+- The canonical detector paths intentionally return an inconclusive result when Dataverse supplies `@odata.nextLink`; they do not classify only the first page. The exported shared client retains its separate multi-page aggregation behavior.
+- JSON parsing is built in. YAML parsing uses `ConvertFrom-Yaml` when available, with structural regular expressions as a portable fallback. Those expressions can recognize action signatures in some malformed input, so ACA does not provide universal semantic YAML validation.
+- Controls 2.12 and 1.10 remain partially covered pending separately approved validation against authentic in-product Topic V2 components. The offline suite does not access a tenant or prove every action and confirmation pattern.
 
 ## Components
 

@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "action-confirmation-auditor",
   "solutionName": "Action Confirmation Auditor",
-  "solutionVersion": "1.2.1",
+  "solutionVersion": "1.2.2",
   "status": "live",
   "controls": [
     {

@@ -18,7 +18,7 @@
 
 .NOTES
     Module: ACAClient.psm1
-    Version: 1.2.1
+    Version: 1.2.2
     Requires: Windows PowerShell 5.1+
     Author: FSI Agent Governance Team
 #>
@@ -752,7 +752,7 @@ function Get-BotActionSettings {
         }
 
         $baseUrl = $DataverseUrl.TrimEnd('/')
-        $select = "botcomponentid,name,componenttype,content,_parentbotid_value"
+        $select = "botcomponentid,name,componenttype,data,content,_parentbotid_value"
         $filter = "_parentbotid_value eq '$BotId' and statecode eq 0"
 
         $uri = "$baseUrl/api/data/v9.2/botcomponents?`$select=$select&`$filter=$filter"
@@ -775,11 +775,20 @@ function Get-BotActionSettings {
 
         Write-Verbose "Retrieved $($allComponents.Count) bot components for bot $BotId"
 
-        # Parse action nodes from component content
+        # Parse action nodes from component data/content
         $actionSettings = @()
 
         foreach ($component in $allComponents) {
-            if (-not $component.content) { continue }
+            # Modern Topic V2 records store YAML in data. Legacy components may use content.
+            # Select once before parsing so malformed nonblank data does not fall back to content.
+            $contentStr = if (-not [string]::IsNullOrWhiteSpace([string]$component.data)) {
+                [string]$component.data
+            } elseif (-not [string]::IsNullOrWhiteSpace([string]$component.content)) {
+                [string]$component.content
+            } else {
+                $null
+            }
+            if (-not $contentStr) { continue }
 
             try {
                 # Copilot Studio topics are authored as YAML; exported/legacy components may be
@@ -789,10 +798,10 @@ function Get-BotActionSettings {
                 # full YAML detection is best-effort and not proven headless this round.
                 $content = $null
                 try {
-                    $content = $component.content | ConvertFrom-Json -ErrorAction Stop
+                    $content = $contentStr | ConvertFrom-Json -ErrorAction Stop
                 } catch {
                     if (Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue) {
-                        $yamlObj = $component.content | ConvertFrom-Yaml -ErrorAction Stop
+                        $yamlObj = $contentStr | ConvertFrom-Yaml -ErrorAction Stop
                         $content = $yamlObj | ConvertTo-Json -Depth 20 | ConvertFrom-Json
                     } else {
                         throw

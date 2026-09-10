@@ -4,6 +4,17 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-09-08
+
+### Fixed
+
+- **Modern Copilot Studio Topic V2 detection:** Corrected the canonical `botcomponent` queries in `scripts/Get-AgentActionSettings.ps1` and `scripts/governance/Test-UserDefinedActionMessages.ps1` to retrieve topic component types `9` (Topic V2) and `0` (legacy Topic), rather than bot-variable types `12` and `2`. Both paths now select the modern `data` Memo attribute and legacy `content`, prefer nonblank `data`, and fall back to nonblank `content` only when `data` is blank.
+- **Authoritative payload handling:** A nonblank but malformed `data` payload no longer falls through to a valid legacy `content` payload. Empty or otherwise unassessable topics append an `UnableToDetermine` result in the main detector and force the four-property user-message helper result to false, including mixed cases where another topic was successfully assessed.
+- **Incomplete canonical scans:** The two canonical paths now detect `@odata.nextLink` before classifying page-one records and return their existing inconclusive/failure contracts. Full canonical pagination remains deferred. The exported `Get-BotActionSettings` client retains its existing all-component, multi-page aggregation behavior.
+- **Exported ACA client parity:** `scripts/private/ACAClient.psm1` now selects `data` and applies the same whitespace-safe `data`-then-`content` precedence without changing its public result schema or pagination contract.
+- **Offline regression coverage:** Added `tests/TopicV2Detection.Tests.ps1` with mocked Dataverse boundaries for Topic V2 Present/Missing discrimination, legacy fallback, payload precedence, mixed unassessable content, optional YAML-parser behavior, incomplete pages, query failures, stable result properties, policy treatment, and existing client pagination. No tenant calls or credentials are used.
+- **Scope boundary:** This release does not change the Generative AI Config Auditor. Selecting `data` alone would not address that solution's separate JSON-oriented detection limitations, so GAC work remains deferred.
+
 ### Changed
 
 - **`README.md` technical-accuracy re-verification (2026-07-26)**, drift issue #334. Re-checked every Microsoft product claim against current Microsoft Learn and corrected four that had drifted:
@@ -20,7 +31,9 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
 
 ### Validated
 
-- **Live tenant validation — detection path on a synthetic YAML fixture (2026-06-13, the lab validation tenant); coverage stays PARTIAL.** The three `fsi_action*` Dataverse tables and the shared/ACA option sets were deployed, and the committed detection path was proven end-to-end against disposable-bot fixtures using a **synthetic hand-written YAML** topic: the `_parentbotid_value` foreign-key query succeeded (no more HTTP 400), a Zone 1 connector action with no confirmation node resolved to `Missing` / **Critical** with one row persisted, a compliant variant (a `Question` confirmation node) produced no row, the same-fixture flip flipped the result, unparseable content fell closed to `UnableToDetermine` (never a false Compliant), the SHA-256 evidence digest (prefix `DADDBA91`) recomputed to an integrity match, and all disposable fixtures were torn down (the three ACA tables verified back to zero — the deployed schema is the retained deliverable). **No committed-source fix was needed** for this leg (contrast GAC's Rule 7); `git diff` over `scripts` is empty. **PARTIAL is preserved on both 2.12 and 1.10:** the topic content was synthetic, NOT an authentic in-product Copilot Studio-authored topic (the two real agents exposed 0 of 18 topic components), so authentic in-product topic detection remains unproven and out of lab scope. This is lab evidence from disposable fixtures, not a production guarantee. Full record: `LAB-VALIDATION.md` → "Live tenant validation outcome — 2026-06-13".
+- **Offline Topic V2 regressions (2026-09-08); coverage stays PARTIAL.** The new Pester suite invokes the detector/helper function bodies and exported client with mocked Dataverse boundaries. It proves the corrected type `0`/`9` query, `data`/`content` precedence, Present/Missing discrimination, fail-closed mixed-content and incomplete-page behavior, error handling, stable result properties, and retained client pagination without tenant access.
+- **June 13 synthetic-fixture provenance corrected.** The earlier live leg proved the `_parentbotid_value` foreign-key path, parser heuristics, persistence, evidence integrity, and teardown against hand-written YAML placed on disposable records. It did **not** prove authentic Copilot Studio Topic V2 retrieval: the fixture used the same incorrect variable-type/content shape as the detector, and the reported `0 of 18` result on real agents was a symptom of the wrong-column defect rather than evidence that real topics were absent. Authentic in-product Topic V2 validation remains separately gated and unperformed in this repository release.
+- **Partial coverage retained:** Controls 2.12 and 1.10 remain `partial`. The regex parser can recognize action signatures in some malformed input and does not provide universal semantic YAML validation; the canonical detector also returns inconclusive rather than following additional pages.
 
 ### Fixed
 
