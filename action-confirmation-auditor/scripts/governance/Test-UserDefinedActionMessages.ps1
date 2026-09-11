@@ -76,7 +76,7 @@
 
 .NOTES
     File: Test-UserDefinedActionMessages.ps1
-    Version: 1.2.2
+    Version: 1.2.3
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
     Regulations: FINRA 3110, GLBA 501(b), SOX 404
@@ -381,7 +381,7 @@ function Test-UserDefinedActionMessages {
                 }
 
                 # Detect action invocation nodes (JSON "kind": "X" or YAML kind: X)
-                $hasActions = $contentStr -match '["'']?kind["'']?\s*:\s*["'']?(InvokeFlowAction|InvokeConnectorAction|InvokeSkillAction|HttpRequest|InvokePlugin|InvokeCustomAction)\b'
+                $hasActions = $contentStr -match '["'']?kind["'']?\s*:\s*["'']?(InvokeFlowAction|InvokeConnectorAction|InvokeSkillAction|HttpRequestAction|HttpRequest|InvokePlugin|InvokeCustomAction)\b'
 
                 if (-not $hasActions) {
                     if ($contentFormat -eq 'Unparseable') {

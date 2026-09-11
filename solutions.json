@@ -10,7 +10,7 @@
     "action-confirmation-auditor": {
       "id": "action-confirmation-auditor",
       "name": "Action Confirmation Auditor",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",

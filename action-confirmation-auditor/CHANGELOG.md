@@ -4,6 +4,19 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-09-11
+
+### Fixed
+
+- Added recognition for the authentic Copilot Studio Topic V2 `kind: HttpRequestAction`
+  signature in the main detector and user-defined action-message helper, mapping it to
+  the existing `HttpRequest` action type while retaining legacy `HttpRequest` support.
+  Offline regressions cover confirmed and unconfirmed GET actions, recognized and missing
+  action-message cases, the helper's four-property result contract, and unavailable YAML
+  parsing. Authentic UI authoring exposed this shape; owner-attended live discrimination
+  through the tenant retrieval path remains pending, so controls 2.12 and 1.10 remain
+  partial.
+
 ## [1.2.2] - 2026-09-08
 
 ### Fixed
