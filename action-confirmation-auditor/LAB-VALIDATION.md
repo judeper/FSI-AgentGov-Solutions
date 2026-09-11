@@ -7,7 +7,24 @@
 > **Original static validation date:** 2026-06-04
 > **Live tenant validation date:** 2026-06-13 (see "Live tenant validation outcome — 2026-06-13" below)
 > **Offline backport validation date:** 2026-09-08
-> **Solution version:** v1.2.2
+> **HTTP action-shape correction date:** 2026-09-11
+> **Solution version:** v1.2.3
+
+## Authentic Topic V2 action-shape correction - 2026-09-11
+
+Owner-attended authoring through the supported Copilot Studio web editor in Autonomous Demo
+created two enabled, unpublished Topic V2 topics. Copilot Studio serialized the HTTP action
+as `kind: HttpRequestAction`, not the legacy `kind: HttpRequest`. The authentic fixture
+therefore exposed a narrow recognition gap: the main detector and the user-defined
+action-message helper both missed the action signature, while the existing private
+`ACAClient.psm1` path already recognized it.
+
+Version 1.2.3 adds `HttpRequestAction` recognition to the main canonical kind map and the
+helper action signature while retaining legacy `HttpRequest`. Offline regressions now
+exercise confirmed and unconfirmed GET actions plus recognized and missing action-message
+cases with YAML parsing unavailable. This is offline discrimination only; owner-attended
+live discrimination through the tenant retrieval path remains pending. Controls 2.12 and
+1.10 remain **PARTIAL**.
 
 ## Maintainer backport outcome — 2026-09-08
 

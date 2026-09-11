@@ -181,6 +181,28 @@ beginDialog:
       method: POST
 '@
 
+    $script:HttpRequestActionPresentYaml = @'
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  actions:
+    - kind: Question
+      prompt: Do you want to fetch the account balance?
+    - kind: HttpRequestAction
+      name: Fetch account balance
+      method: GET
+'@
+
+    $script:HttpRequestActionMissingYaml = @'
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  actions:
+    - kind: HttpRequestAction
+      name: Fetch account balance
+      method: GET
+'@
+
     $script:MessageYaml = @'
 kind: AdaptiveDialog
 beginDialog:
@@ -266,6 +288,98 @@ Describe 'Public ACA scan result envelopes' {
         $result[0].ActionsMissingConfirmation | Should -Be 1
         @($result[0].Actions | Select-Object -ExpandProperty ConfirmationStatus) |
             Should -Be @('Present', 'Missing')
+    }
+
+    It 'recognizes authentic-shape HttpRequestAction topics in the public detector envelope' {
+        Mock Get-Command { $null } -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' }
+        $script:AcaComponentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'Confirmed HTTP request topic'
+                    botcomponentid = '23232323-2323-2323-2323-232323232323'
+                    componenttype = 9
+                    data = $script:HttpRequestActionPresentYaml
+                    content = $null
+                },
+                [PSCustomObject]@{
+                    name = 'Unconfirmed HTTP request topic'
+                    botcomponentid = '24242424-2424-2424-2424-242424242424'
+                    componenttype = 9
+                    data = $script:HttpRequestActionMissingYaml
+                    content = $null
+                }
+            )
+        }
+
+        $result = @(AcaDetectorHarness\Get-AgentActionSettings -GracePeriodHours 0)
+
+        $result.Count | Should -Be 1
+        $result[0].TotalActions | Should -Be 2
+        @($result[0].Actions | Select-Object -ExpandProperty ActionType) |
+            Should -Be @('HttpRequest', 'HttpRequest')
+        @($result[0].Actions | Select-Object -ExpandProperty HttpMethod) |
+            Should -Be @('GET', 'GET')
+        @($result[0].Actions | Select-Object -ExpandProperty ConfirmationStatus) |
+            Should -Be @('Present', 'Missing')
+    }
+
+    It 'counts an authentic-shape HttpRequestAction with a recognized message' {
+        Mock Get-Command { $null } -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' }
+        $script:AcaComponentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'HTTP request message topic'
+                    botcomponentid = '25252525-2525-2525-2525-252525252525'
+                    componenttype = 9
+                    data = @'
+kind: AdaptiveDialog
+beginDialog:
+  actions:
+    - kind: Message
+      text: About to run the requested HTTP request.
+    - kind: HttpRequestAction
+      name: Fetch account balance
+      method: GET
+'@
+                    content = $null
+                }
+            )
+        }
+
+        $result = @(AcaUdamHarness\Test-UserDefinedActionMessages -OutputFormat Object -GracePeriodHours 0)
+
+        $result.Count | Should -Be 1
+        $result[0].HasUserDefinedActionMessages | Should -BeTrue
+        $result[0].ActionComponentCount | Should -Be 1
+        $result[0].ComponentsWithMessages | Should -Be 1
+        $result[0].Details | Should -Match 'All 1 action component'
+        @('HasUserDefinedActionMessages', 'ActionComponentCount', 'ComponentsWithMessages', 'Details') |
+            ForEach-Object { $result[0].PSObject.Properties.Name | Should -Contain $_ }
+    }
+
+    It 'counts an authentic-shape HttpRequestAction without a message as missing' {
+        Mock Get-Command { $null } -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' }
+        $script:AcaComponentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'HTTP request without message topic'
+                    botcomponentid = '26262626-2626-2626-2626-262626262626'
+                    componenttype = 9
+                    data = $script:HttpRequestActionMissingYaml
+                    content = $null
+                }
+            )
+        }
+
+        $result = @(AcaUdamHarness\Test-UserDefinedActionMessages -OutputFormat Object -GracePeriodHours 0)
+
+        $result.Count | Should -Be 1
+        $result[0].HasUserDefinedActionMessages | Should -BeFalse
+        $result[0].ActionComponentCount | Should -Be 1
+        $result[0].ComponentsWithMessages | Should -Be 0
+        $result[0].Details | Should -Match '0 of 1 action component'
+        @('HasUserDefinedActionMessages', 'ActionComponentCount', 'ComponentsWithMessages', 'Details') |
+            ForEach-Object { $result[0].PSObject.Properties.Name | Should -Contain $_ }
     }
 
     It 'returns the public UDAM envelope as noncompliant for mixed assessable and empty topics' {

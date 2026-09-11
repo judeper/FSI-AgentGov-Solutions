@@ -8,10 +8,10 @@ coe_function: govern
 ---
 # Action Confirmation Auditor
 
-> **Version:** v1.2.2
+> **Version:** v1.2.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-07-26
+> **Last Verified:** 2026-09-11
 
 Validates that Copilot Studio agents require user confirmation before running tools (connectors, agent flows, prompts, REST API tools, Model Context Protocol tools, and computer use), with zone-based policy enforcement for financial services governance.
 
@@ -105,6 +105,7 @@ When a required confirmation is missing, severity is classified as:
 - The canonical detector paths intentionally return an inconclusive result when Dataverse supplies `@odata.nextLink`; they do not classify only the first page. The exported shared client retains its separate multi-page aggregation behavior.
 - JSON parsing is built in. YAML parsing uses `ConvertFrom-Yaml` when available, with structural regular expressions as a portable fallback. Those expressions can recognize action signatures in some malformed input, so ACA does not provide universal semantic YAML validation.
 - Controls 2.12 and 1.10 remain partially covered pending separately approved validation against authentic in-product Topic V2 components. The offline suite does not access a tenant or prove every action and confirmation pattern.
+- Authentic Copilot Studio UI authoring exposed `kind: HttpRequestAction` in unpublished Topic V2 data. Version 1.2.3 recognizes that action offline, including GET and confirmation discrimination; owner-attended live discrimination remains pending, so controls 2.12 and 1.10 stay partial.
 
 ## Components
 

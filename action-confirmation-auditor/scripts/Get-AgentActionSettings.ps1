@@ -16,7 +16,7 @@
 
 .NOTES
     File: Get-AgentActionSettings.ps1
-    Version: 1.2.2
+    Version: 1.2.3
     Solution: Action Confirmation Auditor (ACA)
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
 #>
@@ -319,6 +319,7 @@ function Get-AgentActionSettings {
                         'InvokeFlowAction'      = 'CloudFlowAction'
                         'InvokeConnectorAction' = 'ConnectorAction'
                         'InvokeSkillAction'     = 'PluginAction'
+                        'HttpRequestAction'     = 'HttpRequest'
                         'HttpRequest'           = 'HttpRequest'
                         'InvokePlugin'          = 'PluginAction'
                         'InvokeCustomAction'    = 'CustomAction'
