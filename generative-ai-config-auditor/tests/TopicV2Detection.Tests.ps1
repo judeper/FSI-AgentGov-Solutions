@@ -800,6 +800,8 @@ Describe 'Topic assessment runbook propagation' {
         $runbookPath = Join-Path $scriptRoot 'Start-GenAIConfigValidationRunbook.ps1'
         $agentId = '77777777-7777-7777-7777-777777777777'
 
+        Mock Import-Module {}
+
         if (-not (Get-Command Test-GenAIConfigCompliance -ErrorAction SilentlyContinue)) {
             function Test-GenAIConfigCompliance {}
         }
