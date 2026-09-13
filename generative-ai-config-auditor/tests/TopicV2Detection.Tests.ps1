@@ -2,11 +2,25 @@ BeforeAll {
     $solutionRoot = Split-Path -Parent $PSScriptRoot
     $scriptsRoot = Join-Path $solutionRoot 'scripts'
 
+    $script:previousModulePath = $env:PSModulePath
+    $script:stubModuleRoot = Join-Path $TestDrive 'SharedModules'
+    $powerAppsModuleVersionRoot = Join-Path $script:stubModuleRoot 'Microsoft.PowerApps.Administration.PowerShell\99.0.0'
+    New-Item -ItemType Directory -Path $powerAppsModuleVersionRoot -Force | Out-Null
+    @(
+        'function Get-AdminPowerAppEnvironment { }'
+        ''
+        'Export-ModuleMember -Function Get-AdminPowerAppEnvironment'
+    ) | Set-Content -Path (Join-Path $powerAppsModuleVersionRoot 'Microsoft.PowerApps.Administration.PowerShell.psm1')
+    New-ModuleManifest `
+        -Path (Join-Path $powerAppsModuleVersionRoot 'Microsoft.PowerApps.Administration.PowerShell.psd1') `
+        -RootModule 'Microsoft.PowerApps.Administration.PowerShell.psm1' `
+        -ModuleVersion '99.0.0' `
+        -FunctionsToExport 'Get-AdminPowerAppEnvironment'
+    $env:PSModulePath = "$script:stubModuleRoot;$script:previousModulePath"
+
     . (Join-Path $scriptsRoot 'Get-AgentGenAISettings.ps1')
     Import-Module (Join-Path $scriptsRoot 'private\GACClient.psm1') -Force
 
-    $script:previousModulePath = $env:PSModulePath
-    $script:stubModuleRoot = Join-Path $TestDrive 'SharedModules'
     $stubModuleVersionRoot = Join-Path $script:stubModuleRoot 'MSAL.PS\4.37.0'
     New-Item -ItemType Directory -Path $stubModuleVersionRoot -Force | Out-Null
     @(
@@ -21,7 +35,6 @@ BeforeAll {
         -RootModule 'MSAL.PS.psm1' `
         -ModuleVersion '4.37.0' `
         -FunctionsToExport 'Get-MsalToken'
-    $env:PSModulePath = "$script:stubModuleRoot;$script:previousModulePath"
     Import-Module (Join-Path $stubModuleVersionRoot 'MSAL.PS.psd1') -Force
 
     $azModuleVersionRoot = Join-Path $script:stubModuleRoot 'Az.Accounts\2.0.0'
