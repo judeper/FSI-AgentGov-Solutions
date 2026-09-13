@@ -4,10 +4,11 @@ BeforeAll {
 
     $script:previousModulePath = $env:PSModulePath
     $script:stubModuleRoot = Join-Path $TestDrive 'SharedModules'
-    $powerAppsModuleVersionRoot = Join-Path $script:stubModuleRoot 'Microsoft.PowerApps.Administration.PowerShell\99.0.0'
+    $powerAppsModuleRoot = Join-Path $script:stubModuleRoot 'Microsoft.PowerApps.Administration.PowerShell'
+    $powerAppsModuleVersionRoot = Join-Path $powerAppsModuleRoot '99.0.0'
     New-Item -ItemType Directory -Path $powerAppsModuleVersionRoot -Force | Out-Null
     @(
-        'function Get-AdminPowerAppEnvironment { }'
+        'function Get-AdminPowerAppEnvironment { throw ''Unexpected unstubbed Power Apps environment query.'' }'
         ''
         'Export-ModuleMember -Function Get-AdminPowerAppEnvironment'
     ) | Set-Content -Path (Join-Path $powerAppsModuleVersionRoot 'Microsoft.PowerApps.Administration.PowerShell.psm1')
@@ -16,12 +17,14 @@ BeforeAll {
         -RootModule 'Microsoft.PowerApps.Administration.PowerShell.psm1' `
         -ModuleVersion '99.0.0' `
         -FunctionsToExport 'Get-AdminPowerAppEnvironment'
-    $env:PSModulePath = "$script:stubModuleRoot;$script:previousModulePath"
+    $env:PSModulePath = "$script:stubModuleRoot$([IO.Path]::PathSeparator)$script:previousModulePath"
 
     . (Join-Path $scriptsRoot 'Get-AgentGenAISettings.ps1')
-    Import-Module (Join-Path $scriptsRoot 'private\GACClient.psm1') -Force
+    $privateRoot = Join-Path $scriptsRoot 'private'
+    Import-Module (Join-Path $privateRoot 'GACClient.psm1') -Force
 
-    $stubModuleVersionRoot = Join-Path $script:stubModuleRoot 'MSAL.PS\4.37.0'
+    $msalModuleRoot = Join-Path $script:stubModuleRoot 'MSAL.PS'
+    $stubModuleVersionRoot = Join-Path $msalModuleRoot '4.37.0'
     New-Item -ItemType Directory -Path $stubModuleVersionRoot -Force | Out-Null
     @(
         'function Get-MsalToken {'
@@ -37,7 +40,8 @@ BeforeAll {
         -FunctionsToExport 'Get-MsalToken'
     Import-Module (Join-Path $stubModuleVersionRoot 'MSAL.PS.psd1') -Force
 
-    $azModuleVersionRoot = Join-Path $script:stubModuleRoot 'Az.Accounts\2.0.0'
+    $azModuleRoot = Join-Path $script:stubModuleRoot 'Az.Accounts'
+    $azModuleVersionRoot = Join-Path $azModuleRoot '2.0.0'
     New-Item -ItemType Directory -Path $azModuleVersionRoot -Force | Out-Null
     @(
         'function Get-AzContext { [PSCustomObject]@{ Account = [PSCustomObject]@{ Id = ''operator@example.com'' }; Tenant = [PSCustomObject]@{ Id = ''tenant-id'' } } }'
@@ -106,6 +110,8 @@ BeforeAll {
 }
 
 AfterAll {
+    Get-Module GACClient, Microsoft.PowerApps.Administration.PowerShell, MSAL.PS, Az.Accounts -All |
+        Remove-Module -Force -ErrorAction SilentlyContinue
     $env:PSModulePath = $script:previousModulePath
 }
 
