@@ -7,7 +7,7 @@ coe_function: govern
 ---
 # Generative AI Config Auditor
 
-> **Version:** v1.2.1
+> **Version:** v1.2.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Last Verified:** 2026-07-26
@@ -19,6 +19,17 @@ Validates generative AI feature configurations (Azure OpenAI integration, genera
 The Generative AI Config Auditor (GAC) validates that Copilot Studio agents comply with organization-specific generative AI governance policies. It detects unauthorized Azure OpenAI integrations, unapproved generative orchestration modes, unvetted knowledge sources, unauthorized Allow ungrounded responses (AI general knowledge) usage, and unapproved Tenant graph grounding with semantic search enablement across Power Platform environments.
 
 Unlike the Content Moderation Monitor which validates moderation levels, GAC audits the generative AI feature configuration itself -- which AI capabilities are enabled, how they are configured, and whether connections to Azure OpenAI are on the approved whitelist.
+
+### Topic V2 assessment behavior
+
+Topic and Topic V2 components are queried together (`componenttype` 0 and 9), selecting `data`, `content`, `componenttype`, `botcomponentid`, and the topic name. The auditor uses nonblank `data` as the authoritative payload and falls back to nonblank `content` only when `data` is blank or whitespace. It parses JSON first and uses an optional YAML parser when one is available; no YAML module is required.
+
+Modern `SearchAndSummarizeContent` nodes and retained legacy generative-answer and knowledge-source signals are inspected recursively. `GenerativeAnswersNodeCount` counts each recognized node occurrence, including multiple nodes in one topic. Positive-only regex fallback can preserve known-positive counts when structured parsing is unavailable, but it never establishes a clean zero. Each result exposes `TopicAssessmentStatus` (`Determined` or `Indeterminate`) and `TopicAssessmentDetails`; indeterminate assessments require manual review and produce an `IndeterminateTopicAssessment` warning. Baseline capture skips those agents rather than recording an unknown zero. Control 2.24 coverage remains **PARTIAL** within the documented implementation scope.
+
+> **Baseline warning for v1.2.2.** The node-count correction can change
+> `GenerativeAnswersNodeCount` for agents whose topics contain multiple
+> recognized nodes. After upgrading, operators should perform a one-time
+> baseline re-capture for affected agents before interpreting count drift.
 
 ## Zone Requirements
 
@@ -53,6 +64,7 @@ Each governance zone defines which generative AI features are permitted and unde
 | Feature | Description |
 |---------|-------------|
 | **Per-Agent Validation** | Validates each Copilot Studio agent's generative AI configuration individually |
+| **Topic V2 Content Assessment** | Assesses Topic and Topic V2 payloads with data precedence, optional YAML parsing, positive-only fallback evidence, and explicit manual-review status |
 | **Zone Compliance** | Compares actual generative AI settings against zone-specific governance policies |
 | **AOAI Connection Whitelist** | Manages approved Azure OpenAI connections per zone |
 | **Multiple Output Formats** | Table (human-readable), JSON (archival), Object (pipeline) |

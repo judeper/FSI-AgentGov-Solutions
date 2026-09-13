@@ -7,6 +7,7 @@ Requirements for deploying the Generative AI Config Auditor (GAC) solution.
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
 | PowerShell | 7.4+ | Core runtime matching the solution scripts' `#Requires -Version 7.4` declarations |
+| Optional YAML parser | Any PowerShell module that provides `ConvertFrom-Yaml` | Recommended for semantic assessment of Topic V2 YAML payloads; never required. Without it, known-positive regex evidence is retained but the topic assessment remains indeterminate. |
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform environment enumeration (`Get-AdminPowerAppEnvironment`) |
 | Az.Accounts | 2.0+ | Dataverse token acquisition (interactive mode). Az.Accounts 5.x returns `Get-AzAccessToken` tokens as `SecureString` by default; the solution scripts detect and convert these automatically. |
 | MSAL.PS | 4.37+ | Evidence export authentication (`Install-Module MSAL.PS`) |

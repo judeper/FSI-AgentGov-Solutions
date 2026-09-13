@@ -40,7 +40,7 @@ function Get-AgentGenAISettings {
         This script operates at agent granularity -- one result per agent per
         environment. It queries bot, bot_botsetting (if available) for AOAI toggle
         and orchestration mode, then botcomponent for topic definitions to detect
-        generative answers nodes in topic content JSON.
+        generative answers nodes in topic data/content JSON or YAML.
 
     .PARAMETER IncludeEnvironments
         Limit scan to specific environment IDs. Mutually exclusive with ExcludeEnvironments.
@@ -109,7 +109,8 @@ function Get-AgentGenAISettings {
         EnvironmentId, EnvironmentDisplayName, Zone, AgentId, AgentName,
         AzureOpenAIEnabled, OrchestrationMode, KnowledgeSourceCount,
         GenerativeAnswersNodeCount, AoaiConnectionId, ModelKnowledgeEnabled,
-        SemanticSearchEnabled, AgentStatus, TopicSummary
+        SemanticSearchEnabled, TopicAssessmentStatus, TopicAssessmentDetails,
+        AgentStatus, TopicSummary
     #>
     [CmdletBinding()]
     param(
@@ -244,7 +245,7 @@ function Get-AgentGenAISettings {
         .DESCRIPTION
             Queries bot_botsetting for AOAI toggle and orchestration mode, then
             queries botcomponent filtered by _parentbotid_value to find generative answers
-            nodes in topic content JSON. Conservative parsing returns 'Unable to Determine'
+            nodes in topic data/content JSON or YAML. Conservative parsing returns 'Unable to Determine'
             for unknown structures.
         #>
         param(
@@ -267,6 +268,8 @@ function Get-AgentGenAISettings {
             ModelKnowledgeEnabled       = 'Unable to Determine'
             SemanticSearchEnabled       = 'Unable to Determine'
             TopicSummary                = ''
+            TopicAssessmentStatus       = 'Indeterminate'
+            TopicAssessmentDetails      = 'Topic assessment not completed.'
         }
 
         $baseUrl = $EnvDataverseUrl.TrimEnd('/')
@@ -544,64 +547,246 @@ function Get-AgentGenAISettings {
             # componenttype 0 = Topic, componenttype 9 = Topic (V2)
             $componentsUri = "$baseUrl/api/data/v9.2/botcomponents?" +
                 "`$filter=_parentbotid_value eq '$($Bot.botid)' and (componenttype eq 0 or componenttype eq 9)&" +
-                "`$select=name,content,componenttype"
+                "`$select=name,data,content,componenttype,botcomponentid"
 
             $componentsResponse = Invoke-RestMethod -Uri $componentsUri -Method Get -Headers $headers -ErrorAction Stop
 
             $topicNames = @()
             $genAnswersCount = 0
             $knowledgeSourceCount = 0
+            $assessmentReasons = [System.Collections.Generic.List[string]]::new()
+            $assessmentDetermined = $true
+            $valueProperty = $componentsResponse.PSObject.Properties['value']
+            $components = if ($null -ne $valueProperty) { @($valueProperty.Value) } else { @() }
+            $nextLinkProperty = $componentsResponse.PSObject.Properties['@odata.nextLink']
 
-            if ($componentsResponse.value) {
-                foreach ($component in $componentsResponse.value) {
+            if ($null -eq $valueProperty) {
+                $assessmentDetermined = $false
+                [void]$assessmentReasons.Add('Topic component query response did not include a value collection.')
+            }
+
+            if ($nextLinkProperty -and -not [string]::IsNullOrWhiteSpace([string]$nextLinkProperty.Value)) {
+                $assessmentDetermined = $false
+                [void]$assessmentReasons.Add('Topic component query returned @odata.nextLink; the returned topic set is incomplete.')
+            }
+
+            $recognizedTopicKinds = @('AdaptiveDialog', 'OrdinaryTopic', 'Topic', 'Dialog')
+            $recognizedGenerativeNodeKinds = @('SearchAndSummarizeContent', 'SearchAndSummarize', 'GenerativeAnswers')
+            $legacyGenerativePropertyNames = @('GenerativeAnswer', 'GenerativeAnswers', 'generativeAnswers')
+            $recognizedGenerativeNodePattern = ($recognizedGenerativeNodeKinds | ForEach-Object { [regex]::Escape($_) }) -join '|'
+            $legacyGenerativePropertyPattern = ($legacyGenerativePropertyNames | ForEach-Object { [regex]::Escape($_) }) -join '|'
+
+            function Get-TopicSignals {
+                param(
+                    [AllowNull()]
+                    $InputObject
+                )
+
+                $signals = [PSCustomObject]@{
+                    HasRecognizedStructure      = $false
+                    GenerativeAnswersNodeCount  = 0
+                    KnowledgeSourceCount        = 0
+                }
+
+                function Find-TopicNode {
+                    param(
+                        [AllowNull()]
+                        $Node
+                    )
+
+                    if ($null -eq $Node -or $Node -is [string] -or $Node -is [ValueType]) {
+                        return
+                    }
+
+                    if ($Node -is [System.Collections.IEnumerable] -and
+                        $Node -isnot [System.Collections.IDictionary]) {
+                        foreach ($item in $Node) {
+                            Find-TopicNode -Node $item
+                        }
+                        return
+                    }
+
+                    $properties = if ($Node -is [System.Collections.IDictionary]) {
+                        @($Node.Keys | ForEach-Object {
+                            [PSCustomObject]@{
+                                Name  = [string]$_
+                                Value = $Node[$_]
+                            }
+                        })
+                    } else {
+                        @($Node.PSObject.Properties)
+                    }
+
+                    foreach ($property in $properties) {
+                        $propertyName = [string]$property.Name
+                        $propertyValue = $property.Value
+
+                        if ($propertyName -ieq 'kind') {
+                            $kind = [string]$propertyValue
+                            if ($recognizedTopicKinds | Where-Object { $_ -ieq $kind }) {
+                                $signals.HasRecognizedStructure = $true
+                            } elseif ($recognizedGenerativeNodeKinds | Where-Object { $_ -ieq $kind }) {
+                                $signals.HasRecognizedStructure = $true
+                                $signals.GenerativeAnswersNodeCount++
+                            } elseif ($kind -ieq 'KnowledgeSource') {
+                                $signals.HasRecognizedStructure = $true
+                            }
+                            if ($kind -ieq 'KnowledgeSource') {
+                                $signals.KnowledgeSourceCount++
+                            }
+                        } elseif ($legacyGenerativePropertyNames | Where-Object { $_ -ieq $propertyName }) {
+                            $signals.HasRecognizedStructure = $true
+                            $signals.GenerativeAnswersNodeCount++
+                        } elseif ($propertyName -ieq 'dataSource') {
+                            $signals.HasRecognizedStructure = $true
+                            $signals.KnowledgeSourceCount++
+                        } elseif ($propertyName -ieq 'knowledgeSources') {
+                            $signals.HasRecognizedStructure = $true
+                            if ($propertyValue -is [System.Collections.IEnumerable] -and
+                                $propertyValue -isnot [string]) {
+                                $signals.KnowledgeSourceCount += @($propertyValue).Count
+                            } else {
+                                $signals.KnowledgeSourceCount++
+                            }
+                        }
+
+                        Find-TopicNode -Node $propertyValue
+                    }
+                }
+
+                Find-TopicNode -Node $InputObject
+                return $signals
+            }
+
+            function Get-TopicGenerativeRegexCount {
+                param(
+                    [Parameter(Mandatory)]
+                    [string]$Payload
+                )
+
+                $count = 0
+                $count += [regex]::Matches(
+                    $Payload,
+                    "(?im)^\s*kind\s*:\s*($recognizedGenerativeNodePattern)\b"
+                ).Count
+                $count += [regex]::Matches(
+                    $Payload,
+                    "(?i)""kind""\s*:\s*""($recognizedGenerativeNodePattern)\b"
+                ).Count
+                $count += [regex]::Matches(
+                    $Payload,
+                    "(?i)""?($legacyGenerativePropertyPattern)""?\s*:"
+                ).Count
+                return $count
+            }
+
+            function Test-TopicKnowledgeRegex {
+                param(
+                    [Parameter(Mandatory)]
+                    [string]$Payload
+                )
+
+                return (
+                    $Payload -match '(?im)^\s*(dataSource|knowledgeSources)\s*:' -or
+                    $Payload -match '(?i)"(dataSource|knowledgeSources)"\s*:' -or
+                    $Payload -match '(?im)^\s*kind\s*:\s*KnowledgeSource\b' -or
+                    $Payload -match '(?i)"kind"\s*:\s*"KnowledgeSource\b'
+                )
+            }
+
+            foreach ($component in $components) {
                     if ($component.name) {
                         $topicNames += $component.name
                     }
 
-                    # Parse component content JSON for generative features
-                    if ($component.content) {
-                        try {
-                            $componentJson = $component.content | ConvertFrom-Json -ErrorAction Stop
+                    $dataValue = $component.PSObject.Properties['data']
+                    $contentValue = $component.PSObject.Properties['content']
+                    $dataText = if ($dataValue) { [string]$dataValue.Value } else { '' }
+                    $contentText = if ($contentValue) { [string]$contentValue.Value } else { '' }
+                    $payload = if (-not [string]::IsNullOrWhiteSpace($dataText)) {
+                        $dataText
+                    } elseif (-not [string]::IsNullOrWhiteSpace($contentText)) {
+                        $contentText
+                    } else {
+                        $null
+                    }
 
-                            # Look for generative answers nodes in the component
-                            $contentStr = $component.content
+                    if ($null -eq $payload) {
+                        $assessmentDetermined = $false
+                        [void]$assessmentReasons.Add("Topic '$($component.name)' has no nonblank data or content payload.")
+                        continue
+                    }
 
-                            # Detect generative answers node patterns
-                            if ($contentStr -match '"kind"\s*:\s*"GenerativeAnswers"' -or
-                                $contentStr -match '"kind"\s*:\s*"SearchAndSummarize"' -or
-                                $contentStr -match '"GenerativeAnswer"' -or
-                                $contentStr -match '"generativeAnswers"') {
-                                $genAnswersCount++
+                    $parsed = $null
+                    $parsedSuccessfully = $false
+                    try {
+                        $parsed = $payload | ConvertFrom-Json -ErrorAction Stop
+                        $parsedSuccessfully = $true
+                    } catch {
+                        $yamlCommand = Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue
+                        if ($yamlCommand) {
+                            try {
+                                $parsed = & $yamlCommand -Yaml $payload -ErrorAction Stop
+                                $parsedSuccessfully = $true
+                            } catch {
+                                Write-Verbose "Failed to parse topic '$($component.name)' as JSON or YAML."
                             }
-
-                            # Detect knowledge source references
-                            if ($contentStr -match '"kind"\s*:\s*"KnowledgeSource"' -or
-                                $contentStr -match '"dataSource"' -or
-                                $contentStr -match '"knowledgeSources"') {
-
-                                # Try to count individual knowledge sources
-                                if ($componentJson.PSObject.Properties.Name -contains 'knowledgeSources') {
-                                    $knowledgeSourceCount += @($componentJson.knowledgeSources).Count
-                                } else {
-                                    $knowledgeSourceCount++
-                                }
-                            }
-                        } catch {
-                            Write-Verbose "Failed to parse botcomponent content for '$($component.name)' in bot '$($Bot.name)'"
                         }
                     }
-                }
+
+                    if ($parsedSuccessfully) {
+                        $signals = Get-TopicSignals -InputObject $parsed
+                        if ($signals.HasRecognizedStructure) {
+                            $genAnswersCount += $signals.GenerativeAnswersNodeCount
+                            $knowledgeSourceCount += $signals.KnowledgeSourceCount
+                        } else {
+                            $assessmentDetermined = $false
+                            [void]$assessmentReasons.Add("Topic '$($component.name)' does not contain recognizable topic/node structure.")
+                        }
+                    } else {
+                        $assessmentDetermined = $false
+                        $regexCount = Get-TopicGenerativeRegexCount -Payload $payload
+                        if ($regexCount -gt 0) {
+                            $genAnswersCount += $regexCount
+                            [void]$assessmentReasons.Add("Topic '$($component.name)' contributed positive regex evidence after structured parsing failed.")
+                        } elseif ($yamlCommand) {
+                            [void]$assessmentReasons.Add("Topic '$($component.name)' could not be parsed as JSON or YAML.")
+                        } else {
+                            [void]$assessmentReasons.Add("Topic '$($component.name)' could not be parsed as JSON and the optional YAML parser is unavailable.")
+                        }
+
+                        if (Test-TopicKnowledgeRegex -Payload $payload) {
+                            $knowledgeSourceCount++
+                        }
+                    }
             }
 
             $config.GenerativeAnswersNodeCount = $genAnswersCount
             $config.KnowledgeSourceCount = $knowledgeSourceCount
             $config.TopicSummary = ($topicNames | Select-Object -First 10) -join '; '
+            if ($assessmentDetermined) {
+                $config.TopicAssessmentStatus = 'Determined'
+                $config.TopicAssessmentDetails = if ($components.Count -eq 0) {
+                    'No topic components were returned.'
+                } else {
+                    "All $($components.Count) returned topic payload(s) were parsed as JSON or YAML."
+                }
+            } else {
+                $config.TopicAssessmentStatus = 'Indeterminate'
+                $assessmentDetails = (($assessmentReasons | Select-Object -Unique) -join ' ').Trim()
+                if ($assessmentDetails.Length -gt 1000) {
+                    $assessmentDetails = $assessmentDetails.Substring(0, 997) + '...'
+                }
+                $config.TopicAssessmentDetails = $assessmentDetails
+            }
 
             if ($topicNames.Count -gt 10) {
                 $config.TopicSummary += " (+$($topicNames.Count - 10) more)"
             }
         } catch {
             Write-Verbose "botcomponent query failed for $($Bot.name): $($_.Exception.Message)"
+            $config.TopicAssessmentStatus = 'Indeterminate'
+            $config.TopicAssessmentDetails = "Topic component query failed: $($_.Exception.Message)"
         }
 
         #endregion
@@ -746,6 +931,8 @@ function Get-AgentGenAISettings {
                 AoaiConnectionId           = $genAIConfig.AoaiConnectionId
                 ModelKnowledgeEnabled      = $genAIConfig.ModelKnowledgeEnabled
                 SemanticSearchEnabled      = $genAIConfig.SemanticSearchEnabled
+                TopicAssessmentStatus      = $genAIConfig.TopicAssessmentStatus
+                TopicAssessmentDetails     = $genAIConfig.TopicAssessmentDetails
                 AgentStatus                = if ($bot.statecode -eq 0) { 'Active' } else { 'Inactive' }
                 TopicSummary               = $genAIConfig.TopicSummary
                 DataverseUrl               = $envDataverseUrl

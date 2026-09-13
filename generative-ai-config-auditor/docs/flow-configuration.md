@@ -134,6 +134,8 @@ Add these **Initialize variable** actions immediately after the trigger:
                     "AzureOpenAIEnabled": { "type": "boolean" },
                     "OrchestrationMode": { "type": "string" },
                     "GenerativeAnswersNodeCount": { "type": "integer" },
+                    "TopicAssessmentStatus": { "type": "string" },
+                    "TopicAssessmentDetails": { "type": "string" },
                     "Severity": { "type": "string" },
                     "RegulatoryContext": { "type": "string" }
                 }
@@ -145,7 +147,16 @@ Add these **Initialize variable** actions immediately after the trigger:
                 "HasDrift": { "type": "boolean" },
                 "IsFirstRun": { "type": "boolean" },
                 "DriftedAgents": { "type": "integer" },
-                "Details": { "type": "array" }
+                "Details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "CurrentTopicAssessmentStatus": { "type": "string" },
+                            "CurrentTopicAssessmentDetails": { "type": "string" }
+                        }
+                    }
+                }
             }
         }
     }
@@ -371,6 +382,7 @@ After either branch (use a common action after the condition):
 - The Parse_Results schema must match the runbook output structure exactly
 - If the runbook output changes (e.g., new fields added), update the schema in the flow
 - Key GAC schema differences from CMM: each violation includes `ViolationType` plus the generative AI configuration fields `AzureOpenAIEnabled`, `OrchestrationMode`, and `GenerativeAnswersNodeCount` (instead of CMM's `ExpectedModerationLevel`/`ActualModerationLevel`)
+- Topic assessment fields are additive: `TopicAssessmentStatus` is `Determined` or `Indeterminate`, and `TopicAssessmentDetails` explains an indeterminate result. Treat `Indeterminate` as manual-review evidence rather than a clean zero.
 
 ### Flow Errors (Scope_Catch)
 
@@ -380,4 +392,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Generative AI Config Auditor -- Flow Setup Guide v1.1.1*
+*Generative AI Config Auditor -- Flow Setup Guide v1.2.2*

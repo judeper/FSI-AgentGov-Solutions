@@ -81,7 +81,8 @@ function Compare-GenAIConfigCompliance {
         AgentId, AgentName, EnvironmentId, EnvironmentDisplayName, Zone,
         AzureOpenAIEnabled, OrchestrationMode, GenerativeAnswersNodeCount,
         AoaiConnectionId, ModelKnowledgeEnabled, SemanticSearchEnabled,
-        IsCompliant, Severity, ViolationType, RegulatoryContext, AgentStatus
+        TopicAssessmentStatus, TopicAssessmentDetails, IsCompliant, Severity,
+        ViolationType, RegulatoryContext, AgentStatus
     #>
     [CmdletBinding()]
     param(
@@ -284,6 +285,23 @@ function Compare-GenAIConfigCompliance {
                 }
             }
 
+            # Topic assessment status is independent evidence. An indeterminate
+            # topic set must remain visible even when no positive policy rule fires.
+            if ($agent.TopicAssessmentStatus -eq 'Indeterminate') {
+                $details = if ([string]::IsNullOrWhiteSpace([string]$agent.TopicAssessmentDetails)) {
+                    'the topic payload set could not be assessed completely'
+                } else {
+                    [string]$agent.TopicAssessmentDetails
+                }
+
+                $violations += [PSCustomObject]@{
+                    ViolationType    = 'IndeterminateTopicAssessment'
+                    Description      = "Topic assessment is indeterminate for $agentZone agent: $details"
+                    Severity         = 'Warning'
+                    RegulatoryContext = "Supports supervisory expectations under FINRA Rule 3110(a)(1) for auditable agent feature assessment; $($policy.RegulatoryContext)"
+                }
+            }
+
             # Rule 7: Indeterminate configuration (fail-closed)
             # If none of the real config-state signals could be resolved from the agent's stored
             # configuration — OrchestrationMode, Allow-ungrounded-responses (ModelKnowledgeEnabled),
@@ -340,6 +358,8 @@ function Compare-GenAIConfigCompliance {
                 AoaiConnectionId           = $agent.AoaiConnectionId
                 ModelKnowledgeEnabled      = $agent.ModelKnowledgeEnabled
                 SemanticSearchEnabled      = $agent.SemanticSearchEnabled
+                TopicAssessmentStatus      = $agent.TopicAssessmentStatus
+                TopicAssessmentDetails     = $agent.TopicAssessmentDetails
                 IsCompliant                = $isCompliant
                 Severity                   = if ($isCompliant) { $null } else { $worstSeverity }
                 ViolationType              = if ($isCompliant) { $null } else { $worstViolationType }

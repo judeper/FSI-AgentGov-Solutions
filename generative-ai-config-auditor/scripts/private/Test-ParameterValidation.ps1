@@ -9,7 +9,7 @@
 
 .NOTES
     File: Test-ParameterValidation.ps1
-    Version: 1.2.1
+    Version: 1.2.2
     Requires: PowerShell 7.4+
 #>
 

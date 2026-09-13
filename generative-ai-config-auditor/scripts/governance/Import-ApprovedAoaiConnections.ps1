@@ -52,7 +52,7 @@
     Previews the import without making changes.
 
 .NOTES
-    Version: 1.2.1
+    Version: 1.2.2
 
     CSV Format:
         ConnectionId,ConnectionName,Zone,ResourceGroup,AoaiEndpoint,Notes

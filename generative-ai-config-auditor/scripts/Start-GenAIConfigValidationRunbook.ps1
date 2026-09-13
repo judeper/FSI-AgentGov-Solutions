@@ -82,8 +82,11 @@
     - OverallStatus: Passed | Critical | Failed | Review | Error
     - Reason: Summary explanation
     - ZoneSummary: Object with Zone1/Zone2/Zone3 sub-objects { Total, Compliant, Violations }
-    - Violations: Array of violation details
-    - Drift: Object with HasDrift, IsFirstRun, DriftedAgents, Details
+    - Violations: Array of violation details, including TopicAssessmentStatus
+      and TopicAssessmentDetails
+    - Drift: Object with HasDrift, IsFirstRun, DriftedAgents, Details. Each
+      detail carries CurrentTopicAssessmentStatus and
+      CurrentTopicAssessmentDetails.
     - AlertRequired: Boolean flag for flow routing
     - AlertSeverity: Status value for alert priority
 
@@ -207,22 +210,25 @@ function Get-GenAIConfigDriftDirection {
         if ($direction -eq 'Strengthened') { $hasStrengthened = $true }
     }
 
-    # Check generative answers node count drift
-    $baselineGenCount = [int]$Baseline.GenerativeAnswersNodeCount
-    $currentGenCount = [int]$Current.GenerativeAnswersNodeCount
+    # A zero count from an indeterminate topic assessment is not evidence of
+    # absence, so do not classify it as drift against a known baseline.
+    if ($Current.TopicAssessmentStatus -ne 'Indeterminate') {
+        $baselineGenCount = [int]$Baseline.GenerativeAnswersNodeCount
+        $currentGenCount = [int]$Current.GenerativeAnswersNodeCount
 
-    if ($baselineGenCount -ne $currentGenCount) {
-        $direction = if ($currentGenCount -gt $baselineGenCount) { 'Increased' } else { 'Decreased' }
+        if ($baselineGenCount -ne $currentGenCount) {
+            $direction = if ($currentGenCount -gt $baselineGenCount) { 'Increased' } else { 'Decreased' }
 
-        $changes += [PSCustomObject]@{
-            Field     = 'GenerativeAnswersNodeCount'
-            Baseline  = $baselineGenCount
-            Current   = $currentGenCount
-            Direction = $direction
+            $changes += [PSCustomObject]@{
+                Field     = 'GenerativeAnswersNodeCount'
+                Baseline  = $baselineGenCount
+                Current   = $currentGenCount
+                Direction = $direction
+            }
+
+            if ($direction -eq 'Increased') { $hasWeakened = $true }
+            if ($direction -eq 'Decreased') { $hasStrengthened = $true }
         }
-
-        if ($direction -eq 'Increased') { $hasWeakened = $true }
-        if ($direction -eq 'Decreased') { $hasStrengthened = $true }
     }
 
     # Check Allow ungrounded responses / AI general knowledge drift (Yes/No comparison; Yes-after-No is Weakened)
@@ -483,6 +489,8 @@ try {
             CurrentAoai                = $agent.AzureOpenAIEnabled
             CurrentOrchestration       = $agent.OrchestrationMode
             CurrentGenAnswers          = $agent.GenerativeAnswersNodeCount
+            CurrentTopicAssessmentStatus  = $agent.TopicAssessmentStatus
+            CurrentTopicAssessmentDetails = $agent.TopicAssessmentDetails
         }
 
         if ($globalIsFirstRun) {
@@ -509,6 +517,8 @@ try {
                 GenerativeAnswersNodeCount = $agent.GenerativeAnswersNodeCount
                 ModelKnowledgeEnabled      = $agent.ModelKnowledgeEnabled
                 SemanticSearchEnabled      = $agent.SemanticSearchEnabled
+                TopicAssessmentStatus      = $agent.TopicAssessmentStatus
+                TopicAssessmentDetails     = $agent.TopicAssessmentDetails
             }
 
             $driftResult = Get-GenAIConfigDriftDirection -Baseline $baselineObj -Current $currentObj
@@ -547,6 +557,8 @@ try {
             AzureOpenAIEnabled         = $v.AzureOpenAIEnabled
             OrchestrationMode          = $v.OrchestrationMode
             GenerativeAnswersNodeCount = $v.GenerativeAnswersNodeCount
+            TopicAssessmentStatus      = $v.TopicAssessmentStatus
+            TopicAssessmentDetails     = $v.TopicAssessmentDetails
             Severity                   = $v.Severity
             RegulatoryContext          = $v.RegulatoryContext
         }
