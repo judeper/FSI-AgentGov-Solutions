@@ -2,13 +2,65 @@
 
 > **Validation type:** Static verification (2026-06-04), a bounded live tenant leg
 > using a synthetic YAML fixture (2026-06-13), and offline Topic V2 regressions for
-> the maintainer backport (2026-09-08). The June fixture did not prove authentic
-> Copilot Studio Topic V2 retrieval; that provenance is corrected below.
+> the maintainer backport (2026-09-08), followed by bounded owner-attended live
+> validation against authentic Topic V2 components (2026-09-13). The June fixture
+> did not prove authentic Copilot Studio Topic V2 retrieval; that provenance is
+> corrected below.
 > **Original static validation date:** 2026-06-04
 > **Live tenant validation date:** 2026-06-13 (see "Live tenant validation outcome — 2026-06-13" below)
 > **Offline backport validation date:** 2026-09-08
 > **HTTP action-shape correction date:** 2026-09-11
+> **Authentic Topic V2 live validation date:** 2026-09-13
 > **Solution version:** v1.2.3
+
+## Authentic Topic V2 live validation outcome - 2026-09-13
+
+Owner-attended, read-only validation exercised merged commit
+`6b43b53ff76fc1be50a7ddaef3ba17c7f0997cdf` against two disposable Topic V2
+topics created through the supported Copilot Studio web editor. The topics
+used the same body-free `HttpRequestAction` GET to `https://example.com`; one
+placed a Boolean confirmation immediately before the action, and the other
+invoked the action without confirmation.
+
+**Metadata preflight.** Both fixtures were `componenttype` 9, belonged to the
+expected draft agent, stored nonblank YAML in `data`, and had blank `content`.
+The confirmed and unconfirmed payload lengths were 1,239 and 453 characters,
+respectively. `ConvertFrom-Yaml` was unavailable, so the detector exercised
+its portable structural-regex path rather than semantic YAML parsing.
+
+**Detector result.**
+
+- The confirmed topic resolved to action type `HttpRequest`, method `GET`, and
+  confirmation status `Present`.
+- The comparable no-confirmation topic resolved to action type `HttpRequest`,
+  method `GET`, and confirmation status `Missing`.
+- The detector also emitted its single fail-closed indeterminate-content
+  marker because another topic in the agent could not be fully assessed
+  without the optional YAML parser. The reported totals were therefore three
+  result entries: one `Present`, one `Missing`, and one
+  `UnableToDetermine` marker.
+- The user-defined action-message helper independently counted both HTTP
+  action topics. It returned its incomplete-assessment result because a
+  confirmation `Question` is not itself a user-defined action message and
+  other topic content remained unassessable without the optional parser.
+
+**No-write and cleanup evidence.** The scan used `-WhatIf` and did not enable
+result persistence. The topic HTTP requests were parsed as configuration and
+were not executed. After independent evidence review accepted the bounded
+claim, both disposable topics were removed through the Standard Copilot
+Studio UI. UI read-back returned the agent from nine to its original seven
+custom topics. A separate Dataverse read-back found zero remaining fixture
+component IDs and zero ACA audit-result rows created after the proof
+timestamp.
+
+**Validation boundary.** This leg establishes authentic Topic V2 `data`
+retrieval and structural `HttpRequestAction` Present/Missing discrimination
+for one confirmation pattern. It does not establish semantic YAML validation,
+every supported action or confirmation kind, confirmation placement beyond
+the detector's 2,000-character lookback, multi-page retrieval, or
+zone-specific severity. ELM zone lookup returned HTTP 404 in the lab, so the
+environment fell back to `Unknown` and policy severity was not part of this
+proof. Controls 2.12 and 1.10 remain **PARTIAL**.
 
 ## Authentic Topic V2 action-shape correction - 2026-09-11
 
@@ -23,8 +75,8 @@ Version 1.2.3 adds `HttpRequestAction` recognition to the main canonical kind ma
 helper action signature while retaining legacy `HttpRequest`. Offline regressions now
 exercise confirmed and unconfirmed GET actions plus recognized and missing action-message
 cases with YAML parsing unavailable. This is offline discrimination only; owner-attended
-live discrimination through the tenant retrieval path remains pending. Controls 2.12 and
-1.10 remain **PARTIAL**.
+live discrimination through the tenant retrieval path was subsequently completed in the
+bounded 2026-09-13 leg above. Controls 2.12 and 1.10 remain **PARTIAL**.
 
 ## Maintainer backport outcome — 2026-09-08
 
@@ -48,9 +100,9 @@ mixed unassessable content, unavailable YAML parsing, canonical incomplete pages
 and the exported client's existing page-two aggregation.
 
 No tenant, credential, persistence, or agent-configuration access was used for this
-backport. Controls 2.12 and 1.10 remain **PARTIAL**. A separately approved owner-attended
-live proof against authentic in-product Topic V2 components is still required for full
-detector acceptance.
+backport. The separately approved 2026-09-13 live leg subsequently exercised authentic
+in-product Topic V2 retrieval. Controls 2.12 and 1.10 remain **PARTIAL** because that
+proof retained the bounded limitations documented above.
 
 ## Live tenant validation outcome — 2026-06-13
 
@@ -90,16 +142,18 @@ recorded both the wrong `_botid_value` foreign key and variable component types 
 as healthy. The June leg proved the `_parentbotid_value` re-path, but its synthetic
 fixture exercised the still-defective type/content selection against itself. The type
 `0`/`9` and Topic V2 `data` fixes were implemented in the September maintainer backport
-and validated offline; no live proof was performed for this repository release.
+and initially validated offline; the bounded authentic proof was subsequently completed
+on 2026-09-13.
 
-**Synthetic-YAML boundary (why ACA stays PARTIAL).** The disposable fixture was not an
+**Synthetic-YAML boundary.** The disposable fixture was not an
 authentic in-product Copilot Studio-authored topic. The reported **0 of 18** result on the
 two real agents was later identified as evidence of the wrong type/content query, not
 evidence that authentic topics were absent. This live leg supports the FK, parser
 heuristic, confirmation-policy, persistence, integrity, and teardown claims only within
-that synthetic boundary. `controls-covered.json` stays `coverage: "partial"` on both
-2.12 and 1.10; closing the gap requires a separately approved live leg against authentic
-Topic V2 components with comparable confirmed and unconfirmed actions.
+that synthetic boundary. The separate 2026-09-13 leg above later exercised authentic
+Topic V2 retrieval and comparable confirmed/unconfirmed actions. Coverage remains
+`partial` on controls 2.12 and 1.10 because the authentic leg covered only one action
+kind, one confirmation pattern, parser-unavailable fallback, and no zone-specific policy.
 
 **Honest framing.** This is **lab evidence** from disposable fixtures on the lab validation tenant — not a
 production guarantee. A customer's tenant evidence is produced by running the solution against
@@ -217,11 +271,12 @@ action type, and supports exception management with Maker/Checker gating.
   selected `botcomponent.data` or legacy `content` payload. The exact `kind` values (`InvokeFlowAction`,
   `InvokeConnectorAction`, `InvokeSkillAction`, etc.) and the confirmation
   heuristics were exercised live on 2026-06-13 against a **synthetic** YAML
-  topic fixture; parsing fidelity against **authentic in-product** Copilot
-  Studio-authored Topic V2 content is still unproven and remains the PARTIAL gap.
-  The fallback regex can recognize signatures in some malformed payloads and is
-  not universal semantic YAML validation. Node schemas can change and are not
-  publicly versioned.
+  topic fixture. The 2026-09-13 leg subsequently exercised authentic
+  Copilot Studio-authored Topic V2 `HttpRequestAction` content with and without
+  one Boolean confirmation pattern. The fallback regex can recognize
+  signatures in some malformed payloads and is not universal semantic YAML
+  validation. Other action/confirmation kinds, longer topic layouts, and node
+  schema changes remain runtime-verification concerns.
 - **`Add-PowerAppsAccount -AccessToken` with a managed-identity token.** Microsoft
   documents service-principal auth as the supported automation path; passing an
   MI-issued Power Apps-audience token is a reasonable pattern but is not
@@ -236,12 +291,13 @@ action type, and supports exception management with Maker/Checker gating.
 
 ## Final Lab-Readiness Assessment
 
-**Lab-ready, offline-regression-validated PARTIAL.** All scripts parse/compile; the two functional
+**Lab-ready, authentic-fixture-validated PARTIAL.** All scripts parse/compile; the two functional
 authentication defects (Purview evidence script and the MI runbook) and the schema column
 mismatch are fixed and verified against authoritative Microsoft sources. The core scan path
 and evidence export were aligned to the schema. The June 13 tenant leg supports the bounded
 synthetic-fixture claims above, while the September 8 offline suite covers the corrected
-Topic V2 query/payload behavior and fail-closed regressions without tenant access.
-Coverage stays **PARTIAL**: authentic in-product Copilot Studio Topic V2 detection is not
-yet proven. The remaining items are runtime-verification concerns (authentic-content parsing
-fidelity and service availability), documented above rather than assumed.
+Topic V2 query/payload behavior and fail-closed regressions without tenant access. The
+September 13 leg adds authentic Topic V2 `HttpRequestAction` Present/Missing
+discrimination and verified teardown. Coverage stays **PARTIAL** because the live scope
+did not cover every action/confirmation pattern, semantic YAML parsing, pagination, or
+zone-specific policy. The remaining runtime concerns are documented rather than assumed.

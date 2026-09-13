@@ -8,11 +8,12 @@ tier: '2'
 controls:
 - '2.12'
 - '1.10'
-# controls_partial: ACA stays PARTIAL on both controls. The 2026-06-13 live leg
-# used a SYNTHETIC hand-written YAML topic fixture; the two real agents exposed
-# 0 of 18 topic components, so detection against authentic in-product Copilot
-# Studio topics is unproven. Evidence:
-# LAB-VALIDATION.md#runtime-only-verification-items-cannot-confirm-statically
+# controls_partial: ACA stays PARTIAL on both controls. The bounded 2026-09-13
+# live leg proved authentic type-9 data retrieval and HttpRequestAction
+# Present/Missing discrimination for one confirmation pattern. It did not cover
+# semantic YAML parsing, every action/confirmation kind, pagination, or
+# zone-specific severity. Evidence:
+# LAB-VALIDATION.md#authentic-topic-v2-live-validation-outcome-2026-09-13
 controls_partial:
 - '2.12'
 - '1.10'
