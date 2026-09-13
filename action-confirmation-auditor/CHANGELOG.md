@@ -13,9 +13,28 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
   the existing `HttpRequest` action type while retaining legacy `HttpRequest` support.
   Offline regressions cover confirmed and unconfirmed GET actions, recognized and missing
   action-message cases, the helper's four-property result contract, and unavailable YAML
-  parsing. Authentic UI authoring exposed this shape; owner-attended live discrimination
-  through the tenant retrieval path remains pending, so controls 2.12 and 1.10 remain
-  partial.
+  parsing. Authentic UI authoring exposed this shape; the bounded live validation below
+  subsequently exercised it through the tenant retrieval path. Controls 2.12 and 1.10
+  remain partial.
+
+### Validated
+
+- **Authentic Topic V2 tenant retrieval (2026-09-13):** Owner-attended,
+  read-only validation ran the merged v1.2.3 detector against two disposable
+  Topic V2 topics created through the supported Copilot Studio web editor. Both
+  were type-9 components with nonblank `data` and blank `content`. The same
+  body-free `HttpRequestAction` GET resolved to `Present` when preceded by a
+  Boolean confirmation and `Missing` without it. `ConvertFrom-Yaml` was
+  unavailable, so this leg exercised the structural-regex fallback. The scan
+  used `-WhatIf`; no action was executed and no ACA audit row was created.
+  Both topics were deleted afterward, with UI and Dataverse read-back
+  confirming cleanup.
+- **Validation boundary:** The live leg covered one action kind, one
+  confirmation shape, the parser-unavailable path, and structural
+  discrimination within the detector's 2,000-character lookback window. It
+  did not exercise zone-specific severity because ELM lookup was unavailable,
+  additional action/confirmation kinds, semantic YAML parsing, or multi-page
+  topic retrieval. Controls 2.12 and 1.10 remain `partial`.
 
 ## [1.2.2] - 2026-09-08
 
@@ -45,7 +64,7 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
 ### Validated
 
 - **Offline Topic V2 regressions (2026-09-08); coverage stays PARTIAL.** The new Pester suite invokes the detector/helper function bodies and exported client with mocked Dataverse boundaries. It proves the corrected type `0`/`9` query, `data`/`content` precedence, Present/Missing discrimination, fail-closed mixed-content and incomplete-page behavior, error handling, stable result properties, and retained client pagination without tenant access.
-- **June 13 synthetic-fixture provenance corrected.** The earlier live leg proved the `_parentbotid_value` foreign-key path, parser heuristics, persistence, evidence integrity, and teardown against hand-written YAML placed on disposable records. It did **not** prove authentic Copilot Studio Topic V2 retrieval: the fixture used the same incorrect variable-type/content shape as the detector, and the reported `0 of 18` result on real agents was a symptom of the wrong-column defect rather than evidence that real topics were absent. Authentic in-product Topic V2 validation remains separately gated and unperformed in this repository release.
+- **June 13 synthetic-fixture provenance corrected.** The earlier live leg proved the `_parentbotid_value` foreign-key path, parser heuristics, persistence, evidence integrity, and teardown against hand-written YAML placed on disposable records. It did **not** prove authentic Copilot Studio Topic V2 retrieval: the fixture used the same incorrect variable-type/content shape as the detector, and the reported `0 of 18` result on real agents was a symptom of the wrong-column defect rather than evidence that real topics were absent. Authentic in-product Topic V2 retrieval was subsequently exercised in the bounded 2026-09-13 validation recorded under v1.2.3.
 - **Partial coverage retained:** Controls 2.12 and 1.10 remain `partial`. The regex parser can recognize action signatures in some malformed input and does not provide universal semantic YAML validation; the canonical detector also returns inconclusive rather than following additional pages.
 
 ### Fixed
@@ -56,7 +75,7 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
 
 - **`botcomponent` foreign-key lookup**: Re-pathed the detector's `botcomponent` query from the non-existent `_botid_value` to the real FK `_parentbotid_value` (filter form `$filter=_parentbotid_value eq <guid>`) in all three call sites (`Get-AgentActionSettings.ps1`, `private/ACAClient.psm1`, `governance/Test-UserDefinedActionMessages.ps1`). The prior value returned HTTP 400 on the live lab validation tenant and hard-failed the scan before scoring. This reverses the incorrect standardization recorded in the v1.2.0 entry below. (OPTION A reconciliation; Phase 0 probe 2026-06-13)
 
-- **YAML-aware topic parsing (fail-closed)**: `Get-AgentActionSettings.ps1` (and the exported `ACAClient.psm1` parser) previously `ConvertFrom-Json`'d `botcomponent.content` and silently `continue`'d on parse failure — a false-Compliant trap, since Copilot Studio topics are authored as **YAML**. The parser now detects JSON vs YAML, parses YAML best-effort (`ConvertFrom-Yaml` when the module is present, plus portable structural regex that works without it), and emits an `UnableToDetermine` (Indeterminate) marker for unparseable/empty content instead of dropping it. Indeterminate surfaces as a violation in strict zones and a Warning in advisory zones — never silently Compliant. Full YAML *semantic* detection remains **PARTIAL** pending a genuine in-product fixture.
+- **YAML-aware topic parsing (fail-closed)**: `Get-AgentActionSettings.ps1` (and the exported `ACAClient.psm1` parser) previously `ConvertFrom-Json`'d `botcomponent.content` and silently `continue`'d on parse failure — a false-Compliant trap, since Copilot Studio topics are authored as **YAML**. The parser now detects JSON vs YAML, parses YAML best-effort (`ConvertFrom-Yaml` when the module is present, plus portable structural regex that works without it), and emits an `UnableToDetermine` (Indeterminate) marker for unparseable/empty content instead of dropping it. Indeterminate surfaces as a violation in strict zones and a Warning in advisory zones — never silently Compliant. The 2026-09-13 live leg exercised authentic YAML through the structural-regex fallback; universal semantic YAML detection remains outside the validated scope.
 
 ### Changed
 

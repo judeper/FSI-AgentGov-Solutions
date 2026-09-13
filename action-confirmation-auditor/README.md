@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.2.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-09-11
+> **Last Verified:** 2026-09-13
 
 Validates that Copilot Studio agents require user confirmation before running tools (connectors, agent flows, prompts, REST API tools, Model Context Protocol tools, and computer use), with zone-based policy enforcement for financial services governance.
 
@@ -104,8 +104,16 @@ When a required confirmation is missing, severity is classified as:
 - ACA prefers a nonblank Topic V2 `data` payload and uses legacy `content` only when `data` is blank. It does not substitute legacy content after a malformed nonblank Topic V2 payload.
 - The canonical detector paths intentionally return an inconclusive result when Dataverse supplies `@odata.nextLink`; they do not classify only the first page. The exported shared client retains its separate multi-page aggregation behavior.
 - JSON parsing is built in. YAML parsing uses `ConvertFrom-Yaml` when available, with structural regular expressions as a portable fallback. Those expressions can recognize action signatures in some malformed input, so ACA does not provide universal semantic YAML validation.
-- Controls 2.12 and 1.10 remain partially covered pending separately approved validation against authentic in-product Topic V2 components. The offline suite does not access a tenant or prove every action and confirmation pattern.
-- Authentic Copilot Studio UI authoring exposed `kind: HttpRequestAction` in unpublished Topic V2 data. Version 1.2.3 recognizes that action offline, including GET and confirmation discrimination; owner-attended live discrimination remains pending, so controls 2.12 and 1.10 stay partial.
+- Owner-attended validation on 2026-09-13 exercised authentic, unpublished
+  Topic V2 `data` through the tenant retrieval path. Comparable
+  `HttpRequestAction` GET topics resolved to `Present` with a preceding Boolean
+  confirmation and `Missing` without it; the disposable topics were then
+  removed and cleanup was independently read back.
+- Controls 2.12 and 1.10 remain partially covered. The bounded live leg used
+  the parser-unavailable structural-regex path and covered one action kind,
+  one confirmation pattern, no multi-page result, and no zone-specific
+  severity. The solution does not prove every action/confirmation shape or
+  universal semantic YAML validation.
 
 ## Components
 
