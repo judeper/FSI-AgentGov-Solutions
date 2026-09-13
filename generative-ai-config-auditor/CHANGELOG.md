@@ -4,6 +4,19 @@ All notable changes to the Generative AI Config Auditor are documented in this f
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-09-13
+
+### Added
+
+- **Topic V2 assessment contract**: Topic and Topic V2 components now select both `data` and `content`, prefer nonblank `data`, and expose additive `TopicAssessmentStatus` / `TopicAssessmentDetails` fields.
+- **Modern content detection**: Recursively detects `SearchAndSummarizeContent`, retained legacy generative-answer aliases, and knowledge-source signals from parsed JSON or optional YAML.
+- **Indeterminate handling**: Positive-only regex fallback preserves known-positive counts without treating unparseable or incomplete topic sets as a clean zero. Comparator, persistence, runbook drift, and baseline capture surface manual review consistently.
+
+### Changed
+
+- Baseline capture skips agents with indeterminate topic assessment and reports `TotalSkipped` / `SkippedAgents`; determined agents retain the existing baseline write path.
+- Control 2.24 remains partial; this release adds defensive assessment status rather than expanding coverage claims.
+
 ### Validated
 
 - **Live tenant validation — bot-config-state detection path (2026-06-13, the lab validation tenant).** The five `fsi_GAC*` Dataverse tables and the shared/GAC-specific option sets were deployed, and the detection path was proven end-to-end against disposable-bot fixtures: a Zone 1 fixture with all three generative flags on fired **Critical** (three rules), an all-off fixture produced no row, and an all-nodes-absent fixture fired the new fail-closed **Rule 7** (Warning, never a false Compliant). The SHA-256 evidence digest (prefix `8D55C369`) recomputed to an integrity match, and all disposable fixtures were torn down with the tables verified back to zero — the deployed schema is the retained deliverable. This is **lab evidence** from disposable fixtures, not a production guarantee; customer-tenant evidence comes from running the solution against the customer tenant. The Work IQ usage-telemetry and Purview DLP legs remain out of lab scope (no connectors on the lab validation tenant). Full record: `LAB-VALIDATION.md` → "Live tenant validation outcome — 2026-06-13".

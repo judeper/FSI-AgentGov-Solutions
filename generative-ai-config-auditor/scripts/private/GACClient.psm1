@@ -14,7 +14,7 @@
 
 .NOTES
     Module: GACClient.psm1
-    Version: 1.2.1
+    Version: 1.2.2
     Requires: PowerShell 7.4+
     Author: FSI Agent Governance Team
 #>

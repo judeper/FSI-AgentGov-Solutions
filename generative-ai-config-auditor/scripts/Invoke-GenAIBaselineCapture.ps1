@@ -102,8 +102,10 @@
     - CapturedOn: ISO 8601 UTC timestamp
     - CapturedBy: Operator identity
     - TotalCaptured: Count of baselines written
+    - TotalSkipped: Count of agents skipped because topic assessment was indeterminate
     - ZoneBreakdown: Hashtable with per-zone counts
     - Agents: Array of captured agent summaries
+    - SkippedAgents: Array of skipped agent summaries with topic assessment details
 
 .NOTES
     Version: 1.0.0
@@ -263,6 +265,11 @@ try {
 
     $agentSettings = Get-AgentGenAISettings @queryParams
 
+    # Get-AgentGenAISettings reloads the shared client while collecting
+    # per-environment data. Reconnect before baseline writes so the central
+    # Dataverse writer retains the requested destination and token.
+    Connect-GACDataverse -DataverseUrl $DataverseUrl -AccessToken $dataverseToken
+
     if (-not $agentSettings -or @($agentSettings).Count -eq 0) {
         Write-Warning "No agents found. Nothing to capture."
 
@@ -270,8 +277,10 @@ try {
             CapturedOn    = (Get-Date).ToUniversalTime().ToString('o')
             CapturedBy    = $CapturedBy
             TotalCaptured = 0
+            TotalSkipped  = 0
             ZoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
             Agents        = @()
+            SkippedAgents  = @()
         }
 
         $emptyResult | ConvertTo-Json -Depth 5
@@ -307,8 +316,10 @@ try {
             CapturedOn    = (Get-Date).ToUniversalTime().ToString('o')
             CapturedBy    = $CapturedBy
             TotalCaptured = 0
+            TotalSkipped  = 0
             ZoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
             Agents        = @()
+            SkippedAgents  = @()
         }
 
         $emptyResult | ConvertTo-Json -Depth 5
@@ -344,12 +355,32 @@ try {
     Write-Verbose "Capturing baselines for $($agentSettings.Count) agent(s)..."
 
     $capturedAgents = @()
+    $skippedAgents = @()
     $zoneBreakdown = @{ Zone1 = 0; Zone2 = 0; Zone3 = 0; Unknown = 0 }
 
     foreach ($agent in $agentSettings) {
         $envId = $agent.EnvironmentId
         $envName = $agent.EnvironmentDisplayName
         $agentZone = $agent.Zone
+
+        if ($agent.TopicAssessmentStatus -eq 'Indeterminate') {
+            $skipDetails = if ([string]::IsNullOrWhiteSpace([string]$agent.TopicAssessmentDetails)) {
+                'Topic assessment could not be completed.'
+            } else {
+                [string]$agent.TopicAssessmentDetails
+            }
+
+            Write-Warning "Skipping baseline capture for $($agent.AgentName): topic assessment is indeterminate ($skipDetails)"
+            $skippedAgents += [PSCustomObject]@{
+                AgentId                = $agent.AgentId
+                AgentName              = $agent.AgentName
+                EnvironmentName        = $envName
+                Zone                   = $agentZone
+                TopicAssessmentStatus  = 'Indeterminate'
+                TopicAssessmentDetails = $skipDetails
+            }
+            continue
+        }
 
         Write-Verbose "Capturing baseline for: $($agent.AgentName) in $envName ($agentZone)"
 
@@ -367,6 +398,8 @@ try {
             EnvironmentDisplayName     = $envName
             EnvironmentType            = $agent.EnvironmentType
             Zone                       = $agentZone
+            TopicAssessmentStatus      = $agent.TopicAssessmentStatus
+            TopicAssessmentDetails     = $agent.TopicAssessmentDetails
             LastPublished              = $agent.LastPublished
             RetrievedAt                = $agent.RetrievedAt
         } | ConvertTo-Json -Compress
@@ -406,6 +439,8 @@ try {
             AzureOpenAIEnabled         = $agent.AzureOpenAIEnabled
             OrchestrationMode          = $agent.OrchestrationMode
             GenerativeAnswersNodeCount = $agent.GenerativeAnswersNodeCount
+            TopicAssessmentStatus      = $agent.TopicAssessmentStatus
+            TopicAssessmentDetails     = $agent.TopicAssessmentDetails
         }
 
         # Update zone breakdown
@@ -416,7 +451,7 @@ try {
         }
     }
 
-    Write-Verbose "Baseline capture complete. Total captured: $($capturedAgents.Count)"
+    Write-Verbose "Baseline capture complete. Total captured: $($capturedAgents.Count); skipped: $($skippedAgents.Count)"
 
     #endregion
 
@@ -426,8 +461,10 @@ try {
         CapturedOn    = (Get-Date).ToUniversalTime().ToString('o')
         CapturedBy    = $CapturedBy
         TotalCaptured = $capturedAgents.Count
+        TotalSkipped  = $skippedAgents.Count
         ZoneBreakdown = $zoneBreakdown
         Agents        = $capturedAgents
+        SkippedAgents = $skippedAgents
     }
 
     $result | ConvertTo-Json -Depth 5

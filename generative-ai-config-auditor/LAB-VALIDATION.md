@@ -3,8 +3,12 @@
 > **Original static validation date:** 2026-06-04
 > **Live tenant validation date:** 2026-06-13 (see "Live tenant validation outcome — 2026-06-13" below)
 > **Branch:** `validation/generative-ai-config-auditor`
-> **Solution version:** v1.2.1 (fixes recorded under CHANGELOG `[Unreleased]`)
-> **Validation type:** Static (parse-validity + authoritative-source verification + documentation completeness, 2026-06-04) **followed by live tenant validation of the bot-config-state detection path on the lab validation tenant (2026-06-13)**. The static report below is retained as the historical record; the live outcome is appended in its own dated section.
+> **Solution version:** v1.2.2
+> **Validation type:** Offline-only static and mocked public-seam validation for the Topic V2 update (2026-09-13). No tenant access or live proof was used for this release. The earlier static and tenant-validation records below are retained as historical records for prior releases and do not validate the Topic V2 implementation.
+
+## Topic V2 update validation scope — 2026-09-13
+
+The v1.2.2 Topic V2 changes were validated offline with mocked Dataverse, authentication, write, and baseline seams. Coverage includes query shape, data/content precedence, JSON and optional YAML parsing, positive-only regex fallback, incomplete topic sets, comparator warnings, persistence projection, runbook drift handling, and baseline skip behavior. No tenant was accessed, no agent or configuration was changed, and no live proof is claimed for this update.
 
 ## Live tenant validation outcome — 2026-06-13
 

@@ -45,7 +45,7 @@ This file provides guidance for autonomous AI agents working on this repository.
 | eval-gate | v0.1.0-preview | 2.3, 2.5, 2.12, 2.20 | CI evaluation gate for Copilot Studio agent promotions — a Power CAT Copilot Studio Kit wrapper enforcing PASS/SOFT-FAIL/HARD-FAIL safety (OWASP LLM Top 10 + FSI overlay), accuracy, and fallback thresholds across Dev→Test / Test→Prod, with required-reviewer human sign-off before production |
 | file-upload-security | v1.1.2 | 1.14, 1.8, 1.4 | Per-agent file upload validation against zone governance policies |
 | finra-supervision-workflow | v1.1.2 | 2.12, 1.10, 1.7 | Automated supervision queue for AI agent outputs (FINRA 3110) |
-| generative-ai-config-auditor | v1.2.1 | 2.24 | GenAI feature enablement governance per zone |
+| generative-ai-config-auditor | v1.2.2 | 2.24 | GenAI feature enablement governance per zone |
 | hallucination-tracker | v1.2.0 | 3.10, 2.9, 2.12 | Feedback aggregation for hallucination pattern analysis |
 | hitl-workflow-governance | v1.1.3 | 2.12, 2.17, 1.10 | Zone-based governance for Human in the Loop checkpoints in Copilot Studio agent flows |
 | inactivity-timeout-enforcement | v1.1.2 | 2.22, 1.23, 3.7, 3.8 | Policy-driven inactivity timeout validation with zone-based durations |

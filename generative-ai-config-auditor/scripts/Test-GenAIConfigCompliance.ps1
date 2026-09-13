@@ -549,9 +549,28 @@ function Test-GenAIConfigCompliance {
                         ViolationType          = $violation.ViolationType
                         AzureOpenAIEnabled     = $violation.AzureOpenAIEnabled
                         OrchestrationMode      = $violation.OrchestrationMode
+                        TopicAssessmentStatus  = $violation.TopicAssessmentStatus
+                        TopicAssessmentDetails = $violation.TopicAssessmentDetails
                         Severity               = $violation.Severity
                         RegulatoryContext       = $violation.RegulatoryContext
                     }
+
+                    if ($violation.ViolationType -eq 'IndeterminateTopicAssessment') {
+                        $topicDetails = if ([string]::IsNullOrWhiteSpace([string]$violation.TopicAssessmentDetails)) {
+                            'Topic assessment could not be completed.'
+                        } else {
+                            [string]$violation.TopicAssessmentDetails
+                        }
+                        $actualState = "Indeterminate: $topicDetails"
+                        if ($actualState.Length -gt 500) {
+                            $actualState = $actualState.Substring(0, 497) + '...'
+                        }
+
+                        $violationData['FeatureType'] = 'GenerativeAnswersNode'
+                        $violationData['ExpectedState'] = 'Determined'
+                        $violationData['ActualState'] = $actualState
+                    }
+
                     Write-GACViolation -Violation $violationData -RunId $runId
                 } catch {
                     Write-Warning "Failed to write violation for $($violation.AgentName): $($_.Exception.Message)"
@@ -647,6 +666,8 @@ function Test-GenAIConfigCompliance {
                         OrchestrationMode          = $_.OrchestrationMode
                         GenerativeAnswersNodeCount = $_.GenerativeAnswersNodeCount
                         AoaiConnectionId           = $_.AoaiConnectionId
+                        TopicAssessmentStatus      = $_.TopicAssessmentStatus
+                        TopicAssessmentDetails     = $_.TopicAssessmentDetails
                         IsCompliant                = $_.IsCompliant
                         Severity                   = $_.Severity
                         ViolationType              = $_.ViolationType

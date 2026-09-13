@@ -3,7 +3,7 @@
   "generatedBy": "scripts/build-manifest.py",
   "solutionId": "generative-ai-config-auditor",
   "solutionName": "Generative AI Config Auditor",
-  "solutionVersion": "1.2.1",
+  "solutionVersion": "1.2.2",
   "status": "live",
   "controls": [
     {
