@@ -235,6 +235,32 @@ function Test-GenAIConfigCompliance {
 
     #endregion
 
+    function ConvertTo-GACBoundedText {
+        param(
+            [AllowNull()]
+            $Value,
+
+            [Parameter(Mandatory)]
+            [ValidateRange(1, 1000000)]
+            [int]$MaximumLength
+        )
+
+        if ($null -eq $Value) {
+            return $null
+        }
+
+        $text = [string]$Value
+        if ($text.Length -le $MaximumLength) {
+            return $text
+        }
+
+        if ($MaximumLength -le 3) {
+            return $text.Substring(0, $MaximumLength)
+        }
+
+        return $text.Substring(0, $MaximumLength - 3) + '...'
+    }
+
     #region Dataverse Integration
 
     $dataverseConnected = $false
@@ -538,42 +564,70 @@ function Test-GenAIConfigCompliance {
 
         # Write individual violations
         foreach ($violation in $violationResults) {
-            if ($PSCmdlet.ShouldProcess("$($violation.AgentName) in $($violation.EnvironmentDisplayName)", "Write violation")) {
-                try {
+            $detailsToPersist = @($violation.ViolationDetails)
+            if ($detailsToPersist.Count -eq 0) {
+                $detailsToPersist = @(
+                    [PSCustomObject]@{
+                        ViolationType    = $violation.ViolationType
+                        Severity         = $violation.Severity
+                        RegulatoryContext = $violation.RegulatoryContext
+                    }
+                )
+            }
+
+            foreach ($detail in $detailsToPersist) {
+                if ($PSCmdlet.ShouldProcess("$($violation.AgentName) in $($violation.EnvironmentDisplayName)", "Write violation detail")) {
+                    $detailViolationType = if ($detail.ViolationType) {
+                        [string]$detail.ViolationType
+                    } else {
+                        [string]$violation.ViolationType
+                    }
+                    $detailSeverity = if ($detail.Severity) {
+                        [string]$detail.Severity
+                    } else {
+                        [string]$violation.Severity
+                    }
+                    $detailRegulatoryContext = if ($null -ne $detail.RegulatoryContext) {
+                        $detail.RegulatoryContext
+                    } else {
+                        $violation.RegulatoryContext
+                    }
+
                     $violationData = @{
                         EnvironmentId          = $violation.EnvironmentId
                         EnvironmentDisplayName = $violation.EnvironmentDisplayName
                         AgentId                = $violation.AgentId
                         AgentName              = $violation.AgentName
                         Zone                   = $violation.Zone
-                        ViolationType          = $violation.ViolationType
+                        ViolationType          = $detailViolationType
                         AzureOpenAIEnabled     = $violation.AzureOpenAIEnabled
                         OrchestrationMode      = $violation.OrchestrationMode
                         TopicAssessmentStatus  = $violation.TopicAssessmentStatus
                         TopicAssessmentDetails = $violation.TopicAssessmentDetails
-                        Severity               = $violation.Severity
-                        RegulatoryContext       = $violation.RegulatoryContext
+                        Severity               = $detailSeverity
+                        RegulatoryContext      = ConvertTo-GACBoundedText -Value $detailRegulatoryContext -MaximumLength 2000
                     }
 
-                    if ($violation.ViolationType -eq 'IndeterminateTopicAssessment') {
+                    if ($detailViolationType -eq 'IndeterminateTopicAssessment') {
                         $topicDetails = if ([string]::IsNullOrWhiteSpace([string]$violation.TopicAssessmentDetails)) {
                             'Topic assessment could not be completed.'
                         } else {
                             [string]$violation.TopicAssessmentDetails
                         }
                         $actualState = "Indeterminate: $topicDetails"
-                        if ($actualState.Length -gt 500) {
-                            $actualState = $actualState.Substring(0, 497) + '...'
-                        }
 
                         $violationData['FeatureType'] = 'GenerativeAnswersNode'
-                        $violationData['ExpectedState'] = 'Determined'
-                        $violationData['ActualState'] = $actualState
+                        $violationData['ExpectedState'] = ConvertTo-GACBoundedText -Value 'Determined' -MaximumLength 500
+                        $violationData['ActualState'] = ConvertTo-GACBoundedText -Value $actualState -MaximumLength 500
+                    } elseif ($detailViolationType -eq 'GenerativeAnswersNotAllowed') {
+                        $violationData['FeatureType'] = 'GenerativeAnswersNode'
+                        $violationData['ExpectedState'] = ConvertTo-GACBoundedText -Value 'Not permitted' -MaximumLength 500
+                        $violationData['ActualState'] = ConvertTo-GACBoundedText `
+                            -Value "$($violation.GenerativeAnswersNodeCount) node(s) detected" `
+                            -MaximumLength 500
                     }
 
                     Write-GACViolation -Violation $violationData -RunId $runId
-                } catch {
-                    Write-Warning "Failed to write violation for $($violation.AgentName): $($_.Exception.Message)"
                 }
             }
         }

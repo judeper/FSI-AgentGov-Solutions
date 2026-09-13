@@ -570,6 +570,12 @@ function Get-AgentGenAISettings {
                 [void]$assessmentReasons.Add('Topic component query returned @odata.nextLink; the returned topic set is incomplete.')
             }
 
+            $recognizedTopicKinds = @('AdaptiveDialog', 'OrdinaryTopic', 'Topic', 'Dialog')
+            $recognizedGenerativeNodeKinds = @('SearchAndSummarizeContent', 'SearchAndSummarize', 'GenerativeAnswers')
+            $legacyGenerativePropertyNames = @('GenerativeAnswer', 'GenerativeAnswers', 'generativeAnswers')
+            $recognizedGenerativeNodePattern = ($recognizedGenerativeNodeKinds | ForEach-Object { [regex]::Escape($_) }) -join '|'
+            $legacyGenerativePropertyPattern = ($legacyGenerativePropertyNames | ForEach-Object { [regex]::Escape($_) }) -join '|'
+
             function Get-TopicSignals {
                 param(
                     [AllowNull()]
@@ -577,8 +583,9 @@ function Get-AgentGenAISettings {
                 )
 
                 $signals = [PSCustomObject]@{
-                    HasGenerativeAnswerSignal = $false
-                    KnowledgeSourceCount      = 0
+                    HasRecognizedStructure      = $false
+                    GenerativeAnswersNodeCount  = 0
+                    KnowledgeSourceCount        = 0
                 }
 
                 function Find-TopicNode {
@@ -616,21 +623,25 @@ function Get-AgentGenAISettings {
 
                         if ($propertyName -ieq 'kind') {
                             $kind = [string]$propertyValue
-                            if ($kind -ieq 'SearchAndSummarizeContent' -or
-                                $kind -ieq 'SearchAndSummarize' -or
-                                $kind -ieq 'GenerativeAnswers') {
-                                $signals.HasGenerativeAnswerSignal = $true
+                            if ($recognizedTopicKinds | Where-Object { $_ -ieq $kind }) {
+                                $signals.HasRecognizedStructure = $true
+                            } elseif ($recognizedGenerativeNodeKinds | Where-Object { $_ -ieq $kind }) {
+                                $signals.HasRecognizedStructure = $true
+                                $signals.GenerativeAnswersNodeCount++
+                            } elseif ($kind -ieq 'KnowledgeSource') {
+                                $signals.HasRecognizedStructure = $true
                             }
                             if ($kind -ieq 'KnowledgeSource') {
                                 $signals.KnowledgeSourceCount++
                             }
-                        } elseif ($propertyName -ieq 'GenerativeAnswer' -or
-                            $propertyName -ieq 'GenerativeAnswers' -or
-                            $propertyName -ieq 'generativeAnswers') {
-                            $signals.HasGenerativeAnswerSignal = $true
+                        } elseif ($legacyGenerativePropertyNames | Where-Object { $_ -ieq $propertyName }) {
+                            $signals.HasRecognizedStructure = $true
+                            $signals.GenerativeAnswersNodeCount++
                         } elseif ($propertyName -ieq 'dataSource') {
+                            $signals.HasRecognizedStructure = $true
                             $signals.KnowledgeSourceCount++
                         } elseif ($propertyName -ieq 'knowledgeSources') {
+                            $signals.HasRecognizedStructure = $true
                             if ($propertyValue -is [System.Collections.IEnumerable] -and
                                 $propertyValue -isnot [string]) {
                                 $signals.KnowledgeSourceCount += @($propertyValue).Count
@@ -647,17 +658,26 @@ function Get-AgentGenAISettings {
                 return $signals
             }
 
-            function Test-TopicGenerativeRegex {
+            function Get-TopicGenerativeRegexCount {
                 param(
                     [Parameter(Mandatory)]
                     [string]$Payload
                 )
 
-                return (
-                    $Payload -match '(?im)^\s*kind\s*:\s*(SearchAndSummarizeContent|SearchAndSummarize|GenerativeAnswers)\b' -or
-                    $Payload -match '(?i)"kind"\s*:\s*"(SearchAndSummarizeContent|SearchAndSummarize|GenerativeAnswers)\b' -or
-                    $Payload -match '(?i)GenerativeAnswer|generativeAnswers'
-                )
+                $count = 0
+                $count += [regex]::Matches(
+                    $Payload,
+                    "(?im)^\s*kind\s*:\s*($recognizedGenerativeNodePattern)\b"
+                ).Count
+                $count += [regex]::Matches(
+                    $Payload,
+                    "(?i)""kind""\s*:\s*""($recognizedGenerativeNodePattern)\b"
+                ).Count
+                $count += [regex]::Matches(
+                    $Payload,
+                    "(?i)""?($legacyGenerativePropertyPattern)""?\s*:"
+                ).Count
+                return $count
             }
 
             function Test-TopicKnowledgeRegex {
@@ -716,14 +736,18 @@ function Get-AgentGenAISettings {
 
                     if ($parsedSuccessfully) {
                         $signals = Get-TopicSignals -InputObject $parsed
-                        if ($signals.HasGenerativeAnswerSignal) {
-                            $genAnswersCount++
+                        if ($signals.HasRecognizedStructure) {
+                            $genAnswersCount += $signals.GenerativeAnswersNodeCount
+                            $knowledgeSourceCount += $signals.KnowledgeSourceCount
+                        } else {
+                            $assessmentDetermined = $false
+                            [void]$assessmentReasons.Add("Topic '$($component.name)' does not contain recognizable topic/node structure.")
                         }
-                        $knowledgeSourceCount += $signals.KnowledgeSourceCount
                     } else {
                         $assessmentDetermined = $false
-                        if (Test-TopicGenerativeRegex -Payload $payload) {
-                            $genAnswersCount++
+                        $regexCount = Get-TopicGenerativeRegexCount -Payload $payload
+                        if ($regexCount -gt 0) {
+                            $genAnswersCount += $regexCount
                             [void]$assessmentReasons.Add("Topic '$($component.name)' contributed positive regex evidence after structured parsing failed.")
                         } elseif ($yamlCommand) {
                             [void]$assessmentReasons.Add("Topic '$($component.name)' could not be parsed as JSON or YAML.")

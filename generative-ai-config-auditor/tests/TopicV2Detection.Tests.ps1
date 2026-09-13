@@ -177,6 +177,110 @@ Describe 'Topic V2 detection' {
         $result[0].TopicAssessmentDetails | Should -Be 'No topic components were returned.'
     }
 
+    It 'does not treat parsed empty, null, scalar, or unrecognized payloads as a determined zero' {
+        $script:componentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'Empty object'
+                    data = '{}'
+                    content = ''
+                    componenttype = 9
+                    botcomponentid = '10101010-1010-1010-1010-101010101010'
+                },
+                [PSCustomObject]@{
+                    name = 'Null payload'
+                    data = 'null'
+                    content = ''
+                    componenttype = 9
+                    botcomponentid = '20202020-2020-2020-2020-202020202020'
+                },
+                [PSCustomObject]@{
+                    name = 'Scalar payload'
+                    data = '"not a topic"'
+                    content = ''
+                    componenttype = 0
+                    botcomponentid = '30303030-3030-3030-3030-303030303030'
+                }
+            )
+        }
+
+        $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
+
+        $result[0].GenerativeAnswersNodeCount | Should -Be 0
+        $result[0].TopicAssessmentStatus | Should -Be 'Indeterminate'
+        $result[0].TopicAssessmentDetails | Should -Match 'recognizable topic/node structure'
+    }
+
+    It 'keeps a valid action-free AdaptiveDialog as a determined zero' {
+        $script:componentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'Action-free dialog'
+                    data = '{"kind":"AdaptiveDialog","nodes":[]}'
+                    content = ''
+                    componenttype = 9
+                    botcomponentid = '40404040-4040-4040-4040-404040404040'
+                }
+            )
+        }
+
+        $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
+
+        $result[0].GenerativeAnswersNodeCount | Should -Be 0
+        $result[0].TopicAssessmentStatus | Should -Be 'Determined'
+    }
+
+    It 'applies the structure requirement to parsed JSON arrays' {
+        $script:componentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'Unrecognized JSON array'
+                    data = '[{},{"value":"not a topic"}]'
+                    content = ''
+                    componenttype = 9
+                    botcomponentid = '50505050-5050-5050-5050-505050505050'
+                }
+            )
+        }
+
+        $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
+
+        $result[0].GenerativeAnswersNodeCount | Should -Be 0
+        $result[0].TopicAssessmentStatus | Should -Be 'Indeterminate'
+    }
+
+    It 'applies the structure requirement to parsed YAML arrays' {
+        function ConvertFrom-Yaml {
+            param([string]$Yaml)
+            [void]$Yaml
+            @(
+                [PSCustomObject]@{ value = 'not a topic' }
+                [PSCustomObject]@{ anotherValue = 'still not a topic' }
+            )
+        }
+
+        try {
+            $script:componentResponse = [PSCustomObject]@{
+                value = @(
+                    [PSCustomObject]@{
+                        name = 'Unrecognized YAML array'
+                        data = '- value: not a topic'
+                        content = ''
+                        componenttype = 9
+                        botcomponentid = '60606060-6060-6060-6060-606060606060'
+                    }
+                )
+            }
+
+            $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
+
+            $result[0].GenerativeAnswersNodeCount | Should -Be 0
+            $result[0].TopicAssessmentStatus | Should -Be 'Indeterminate'
+        } finally {
+            Remove-Item Function:\ConvertFrom-Yaml -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'reports a topic query failure as indeterminate' {
         Mock Invoke-RestMethod {
             param([string]$Uri)
@@ -243,6 +347,26 @@ Describe 'Topic V2 detection' {
         $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
 
         $result[0].GenerativeAnswersNodeCount | Should -Be 1
+        $result[0].TopicAssessmentStatus | Should -Be 'Indeterminate'
+    }
+
+    It 'counts safe positive regex occurrences while keeping the assessment indeterminate' {
+        Mock Get-Command -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' } {}
+        $script:componentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'Unparsed multiple modern nodes'
+                    data = "kind: SearchAndSummarizeContent`n---`nkind: SearchAndSummarizeContent`n"
+                    content = ''
+                    componenttype = 9
+                    botcomponentid = '12121212-1212-1212-1212-121212121212'
+                }
+            )
+        }
+
+        $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
+
+        $result[0].GenerativeAnswersNodeCount | Should -Be 2
         $result[0].TopicAssessmentStatus | Should -Be 'Indeterminate'
     }
 
@@ -338,6 +462,25 @@ Describe 'Topic V2 detection' {
 
         $result[0].GenerativeAnswersNodeCount | Should -Be 1
         $result[0].KnowledgeSourceCount | Should -Be 2
+        $result[0].TopicAssessmentStatus | Should -Be 'Determined'
+    }
+
+    It 'counts each SearchAndSummarizeContent node in one topic' {
+        $script:componentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'Multiple modern nodes'
+                    data = '{"kind":"AdaptiveDialog","nodes":[{"kind":"SearchAndSummarizeContent"},{"kind":"SearchAndSummarizeContent"}]}'
+                    content = ''
+                    componenttype = 9
+                    botcomponentid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+                }
+            )
+        }
+
+        $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
+
+        $result[0].GenerativeAnswersNodeCount | Should -Be 2
         $result[0].TopicAssessmentStatus | Should -Be 'Determined'
     }
 }
@@ -454,6 +597,29 @@ Describe 'Topic assessment persistence projection' {
         . (Join-Path $scriptsRoot 'Test-GenAIConfigCompliance.ps1')
     }
 
+    BeforeEach {
+        Mock Import-Module {}
+        Mock Connect-GACDataverse -ModuleName GACClient {}
+        Mock Get-GACConnection -ModuleName GACClient {
+            [PSCustomObject]@{
+                DataverseUrl = 'https://governance.crm.dynamics.com'
+                AccessToken  = 'test-token'
+                IsConnected  = $true
+            }
+        }
+        Mock Get-GACEnvironmentVariable -ModuleName GACClient {
+            param([string]$Name, $DefaultValue)
+            [void]$Name
+            return $DefaultValue
+        }
+        Mock Invoke-DataverseRequest -ModuleName GACClient {
+            [PSCustomObject]@{ value = @() }
+        }
+        Mock Invoke-RestMethod -ModuleName GACClient {
+            throw 'Unexpected live Dataverse request in offline persistence test.'
+        }
+    }
+
     It 'projects an indeterminate topic assessment through the existing violation writer fields and Object output' {
         $script:writtenViolation = $null
         $agent = [PSCustomObject]@{
@@ -492,6 +658,93 @@ Describe 'Topic assessment persistence projection' {
         $script:writtenViolation.FeatureType | Should -Be 'GenerativeAnswersNode'
         $script:writtenViolation.ExpectedState | Should -Be 'Determined'
         $script:writtenViolation.ActualState | Should -Be 'Indeterminate: Topic data was malformed and the optional parser was unavailable.'
+    }
+
+    It 'persists every coexisting violation detail with bounded Dataverse fields' {
+        $script:writtenViolations = [System.Collections.Generic.List[object]]::new()
+        $longDetails = 'Topic assessment detail. ' * 300
+        $agent = [PSCustomObject]@{
+            AgentId                    = '77777777-7777-7777-7777-777777777777'
+            AgentName                  = 'Persisted coexisting violations'
+            EnvironmentId              = 'env-1'
+            EnvironmentDisplayName     = 'Test-zone1'
+            Zone                       = 'Zone1'
+            AzureOpenAIEnabled         = 'No'
+            OrchestrationMode          = 'Classic'
+            GenerativeAnswersNodeCount = 2
+            AoaiConnectionId           = $null
+            ModelKnowledgeEnabled      = 'No'
+            SemanticSearchEnabled      = 'No'
+            TopicAssessmentStatus      = 'Indeterminate'
+            TopicAssessmentDetails     = $longDetails
+            AgentStatus                = 'Active'
+        }
+
+        Mock Get-AgentGenAISettings { $agent }
+        Mock Write-GACValidationHistory {}
+        Mock Write-GACViolation {
+            param([hashtable]$Violation)
+            [void]$script:writtenViolations.Add($Violation)
+        }
+
+        $result = @(Test-GenAIConfigCompliance `
+            -OutputFormat Object `
+            -IncludeCompliant `
+            -PersistResults `
+            -DataverseUrl 'https://governance.crm.dynamics.com' `
+            -DataverseToken 'test-token')
+
+        $result[0].ViolationType | Should -Be 'GenerativeAnswersNotAllowed'
+        $script:writtenViolations.Count | Should -Be 2
+        Should -Invoke Write-GACViolation -Times 2 -Exactly
+        Should -Invoke Invoke-RestMethod -ModuleName GACClient -Times 0 -Exactly
+        @($script:writtenViolations | Where-Object ActualState -like 'Indeterminate:*').Count | Should -Be 1
+        @($script:writtenViolations | Where-Object ExpectedState -eq 'Not permitted').Count | Should -Be 1
+
+        foreach ($written in $script:writtenViolations) {
+            ([string]$written.RegulatoryContext).Length | Should -BeLessOrEqual 2000
+            ([string]$written.ExpectedState).Length | Should -BeLessOrEqual 500
+            ([string]$written.ActualState).Length | Should -BeLessOrEqual 500
+        }
+
+        $script:writtenViolations |
+            Where-Object ActualState -like 'Indeterminate:*' |
+            Select-Object -ExpandProperty ActualState |
+            Should -Match '^Indeterminate:'
+    }
+
+    It 'does not swallow an individual violation writer failure' {
+        $agent = [PSCustomObject]@{
+            AgentId                    = '78787878-7878-7878-7878-787878787878'
+            AgentName                  = 'Writer failure'
+            EnvironmentId              = 'env-1'
+            EnvironmentDisplayName     = 'Test-zone1'
+            Zone                       = 'Zone1'
+            AzureOpenAIEnabled         = 'No'
+            OrchestrationMode          = 'Classic'
+            GenerativeAnswersNodeCount = 1
+            AoaiConnectionId           = $null
+            ModelKnowledgeEnabled      = 'No'
+            SemanticSearchEnabled      = 'No'
+            TopicAssessmentStatus      = 'Determined'
+            TopicAssessmentDetails     = 'All topics parsed.'
+            AgentStatus                = 'Active'
+        }
+
+        Mock Get-AgentGenAISettings { $agent }
+        Mock Write-GACValidationHistory {}
+        Mock Write-GACViolation {
+            throw 'simulated violation writer failure'
+        }
+
+        {
+            Test-GenAIConfigCompliance `
+                -OutputFormat Object `
+                -IncludeCompliant `
+                -PersistResults `
+                -DataverseUrl 'https://governance.crm.dynamics.com' `
+                -DataverseToken 'test-token'
+        } | Should -Throw
     }
 
     It 'carries topic assessment fields through JSON output' {

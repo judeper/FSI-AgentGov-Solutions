@@ -11,11 +11,16 @@ All notable changes to the Generative AI Config Auditor are documented in this f
 - **Topic V2 assessment contract**: Topic and Topic V2 components now select both `data` and `content`, prefer nonblank `data`, and expose additive `TopicAssessmentStatus` / `TopicAssessmentDetails` fields.
 - **Modern content detection**: Recursively detects `SearchAndSummarizeContent`, retained legacy generative-answer aliases, and knowledge-source signals from parsed JSON or optional YAML.
 - **Indeterminate handling**: Positive-only regex fallback preserves known-positive counts without treating unparseable or incomplete topic sets as a clean zero. Comparator, persistence, runbook drift, and baseline capture surface manual review consistently.
+- **Multiple-node counting**: `GenerativeAnswersNodeCount` now counts each recognized generative-answer node occurrence recursively, including multiple nodes within one topic. Positive regex fallback counts safe recognized occurrences while retaining `Indeterminate` status.
 
 ### Changed
 
 - Baseline capture skips agents with indeterminate topic assessment and reports `TotalSkipped` / `SkippedAgents`; determined agents retain the existing baseline write path.
 - Control 2.24 remains partial; this release adds defensive assessment status rather than expanding coverage claims.
+- **One-time baseline rebaseline warning**: The corrected count can change stored
+  counts for agents whose topics contain multiple recognized nodes. Operators
+  should re-capture baselines for those agents once after upgrading before
+  interpreting count drift; no schema change is required.
 
 ### Validated
 
