@@ -375,7 +375,15 @@ Describe 'Topic V2 detection' {
             value = @(
                 [PSCustomObject]@{
                     name = 'Unparsed YAML list items'
-                    data = "actions:`n  - kind: SearchAndSummarizeContent`n  - kind: SearchAndSummarizeContent`n"
+                    data = @'
+actions:
+  - kind: SearchAndSummarizeContent
+  - kind: SearchAndSummarizeContent # exact kind with a YAML comment
+  # - kind: SearchAndSummarizeContent
+  - kind: SearchAndSummarizeContentV2
+  - kind: SearchAndSummarizeContent-Preview
+  - payload: '{"kind":"SearchAndSummarizeContent-Preview"}'
+'@
                     content = ''
                     componenttype = 9
                     botcomponentid = '13131313-1313-1313-1313-131313131313'
