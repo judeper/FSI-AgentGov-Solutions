@@ -4,6 +4,16 @@ All notable changes to the Generative AI Config Auditor are documented in this f
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-09-14
+
+### Fixed
+
+- **YAML list-item node detection**: The positive-only fallback now recognizes both bare `kind: SearchAndSummarizeContent` and normal YAML list-item `- kind: SearchAndSummarizeContent` serialization, counting each recognized occurrence without accepting commented text or weakening the existing suffix boundary. Parser-unavailable assessments remain `Indeterminate`.
+
+### Validated
+
+- Added an offline public-seam regression using authentic Topic V2 list-item YAML shape; live positive discrimination and evidence persistence remain pending.
+
 ## [1.2.2] - 2026-09-13
 
 ### Added

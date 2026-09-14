@@ -38,7 +38,7 @@
 
 .NOTES
     File: Get-PurviewDLPEvidence.ps1
-    Version: 1.2.2
+    Version: 1.2.3
     Solution: Generative AI Config Auditor (GAC)
     Control: 2.24 (Agent Feature Enablement Governance)
     Requires:

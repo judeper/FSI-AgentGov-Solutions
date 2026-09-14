@@ -114,7 +114,7 @@
     - GeneratedAt: ISO 8601 timestamp of export generation
 
 .NOTES
-    Version: 1.2.2
+    Version: 1.2.3
     Solution: Generative AI Config Auditor (GAC)
     Control: 2.24 (Agent Feature Enablement Governance)
     Requires:
@@ -493,7 +493,7 @@ $exportTimestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $metadata = [PSCustomObject]@{
     exportedAt      = $exportTimestamp
     solution        = "Generative AI Config Auditor"
-    solutionVersion = "1.2.2"
+    solutionVersion = "1.2.3"
     control         = "2.24"
     fromDate        = $FromDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     toDate          = $ToDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")

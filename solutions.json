@@ -814,7 +814,7 @@
     "generative-ai-config-auditor": {
       "id": "generative-ai-config-auditor",
       "name": "Generative AI Config Auditor",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "domain": "agent-config",
       "tier": "2",
       "status": "live",

@@ -108,7 +108,7 @@ All other solutions operate independently and can be deployed in any order based
 | [Environment Lifecycle Management](./environment-lifecycle-management/) | 2 | v1.2.3 | personal, team, enterprise |
 | [Eval Gate](./eval-gate/) | 2 | v0.1.0-preview | enterprise |
 | [FINRA Supervision Workflow](./finra-supervision-workflow/) | 2 | v1.1.2 | enterprise |
-| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.2 | team, enterprise |
+| [Generative AI Config Auditor](./generative-ai-config-auditor/) | 2 | v1.2.3 | team, enterprise |
 | [Hallucination Feedback Tracker](./hallucination-tracker/) | 2 | v1.2.0 | personal, team, enterprise |
 | [HITL Workflow Governance](./hitl-workflow-governance/) | 2 | v1.1.3 | personal, team, enterprise |
 | [Inactivity Timeout Enforcement](./inactivity-timeout-enforcement/) | 2 | v1.1.2 | team, enterprise |

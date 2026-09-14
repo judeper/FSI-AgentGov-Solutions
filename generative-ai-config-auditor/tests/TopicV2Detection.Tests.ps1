@@ -369,6 +369,35 @@ Describe 'Topic V2 detection' {
         $result[0].TopicAssessmentStatus | Should -Be 'Indeterminate'
     }
 
+    It 'counts authentic YAML list-item generative nodes when the optional parser is unavailable' {
+        Mock Get-Command -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' } {}
+        $script:componentResponse = [PSCustomObject]@{
+            value = @(
+                [PSCustomObject]@{
+                    name = 'Unparsed YAML list items'
+                    data = @'
+actions:
+  - kind: SearchAndSummarizeContent
+  - kind: SearchAndSummarizeContent # exact kind with a YAML comment
+  # - kind: SearchAndSummarizeContent
+  - kind: SearchAndSummarizeContentV2
+  - kind: SearchAndSummarizeContent-Preview
+  - kind: SearchAndSummarizeContent#not-a-comment
+  - payload: '{"kind":"SearchAndSummarizeContent-Preview"}'
+'@
+                    content = ''
+                    componenttype = 9
+                    botcomponentid = '13131313-1313-1313-1313-131313131313'
+                }
+            )
+        }
+
+        $result = @(Get-AgentGenAISettings -IncludeEnvironments 'env-1')
+
+        $result[0].GenerativeAnswersNodeCount | Should -Be 2
+        $result[0].TopicAssessmentStatus | Should -Be 'Indeterminate'
+    }
+
     It 'counts safe positive regex occurrences while keeping the assessment indeterminate' {
         Mock Get-Command -ParameterFilter { $Name -eq 'ConvertFrom-Yaml' } {}
         $script:componentResponse = [PSCustomObject]@{

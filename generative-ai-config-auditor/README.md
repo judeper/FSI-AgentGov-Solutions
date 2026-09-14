@@ -7,7 +7,7 @@ coe_function: govern
 ---
 # Generative AI Config Auditor
 
-> **Version:** v1.2.2
+> **Version:** v1.2.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
 > **Last Verified:** 2026-07-26
@@ -25,6 +25,8 @@ Unlike the Content Moderation Monitor which validates moderation levels, GAC aud
 Topic and Topic V2 components are queried together (`componenttype` 0 and 9), selecting `data`, `content`, `componenttype`, `botcomponentid`, and the topic name. The auditor uses nonblank `data` as the authoritative payload and falls back to nonblank `content` only when `data` is blank or whitespace. It parses JSON first and uses an optional YAML parser when one is available; no YAML module is required.
 
 Modern `SearchAndSummarizeContent` nodes and retained legacy generative-answer and knowledge-source signals are inspected recursively. `GenerativeAnswersNodeCount` counts each recognized node occurrence, including multiple nodes in one topic. Positive-only regex fallback can preserve known-positive counts when structured parsing is unavailable, but it never establishes a clean zero. Each result exposes `TopicAssessmentStatus` (`Determined` or `Indeterminate`) and `TopicAssessmentDetails`; indeterminate assessments require manual review and produce an `IndeterminateTopicAssessment` warning. Baseline capture skips those agents rather than recording an unknown zero. Control 2.24 coverage remains **PARTIAL** within the documented implementation scope.
+
+> **YAML list-item correction (v1.2.3, 2026-09-14).** Authentic web authoring evidence exposed Topic V2 YAML action serialization as list items such as `- kind: SearchAndSummarizeContent`. v1.2.3 recognizes those list-item nodes in the offline positive-only fallback while preserving `Indeterminate` status when the optional parser is unavailable. Live positive discrimination and evidence persistence remain pending; Control 2.24 coverage remains **PARTIAL**.
 
 > **Baseline warning for v1.2.2.** The node-count correction can change
 > `GenerativeAnswersNodeCount` for agents whose topics contain multiple
