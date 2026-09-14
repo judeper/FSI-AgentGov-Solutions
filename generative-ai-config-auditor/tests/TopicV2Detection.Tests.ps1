@@ -382,6 +382,7 @@ actions:
   # - kind: SearchAndSummarizeContent
   - kind: SearchAndSummarizeContentV2
   - kind: SearchAndSummarizeContent-Preview
+  - kind: SearchAndSummarizeContent#not-a-comment
   - payload: '{"kind":"SearchAndSummarizeContent-Preview"}'
 '@
                     content = ''
