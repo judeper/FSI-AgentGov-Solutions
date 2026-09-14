@@ -667,7 +667,7 @@ function Get-AgentGenAISettings {
                 $count = 0
                 $count += [regex]::Matches(
                     $Payload,
-                    "(?im)^\s*kind\s*:\s*($recognizedGenerativeNodePattern)\b"
+                    "(?im)^[ \t]*(?:-[ \t]+)?kind[ \t]*:[ \t]*($recognizedGenerativeNodePattern)\b"
                 ).Count
                 $count += [regex]::Matches(
                     $Payload,

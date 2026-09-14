@@ -392,4 +392,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Generative AI Config Auditor -- Flow Setup Guide v1.2.2*
+*Generative AI Config Auditor -- Flow Setup Guide v1.2.3*

@@ -42,7 +42,7 @@
 
 .NOTES
     File: Connect-EnvironmentDataverse.ps1
-    Version: 1.2.2
+    Version: 1.2.3
     Requires: PowerShell 7.4+
 #>
 
