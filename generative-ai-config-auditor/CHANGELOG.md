@@ -12,7 +12,31 @@ All notable changes to the Generative AI Config Auditor are documented in this f
 
 ### Validated
 
-- Added an offline public-seam regression using authentic Topic V2 list-item YAML shape; live positive discrimination and evidence persistence remain pending.
+- Added an offline public-seam regression using authentic Topic V2 list-item YAML shape.
+- **Authentic Topic V2 live validation (2026-09-15):** Owner-attended,
+  target-scoped validation at merged commit
+  `b12e61adc81474b1c23262a815f5a5785417ae4b` used two disposable topics
+  created through the Standard Copilot Studio UI. Both were type-9 components
+  with nonblank `data` and blank `content`: a positive topic containing one
+  exact `SearchAndSummarizeContent` node and a control containing
+  `SendActivity` only. With `ConvertFrom-Yaml` unavailable, the positive-only
+  fallback reported one generative-answer node while retaining
+  `TopicAssessmentStatus = Indeterminate`; the comparator emitted both
+  `GenerativeAnswersNotAllowed` and `IndeterminateTopicAssessment`.
+- **Evidence and teardown:** The production Dataverse writer functions created
+  one validation-history row and two target-agent violation rows under a
+  unique run ID. Independent read-back confirmed the existing
+  `GenerativeAnswersNode` feature type and the `Determined` / `Not permitted`
+  expected states. No baseline was written and no topic was executed. All
+  three evidence rows and both disposable topics were deleted afterward;
+  final read-back found zero fixture topics, zero proof rows, and zero
+  baselines created during the proof.
+- **Validation boundary:** ELM zone lookup was unavailable, so restrictive
+  `Unknown`-zone defaults produced Warning severity; no zone-specific policy
+  result is claimed. The live leg exercised the parser-unavailable
+  positive-only path and direct writer functions, not semantic YAML parsing,
+  the full `Test-GenAIConfigCompliance` persistence orchestration, or baseline
+  capture. Control 2.24 remains `partial`.
 
 ## [1.2.2] - 2026-09-13
 

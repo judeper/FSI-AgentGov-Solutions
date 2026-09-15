@@ -10,7 +10,7 @@ coe_function: govern
 > **Version:** v1.2.3
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-07-26
+> **Last Verified:** 2026-09-15
 
 Validates generative AI feature configurations (Azure OpenAI integration, generative orchestration, generative answers nodes, knowledge sources, Allow ungrounded responses / AI general knowledge, and Tenant graph grounding with semantic search) for Copilot Studio agents against zone-specific governance policies.
 
@@ -26,7 +26,17 @@ Topic and Topic V2 components are queried together (`componenttype` 0 and 9), se
 
 Modern `SearchAndSummarizeContent` nodes and retained legacy generative-answer and knowledge-source signals are inspected recursively. `GenerativeAnswersNodeCount` counts each recognized node occurrence, including multiple nodes in one topic. Positive-only regex fallback can preserve known-positive counts when structured parsing is unavailable, but it never establishes a clean zero. Each result exposes `TopicAssessmentStatus` (`Determined` or `Indeterminate`) and `TopicAssessmentDetails`; indeterminate assessments require manual review and produce an `IndeterminateTopicAssessment` warning. Baseline capture skips those agents rather than recording an unknown zero. Control 2.24 coverage remains **PARTIAL** within the documented implementation scope.
 
-> **YAML list-item correction (v1.2.3, 2026-09-14).** Authentic web authoring evidence exposed Topic V2 YAML action serialization as list items such as `- kind: SearchAndSummarizeContent`. v1.2.3 recognizes those list-item nodes in the offline positive-only fallback while preserving `Indeterminate` status when the optional parser is unavailable. Live positive discrimination and evidence persistence remain pending; Control 2.24 coverage remains **PARTIAL**.
+> **Authentic Topic V2 validation (v1.2.3, 2026-09-15).** A bounded,
+> owner-attended lab leg used two disposable topics created through the
+> Standard Copilot Studio UI. With the optional YAML parser unavailable, one
+> exact `SearchAndSummarizeContent` node contributed a positive count
+> while the assessment remained `Indeterminate`; a no-node control did not
+> become a clean zero. The comparator emitted both the feature-policy and
+> manual-review violations. Production writer functions created and read back
+> one history row and two violation rows, after which all rows and topics were
+> removed and independently verified absent. The leg did not exercise
+> zone-specific policy, semantic YAML parsing, or the full persistence/runbook
+> orchestration. Control 2.24 coverage remains **PARTIAL**.
 
 > **Baseline warning for v1.2.2.** The node-count correction can change
 > `GenerativeAnswersNodeCount` for agents whose topics contain multiple
