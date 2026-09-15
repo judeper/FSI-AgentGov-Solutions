@@ -2,13 +2,61 @@
 
 > **Original static validation date:** 2026-06-04
 > **Live tenant validation date:** 2026-06-13 (see "Live tenant validation outcome — 2026-06-13" below)
+> **Authentic Topic V2 live validation date:** 2026-09-15
 > **Branch:** `validation/generative-ai-config-auditor`
 > **Solution version:** v1.2.3
-> **Validation type:** Offline-only static and mocked public-seam validation for the YAML list-item correction (2026-09-14). No tenant access or live proof was used for this release. The earlier static and tenant-validation records below are retained as historical records for prior releases and do not validate the Topic V2 implementation.
+> **Validation type:** Offline static and mocked public-seam validation for the YAML list-item correction (2026-09-14), followed by bounded owner-attended live validation against authentic Topic V2 components and the production Dataverse writer functions (2026-09-15). Earlier validation records are retained below as historical evidence for their stated scopes.
+
+## Authentic Topic V2 live validation outcome — 2026-09-15
+
+Owner-attended validation exercised merged commit
+`b12e61adc81474b1c23262a815f5a5785417ae4b` against two disposable topics
+created through the Standard Copilot Studio UI. Both were authentic
+`componenttype` 9 records with nonblank YAML in `data` and blank `content`.
+The positive topic contained exactly one `SearchAndSummarizeContent` node;
+the control contained a `SendActivity` node and no generative-answer or
+knowledge-source node.
+
+**Detection and comparison result.** `ConvertFrom-Yaml` was unavailable, so
+the live leg exercised the positive-only structural-regex fallback. The
+detector reported `GenerativeAnswersNodeCount = 1` and retained
+`TopicAssessmentStatus = Indeterminate`, as required when the complete topic
+set cannot be semantically parsed. The comparator emitted both
+`GenerativeAnswersNotAllowed` and `IndeterminateTopicAssessment`. The
+no-generative-answer control did not contribute to the positive count and was
+not treated as a clean determined zero.
+
+**Evidence write/read-back.** Target-scoped calls to the production
+`Write-GACValidationHistory` and `Write-GACViolation` functions created one
+validation-history row and two violation rows under a unique run ID.
+Independent Dataverse read-back confirmed both rows used the existing
+`GenerativeAnswersNode` feature type and separately recorded the
+`Determined` and `Not permitted` expected states. This proves the direct
+writer seam and option-set mapping; the full
+`Test-GenAIConfigCompliance` persistence orchestration remains covered
+offline rather than by this live leg.
+
+**No execution, baseline, or retained fixture.** The topics were inspected as
+configuration and were not executed. No baseline write was performed. After
+independent evidence review accepted the bounded claim, all three temporary
+evidence rows were deleted and read back as zero. Both disposable topics were
+then removed through the Standard Copilot Studio UI, returning the draft
+agent from nine to its original seven custom topics. Final Dataverse
+verification found zero fixture topic IDs, zero proof history/violation rows,
+and zero baselines created after the proof.
+
+**Validation boundary.** ELM zone lookup returned HTTP 404, so the environment
+resolved to `Unknown` and restrictive-until-classified defaults produced
+Warning severity. This leg does not support a zone-specific policy claim. It
+also does not validate the optional semantic YAML-parser path, prove a clean
+no-node result when that parser is unavailable, exercise every recognized
+node/property shape, or prove the full runbook/baseline workflow live. The
+assessment detail is bounded for Dataverse storage, so it is not a
+line-by-line topic audit trail. Control 2.24 remains **PARTIAL**.
 
 ## YAML list-item correction validation scope — 2026-09-14
 
-Authentic web authoring evidence exposed Topic V2 YAML action serialization as list items such as `- kind: SearchAndSummarizeContent`. v1.2.3 recognizes those list-item nodes in the offline positive-only fallback, counts each occurrence, and preserves `Indeterminate` status when the optional YAML parser is unavailable. The targeted public-seam suite passes offline with zero network calls. Live positive discrimination and evidence persistence remain pending; no tenant was accessed, no agent or configuration was changed, and no live proof is claimed for this correction.
+Authentic web authoring evidence exposed Topic V2 YAML action serialization as list items such as `- kind: SearchAndSummarizeContent`. v1.2.3 recognizes those list-item nodes in the offline positive-only fallback, counts each occurrence, and preserves `Indeterminate` status when the optional YAML parser is unavailable. The targeted public-seam suite passes offline with zero network calls. The bounded live validation above subsequently exercised positive discrimination and direct evidence persistence; the offline correction itself used no tenant access.
 
 ## Live tenant validation outcome — 2026-06-13
 
@@ -79,17 +127,23 @@ The Generative AI Config Auditor validates that Copilot Studio agents comply wit
 - Dataverse logical column names, entity-set names, and option-set integer values match `create_dataverse_schema.py`.
 - The 3 evidence/runbook scripts (`Export-GenAIConfigEvidence.ps1`, `Invoke-GenAIBaselineCapture.ps1`, `Start-GenAIConfigValidationRunbook.ps1`) acquire tokens via MSAL.PS `.AccessToken` (plain text) — not affected by the Az SecureString change.
 
-## Runtime-Only Caveats (cannot be verified without a live tenant)
+## Remaining Runtime-Only Caveats
 
-- Actual Dataverse read/write against `bot`, `botcomponent`, `bot_botsettings`, and the five `fsi_GAC*` tables (auth, role assignment, table existence).
+- The 2026-09-15 leg proved live `bot` / `botcomponent` reads and direct
+  validation-history / violation writer calls. It did not exercise baseline,
+  approved-connection, feature-inventory, or full evidence-export writes.
 - `bot_botsettings` is an **optional extension table**; fall-through behavior when customers have not added platform-side `fsi_*` columns is by-design (per CHANGELOG 1.1.0) and only observable live.
-- Power Platform environment enumeration behavior and zone classification via the shared `Get-ZoneClassification.ps1` module (external dependency at `scripts/shared/`).
+- Power Platform environment enumeration succeeded in the live leg, but ELM
+  zone classification returned HTTP 404 and fell back to `Unknown`; classified
+  Zone 1/2/3 policy behavior remains unproven in this Topic V2 scope.
+- The full `Test-GenAIConfigCompliance` persistence orchestration and
+  `Start-GenAIConfigValidationRunbook` drift/alert path remain offline-tested
+  rather than live-exercised.
 - Microsoft Graph / Security & Compliance cmdlet availability and consent state for the Purview evidence script.
-- `manifest.yaml` build verification (`build-manifest.py --check`) could not run in this worktree — it requires a sibling `fsi-agentgov` checkout providing `controls.json`. `manifest.yaml` was **not** modified, so no manifest drift is introduced.
 
 ## Lab-Readiness Assessment
 
-**Ready for lab use, with the SecureString fix applied.** Before this change, the core enumeration path (`Get-AgentGenAISettings.ps1`) would have failed authentication on any host running Az.Accounts 5.x — a likely default in a fresh lab. With the fix plus the prerequisite/permission corrections, an operator following `docs/prerequisites.md` can install the correct modules, grant the correct permissions, and exercise the scan/baseline/evidence flows. The bot-config-state detection path has since been **live-validated against the lab validation tenant on 2026-06-13** (see "Live tenant validation outcome — 2026-06-13" above); the remaining out-of-scope items are the telemetry-dependent sub-checks recorded under "Known lab-scope limitation".
+**Ready for lab use, with bounded Topic V2 evidence.** Before the SecureString fix, the core enumeration path (`Get-AgentGenAISettings.ps1`) would have failed authentication on any host running Az.Accounts 5.x — a likely default in a fresh lab. With the fix plus the prerequisite/permission corrections, an operator following `docs/prerequisites.md` can install the correct modules, grant the correct permissions, and exercise the scan/baseline/evidence flows. The bot-config-state path was live-validated on 2026-06-13, and the authentic Topic V2 positive-only path plus direct writer seam were live-validated on 2026-09-15. Coverage remains **PARTIAL** because the zone-specific, semantic-parser, full orchestration, and telemetry-dependent scopes documented above remain unproven.
 
 ## OPTION A zone reconciliation (2026-06-13)
 
