@@ -40,12 +40,11 @@ offline rather than by this live leg.
 configuration and were not executed. No baseline write was performed. After
 independent evidence review accepted the bounded claim, all three temporary
 evidence rows were deleted and read back as zero. Both disposable topics were
-then removed through the Standard Copilot Studio UI, returning the draft
-agent from nine to its original seven custom topics. Final Dataverse
-verification found zero fixture topic IDs, zero proof history/violation rows,
-and zero baselines created after the proof.
+then removed through the Standard Copilot Studio UI and independently
+verified absent. Final Dataverse verification found zero fixture topic IDs,
+zero proof history/violation rows, and zero baselines created after the proof.
 
-**Validation boundary.** ELM zone lookup returned HTTP 404, so the environment
+**Validation boundary.** ELM zone lookup was unavailable, so the environment
 resolved to `Unknown` and restrictive-until-classified defaults produced
 Warning severity. This leg does not support a zone-specific policy claim. It
 also does not validate the optional semantic YAML-parser path, prove a clean
@@ -134,7 +133,7 @@ The Generative AI Config Auditor validates that Copilot Studio agents comply wit
   approved-connection, feature-inventory, or full evidence-export writes.
 - `bot_botsettings` is an **optional extension table**; fall-through behavior when customers have not added platform-side `fsi_*` columns is by-design (per CHANGELOG 1.1.0) and only observable live.
 - Power Platform environment enumeration succeeded in the live leg, but ELM
-  zone classification returned HTTP 404 and fell back to `Unknown`; classified
+  zone classification was unavailable and fell back to `Unknown`; classified
   Zone 1/2/3 policy behavior remains unproven in this Topic V2 scope.
 - The full `Test-GenAIConfigCompliance` persistence orchestration and
   `Start-GenAIConfigValidationRunbook` drift/alert path remain offline-tested

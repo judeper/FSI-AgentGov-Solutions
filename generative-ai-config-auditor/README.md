@@ -29,7 +29,7 @@ Modern `SearchAndSummarizeContent` nodes and retained legacy generative-answer a
 > **Authentic Topic V2 validation (v1.2.3, 2026-09-15).** A bounded,
 > owner-attended lab leg used two disposable topics created through the
 > Standard Copilot Studio UI. With the optional YAML parser unavailable, one
-> exact `- kind: SearchAndSummarizeContent` node contributed a positive count
+> exact `SearchAndSummarizeContent` node contributed a positive count
 > while the assessment remained `Indeterminate`; a no-node control did not
 > become a clean zero. The comparator emitted both the feature-policy and
 > manual-review violations. Production writer functions created and read back
