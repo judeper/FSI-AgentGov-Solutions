@@ -4,7 +4,7 @@
 The Agent Builder toggle *"Reference org chart and profile info"* maps to the
 declarative-agent manifest capability ``{ "name": "People" }`` inside
 ``declarativeAgent.json`` (manifest schema v1.3+, introduced in schema v1.3;
-unchanged through v1.7). This capability is NOT a
+unchanged through v1.8). This capability is NOT a
 Copilot Studio ``botcomponent`` and is NOT returned by any public API for a
 *deployed* agent (verified in GATE0a). Capability-level detection therefore
 requires the source manifest itself, obtained from the agent app package or from
@@ -13,15 +13,15 @@ source control. This module:
   * Parses a ``declarativeAgent.json`` (or an app-package ``.zip``, or a
     directory of packages) and extracts ``capabilities[]``.
   * Detects ``name == "People"`` as a **case-sensitive literal**, independent of
-    the manifest ``version`` (the const is unchanged through v1.7).
-  * Captures the optional v1.7 ``include_related_content`` sub-setting.
+    the manifest ``version`` (the const is unchanged through v1.8).
+  * Captures the optional v1.6+ ``include_related_content`` sub-setting.
   * Emits one ``fsi_caiagentfeature`` row (logical column names) per detected
     agent, using the feature type ``People (Org Chart & Profile)``, a
     provenance marker (``fsi_detectionsource``), and a confidence marker
     (``fsi_detectionconfidence = "Declared (Manifest)"``).
 
 **Declared is not effective.** A manifest capability is *authored/available*;
-the v1.7 ``user_overrides`` mechanism lets a consuming user remove a capability
+the v1.6+ ``user_overrides`` mechanism lets a consuming user remove a capability
 at runtime, and tenant policy may gate grounding. For a governance inventory of
 what an agent is *built with*, the manifest ``capabilities[].name == "People"``
 signal is correct; per-user effective state is a separate, non-queryable concern.
@@ -66,7 +66,7 @@ logger = logging.getLogger("detect_people_capability")
 # =============================================================================
 
 # Case-sensitive const from the declarative-agent manifest JSON Schema; the
-# value is present since schema v1.3 (introduced in v1.3; unchanged through v1.7).
+# value is present since schema v1.3 (introduced in v1.3; unchanged through v1.8).
 PEOPLE_CAPABILITY_NAME = "People"
 
 # fsi_cai_featuretype label for the People capability (see create_cai_dataverse_schema.py).
@@ -176,7 +176,7 @@ def detect_people_capability(manifest: Any, agent_label: str = "") -> PeopleDete
 
     Matches ``capabilities[].name == "People"`` as a case-sensitive literal so a
     lowercase ``"people"`` (or any other casing) does NOT match. Returns the
-    first matching capability object; the optional v1.7 ``include_related_content``
+    first matching capability object; the optional v1.6+ ``include_related_content``
     boolean is captured but does NOT gate detection (it is a sub-setting).
 
     A non-fatal WARNING is emitted via the module logger for any capability whose

@@ -11,7 +11,7 @@ coe_function: govern
 > **Status:** Preview
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — ARG Power Platform Inventory GA Mar 31 2026; Package Management API GA v1.0 (application CopilotPackages.Read.All); several agent-specific ARG fields (isManaged, channels, authentication, capabilitiesCounts, powerPlatformConnectors) are still preview.
-> **Last Verified:** 2026-07-21
+> **Last Verified:** 2026-09-22
 
 Tenant-wide discovery and a canonical Dataverse **system-of-record** for every
 Copilot Studio and Microsoft 365 Copilot Agent Builder agent. Copilot Agent
@@ -280,8 +280,8 @@ downstream Copilot Billing Governance (CBG) solution.
 **People capability detection (`detect_people_capability.py`).** The "Reference
 org chart and profile info" toggle is the declarative-agent manifest entry
 `capabilities[].name == "People"` (a case-sensitive literal, stable across
-manifest schema v1.5–v1.7; the optional v1.7 `include_related_content` is
-captured but does not gate detection). This signal lives in `declarativeAgent.json`
+manifest schema v1.5–v1.8 (latest as of this verification); the optional v1.6+
+`include_related_content` is captured but does not gate detection). This signal lives in `declarativeAgent.json`
 inside the agent app package — **not** in the Dataverse `bot`/`botcomponent`
 definition and not in any public API for deployed agents — so it is parsed from
 manifests via a **manifest-source-agnostic** parser behind an acquisition-adapter
@@ -297,7 +297,7 @@ seam:
 Each hit is recorded as a `fsi_caiagentfeature` row of feature type
 **People (Org Chart & Profile)** with provenance (`fsi_detectionsource`) and a
 **Declared (Manifest)** confidence marker (`fsi_detectionconfidence`). "Declared"
-means authored/available in the manifest; a v1.7 `user_overrides` block can remove
+means authored/available in the manifest; a v1.6+ `user_overrides` block can remove
 a capability at runtime, so declared does not equate to effective. Declarative
 manifests carry no Dataverse bot GUID, so without an `--id-map` entry the agent id
 is flagged **provisional** and a warning is logged for the orchestrator to

@@ -146,8 +146,8 @@ The Copilot Agent Inventory solution uses **9 Dataverse tables**, **22 solution-
 | `fsi_IsEnabled` | `fsi_isenabled` | Boolean (default: true) | No | Whether the feature is enabled on the agent |
 | `fsi_RelationshipName` | `fsi_relationshipname` | String(200) | No | botcomponent navigation property the feature was matched through |
 | `fsi_DetectionSource` | `fsi_detectionsource` | Picklist (`fsi_cai_detectionsource`) | No | Acquisition source that produced this row (Dataverse botcomponent scan or a declarative-manifest adapter) |
-| `fsi_DetectionConfidence` | `fsi_detectionconfidence` | Picklist (`fsi_cai_detectionconfidence`) | No | Declared (manifest) vs Configured (Dataverse); declared capabilities may be removed by the user at runtime (v1.7 user_overrides) |
-| `fsi_DetectionDetail` | `fsi_detectiondetail` | Memo(4000) | No | JSON provenance for manifest-derived rows: source locator, manifest schema version, and capability sub-settings such as the v1.7 People include_related_content flag |
+| `fsi_DetectionConfidence` | `fsi_detectionconfidence` | Picklist (`fsi_cai_detectionconfidence`) | No | Declared (manifest) vs Configured (Dataverse); declared capabilities may be removed by the user at runtime (v1.6+ user_overrides) |
+| `fsi_DetectionDetail` | `fsi_detectiondetail` | Memo(4000) | No | JSON provenance for manifest-derived rows: source locator, manifest schema version, and capability sub-settings such as the v1.6+ People include_related_content flag |
 | `fsi_AgentRefProvisional` | `fsi_agentrefprovisional` | Boolean (default: false) | No | The fsi_agentid is a PROVISIONAL manifest/app id not yet bound to a Dataverse bot GUID (no --id-map match during manifest detection). Downstream joins (Copilot Billing Governance) must reconcile provisional rows before use; queryable so provisional rows can be filtered |
 | `fsi_LastScannedAt` | `fsi_lastscannedat` | DateTime | Yes | When this feature row was last refreshed |
 | `fsi_RunId` | `fsi_runid` | String(36) | No | Correlating cai- scan run identifier (36 characters or fewer) |
