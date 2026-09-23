@@ -5,6 +5,15 @@ All notable changes to the Copilot Agent Inventory are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-09-22
+
+### Fixed
+
+- Corrected declarative-agent schema provenance for People capability
+  sub-settings: Microsoft Learn schema 1.6 introduced `include_related_content`
+  on the People object and `user_overrides`; schema 1.7 did not introduce those
+  properties.
+
 ## [0.4.0-preview] - 2026-07-21
 
 Introduces a **license-aware Agent Builder discovery fallback**. The Package
@@ -425,7 +434,7 @@ sharing-audience-to-UPN expansion.
   manifest-source-agnostic parser that detects the declarative-agent
   `capabilities[].name == "People"` signal (the "Reference org chart and profile
   info" toggle) from `declarativeAgent.json`. Case-sensitive literal match, stable
-  across manifest schema v1.5–v1.7, with the optional v1.7 `include_related_content`
+  across manifest schema v1.5–v1.8, with the optional v1.6+ `include_related_content`
   captured (it does not gate detection). Includes an **acquisition-adapter seam**
   with two implemented adapters — `local-package` (app-package directory/`.zip`)
   and `source-repo` (source/CI tree) — plus a clearly-marked `FutureExportAdapter`
@@ -480,7 +489,7 @@ sharing-audience-to-UPN expansion.
 ### Notes
 
 - **Declared ≠ effective** — the People signal is detected as authored/available
-  in the manifest; a v1.7 `user_overrides` block can remove a capability at
+  in the manifest; a v1.6+ `user_overrides` block can remove a capability at
   runtime, so the marker is "Declared (Manifest)", not "effective".
 - **Provisional agent ids** — declarative manifests carry no Dataverse bot GUID;
   detections without an `--id-map` match are flagged provisional for the

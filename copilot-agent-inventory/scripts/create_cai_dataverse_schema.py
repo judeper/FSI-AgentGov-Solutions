@@ -271,7 +271,7 @@ CAI_OPTIONSETS = {
     },
     # Confidence marker for a detected feature. "Declared (Manifest)" means the
     # capability is authored/available in the declarative-agent manifest; per the
-    # v1.7 user_overrides caveat the consuming user may remove it at runtime, so
+    # v1.6+ user_overrides caveat the consuming user may remove it at runtime, so
     # declared is NOT the same as effective. Botcomponent rows are read from the
     # agent's persisted definition and are marked "Configured (Dataverse)".
     "fsi_cai_detectionconfidence": {
@@ -681,11 +681,11 @@ AGENTFEATURE_COLUMNS = [
     _picklist_col("fsi_DetectionConfidence", "Detection Confidence",
                   "fsi_cai_detectionconfidence", required=False,
                   description="Declared (manifest) vs Configured (Dataverse); declared "
-                              "capabilities may be removed by the user at runtime (v1.7 user_overrides)"),
+                              "capabilities may be removed by the user at runtime (v1.6+ user_overrides)"),
     _memo_col("fsi_DetectionDetail", "Detection Detail", 4000,
               description="JSON provenance for manifest-derived rows: source locator, "
                           "manifest schema version, and capability sub-settings such as "
-                          "the v1.7 People include_related_content flag"),
+                          "the v1.6+ People include_related_content flag"),
     _boolean_col("fsi_AgentRefProvisional", "Agent Ref Provisional", default=False,
                  description="The fsi_agentid is a PROVISIONAL manifest/app id not yet "
                              "bound to a Dataverse bot GUID (no --id-map match during "

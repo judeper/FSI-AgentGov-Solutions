@@ -5,7 +5,7 @@ adapters in ``scripts/detect_people_capability.py``:
 
   * ``detect_people_capability`` matches ``capabilities[].name == "People"`` as a
     CASE-SENSITIVE literal, independent of the manifest ``version`` (the const is
-    unchanged through v1.7), and captures the optional v1.7
+    unchanged through v1.8), and captures the optional v1.6+
     ``include_related_content`` sub-setting without letting it gate detection.
   * ``extract_capabilities`` / ``parse_manifest_version`` fail open on missing or
     malformed manifests (platform drift surfaces as "not detected", not an error).
@@ -37,11 +37,11 @@ import detect_people_capability as dp  # noqa: E402
 # detect_people_capability — the core signal
 # ---------------------------------------------------------------------------
 
-def test_detects_people_v17_with_include_related_content() -> None:
+def test_detects_people_v16_with_include_related_content() -> None:
     manifest = {
         "$schema": "https://developer.microsoft.com/json-schemas/copilot/"
-                   "declarative-agent/v1.7/schema.json",
-        "version": "1.7",
+                   "declarative-agent/v1.6/schema.json",
+        "version": "1.6",
         "capabilities": [
             {"name": "WebSearch"},
             {"name": "People", "include_related_content": True},
@@ -50,7 +50,7 @@ def test_detects_people_v17_with_include_related_content() -> None:
     result = dp.detect_people_capability(manifest)
     assert result.detected is True
     assert result.include_related_content is True
-    assert result.manifest_version == "1.7"
+    assert result.manifest_version == "1.6"
     assert result.raw_capability == {"name": "People", "include_related_content": True}
 
 

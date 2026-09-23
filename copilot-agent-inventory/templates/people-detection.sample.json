@@ -1,5 +1,5 @@
 {
-  "_comment": "Sample artifact emitted by detect_people_capability.py. It records the declarative-agent 'People' capability (capabilities[].name == 'People', the 'Reference org chart and profile info' toggle) detected from declarativeAgent.json manifests. Field names under 'features' are Dataverse LOGICAL names for fsi_caiagentfeature rows; picklist fields (fsi_featuretype, fsi_detectionsource, fsi_detectionconfidence) carry the option-set LABEL and the writer resolves the label to its integer value at upsert time. This is illustrative sample data, NOT an exported Power Platform artifact. The People signal is DECLARED (authored/available in the manifest); a v1.7 user_overrides block can remove it at runtime, so 'declared' does not guarantee 'effective'.",
+  "_comment": "Sample artifact emitted by detect_people_capability.py. It records the declarative-agent 'People' capability (capabilities[].name == 'People', the 'Reference org chart and profile info' toggle) detected from declarativeAgent.json manifests. Field names under 'features' are Dataverse LOGICAL names for fsi_caiagentfeature rows; picklist fields (fsi_featuretype, fsi_detectionsource, fsi_detectionconfidence) carry the option-set LABEL and the writer resolves the label to its integer value at upsert time. This is illustrative sample data, NOT an exported Power Platform artifact. The People signal is DECLARED (authored/available in the manifest); a v1.6+ user_overrides block can remove it at runtime, so 'declared' does not guarantee 'effective'.",
   "schemaVersion": "0.2.0-preview",
   "summary": {
     "runId": "cai-people-1781290000",
@@ -45,7 +45,7 @@
       "fsi_runid": "cai-people-1781290000"
     },
     {
-      "_comment": "Provisional agent id: the manifest had no Dataverse bot GUID and no --id-map entry resolved it, so fsi_agentid carries the declarative-agent id as a placeholder and agentRefProvisional is true. The orchestrator must reconcile this to the bot GUID before joining CAI/CBG. include_related_content (v1.7) is captured but does NOT gate detection.",
+      "_comment": "Provisional agent id: the manifest had no Dataverse bot GUID and no --id-map entry resolved it, so fsi_agentid carries the declarative-agent id as a placeholder and agentRefProvisional is true. The orchestrator must reconcile this to the bot GUID before joining CAI/CBG. include_related_content (v1.6+) is captured but does NOT gate detection.",
       "fsi_name": "People (Org Chart & Profile): Org Concierge",
       "fsi_agentid": "people-org-concierge",
       "fsi_environmentid": "Default-2c9e1a77-3b4d-4e5f-8a90-1b2c3d4e5f60",
