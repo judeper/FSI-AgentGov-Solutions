@@ -279,11 +279,11 @@ function Find-OpenHealthIssueForTarget {
     )
 
     $title = 'Health check failure: published artifacts not healthy'
-    $search = "`"$title`" in:title `"$TargetLabel`" in:body"
-    $json = Invoke-HealthGh -ArgumentList @('issue', 'list', '-R', $Repository, '--state', 'open', '--search', $search, '--json', 'number,updatedAt,body', '--jq', '.')
+    $search = "`"$TargetLabel`" in:body"
+    $json = Invoke-HealthGh -ArgumentList @('issue', 'list', '-R', $Repository, '--state', 'open', '--search', $search, '--json', 'number,title,updatedAt,body', '--jq', '.')
     $jsonText = @($json) -join "`n"
     if ([string]::IsNullOrWhiteSpace($jsonText)) { return @() }
-    return @($jsonText | ConvertFrom-Json)
+    return @($jsonText | ConvertFrom-Json | Where-Object { $_.title -eq $title })
 }
 
 function Sync-PublishedArtifactHealthIssues {

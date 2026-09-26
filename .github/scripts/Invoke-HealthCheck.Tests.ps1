@@ -123,11 +123,41 @@ Describe 'Write-HealthOutputs' {
     }
 }
 
+Describe 'Find-OpenHealthIssueForTarget' {
+    It 'searches by target body marker and filters the exact health-check title locally' {
+        Mock -CommandName Invoke-HealthGh -MockWith {
+            ($ArgumentList -join ' ') | Should -Match 'issue list'
+            ($ArgumentList -join ' ') | Should -Match '"raw-lock" in:body'
+            return @'
+[
+  {
+    "number": 370,
+    "title": "Health check failure: published artifacts not healthy",
+    "updatedAt": "2026-09-25T18:46:13Z",
+    "body": "Automated probe detected failures:\n\n- raw-lock expected 200 got 429"
+  },
+  {
+    "number": 999,
+    "title": "Unrelated raw-lock investigation",
+    "updatedAt": "2026-09-25T18:46:13Z",
+    "body": "raw-lock"
+  }
+]
+'@
+        }
+
+        $issues = @(Find-OpenHealthIssueForTarget -Repository 'judeper/FSI-AgentGov-Solutions' -TargetLabel 'raw-lock')
+
+        $issues.Count | Should -Be 1
+        $issues[0].number | Should -Be 370
+    }
+}
+
 Describe 'Sync-PublishedArtifactHealthIssues' {
     It 'comments on an existing target issue instead of creating a duplicate' {
         Mock -CommandName Invoke-HealthGh -MockWith {
             $joined = $ArgumentList -join ' '
-            if ($joined -match '^issue list ') { return '[{"number":370}]' }
+            if ($joined -match '^issue list ') { return '[{"number":370,"title":"Health check failure: published artifacts not healthy"}]' }
             if ($joined -match '^issue comment 370 ') { return 'commented' }
             throw "Unexpected gh call: $joined"
         }
@@ -151,7 +181,7 @@ Describe 'Sync-PublishedArtifactHealthIssues' {
     It 'auto-closes an existing target issue after the target passes' {
         Mock -CommandName Invoke-HealthGh -MockWith {
             $joined = $ArgumentList -join ' '
-            if ($joined -match '^issue list ') { return '[{"number":348}]' }
+            if ($joined -match '^issue list ') { return '[{"number":348,"title":"Health check failure: published artifacts not healthy"}]' }
             if ($joined -match '^issue close 348 ') { return 'closed' }
             throw "Unexpected gh call: $joined"
         }
