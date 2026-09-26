@@ -40,12 +40,14 @@ jobs:
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
-        run: python scripts/build-manifest.py --check
+        run: python scripts/build-manifest.py --check --tracked-only
 
       - name: Generate artifacts (writes gitignored site-docs)
         # The committed-tree gate above must run before any write step. This
-        # generation step is retained only to materialize gitignored site-docs
-        # and prove a full build leaves tracked artifacts unchanged.
+        # tracked-only check intentionally ignores generated files that are not
+        # committed (for example gitignored site-docs detail pages), because
+        # those files do not exist in a fresh checkout. This generation step
+        # materializes them and proves a full build leaves tracked artifacts unchanged.
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json

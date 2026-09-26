@@ -58,6 +58,8 @@ Usage:
 
     python scripts/build-manifest.py            # write artifacts in place
     python scripts/build-manifest.py --check    # validate + assert no drift
+    python scripts/build-manifest.py --check --tracked-only
+        # pre-generation CI gate: assert committed generated artifacts only
 
 Canonical inventory contract
 ----------------------------
@@ -126,6 +128,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import sys
 import zlib
 from collections import defaultdict
@@ -1932,7 +1935,26 @@ def check_only(path: Path, content: str, drift: list[str]) -> None:
         drift.append(str(path.relative_to(ROOT)))
 
 
-def run(check: bool) -> int:
+def load_tracked_relative_paths() -> set[str]:
+    """Return repo-tracked paths relative to ROOT using POSIX separators."""
+    result = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "-z"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        message = result.stderr.strip() or "git ls-files failed"
+        raise SystemExit(f"FATAL: unable to list tracked files: {message}")
+    return {path for path in result.stdout.split("\0") if path}
+
+
+def is_tracked_output(path: Path, tracked_paths: set[str]) -> bool:
+    """Return True when a generated output is committed in the current repo."""
+    return path.relative_to(ROOT).as_posix() in tracked_paths
+
+
+def run(check: bool, tracked_only: bool = False) -> int:
     log.info("Loading framework controls...")
     framework_pillars = load_framework_controls()
     framework_titles = load_framework_control_titles()
@@ -1962,7 +1984,15 @@ def run(check: bool) -> int:
         return 1
 
     drift: list[str] = []
-    record = check_only if check else (lambda p, c, d: write_if_changed(p, c, d))
+    tracked_paths = load_tracked_relative_paths() if check and tracked_only else None
+
+    def record(path: Path, content: str, drift: list[str]) -> None:
+        if check:
+            if tracked_paths is not None and not is_tracked_output(path, tracked_paths):
+                return
+            check_only(path, content, drift)
+            return
+        write_if_changed(path, content, drift)
 
     # Pre-scan sub-docs (need filenames for detail pages)
     sub_docs_per_slug: dict[str, list[str]] = {}
@@ -2103,8 +2133,18 @@ def main() -> int:
         action="store_true",
         help="Validate manifests + assert no drift in generated artifacts.",
     )
+    parser.add_argument(
+        "--tracked-only",
+        action="store_true",
+        help=(
+            "With --check, compare only generated outputs already tracked by git. "
+            "Useful before write steps, when gitignored generated files may be absent."
+        ),
+    )
     args = parser.parse_args()
-    return run(check=args.check)
+    if args.tracked_only and not args.check:
+        parser.error("--tracked-only requires --check")
+    return run(check=args.check, tracked_only=args.tracked_only)
 
 
 if __name__ == "__main__":

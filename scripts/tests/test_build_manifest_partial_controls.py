@@ -137,6 +137,14 @@ def _patch_minimal_run(monkeypatch, tmp_path: Path, artifact: str) -> dict[Path,
     return expected
 
 
+def _patch_tracked_outputs(monkeypatch, tmp_path: Path, paths: list[Path]) -> None:
+    monkeypatch.setattr(
+        bm,
+        "load_tracked_relative_paths",
+        lambda: {path.relative_to(tmp_path).as_posix() for path in paths},
+    )
+
+
 def test_full_build_preserves_authored_fields_for_all_affected_solutions() -> None:
     """A full regeneration must retain each solution's authored coverage fields."""
     for slug in AFFECTED_SOLUTIONS:
@@ -281,6 +289,41 @@ def test_check_mode_fails_on_deliberately_stale_committed_artifact(
     assert bm.run(check=True) == 1
 
 
+def test_tracked_only_check_passes_when_gitignored_site_docs_are_absent(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    expected = _patch_minimal_run(monkeypatch, tmp_path, "fresh\n")
+    tracked_outputs = [
+        tmp_path / "solutions.json",
+        tmp_path / "sample" / "controls-covered.json",
+    ]
+    _patch_tracked_outputs(monkeypatch, tmp_path, tracked_outputs)
+    for path in tracked_outputs:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(expected[path], encoding="utf-8")
+
+    assert bm.run(check=True, tracked_only=True) == 0
+
+
+def test_tracked_only_check_fails_on_stale_committed_artifact(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    expected = _patch_minimal_run(monkeypatch, tmp_path, "fresh\n")
+    tracked_outputs = [
+        tmp_path / "solutions.json",
+        tmp_path / "sample" / "controls-covered.json",
+    ]
+    _patch_tracked_outputs(monkeypatch, tmp_path, tracked_outputs)
+    for path in tracked_outputs:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        content = "stale\n" if path.name == "controls-covered.json" else expected[path]
+        path.write_text(content, encoding="utf-8")
+
+    assert bm.run(check=True, tracked_only=True) == 1
+
+
 def test_check_mode_passes_on_clean_committed_artifacts(tmp_path, monkeypatch) -> None:
     expected = _patch_minimal_run(monkeypatch, tmp_path, "fresh\n")
     for path, content in expected.items():
@@ -294,7 +337,9 @@ def test_manifest_check_workflow_gates_committed_tree_before_regenerating() -> N
     workflow = (ROOT / ".github" / "workflows" / "manifest-check.yml").read_text(
         encoding="utf-8"
     )
-    check_pos = workflow.index("python scripts/build-manifest.py --check")
+    check_pos = workflow.index(
+        "python scripts/build-manifest.py --check --tracked-only"
+    )
     generate_pos = re.search(
         r"(?m)^\s*run:\s+python scripts/build-manifest\.py\s*$", workflow
     )
