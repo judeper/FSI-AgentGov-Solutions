@@ -1,0 +1,135 @@
+#Requires -Version 7.2
+#Requires -Modules @{ ModuleName = "Pester"; ModuleVersion = "5.0.0" }
+
+BeforeAll {
+    . (Join-Path $PSScriptRoot 'Invoke-HealthCheck.ps1')
+
+    function Get-HealthResponse {
+        param(
+            [Parameter(Mandatory)] [int] $StatusCode,
+            [Parameter()] [hashtable] $Headers = @{},
+            [Parameter()] [string] $Content = ''
+        )
+
+        [pscustomobject]@{
+            StatusCode = $StatusCode
+            Headers    = $Headers
+            Content    = $Content
+        }
+    }
+}
+
+Describe 'Test-PublishedArtifactUrl' {
+    BeforeEach {
+        Mock -CommandName Start-Sleep -MockWith { }
+    }
+
+    It 'retries transient 429 with Retry-After and reports every attempt status' {
+        $script:i = 0
+        $responses = @(
+            (Get-HealthResponse -StatusCode 429 -Headers @{ 'Retry-After' = '1' }),
+            (Get-HealthResponse -StatusCode 200 -Content 'ok')
+        )
+        Mock -CommandName Invoke-HealthHttpRequest -MockWith {
+            $response = $responses[$script:i]
+            $script:i++
+            return $response
+        }
+
+        $result = Test-PublishedArtifactUrl -Label 'raw-lock' -Url 'https://unit/solutions.json' -MaxAttempts 4
+
+        $result.Passed | Should -BeTrue
+        $result.AttemptStatuses | Should -Be @('429', '200')
+        Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 1 }
+    }
+
+    It 'fails only after every transient attempt is exhausted' {
+        $script:i = 0
+        $responses = @(
+            (Get-HealthResponse -StatusCode 503),
+            (Get-HealthResponse -StatusCode 504),
+            (Get-HealthResponse -StatusCode 503)
+        )
+        Mock -CommandName Invoke-HealthHttpRequest -MockWith {
+            $response = $responses[$script:i]
+            $script:i++
+            return $response
+        }
+
+        $result = Test-PublishedArtifactUrl -Label 'site-home' -Url 'https://unit/' -MaxAttempts 3 -BaseDelaySeconds 0
+
+        $result.Passed | Should -BeFalse
+        $result.AttemptStatuses | Should -Be @('503', '504', '503')
+        $result.Errors[0] | Should -Match 'after attempts \[503 -> 504 -> 503\]'
+    }
+}
+
+Describe 'Add-SolutionsLockValidation' {
+    It 'attaches shape errors to a successful raw-lock HTTP response' {
+        $result = [pscustomobject]@{
+            Label           = 'raw-lock'
+            Url             = 'https://unit/solutions.json'
+            Expected        = '200'
+            FinalStatus     = '200'
+            AttemptStatuses = @('200')
+            Passed          = $true
+            Content         = '{"solutions":{"a":{"controls":[]}}}'
+            Errors          = @()
+        }
+
+        $validated = Add-SolutionsLockValidation -RawLockResult $result -MinSolutions 36
+
+        $validated.Passed | Should -BeFalse
+        ($validated.Errors -join "`n") | Should -Match 'count below floor'
+        ($validated.Errors -join "`n") | Should -Match 'missing schemaVersion'
+    }
+}
+
+Describe 'Sync-PublishedArtifactHealthIssues' {
+    It 'comments on an existing target issue instead of creating a duplicate' {
+        Mock -CommandName Invoke-HealthGh -MockWith {
+            $joined = $ArgumentList -join ' '
+            if ($joined -match '^issue list ') { return '[{"number":370}]' }
+            if ($joined -match '^issue comment 370 ') { return 'commented' }
+            throw "Unexpected gh call: $joined"
+        }
+        $result = [pscustomobject]@{
+            Label           = 'raw-lock'
+            Url             = 'https://unit/solutions.json'
+            Expected        = '200'
+            FinalStatus     = '429'
+            AttemptStatuses = @('429', '429')
+            Passed          = $false
+            Content         = ''
+            Errors          = @('raw-lock expected 200 got 429 after attempts [429 -> 429] -- https://unit/solutions.json')
+        }
+
+        Sync-PublishedArtifactHealthIssues -Repository 'judeper/FSI-AgentGov-Solutions' -Results @($result) -RunUrl 'https://unit/run'
+
+        Should -Invoke Invoke-HealthGh -Times 1 -Exactly -ParameterFilter { ($ArgumentList -join ' ') -match '^issue comment 370 ' }
+        Should -Invoke Invoke-HealthGh -Times 0 -Exactly -ParameterFilter { ($ArgumentList -join ' ') -match '^issue create ' }
+    }
+
+    It 'auto-closes an existing target issue after the target passes' {
+        Mock -CommandName Invoke-HealthGh -MockWith {
+            $joined = $ArgumentList -join ' '
+            if ($joined -match '^issue list ') { return '[{"number":348}]' }
+            if ($joined -match '^issue close 348 ') { return 'closed' }
+            throw "Unexpected gh call: $joined"
+        }
+        $result = [pscustomobject]@{
+            Label           = 'site-home'
+            Url             = 'https://unit/'
+            Expected        = '200'
+            FinalStatus     = '200'
+            AttemptStatuses = @('200')
+            Passed          = $true
+            Content         = 'ok'
+            Errors          = @()
+        }
+
+        Sync-PublishedArtifactHealthIssues -Repository 'judeper/FSI-AgentGov-Solutions' -Results @($result) -RunUrl 'https://unit/run'
+
+        Should -Invoke Invoke-HealthGh -Times 1 -Exactly -ParameterFilter { ($ArgumentList -join ' ') -match '^issue close 348 ' }
+    }
+}
