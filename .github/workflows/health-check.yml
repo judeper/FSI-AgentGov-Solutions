@@ -17,6 +17,10 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Resolve latest release tag
         id: tag
         env:
@@ -47,4 +51,5 @@ jobs:
             -Repository '${{ github.repository }}' `
             -LatestTag $env:LATEST_TAG `
             -RunUrl '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}' `
-            -ManageIssues
+            -ManageIssues `
+            -OutputPath $env:GITHUB_OUTPUT

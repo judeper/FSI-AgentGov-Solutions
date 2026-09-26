@@ -85,6 +85,44 @@ Describe 'Add-SolutionsLockValidation' {
     }
 }
 
+Describe 'Write-HealthOutputs' {
+    It 'writes GitHub step outputs to the provided output path' {
+        $outputPath = Join-Path $TestDrive 'github-output.txt'
+        $results = @(
+            [pscustomobject]@{
+                Label           = 'site-home'
+                Url             = 'https://unit/'
+                Expected        = '200'
+                FinalStatus     = '200'
+                AttemptStatuses = @('200')
+                Passed          = $true
+                Content         = 'ok'
+                Errors          = @()
+            },
+            [pscustomobject]@{
+                Label           = 'raw-lock'
+                Url             = 'https://unit/solutions.json'
+                Expected        = '200'
+                FinalStatus     = '503'
+                AttemptStatuses = @('503', '200')
+                Passed          = $false
+                Content         = ''
+                Errors          = @('raw-lock expected 200 got 503')
+            }
+        )
+
+        Write-HealthOutputs -Results $results -OutputPath $outputPath
+
+        $output = Get-Content -LiteralPath $outputPath -Raw
+        $output | Should -Match '^fail=1'
+        $output | Should -Match 'errors<<EOF'
+        $output | Should -Match '- raw-lock expected 200 got 503'
+        $output | Should -Match 'report<<EOF'
+        $output | Should -Match 'site-home  200  https://unit/'
+        $output | Should -Match 'raw-lock  503 -> 200  https://unit/solutions.json'
+    }
+}
+
 Describe 'Sync-PublishedArtifactHealthIssues' {
     It 'comments on an existing target issue instead of creating a duplicate' {
         Mock -CommandName Invoke-HealthGh -MockWith {
