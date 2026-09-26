@@ -70,7 +70,7 @@
       "type": "array",
       "items": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
       "uniqueItems": true,
-      "description": "Subset of controls[] the solution contributes to but does not primarily/fully implement. Each listed id is exported to <slug>/controls-covered.json with \"coverage\": \"partial\"; controls omitted here default to \"full\". This manifest field is the ONLY supported way to declare partial coverage — controls-covered.json is generated and MUST NOT be hand-edited, or the partial claim is silently upgraded to full on the next build. Record the supporting evidence (for example a LAB-VALIDATION.md anchor) in a YAML comment above this field."
+      "description": "Subset of controls[] the solution contributes to but does not primarily/fully implement. Each listed id is exported to <slug>/controls-covered.json with \"coverage\": \"partial\"; controls omitted here default to \"full\" unless the existing controls-covered.json already declares that control partial. Prefer this manifest field for new partial-coverage declarations; existing authored partial declarations, coverageScope, and notes in controls-covered.json are preserved across regeneration."
     },
     "dependencies": {
       "type": "array",

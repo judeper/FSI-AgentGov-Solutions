@@ -13,7 +13,11 @@ deterministic artifacts from a single source of truth:
   listing each framework control ID with its coverage level (`full` or
   `partial`). Schema: `scripts/controls-covered.schema.json`. Consumed by
   the framework `solutions-lock.json` as the canonical per-solution contract
-  (issue #163 / finding U-050).
+  (issue #163 / finding U-050). This artifact has a mixed contract: solution
+  identity, version, status, control membership, and `controlCount` are
+  generated from `manifest.yaml`, while existing authored coverage rationale
+  (`coverageScope`, per-control `notes`, and existing `coverage: "partial"`)
+  is preserved across full regeneration.
 * `README.md` solutions table inside `<!-- BEGIN:SOLUTIONS -->` /
   `<!-- END:SOLUTIONS -->` markers.
 * `site-docs/solutions/index.md` — Solutions Catalog grouped by domain.
@@ -601,16 +605,35 @@ def emit_solutions_json(
 def emit_controls_covered_json(slug: str, m: dict) -> str:
     """Return the per-solution controls-covered.json content.
 
-    Controls listed in the optional ``controls_partial`` manifest field are
-    exported with ``"coverage": "partial"`` (the solution contributes to the
-    control but does not provide primary/full implementation).  All other
-    controls default to ``"coverage": "full"``.
+    Generated fields are refreshed from ``manifest.yaml``: solution identity,
+    version, status, control membership/order, and ``controlCount``. Authored
+    evidence fields already present in ``controls-covered.json`` are preserved:
+    top-level ``coverageScope``, per-control ``notes``, and any existing
+    ``coverage: "partial"`` declaration. ``manifest.yaml.controls_partial`` can
+    also declare partial coverage; all remaining controls default to ``full``.
     """
+    existing_path = ROOT / slug / "controls-covered.json"
+    existing: dict = {}
+    if existing_path.is_file():
+        existing = json.loads(existing_path.read_text(encoding="utf-8"))
+    existing_controls = {
+        control.get("id"): control
+        for control in existing.get("controls", [])
+        if isinstance(control, dict) and control.get("id")
+    }
     partial_controls: set[str] = set(m.get("controls_partial", []))
-    controls = [
-        {"id": ctrl, "coverage": "partial" if ctrl in partial_controls else "full"}
-        for ctrl in m.get("controls", [])
-    ]
+    controls = []
+    for ctrl in m.get("controls", []):
+        previous = existing_controls.get(ctrl, {})
+        coverage = (
+            "partial"
+            if ctrl in partial_controls or previous.get("coverage") == "partial"
+            else "full"
+        )
+        entry = {"id": ctrl, "coverage": coverage}
+        if "notes" in previous:
+            entry["notes"] = previous["notes"]
+        controls.append(entry)
     out = {
         "schemaVersion": "1.0.0",
         "generatedBy": "scripts/build-manifest.py",
@@ -618,9 +641,11 @@ def emit_controls_covered_json(slug: str, m: dict) -> str:
         "solutionName": m["name"],
         "solutionVersion": m["version"],
         "status": m.get("status", "live"),
-        "controls": controls,
-        "controlCount": len(controls),
     }
+    if "coverageScope" in existing:
+        out["coverageScope"] = existing["coverageScope"]
+    out["controls"] = controls
+    out["controlCount"] = len(controls)
     return json.dumps(out, indent=2, ensure_ascii=False) + "\n"
 
 

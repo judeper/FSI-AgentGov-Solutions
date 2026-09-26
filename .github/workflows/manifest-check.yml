@@ -36,24 +36,25 @@ jobs:
 
       - run: pip install pyyaml jsonschema
 
+      - name: Verify committed artifacts are in sync with manifests
+        working-directory: solutions
+        env:
+          FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
+        run: python scripts/build-manifest.py --check
+
       - name: Generate artifacts (writes gitignored site-docs)
-        # Generation must run first: site-docs/solutions/** is gitignored and
-        # absent from a fresh checkout, so `--check` alone would report those
-        # missing files as drift.
+        # The committed-tree gate above must run before any write step. This
+        # generation step is retained only to materialize gitignored site-docs
+        # and prove a full build leaves tracked artifacts unchanged.
         working-directory: solutions
         env:
           FRAMEWORK_CONTROLS: ${{ github.workspace }}/fsi-agentgov/assessment/manifest/controls.json
         run: python scripts/build-manifest.py
 
-      - name: Verify committed artifacts are in sync with manifests
-        # THE drift gate. `build-manifest.py --check` cannot serve this purpose
-        # after a generate step, because it compares generated content against
-        # the files on disk -- which generation has just overwritten, so it
-        # would compare generator output to itself and pass unconditionally
-        # (issue #205: CI ran a 78-control framework against 79-control
-        # committed artifacts and still reported success).
-        # git is the right oracle here: tracked artifacts that generation
-        # changed show up as a diff, while gitignored site-docs stay invisible.
+      - name: Verify full build left tracked artifacts unchanged
+        # The --check step above is the committed-drift gate. git is a second
+        # oracle after generation: tracked artifacts that generation changed
+        # show up as a diff, while gitignored site-docs stay invisible.
         working-directory: solutions
         run: |
           if ! git diff --exit-code; then
