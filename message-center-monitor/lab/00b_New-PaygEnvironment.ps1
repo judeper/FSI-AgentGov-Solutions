@@ -86,6 +86,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 . $PSScriptRoot/lib/Write-LabLog.ps1
+. $PSScriptRoot/lib/PaygEnvironmentProvisioning.ps1
 $null = Initialize-LabLog -StepName '00b-payg-env'
 
 $cfg = Get-LabConfig -ConfigPath $ConfigPath
@@ -204,31 +205,9 @@ if ($existing.Count -eq 1) {
         $envObj = $resp.Content | ConvertFrom-Json
     } else {
         Write-LabLog -Level Info -Message "  Polling lifecycle operation: $opUrl"
-        $deadline = (Get-Date).AddMinutes(20)
-        $finalState = $null
-        while ((Get-Date) -lt $deadline) {
-            Start-Sleep -Seconds 15
-            $pollHdr = @{ Authorization = "Bearer $(Get-BapToken)" }
-            $poll = Invoke-WebRequest -Method GET -Uri $opUrl -Headers $pollHdr
-            $pb = $poll.Content | ConvertFrom-Json
-            $st = if ($pb.PSObject.Properties.Name -contains 'state' -and $pb.state) { $pb.state.id }
-                  elseif (($pb.PSObject.Properties.Name -contains 'properties') -and $pb.properties -and ($pb.properties.PSObject.Properties.Name -contains 'state')) { $pb.properties.state.id }
-                  else { 'Unknown' }
-            Write-LabLog -Level Info -Message "    state=$st http=$($poll.StatusCode)"
-            if ($st -in @('Succeeded','Failed','Canceled','FailedCreated')) {
-                $finalState = $st
-                break
-            }
-            if ($poll.StatusCode -ne 202) { break }
-        }
-        if ($finalState -and $finalState -ne 'Succeeded') {
-            Write-LabLog -Level Error -Message "Env create lifecycle operation ended in state '$finalState'." -Throw
-        }
-        # Re-pull env detail
-        $all2 = Invoke-RestMethod -Uri 'https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2023-06-01' -Headers @{ Authorization = "Bearer $(Get-BapToken)" }
-        $envObj = $all2.value | Where-Object { $_.properties.displayName -eq $DisplayName } | Select-Object -First 1
-        if (-not $envObj) {
-            Write-LabLog -Level Error -Message "Env not found after create. Operation may still be in progress; check $opUrl manually." -Throw
+        Invoke-PaygLifecycleOperationPoll -OperationUri $opUrl -Headers @{ Authorization = "Bearer $(Get-BapToken)" } | Out-Null
+        $envObj = Wait-PaygEnvironmentLinkedMetadata -DisplayName $DisplayName -GetEnvironments {
+            Invoke-RestMethod -Uri 'https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments?api-version=2023-06-01' -Headers @{ Authorization = "Bearer $(Get-BapToken)" }
         }
     }
     Write-LabLog -Level Info -Message "  Env created: $($envObj.name)"
