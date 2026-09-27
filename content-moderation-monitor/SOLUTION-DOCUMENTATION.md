@@ -129,9 +129,9 @@ The Content Moderation Monitor operates as PowerShell validation scripts with Po
 
 3. **Per-Agent Moderation Level Extraction:**
    - Parse agent JSON configuration (`bot.configuration` field)
-   - Extract content moderation by probing the keys `ContentModeration`, `contentModeration`, `ContentModerationSetting`, and `contentModerationSetting` (case-insensitive); the value may be either a simple string (`"Lowest"`/`"Low"`/`"Medium"`/`"High"`/`"Highest"`) or an object with a `level` property
+   - Read the nested `aISettings.contentModeration` value (confirmed read-only on the live lab validation tenant, 2026-06-13); the value may be either a simple string (`"Lowest"`/`"Low"`/`"Medium"`/`"High"`/`"Highest"`) or an object with a `level` property
    - Normalize values to CMM's canonical scale: `"Low"`, `"Medium"`, `"High"`, or `"Unknown"`
-   - **Best-effort heuristic.** Copilot Studio does not currently expose a documented public moderation field; if the underlying key name changes in a future Copilot Studio release, agents will normalize to `"Unknown"`. Treat scans where every agent resolves to `Unknown` as **unverified**, not compliant.
+   - **Best-effort heuristic.** Copilot Studio does not currently expose a documented public moderation field; if the underlying key name or nesting changes in a future Copilot Studio release, agents will normalize to `"Unknown"`. Treat scans where every agent resolves to `Unknown` as **unverified**, not compliant. Legacy flat top-level keys are retained only as an unused `botcomponent`-fallback path in `Get-BotModerationLevel`.
 
 4. **Zone Classification:**
    - If `-DataverseUrl` provided: Query environment lifecycle management table for zone
