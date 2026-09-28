@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.2.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-07-26
+> **Last Verified:** 2026-09-27
 
 Detects unauthorized agent-to-agent communication patterns, zone boundary violations, cross-tenant communication, and maker/checker violations in Copilot Studio multi-agent orchestration.
 
@@ -121,6 +121,7 @@ Test-CommRestrictionCompliance -ExcludeSandbox -WhatIf
 # 5. Export and verify evidence
 .\scripts\Export-CommViolationEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
+    -TenantId "<your-tenant-domain-or-id>" `
     -OutputDirectory ".\evidence" `
     -Interactive
 

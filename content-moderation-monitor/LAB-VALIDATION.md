@@ -134,9 +134,10 @@ Graph enum exposes no Copilot record type. README correlation description and CH
 ## Runtime-Only Caveats (not verifiable without a live tenant)
 
 1. **Undocumented moderation source field.** The monitor parses the unstructured `bot.configuration`
-   JSON for several candidate keys (`ContentModeration`, `contentModeration`, ...). Copilot Studio exposes
-   no documented public field for the agent-default moderation level. If the internal key changes, agents
-   report `Unknown` — the scan emits a warning and should be treated as **unverified, not compliant**.
+   JSON for the nested `aISettings.contentModeration` key (re-pathed from the disproven legacy flat-key
+   heuristic on 2026-06-13 — see "Live tenant validation outcome" above). Copilot Studio exposes no
+   documented public field for the agent-default moderation level. If the internal key or nesting changes,
+   agents report `Unknown` — the scan emits a warning and should be treated as **unverified, not compliant**.
    This is honestly documented in the README and TROUBLESHOOTING.md. Confirm against a live agent before
    relying on results.
 2. **Correlation user-matching quality.** `correlate_purview_events.py` matches moderation-violation
@@ -158,4 +159,3 @@ and are already disclosed to operators in the README and troubleshooting guide.
 ## Second-Pass Command-Existence Re-Verification (2026-06-05)
 
 An independent second-pass audit re-derived every invoked command, cmdlet, CLI verb, REST endpoint and api-version, Dataverse entity set / logical column / option-set, and module against Microsoft Learn, with a sharpened focus on confirming each surface exists and will run in a live lab. The Dataverse bot table and configuration column, the Purview auditLogQuery Microsoft Graph v1.0 surface, all fsi_ logical columns and option-set integers, and the MSAL / Az cmdlets were confirmed against Microsoft Learn; the bot.configuration internal moderation key is handled defensively and caveated. No corrections required.
-

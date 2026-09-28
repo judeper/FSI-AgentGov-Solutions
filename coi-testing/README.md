@@ -10,19 +10,19 @@ coe_function: govern
 > **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-07-26
+> **Last Verified:** 2026-09-27
 
 > **Note:** This is a scaffold release. The scenario library, the result
 > schema, and the runner shell are implemented; the agent-interaction layer
-> that drives a Copilot Studio agent via Direct Line is not yet implemented.
-> Scenarios currently report `SKIPPED` until the integration is added. See
-> *Implementation Status* below.
+> that drives a Copilot Studio agent via Direct Line or the Microsoft 365
+> Agents SDK is not yet implemented. Scenarios currently report `SKIPPED`
+> until the integration is added. See *Implementation Status* below.
 
 Automated conflict of interest testing framework for AI agent recommendations in financial services contexts.
 
 ## Overview
 
-The COI Testing framework defines a library of conflict-of-interest scenarios, drives them against an AI agent, and records results to Dataverse so they can be reviewed by supervisors and aggregated for control evidence. This release ships the scenario library, the result schema, and the runner shell. The runner does not yet send scenario inputs to a live agent — every scenario reports `SKIPPED` until the Direct Line integration is implemented.
+The COI Testing framework defines a library of conflict-of-interest scenarios, drives them against an AI agent, and records results to Dataverse so they can be reviewed by supervisors and aggregated for control evidence. This release ships the scenario library, the result schema, and the runner shell. The runner does not yet send scenario inputs to a live agent — every scenario reports `SKIPPED` until agent invocation (Direct Line or the Microsoft 365 Agents SDK) is implemented.
 
 ## Implementation Status
 
@@ -31,7 +31,7 @@ The COI Testing framework defines a library of conflict-of-interest scenarios, d
 | Scenario library (10 scenarios) | ✅ Implemented |
 | CLI runner / categories / reports | ✅ Implemented |
 | Dataverse result persistence | ✅ Implemented (requires `fsi_coitestresults` table — see [docs/dataverse-schema.md](docs/dataverse-schema.md)) |
-| Agent invocation via Direct Line | ⏳ Not implemented (scenarios report `SKIPPED`) |
+| Agent invocation (Direct Line or Microsoft 365 Agents SDK) | ⏳ Not implemented (scenarios report `SKIPPED`) |
 | Pass/fail evaluation of agent responses | ⏳ Not implemented |
 | Power Automate scheduled runner | ⏳ Not implemented |
 | FINRA Supervision Workflow integration | ⏳ Not implemented |
@@ -69,7 +69,8 @@ The COI Testing framework defines a library of conflict-of-interest scenarios, d
                               │
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Copilot Studio Agent                          │
-│                    (via Direct Line API — not yet wired)         │
+│       (via Direct Line API or Microsoft 365 Agents SDK —         │
+│        not yet wired)                                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -121,7 +122,7 @@ Detects inappropriate product bundling suggestions.
 |-------------|---------|
 | **Power Automate Premium** | Power Automate cloud flows using premium connectors (planned scheduled runner) |
 | **Dataverse capacity** | Test results storage |
-| **Copilot Studio (standalone subscription)** | Agent API access over the Direct Line channel (when Direct Line integration ships). The Copilot Studio for Teams plan included in select Microsoft 365 subscriptions publishes only to Teams and cannot generate web channel security secrets. |
+| **Copilot Studio (standalone subscription)** | Agent API access over the Direct Line channel or Microsoft 365 Agents SDK in a future release. The Copilot Studio for Teams plan included in select Microsoft 365 subscriptions publishes only to Teams and cannot generate web channel security secrets. |
 
 ### Permissions
 
@@ -147,14 +148,15 @@ $env:AZURE_MANAGED_IDENTITY_CLIENT_ID = "<managed-identity-client-id>"
 The runner also supports workload identity federation, certificate auth, Azure CLI auth for administrator workstations, and `--auth-mode client-secret` only as a legacy development fallback. See [docs/prerequisites.md](docs/prerequisites.md) for the full auth matrix.
 
 > The `direct_line_secret` / `agent_id` values described in earlier drafts are
-> not consumed by the current runner. Future agent invocation must handle Direct
-> Line token generation/refresh and OAuthCard sign-in flows when the agent
+> not consumed by the current runner. Future agent invocation must handle either
+> Direct Line token generation/refresh and OAuthCard sign-in flows, or the
+> Microsoft 365 Agents SDK's connection and sign-in handling, when the agent
 > requires user authentication.
 
 ### 3. Run Tests
 
 ```bash
-# Smoke-test all COI scenarios without Dataverse persistence (will report SKIPPED until Direct Line integration ships)
+# Smoke-test all COI scenarios without Dataverse persistence (will report SKIPPED until agent invocation ships)
 python scripts/run_coi_tests.py --environment "https://your-org.crm.dynamics.com" --dry-run --allow-skipped
 
 # Persist skipped scaffold results after Dataverse authentication is configured

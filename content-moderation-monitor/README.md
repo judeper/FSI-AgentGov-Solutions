@@ -11,7 +11,7 @@ coe_function: optimize
 > **Version:** v1.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-07-26
+> **Last Verified:** 2026-09-27
 
 Automated validation of Copilot Studio agent content moderation levels against zone-specific governance requirements.
 
@@ -151,11 +151,15 @@ expectations honest, please note:
 - **Source of moderation level.** Copilot Studio does not currently expose a
   documented public field for the agent-default moderation level. The monitor
   parses the unstructured `bot.configuration` JSON returned by the Power
-  Platform admin API and looks for several known key names
-  (`ContentModeration`, `contentModeration`, `ContentModerationSetting`,
-  `contentModerationSetting`). This is best-effort; if the field name changes
-  in a future Copilot Studio release, agents may report `Unknown`. When that
-  happens, treat the run as **unverified**, not as compliant.
+  Platform admin API and reads the nested `aISettings.contentModeration` value
+  (confirmed read-only on the live lab validation tenant, 2026-06-13). This is
+  best-effort; if the field name or nesting changes in a future Copilot Studio
+  release, agents may report `Unknown`. When that happens, treat the run as
+  **unverified**, not as compliant. Legacy flat top-level moderation keys do
+  not exist on real agents and are not read from `bot.configuration`; the
+  flat keys `ContentModeration`/`contentModeration`/`ContentModerationSetting`
+  are retained in `Get-BotModerationLevel` only in an optional, currently
+  unwired `botcomponent`-fallback path.
 - **Agent-default only.** This solution **does not** inspect topic-level
   moderation overrides, prompt-tool moderation overrides, custom safety
   messages, approval evidence, Purview moderation logs, or runtime moderation
