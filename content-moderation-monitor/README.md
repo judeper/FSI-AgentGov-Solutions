@@ -155,11 +155,11 @@ expectations honest, please note:
   (confirmed read-only on the live lab validation tenant, 2026-06-13). This is
   best-effort; if the field name or nesting changes in a future Copilot Studio
   release, agents may report `Unknown`. When that happens, treat the run as
-  **unverified**, not as compliant. The legacy flat top-level keys
-  `ContentModeration`/`contentModeration`/`ContentModerationSetting`/
-  `contentModerationSetting` do not exist on real agents; they are retained in
-  `Get-BotModerationLevel` only as an unused `botcomponent`-fallback path, not
-  read from `bot.configuration`.
+  **unverified**, not as compliant. Legacy flat top-level moderation keys do
+  not exist on real agents and are not read from `bot.configuration`; the
+  flat keys `ContentModeration`/`contentModeration`/`ContentModerationSetting`
+  are retained in `Get-BotModerationLevel` only in an optional, currently
+  unwired `botcomponent`-fallback path.
 - **Agent-default only.** This solution **does not** inspect topic-level
   moderation overrides, prompt-tool moderation overrides, custom safety
   messages, approval evidence, Purview moderation logs, or runtime moderation
