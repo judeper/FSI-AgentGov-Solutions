@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v2.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Upstream Microsoft dependency:** Preview — Copilot Studio credential-oversharing detection is currently listed by Microsoft for public preview and should be validated in a non-production tenant before regulated production use.
+> **Upstream Microsoft dependency:** Preview — Copilot Studio credential-oversharing detection (Microsoft roadmap ID 566873) is listed as In development on the Microsoft AI at Work roadmap (preview target July 2026, general availability target September 2026; status checked 2026-10-09). Public availability is not confirmed; validate in a non-production tenant before regulated production use.
 > **Last Verified:** 2026-07-26
 
 >

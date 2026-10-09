@@ -59,6 +59,6 @@ If using the Environment Lifecycle Management (ELM) solution, zone classificatio
 
 ## Important Notes
 
-- The Microsoft "Enforce safe sharing by detecting credential oversharing" feature is currently listed for public preview in July 2026 and general availability in September 2026. Verify current feature status before production deployment.
+- The Microsoft "Enforce safe sharing by detecting credential oversharing" feature is listed on the Microsoft AI at Work roadmap (ID 566873) as In development, with a preview target of July 2026 and a general availability target of September 2026 (status checked 2026-10-09; public availability is not confirmed). Verify current feature status before production deployment.
 - Preview features may have different security, compliance, and data residency commitments. Review Microsoft Power Platform preview terms.
 - This solution supports compliance with FINRA Rule 4511(a) record-keeping and OCC 2011-12 operational risk requirements but does not provide regulatory compliance on its own. Organizations should verify configuration helps meet their specific obligations.

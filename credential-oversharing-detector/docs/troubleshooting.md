@@ -51,7 +51,7 @@
 
 ### Scan completes but reports zero connectors
 
-- Connector scope information depends on the Microsoft safe-sharing feature currently listed for public preview in July 2026 and general availability in September 2026
+- Connector scope information depends on the Microsoft safe-sharing feature, which the AI at Work roadmap (ID 566873) lists as In development (preview target July 2026, general availability target September 2026; checked 2026-10-09), so public availability is not confirmed
 - Verify the feature is enabled in the target tenant
 - Check Power Platform admin center for feature availability status
 - Note: preview behavior may change; review current Microsoft documentation
