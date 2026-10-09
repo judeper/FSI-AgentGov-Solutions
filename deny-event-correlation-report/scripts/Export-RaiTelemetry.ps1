@@ -37,13 +37,18 @@
     Requires: Az.Accounts module
     Authentication: Microsoft Entra ID - uses Connect-AzAccount
 
-    This script targets the classic Application Insights Logs API endpoint
-    (api.applicationinsights.io). Workspace-based Application Insights
-    resources (which route telemetry through an Azure Monitor Log Analytics
-    workspace) require the Azure Monitor Logs API endpoint
-    (api.loganalytics.io) and a different query path; the classic endpoint
-    will return HTTP 404 for those resources. See:
+    This script targets the Application Insights query endpoint
+    (api.applicationinsights.io) with Microsoft Entra authentication and the
+    classic `customEvents` table. See:
+    https://learn.microsoft.com/azure/azure-monitor/app/azure-ad-authentication#query-application-insights-by-using-microsoft-entra-authentication
+    The Azure Monitor Logs query API is a separate, workspace-scoped endpoint
+    (api.loganalytics.azure.com) that queries Log Analytics workspace tables
+    (for workspace-based resources, `AppEvents`). See:
     https://learn.microsoft.com/azure/azure-monitor/logs/api/overview
+    Microsoft Learn does not state whether the Application Insights endpoint
+    returns an error for workspace-based resources, so validate this script
+    against your resource type; if it does not return data, use the Azure
+    Monitor Logs API with the `AppEvents` form of the query instead.
 
 .LINK
     https://github.com/judeper/FSI-AgentGov
@@ -58,15 +63,19 @@
 
   Migration completed: February 4, 2026
 
-  The deprecated x-api-key authentication method has been removed.
+  The retired x-api-key authentication method has been removed.
   This script uses Entra ID authentication and is unaffected by the
-  Application Insights query API-key retirement (September 30, 2026,
-  extended by Microsoft from the originally announced March 31, 2026).
+  Application Insights query API-key retirement. Microsoft's retirement
+  date for query API keys was September 30, 2026 (extended from the
+  originally announced March 31, 2026); that date has passed as of
+  2026-10-09. Do not use API keys to query Application Insights.
 
   Prerequisites:
   - Install Az.Accounts module: Install-Module Az.Accounts -Force
   - Authenticate before running: Connect-AzAccount
-  - Grant Monitoring Reader role on Application Insights resource
+  - Grant read access on the Application Insights resource (this solution
+    documents the Monitoring Reader role; the Microsoft Learn Entra query
+    example uses the Reader role)
 
 ================================================================================
 #>

@@ -6,6 +6,7 @@ All notable changes to the Deny Event Correlation Report are documented here.
 
 ### Changed
 
+- **Script header**: `scripts/Export-RaiTelemetry.ps1` comment header (no functional change) now states that the Application Insights query API-key retirement date (September 30, 2026, extended from March 31, 2026) has passed, and no longer asserts that the Application Insights endpoint returns HTTP 404 for workspace-based resources or that the Azure Monitor Logs API is `api.loganalytics.io`; Microsoft Learn documents the workspace-scoped Logs query API at `api.loganalytics.azure.com` and does not document that 404 behavior. The prerequisite note now states Learn's example uses the Reader role alongside this solution's documented Monitoring Reader role.
 - **Docs**: Re-checked `docs/troubleshooting.md` against Microsoft Learn and Microsoft release communications. The Application Insights `x-api-key` query retirement date (September 30, 2026) has passed, so `docs/troubleshooting.md`, `docs/prerequisites.md`, and `docs/architecture.md` no longer use future tense; the Graph PowerShell SDK note now states the v1.0 `New-MgSecurityAuditLogQuery` cmdlet is in `Microsoft.Graph.Security` (the beta equivalent is in `Microsoft.Graph.Beta.Security`). The inline `Last verified` marker was left unchanged because some claims (for example the Monitoring Reader role for Application Insights queries) could not be verified on Microsoft Learn. No regulatory or compliance wording was reviewed, added, or altered.
 
 ### Fixed

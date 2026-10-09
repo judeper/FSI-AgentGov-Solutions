@@ -54,7 +54,7 @@ Verified API/auth assertions: `Get-AzAccessToken -ResourceUrl ... -AsSecureStrin
 
 ## 5. Runtime-only caveats (cannot be verified statically)
 
-1. **Upstream preview dependency.** Connector OAuth-scope signal depends on Microsoft's "Enforce safe sharing by detecting credential oversharing" capability, listed for public preview (July 2026) / GA (September 2026). Availability and shape may change; validate in a non-production tenant. Without it, scans may report zero connectors (documented in troubleshooting).
+1. **Upstream preview dependency.** Connector OAuth-scope signal depends on Microsoft's "Enforce safe sharing by detecting credential oversharing" capability, listed on the AI at Work roadmap (ID 566873) as In development (preview target July 2026 / GA target September 2026; checked 2026-10-09; public availability not confirmed). Availability and shape may change; validate in a non-production tenant. Without it, scans may report zero connectors (documented in troubleshooting).
 2. **`bot.configuration` JSON is not a supported contract surface.** Detection parses agent configuration JSON; Microsoft schema changes can silently degrade detection (Tier 2 plans to move to supported `connectionreferences` + PP Admin V2 metadata).
 3. **Scope baseline data must be populated.** The new `fsi_approvedscopes` / `fsi_actualscopes` columns are empty until a baseline capture process writes them; `Compare-OAuthScopeBaseline.ps1` will run cleanly but report nothing until rows carry scope data.
 4. **No automatic 429/5xx retry/backoff** in the PowerShell scripts (documented); implement retry at the Power Automate / wrapper layer.

@@ -33,7 +33,7 @@ Per-agent generative AI configuration snapshots used for drift detection. Each r
 | `fsi_GenerativeAnswersNodeCount` | Integer | No | Number of generative answers nodes in topic tree |
 | `fsi_AoaiConnectionId` | String(200) | No | Azure OpenAI connection reference identifier |
 | `fsi_ModelKnowledgeEnabled` | Boolean (default: false) | No | Whether Allow ungrounded responses (AI general knowledge) is enabled |
-| `fsi_SemanticSearchEnabled` | Boolean (default: false) | No | Whether Work IQ (semantic search) is enabled |
+| `fsi_SemanticSearchEnabled` | Boolean (default: false) | No | Whether Tenant graph grounding with semantic search is enabled |
 | `fsi_IsActive` | Boolean (default: true) | Yes | Current active baseline flag (one active per agent) |
 | `fsi_CapturedAt` | DateTime | Yes | When baseline was captured (UTC) |
 | `fsi_CapturedBy` | String(200) | No | UPN of capturing operator |
@@ -197,7 +197,7 @@ Types of generative AI features tracked by the auditor.
 | 100000004 | GenerativeActions | Generative plugin/action execution |
 | 100000005 | KnowledgeSource | External knowledge source integration |
 | 100000006 | ModelKnowledge | Allow ungrounded responses (AI general knowledge) feature |
-| 100000007 | SemanticSearch | Work IQ (semantic search) feature |
+| 100000007 | SemanticSearch | Tenant graph grounding with semantic search feature |
 
 #### fsi_GAC_connectionstatus
 
