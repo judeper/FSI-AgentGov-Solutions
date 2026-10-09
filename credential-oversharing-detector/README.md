@@ -15,7 +15,7 @@ coe_function: govern
 > **Last Verified:** 2026-07-26
 
 >
-> ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, published as **Microsoft 365 Roadmap ID 566873**. Microsoft currently lists a preview target of July 2026 and a general availability target of September 2026, with roadmap status *In development*. Microsoft has retired the Copilot Studio pages under the Power Platform release plan — those URLs now redirect to the Microsoft 365 Roadmap, which is the current source for Copilot Studio feature timing. Verify current feature status on the [Microsoft 365 Roadmap (Microsoft Copilot Studio)](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) before production deployment.
+> ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, published as **roadmap ID 566873** on the Microsoft roadmap site (now titled **AI at Work roadmap**). Microsoft lists a preview target of July 2026 and a general availability target of September 2026, with roadmap status *In development* (checked 2026-10-09; the September 2026 target month has passed without the status changing, so do not assume the capability is generally available). Microsoft Learn states that Dynamics 365 and Power Platform release plans are no longer published starting September 2026 and that new Power Platform capabilities are published to the AI at Work roadmap; the retired Copilot Studio release-plan pages now redirect to that roadmap, which is the current source for Copilot Studio feature timing. Verify current feature status on the [AI at Work roadmap (Microsoft Copilot Studio filter)](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) before production deployment.
 
 ## Overview
 
@@ -109,7 +109,7 @@ python create_cod_connection_references.py --interactive
 ```
 
 ### 4. Bind connection references
-Open Power Apps maker portal → Solutions → Default Solution → Connection References. Bind each `fsi_cr_*_credentialoversharing` reference to an active connection.
+Open Power Apps maker portal → Solutions → Default Solution → Objects → Connection References. Bind each `fsi_cr_*_credentialoversharing` reference to an active connection.
 
 ### 5. Build Power Automate flows
 Follow [Flow Configuration Guide](docs/flow-configuration.md) to manually build the 3 flows.
@@ -176,23 +176,23 @@ Follow [Flow Configuration Guide](docs/flow-configuration.md) to manually build 
 
 - PowerShell 7.1+
 - Python 3.9+ (for Dataverse setup)
-- Power Platform Admin role
+- Power Platform Administrator role
 - Microsoft 365 E3/E5 (for Teams alerts)
 
 See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 ## Known Limitations
 
-1. **Preview feature dependency** — Credential oversharing signals from Copilot Studio depend on a Microsoft feature currently listed on the Microsoft 365 Roadmap (ID 566873) with a preview target of July 2026 and general availability target of September 2026, at roadmap status *In development*. Roadmap timelines may change, and signal availability may vary by tenant.
+1. **Preview feature dependency** — Credential oversharing signals from Copilot Studio depend on a Microsoft feature listed on the AI at Work roadmap (ID 566873) with a preview target of July 2026 and general availability target of September 2026, at roadmap status *In development* as of 2026-10-09. Roadmap timelines may change, and signal availability may vary by tenant.
 2. **Connector scope visibility** — Not all connector types expose OAuth scope details through the admin API.
 3. **Service principal resolution** — Cross-environment credential detection requires consistent service principal IDs across environments.
 4. **Scan performance** — Large tenants (100+ environments) may require environment filters or batched scanning.
 
 ## Microsoft References
 
-- [Enforce safe sharing by detecting credential oversharing — Microsoft 365 Roadmap ID 566873](https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=566873)
-- [Microsoft 365 Roadmap — Microsoft Copilot Studio](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) (Microsoft's redirect target for the retired Copilot Studio release-plan pages: <https://aka.ms/MCStoM365Roadmap>)
-- [Release plans for Dynamics 365, Power Platform, and Copilot](https://learn.microsoft.com/en-us/dynamics365/release-plans/)
+- [Enforce safe sharing by detecting credential oversharing — AI at Work roadmap ID 566873](https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=566873)
+- [AI at Work roadmap — Microsoft Copilot Studio](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) (Microsoft's redirect target for the retired Copilot Studio release-plan pages: <https://aka.ms/MCStoM365Roadmap>)
+- [Release plans for Dynamics 365 and Power Platform](https://learn.microsoft.com/en-us/dynamics365/release-plans/) (no longer published starting September 2026; existing plans remain available for historical reference)
 - [Conditional Access for workload identities](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity)
 - [Power Platform Preview Terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/)
 

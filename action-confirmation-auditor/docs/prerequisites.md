@@ -8,7 +8,7 @@ Requirements for deploying the Action Confirmation Auditor.
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Platform Premium** | Power Automate flows (ACA-Scanner, ACA-Exception-Approval) |
+| **Power Automate Premium** | Power Automate flows (ACA-Scanner, ACA-Exception-Approval) |
 | **Dataverse capacity** | Scan run, audit result, and exception storage |
 | **Microsoft 365 E5** or **E5 Compliance** | Tenant-wide agent and action visibility |
 | **Azure Automation** | Scheduled runbook execution for compliance scans |
@@ -21,7 +21,7 @@ Requirements for deploying the Action Confirmation Auditor.
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Admin** | Cross-environment agent and action enumeration |
+| **Power Platform Administrator** | Cross-environment agent and action enumeration |
 | **Application Administrator** (or equivalent) | App registration for service principal |
 
 ### Power Platform Roles
@@ -116,7 +116,7 @@ See [dataverse-schema.md](dataverse-schema.md) for the auto-generated column ref
 
 | Endpoint | Protocol | Purpose |
 |----------|----------|---------|
-| `*.crm.dynamics.com` | HTTPS 443 | Dataverse Web API |
+| `*.crm.dynamics.com` | HTTPS 443 | Dataverse Web API (regional variants such as `*.crm4.dynamics.com`) |
 | `login.microsoftonline.com` | HTTPS 443 | Microsoft Entra ID authentication |
 | `management.azure.com` | HTTPS 443 | Azure Automation API |
 | `api.bap.microsoft.com` | HTTPS 443 | Power Platform Admin API |
@@ -137,14 +137,14 @@ If ELM is not deployed and the environment name matches no zone naming conventio
 ## Optional: Purview AI Hub / DSPM Integration
 
 `scripts/Get-PurviewAIHubEvidence.ps1` cross-references ACA confirmation results
-with Microsoft Purview AI Hub (DSPM for AI) activity. It is optional and has
+with Microsoft Purview Data Security Posture Management (DSPM) for AI activity. Microsoft Learn now labels this experience "classic" and describes a newer Data Security Posture Management experience that replaces it. The script is optional and has
 additional dependencies beyond the core scan:
 
 | Requirement | Purpose |
 |-------------|---------|
 | `Microsoft.Graph.Authentication` module | Connect to Microsoft Graph (`Connect-MgGraph`) |
 | Graph scope `AuditLogsQuery.Read.All` | Required by the Graph audit log query API (`security/auditLog/queries`) |
-| Dataverse access token (Power Platform Premium not required) | Query `fsi_actionauditresults`; supplied via `-DataverseAccessToken` (SecureString) or acquired automatically via `Az.Accounts` `Get-AzAccessToken` |
+| Dataverse access token (Power Automate Premium not required) | Query `fsi_actionauditresults`; supplied via `-DataverseAccessToken` (SecureString) or acquired automatically via `Az.Accounts` `Get-AzAccessToken` |
 | DSPM for AI enabled and Copilot audit logging active | So AI Hub activities exist to correlate |
 
 The Microsoft Graph session token cannot be reused for Dataverse because the two
@@ -162,7 +162,7 @@ Get-PurviewAIHubEvidence -DataverseUrl 'https://yourorg.crm.dynamics.com' -Lookb
 ## Validation Checklist
 
 - [ ] E5 or E5 Compliance license available
-- [ ] Power Platform Premium for flow creator
+- [ ] Power Automate Premium for flow creator
 - [ ] Dataverse environment ready with sufficient capacity
 - [ ] Microsoft Entra ID app registration created (`ACA-ActionConfirmationAuditor`)
 - [ ] Admin consent granted for API permissions

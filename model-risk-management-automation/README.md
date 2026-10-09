@@ -115,7 +115,7 @@ This solution addresses three operational gaps that examiners consistently cite:
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Automate Premium** | Power Automate cloud flows using premium connectors (Dataverse, HTTP) |
+| **Power Automate Premium** | Power Automate cloud flows using premium connectors (Dataverse, HTTP, Word Online (Business)) |
 | **Dataverse capacity** | 6 custom tables for MRM data |
 | **Managed Environment** | Required for Dataverse Long-Term Retention (LTR) |
 | **Microsoft 365 E3+** | Teams notifications and Graph API access |
@@ -124,9 +124,9 @@ This solution addresses three operational gaps that examiners consistently cite:
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Admin** | Environment enumeration and Dataverse `bot` table access |
+| **Power Platform Administrator** | Environment enumeration and Dataverse `bot` table access |
 | **System Administrator** | Dataverse table creation and security role configuration |
-| **Microsoft Entra Global Administrator** or **Privileged Role Administrator** | Granting tenant-wide admin consent for the managed identity's Microsoft Graph *application* permissions. Application Administrator and Cloud Application Administrator can consent to any other API, but not to Microsoft Graph app roles |
+| **Microsoft Entra Global Administrator** or **Privileged Role Administrator** | Granting tenant-wide admin consent for the managed identity's Microsoft Graph *application* permissions. Application Administrator, Cloud Application Administrator and AI Administrator can consent to any other API, but not to Microsoft Graph app roles |
 
 See [Prerequisites](docs/prerequisites.md) for complete details.
 
@@ -235,9 +235,9 @@ Review and complete all items in [DELIVERY-CHECKLIST.md](DELIVERY-CHECKLIST.md) 
 
 ## Platform Update Notes
 
-### AI-Powered Self-Healing for Desktop Flows (April 2026)
+### AI-Powered Self-Healing for Desktop Flows (preview since March 2026)
 
-Microsoft has introduced an AI-powered self-healing capability for Power Automate desktop flows (preview), which uses GPT-4.1 mini and Claude Sonnet 4.5 to recover from runtime UI errors (e.g., "Element not found" failures) in single-element UI/web actions.
+Microsoft has introduced an AI-powered self-healing capability for Power Automate desktop flows (preview; introduced with Power Automate for desktop build 2603), which uses GPT-4.1 mini and Claude Sonnet 4.5 to recover from runtime UI errors (e.g., "Element not found" and "Window not found" failures) in actions that interact with a single UI element.
 
 **Impact on this solution:** Self-healing desktop flows represent an emerging AI capability that may require MRM inventory tracking under institution-specific policies informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7):
 
@@ -253,7 +253,7 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 
 Microsoft Entra Agent ID (Control 2.26) introduces a new identity model for AI agents. Organizations migrating from legacy Copilot Studio app registrations to Entra Agent IDs must maintain an auditable trail of the migration for model risk examinations informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7).
 
-Copilot Studio automatically creates a Microsoft Entra Agent ID for each new agent created after the Entra Agent ID rollout in July 2026. Agents created before that rollout continue to use app registrations and are scheduled for migration to Agent IDs by Microsoft; governance capabilities work for both Agent IDs and App Registration IDs during the transition period. The Entra Agent ID is a **GUID** — retrieve it in Copilot Studio under **Settings** → **Advanced** → **Metadata** → **Entra Agent ID**, then use that GUID in the Microsoft Entra admin center.
+Copilot Studio automatically creates a Microsoft Entra Agent ID for each new agent created after the Entra Agent ID rollout in May 2026 (new agents can no longer opt out). Agents created before that rollout continue to use app registrations and will be migrated by Microsoft in a future update, or can be migrated manually; governance capabilities work for both Agent IDs and App Registration IDs during the transition period. The Entra Agent ID is a **GUID** — retrieve it in Copilot Studio under **Settings** → **Advanced** → **Metadata** → **Entra Agent ID**, then use that GUID in the Microsoft Entra admin center.
 
 The MRM model inventory (`fsi_modelinventory`) stores an `fsi_agentid` column that references the agent's identity. When migrating from a legacy Bot Framework app registration to an Entra Agent ID, the old and new identifiers must be linked to preserve the validation history chain.
 

@@ -8,6 +8,7 @@ All notable changes to the RAG Source Validator.
 
 ### Changed
 
+- **Docs**: Re-verified `README.md` against Microsoft Learn and refreshed the `Last Verified` marker to 2026-10-09. The Quick Start no longer suggests creating Dataverse tables and columns with the `pac` CLI (it has no table-creation command); tables are created with the schema deployment script `scripts/create_rsv_dataverse_schema.py` (or manually from the schema reference) until the packaged solution is published. The README Quick Start and Deployment sections now consistently point to the script as the supported path. No regulatory or compliance wording was reviewed, added, or altered.
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
 
 ### Fixed

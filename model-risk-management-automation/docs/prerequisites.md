@@ -12,13 +12,13 @@ Complete all prerequisites before deploying the Model Risk Management Automation
 | Microsoft 365 E3+ | Teams notifications, Graph API, SharePoint |
 | Power BI Pro or Premium Per User | MRM Compliance Dashboard (optional but recommended) |
 
-> **Note:** Power Platform Premium licensing is required for each user who triggers or interacts with approval flows. Service account licensing may differ — consult your Microsoft licensing representative.
+> **Note:** Power Automate Premium licensing is required for each user who triggers or interacts with approval flows. Service account licensing may differ — consult your Microsoft licensing representative.
 
 ## Required Roles
 
 | Role | Required For |
 |------|--------------|
-| Power Platform Admin | Environment enumeration, Dataverse `bot` table access, and Managed Environment configuration |
+| Power Platform Administrator | Environment enumeration, Dataverse `bot` table access, and Managed Environment configuration |
 | System Administrator (Dataverse) | Dataverse table creation, solution import, and alternate key configuration |
 | Microsoft Entra Global Administrator or Privileged Role Administrator | Managed identity creation and tenant-wide admin consent for Microsoft Graph application permissions (Application Administrator and Cloud Application Administrator cannot consent to Microsoft Graph app roles) |
 | SharePoint Admin | MRM Governance site creation and permission configuration |
@@ -90,7 +90,7 @@ Before proceeding, confirm:
 1. Navigate to **Power Platform Admin Center** → **Environments**
 2. Select the target environment → **Edit**
 3. Confirm **Managed Environment** is toggled on
-4. If not enabled, enable it before proceeding (requires Power Platform Admin)
+4. If not enabled, enable it before proceeding (requires Power Platform Administrator)
 
 ## Feature Flags
 
@@ -115,7 +115,7 @@ Feature flags are implemented as Dataverse environment variables. Both default t
 
 ## Pre-Deployment Checklist
 
-- [ ] Power Platform Premium licensing confirmed for all flow users
+- [ ] Power Automate Premium licensing confirmed for all flow users
 - [ ] Managed Environment enabled on target environment
 - [ ] Dataverse capacity sufficient for 6 custom tables
 - [ ] `agent-registry-automation` deployed and `fsi_agentinventory` populated

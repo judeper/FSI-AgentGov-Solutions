@@ -4,6 +4,10 @@ All notable changes to the Deny Event Correlation Report are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs**: Re-checked `docs/troubleshooting.md` against Microsoft Learn and Microsoft release communications. The Application Insights `x-api-key` query retirement date (September 30, 2026) has passed, so `docs/troubleshooting.md`, `docs/prerequisites.md`, and `docs/architecture.md` no longer use future tense; the Graph PowerShell SDK note now states the v1.0 `New-MgSecurityAuditLogQuery` cmdlet is in `Microsoft.Graph.Security` (the beta equivalent is in `Microsoft.Graph.Beta.Security`). The inline `Last verified` marker was left unchanged because some claims (for example the Monitoring Reader role for Application Insights queries) could not be verified on Microsoft Learn. No regulatory or compliance wording was reviewed, added, or altered.
+
 ### Fixed
 
 - **Microsoft Graph audit search mislabeled as beta/preview (tech-accuracy R3 · squad audit).** `docs/prerequisites.md`, `docs/architecture.md`, `docs/troubleshooting.md`, `scripts/Export-DlpCopilotEvents.ps1`, `scripts/Export-CopilotDenyEvents.ps1`, `.ralph-config.json`, and `LAB-VALIDATION.md` described `/security/auditLog/queries` as a beta/preview API "not supported for production use." Creating an `auditLogQuery` at `POST /security/auditLog/queries` is **generally available on the Microsoft Graph v1.0 endpoint** with `AuditLogsQuery.Read.All` (or service-specific `AuditLogsQuery-*.Read.All`) permissions. Updated all seven files to describe it as a supported GA (v1.0) migration path while `Search-UnifiedAuditLog` remains the production extractor. The Graph **PowerShell SDK** cmdlet (`New-MgBetaSecurityAuditLogQuery`) is still **beta-only** in `Microsoft.Graph.Beta.Security`, so the troubleshooting note retains that module reference. Sources: Microsoft Learn [Create auditLogQuery (v1.0)](https://learn.microsoft.com/en-us/graph/api/security-auditcoreroot-post-auditlogqueries?view=graph-rest-1.0), [auditLogQuery resource (v1.0)](https://learn.microsoft.com/en-us/graph/api/resources/security-auditlogquery?view=graph-rest-1.0).
