@@ -8,6 +8,7 @@ All notable changes to the RAG Source Validator.
 
 ### Changed
 
+- **Docs**: Re-verified `README.md` against Microsoft Learn and refreshed the `Last Verified` marker to 2026-10-09. The Quick Start no longer suggests creating Dataverse tables and columns with the `pac` CLI (it has no table-creation command); tables are created manually (for example, in the Power Apps maker portal) using the schema reference until the packaged solution is published. No regulatory or compliance wording was reviewed, added, or altered.
 - **Operator ergonomics (Wave 6 P4a):** State-changing scripts now support `-WhatIf` and `-Confirm` switches via `SupportsShouldProcess`. Existing callers see no behavior change unless they explicitly pass `-WhatIf`.
 
 ### Fixed

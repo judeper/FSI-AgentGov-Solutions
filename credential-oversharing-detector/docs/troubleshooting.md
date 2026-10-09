@@ -34,7 +34,7 @@
 
 ### "Insufficient privileges" when scanning
 
-- **Power Platform Admin** role is required for cross-environment scanning
+- **Power Platform Administrator** role is required for cross-environment scanning
 - Environment-level System Customizer is insufficient; **System Administrator** is needed
 - For Dataverse persistence, verify the app user has read/write access to COD tables (`fsi_credentialscans`, `fsi_credentialviolations`, `fsi_credentialexceptions`)
 

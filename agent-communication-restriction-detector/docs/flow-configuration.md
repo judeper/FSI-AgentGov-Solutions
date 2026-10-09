@@ -79,6 +79,7 @@ Add these **Initialize variable** actions immediately after the trigger:
    - Resource Group: `ResourceGroup` variable
    - Automation Account: `AutomationAccount` variable
    - Runbook Name: `Start-CommRestrictionValidationRunbook`
+   - Wait for Job: **No** (the next step polls for completion)
    - Runbook Parameters:
      - `TenantId`: `TenantId` variable
      - `ClientId`: `ClientId` variable
@@ -88,12 +89,15 @@ Add these **Initialize variable** actions immediately after the trigger:
 
 ### Step 4: Wait for Job Completion
 
-1. Add action: **Azure Automation** > **Wait for job**
-2. Configure:
-   - Job ID: `Create_Automation_Job` output jobId
-   - Timeout: 7200 seconds (2 hours)
-   - Polling interval: 30 seconds
-3. Rename action: `Wait_For_Job`
+The Azure Automation connector has no standalone "Wait for job" action. It offers **Create job** (with an optional **Wait for Job** parameter), **Get status of job**, and **Get job output**. Poll the job status with a **Do until** loop:
+
+1. Add action: **Control** > **Do until**
+2. Inside the loop, add:
+   - **Delay**: 30 seconds
+   - **Azure Automation** > **Get status of job** (Job ID: `Create_Automation_Job` output jobId), renamed `Get_Job_Status`
+3. Loop condition: the job status from `Get_Job_Status` is equal to `Completed`, `Failed`, `Stopped`, or `Suspended`
+4. Loop limits: Count 240, Timeout `PT2H` (2 hours; 240 iterations at 30 seconds)
+5. Rename action: `Wait_For_Job`
 
 ### Step 5: Get Job Output
 
@@ -203,7 +207,7 @@ Add these **Initialize variable** actions immediately after the trigger:
 3. Post in: Channel
 4. Team: `TeamsGroupId` variable
 5. Channel: `TeamsChannelId` variable
-6. Adaptive Card JSON (summary template):
+6. Adaptive Card JSON (summary template). Power Automate doesn't support Adaptive Cards templating (`${...}`), so insert `Parse_Results` fields as dynamic content (shown here as `@{...}` expressions):
 
 ```json
 {
@@ -221,12 +225,12 @@ Add these **Initialize variable** actions immediately after the trigger:
         {
             "type": "FactSet",
             "facts": [
-                { "title": "Status", "value": "${OverallStatus}" },
-                { "title": "Severity", "value": "${AlertSeverity}" },
-                { "title": "Violations", "value": "${ViolationCount}" },
-                { "title": "Agents Scanned", "value": "${TotalAgents}" },
-                { "title": "Environments", "value": "${TotalEnvironments}" },
-                { "title": "Scan Time", "value": "${Timestamp}" }
+                { "title": "Status", "value": "@{body('Parse_Results')?['OverallStatus']}" },
+                { "title": "Severity", "value": "@{body('Parse_Results')?['AlertSeverity']}" },
+                { "title": "Violations", "value": "@{body('Parse_Results')?['ViolationCount']}" },
+                { "title": "Agents Scanned", "value": "@{body('Parse_Results')?['TotalAgents']}" },
+                { "title": "Environments", "value": "@{body('Parse_Results')?['TotalEnvironments']}" },
+                { "title": "Scan Time", "value": "@{body('Parse_Results')?['Timestamp']}" }
             ]
         }
     ]
@@ -427,8 +431,8 @@ After either branch (use a common action after the condition):
 
 ### Approval Flow Issues
 
-- **Approval not received**: Verify the `{{COMPLIANCE_EMAIL}}` distribution list is correct and members have Power Automate licenses
-- **Approval times out**: The default approval timeout is 30 days; configure a custom timeout if needed
+- **Approval not received**: Verify the `{{COMPLIANCE_EMAIL}}` assignee is correct and is a user or Microsoft 365 group in your tenant (approvals can be assigned to users, including guests who accepted the B2B invitation, and Microsoft 365 groups). Approvers do not need a Premium Power Automate license to respond. Approvals also require a Dataverse database in the flow's environment
+- **Approval times out**: A cloud flow run times out after 30 days, including pending steps such as approvals; for longer-running approvals, store them in Dataverse (see the Power Automate approvals documentation)
 - **Exception status not updating**: Check Dataverse permissions for the flow connection identity
 
 ### Flow Errors (Scope_Catch)
@@ -439,4 +443,4 @@ After either branch (use a common action after the condition):
 
 ---
 
-*Agent Communication Restriction Detector — Flow Setup Guide v1.2.1 — Last Verified: 2026-05-25*
+*Agent Communication Restriction Detector — Flow Setup Guide v1.2.1 — Last Verified: 2026-10-09*

@@ -4,6 +4,10 @@ All notable changes to the Action Confirmation Auditor are documented in this fi
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs**: Re-checked `docs/prerequisites.md` against Microsoft Learn. Corrected "Power Automate Premium" licensing name, the "Power Platform Administrator" role name, the Dataverse Web API network row (regional variants such as `*.crm4.dynamics.com`), and noted that Microsoft Learn now labels the Purview DSPM for AI experience "classic" with a newer Data Security Posture Management experience replacing it. The footer `Last Verified` marker was left unchanged because the "Microsoft 365 E5 or E5 Compliance" licensing row could not be verified on Microsoft Learn. No regulatory or compliance wording was reviewed, added, or altered.
+
 ## [1.2.3] - 2026-09-11
 
 ### Fixed

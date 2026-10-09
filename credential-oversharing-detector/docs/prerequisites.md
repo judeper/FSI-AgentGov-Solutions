@@ -20,7 +20,7 @@
 
 ### Power Platform Administration
 
-- **Power Platform Admin** or **Dynamics 365 Service Admin** role — required for cross-environment agent scanning
+- **Power Platform Administrator** or **Dynamics 365 Service Admin** role — required for cross-environment agent scanning
 - **Environment-level System Administrator** — required for Dataverse table operations (schema creation, record read/write)
 
 ### Microsoft Entra ID

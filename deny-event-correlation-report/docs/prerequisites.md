@@ -43,9 +43,9 @@
 |------------|-------|----------|
 | **Reader** | App Insights resource | Query telemetry |
 | **Monitoring Reader** | App Insights resource | Managed identity / Entra ID authentication (recommended) |
-| ~~**API Key (Read)**~~ | ~~App Insights resource~~ | ~~REST API access~~ (query API keys retiring September 30, 2026) |
+| ~~**API Key (Read)**~~ | ~~App Insights resource~~ | ~~REST API access~~ (query API key retirement date, September 30, 2026, has passed) |
 
-> ⚠️ **Retirement Notice:** API key authentication (`x-api-key`) for querying Application Insights is being retired **September 30, 2026** (Microsoft extended this from the originally announced March 31, 2026). See [Authentication Migration](#authentication-migration) for Entra ID setup. This solution already uses Entra ID authentication, so no API key is required.
+> ⚠️ **Retirement Notice:** API key authentication (`x-api-key`) for querying Application Insights had an announced retirement date of **September 30, 2026** (Microsoft extended this from the originally announced March 31, 2026); as of 2026-10-09 that date has passed. See [Authentication Migration](#authentication-migration) for Entra ID setup. This solution already uses Entra ID authentication, so no API key is required.
 
 ### Defender for Cloud Apps (Optional)
 
@@ -228,8 +228,8 @@ union isfuzzy=true
 | Date | Event |
 |------|-------|
 | **Now** | Use managed identity-first authentication for Azure Automation runbooks |
-| **September 30, 2026** | x-api-key query authentication retired (extended from March 31, 2026) |
-| **After September 30, 2026** | Runbooks that still depend on API keys for querying fail until migrated |
+| **September 30, 2026** | x-api-key query authentication announced retirement date (extended from March 31, 2026); date has passed |
+| **After September 30, 2026** | Runbooks that still depend on API keys for querying must be migrated to Entra ID |
 
 ### Migration Steps
 

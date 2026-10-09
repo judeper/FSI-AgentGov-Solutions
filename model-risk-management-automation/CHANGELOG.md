@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs**: Re-checked `README.md` and `docs/prerequisites.md` against Microsoft Learn. Corrected the Entra Agent ID rollout date (May 2026, not July 2026; new agents can no longer opt out, and pre-rollout agents are migrated by Microsoft in a future update or manually), the Power Automate for desktop self-healing heading (preview since build 2603, March 2026) and description, the "Power Platform Administrator" role name, the "Power Automate Premium" licensing name, and added the AI Administrator consent role and Word Online (Business) as a premium connector. This supersedes the earlier "after the July 2026 rollout" wording in this changelog. The `Last Verified` marker was left unchanged because the "Microsoft 365 E3+" licensing row could not be verified on Microsoft Learn. No regulatory or compliance wording was reviewed, added, or altered.
+
 ### Fixed
 
 - **Minor (docs)**: `README.md` *Prerequisites → Licensing* and `docs/prerequisites.md` *Licensing* listed **"Power Platform Premium"**, which is not a Microsoft SKU. The current user license that grants premium connectors for cloud flows is **Power Automate Premium**. Corrected the SKU name in both files and clarified the purpose as premium-connector cloud flows. `README.md:118`, `docs/prerequisites.md:9`. Ref: https://learn.microsoft.com/power-platform/admin/power-automate-licensing/types (drift re-verification vs Microsoft Learn, issue #360)

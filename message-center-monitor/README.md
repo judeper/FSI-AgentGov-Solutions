@@ -11,7 +11,7 @@ coe_function: scale
 > **Version:** v2.5.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-07-26
+> **Last Verified:** 2026-10-09
 >
 > **For AI agents and engineers** working in this solution: see [`AGENTS.md`](AGENTS.md)
 > for current operational state, cross-machine resume runbook, and
@@ -124,12 +124,12 @@ The PowerShell governance scripts (`Invoke-MessageCenterSync.ps1`, `Get-MessageC
 - `ServiceMessage.Read.All` is the only Graph application permission required for Message Center posts. Do not request `ServiceHealth.Read.All` unless you extend this solution to call `healthOverviews` or `issues`.
 - Message Center message categories are Graph enum values (`planForChange`, `stayInformed`, `preventOrFixIssue`) mapped to Dataverse choice integers in `create_mcm_dataverse_schema.py`. `category` and `severity` (`normal`, `high`, `critical`) are both evolvable enums that also declare an `unknownFutureValue` sentinel; the shipped maps in `Invoke-MessageCenterSync.ps1` cover the three concrete values of each.
 - `services[]` and `tags[]` are Microsoft-provided strings. Use configurable routing rules for service names such as Power Platform or Microsoft Copilot Studio instead of hard-coding a closed taxonomy.
-- Power Platform release plans are not ingested by this solution. Review the Microsoft Learn release plan pages and Release planner separately during release-wave readiness.
+- Power Platform release plans are not ingested by this solution. As of 2026-10-09, Microsoft Learn states that release plans are no longer published starting in September 2026 and that new Power Platform capabilities are published to the AI at Work roadmap (aka.ms/AIatWorkRoadmap). Review that roadmap separately during release-wave readiness.
 
 ### 4. Power Platform Environment
 
-- Dataverse environment (included with most Power Platform licenses)
-- Power Automate Premium license (required for Dataverse and HTTP connectors)
+- Dataverse environment (a Dataverse database is required)
+- A license with premium-connector entitlement, such as Power Automate Premium (the Microsoft Dataverse and HTTP with Microsoft Entra ID connectors are both Premium connectors)
 
 ### 5. Dataverse Application User (required for governance scripts)
 
@@ -285,7 +285,7 @@ No custom security roles required.
 
 ## Polling Interval
 
-Microsoft Message Center has no webhook/push notification. The solution polls Graph API.
+Microsoft Message Center has no documented webhook/push notification for posts in Microsoft Graph. The solution polls Graph API.
 
 | Interval | Use Case |
 |----------|----------|

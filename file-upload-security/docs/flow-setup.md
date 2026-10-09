@@ -18,7 +18,7 @@ Before deploying the flow:
 ### 1. Create Flow in Power Automate
 
 1. Open [Power Automate](https://make.powerautomate.com)
-2. Navigate to **My flows** > **Create** > **Scheduled cloud flow**
+2. Navigate to **Create** > **Scheduled cloud flow**
 3. Follow the steps in this guide to build the flow actions and configure connection references
 
 ### 2. Configure Variables
@@ -43,9 +43,9 @@ After import, edit the flow and update these variables:
 | Reference | Connector | Action |
 |-----------|-----------|--------|
 | `fsi_cr_dataverse_fileuploadsecurity` | Dataverse | Select existing connection |
-| `fsi_cr_office365_fileuploadsecurity` | Office 365 | Select existing connection |
-| `fsi_cr_teams_fileuploadsecurity` | Teams | Select existing connection |
-| `fsi_cr_azureautomation_fileuploadsecurity` | Azure Automation | Create or select connection |
+| `fsi_cr_office365_fileuploadsecurity` | Office 365 Outlook | Select existing connection |
+| `fsi_cr_teams_fileuploadsecurity` | Microsoft Teams | Select existing connection |
+| `fsi_cr_azureautomation_fileuploadsecurity` | Azure Automation (Premium connector) | Create or select connection |
 
 ### 4. Test
 
@@ -95,4 +95,4 @@ Recurrence (Daily 06:00 UTC)
 
 ---
 
-*File Upload Security Configurator — Flow Setup Guide — Last Verified: 2026-05-25*
+*File Upload Security Configurator — Flow Setup Guide — Last Verified: 2026-10-09*

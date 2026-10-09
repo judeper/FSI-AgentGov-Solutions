@@ -6,14 +6,14 @@
 
 | Permission | Scope | Purpose |
 |-----------|-------|---------|
-| Environment.Read | Power Platform | Enumerate environments |
+| EnvironmentManagement.Environments.Read | Power Platform API (delegated) | Enumerate environments when calling the Power Platform API directly; the bundled PowerShell scripts use `Get-AdminPowerAppEnvironment`, which relies on the Power Platform Administrator role below |
 | Dynamics CRM user_impersonation | Delegated | Read/write Dataverse tables |
 
 ### Power Platform
 
 | Role | Scope | Purpose |
 |------|-------|---------|
-| Power Platform Admin | Tenant | Enumerate all environments |
+| Power Platform Administrator | Tenant | Enumerate all environments |
 | System Administrator | Dataverse org | Read bot table, write baselines/violations |
 
 ### Azure Automation (Optional)
@@ -21,7 +21,7 @@
 | Permission | Purpose |
 |-----------|---------|
 | Automation Contributor | Import and manage runbook |
-| Managed identity access | Recommended runtime authentication for Dataverse and Power Platform APIs |
+| Managed identity access | Recommended runtime authentication for Dataverse; register the managed identity's application (client) ID as a Dataverse application user. User-assigned identities are supported for Automation cloud jobs only |
 | Certificate access | Fallback authentication when managed identity is not available |
 
 ## Required Modules
@@ -102,9 +102,9 @@ Unclassifiable environments default to Zone 1 (most restrictive) for fail-safe g
 | Endpoint | Protocol | Purpose |
 |----------|----------|---------|
 | `login.microsoftonline.com` | HTTPS | Authentication |
-| `*.crm.dynamics.com` | HTTPS | Dataverse API |
+| `*.crm.dynamics.com` (regional variants such as `*.crm4.dynamics.com`) | HTTPS | Dataverse API |
 | `api.bap.microsoft.com` | HTTPS | Power Platform admin API |
 
 ---
 
-*File Upload Security Configurator — Prerequisites — Last Verified: 2026-05-25*
+*File Upload Security Configurator — Prerequisites — Last Verified: 2026-10-09*

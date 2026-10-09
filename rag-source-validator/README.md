@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v1.3.1
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-08-02
+> **Last Verified:** 2026-10-09
 
 Integrity validation for Retrieval-Augmented Generation (RAG) knowledge sources with change detection and audit capabilities.
 
@@ -111,7 +111,7 @@ The recommended production path is a system- or user-assigned managed identity. 
 
 The Dataverse schema must currently be created manually. The deployable solution package (`solution.xml`, managed/unmanaged `.zip`) is not yet available, so the solution cannot be imported via the Power Platform admin center or `pac` CLI at this time.
 
-> **Note:** The Dataverse schema is documented in [docs/dataverse-schema.md](docs/dataverse-schema.md). Create the tables and columns manually or via `pac` CLI using the schema reference until the packaged solution is published.
+> **Note:** The Dataverse schema is documented in [docs/dataverse-schema.md](docs/dataverse-schema.md). Create the tables and columns manually (for example, in the Power Apps maker portal) using the schema reference until the packaged solution is published.
 
 ### 2. Register Knowledge Sources
 

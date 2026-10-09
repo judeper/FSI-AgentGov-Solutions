@@ -30,11 +30,11 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 
 ### 2. Application Insights Query Fails
 
-> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments. Microsoft is retiring the x-api-key query path on **September 30, 2026** (extended from the originally announced March 31, 2026).
+> **Note:** API key authentication is deprecated. Use Entra ID authentication for all new deployments. Microsoft's retirement notice for the `x-api-key` query path set the retirement date to **September 30, 2026** (extended from the originally announced March 31, 2026); as of 2026-10-09 that date has passed, so do not rely on API keys for querying Application Insights.
 >
-> **⚠️ Warning: x-api-key query authentication retiring (September 30, 2026)**
+> **⚠️ Warning: x-api-key query authentication retirement date passed (September 30, 2026)**
 >
-> If you are troubleshooting API key authentication issues, note that this authentication method is **scheduled for retirement on September 30, 2026** (Microsoft extended this from March 31, 2026). Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
+> If you are troubleshooting API key authentication issues, note that Microsoft's announced retirement date for this authentication method was **September 30, 2026** (extended from March 31, 2026). Organizations should migrate to Entra ID authentication rather than continuing to troubleshoot API key issues.
 >
 > **Migration Path:**
 >
@@ -63,7 +63,7 @@ Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-7) -EndDate (Get-Date) -Re
 **Diagnostic Steps (API Key - Deprecated):**
 
 ```powershell
-# Historical only: API key connectivity test (x-api-key query auth retiring September 30, 2026)
+# Historical only: API key connectivity test (x-api-key query auth retirement date, September 30, 2026, has passed)
 $headers = @{ "x-api-key" = "your-key" }
 $uri = "https://api.applicationinsights.io/v1/apps/your-app-id/query?query=customEvents|take 1"
 Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
@@ -195,7 +195,7 @@ Connect-ExchangeOnline `
 
 ### 7. Microsoft Graph Audit Search (v1.0)
 
-The Graph audit search endpoint (`POST /security/auditLog/queries`) is generally available on the Microsoft Graph v1.0 endpoint with `AuditLogsQuery.Read.All` (or service-specific `AuditLogsQuery-*.Read.All`) permissions. If you call it through the Graph PowerShell SDK outside this production extractor, the `auditLogQuery` cmdlets are currently available in `Microsoft.Graph.Beta.Security`; validate query coverage and response shapes for regulated evidence before relying on it.
+The Graph audit search endpoint (`POST /security/auditLog/queries`) is generally available on the Microsoft Graph v1.0 endpoint with `AuditLogsQuery.Read.All` (or service-specific `AuditLogsQuery-*.Read.All`) permissions. If you call it through the Graph PowerShell SDK outside this production extractor, the v1.0 `auditLogQuery` cmdlets (for example, `New-MgSecurityAuditLogQuery`) are available in `Microsoft.Graph.Security`; the `Microsoft.Graph.Beta.Security` module has the beta equivalents. Validate query coverage and response shapes for regulated evidence before relying on it.
 
 ## Performance Issues
 
