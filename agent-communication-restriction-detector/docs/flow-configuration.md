@@ -245,7 +245,7 @@ The Azure Automation connector has no standalone "Wait for job" action. It offer
 2. Connection reference: `fsi_cr_office365_commrestrictiondetector`
 3. Configure:
    - To: `ComplianceDistributionList` variable
-   - Subject: `[ACRD Alert- @{AlertSeverity}] Agent Communication Violations Detected`
+   - Subject: `[ACRD Alert- @{body('Parse_Results')?['AlertSeverity']}] Agent Communication Violations Detected`
    - Importance: High (for Critical/Failed/Error), Normal (for Warning)
    - Body: HTML table with violation summary, zone breakdown, communication pattern details, and agent-level details
 4. Rename action: `Send_Alert_Email`
@@ -329,8 +329,10 @@ Provides a structured approval workflow when agents require exceptions to blocke
 ### Step 5: Check Approval Response
 
 1. Add action: **Condition**
-2. Condition: `Outcome` is equal to `Approve`
+2. Condition: `Outcome` (dynamic content from the approval action) is equal to `Approve`
 3. Rename action: `Check_Approval_Outcome`
+
+> `@{fsi_...}` and `@{Outcome}` in the approval and notification steps are shorthand for dynamic content fields (Dataverse trigger columns and the approval **Outcome**) that you insert from the dynamic content picker.
 
 ### Step 6: If Approved -- Update Exception Status
 

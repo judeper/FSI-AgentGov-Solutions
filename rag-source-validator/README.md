@@ -107,11 +107,11 @@ The recommended production path is a system- or user-assigned managed identity. 
 
 ## Quick Start
 
-### 1. Deploy Dataverse Schema (Manual)
+### 1. Deploy Dataverse Schema
 
-The Dataverse schema must currently be created manually. The deployable solution package (`solution.xml`, managed/unmanaged `.zip`) is not yet available, so the solution cannot be imported via the Power Platform admin center or `pac` CLI at this time.
+Create the Dataverse schema by running the deployment script `scripts/create_rsv_dataverse_schema.py` (see [Schema Migration](#schema-migration-upgrading-existing-deployments) for usage and authentication options; use `--dry-run` to preview). The deployable solution package (`solution.xml`, managed/unmanaged `.zip`) is not yet available, so the solution cannot be imported via the Power Platform admin center or `pac` CLI at this time.
 
-> **Note:** The Dataverse schema is documented in [docs/dataverse-schema.md](docs/dataverse-schema.md). Create the tables and columns manually (for example, in the Power Apps maker portal) using the schema reference until the packaged solution is published.
+> **Note:** The Dataverse schema is documented in [docs/dataverse-schema.md](docs/dataverse-schema.md), which is generated from the deployment script. The `pac` CLI has no table-creation command, so use the script (or create the tables and columns manually from the schema reference) until the packaged solution is published.
 
 ### 2. Register Knowledge Sources
 
@@ -130,7 +130,7 @@ The script automatically captures baselines on first run for sources without an 
 
 ## Deployment
 
-1. Create the Dataverse schema manually in your Power Platform environment (see [Quick Start](#1-deploy-dataverse-schema-manual) for current status)
+1. Create the Dataverse schema in your Power Platform environment by running `python scripts/create_rsv_dataverse_schema.py` (see [Quick Start](#1-deploy-dataverse-schema))
 2. Grant the Azure-hosted job's managed identity Dataverse access to `fsi_knowledgesource`, `fsi_validationresult`, and `fsi_sourcechange` (via a Dataverse application user and security role), plus the Microsoft Graph application permission `Files.Read.All` (or `Sites.Read.All`) for SharePoint or OneDrive content retrieval
 3. Register knowledge sources via the model-driven app or Dataverse API
 4. Run `Invoke-SourceValidation.ps1 -UseManagedIdentity` to capture baselines and validate
