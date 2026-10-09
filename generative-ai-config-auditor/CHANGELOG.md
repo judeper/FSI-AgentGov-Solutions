@@ -4,6 +4,13 @@ All notable changes to the Generative AI Config Auditor are documented in this f
 
 ## [Unreleased]
 
+### Fixed
+
+- **README `Last Verified` stamp repaired (`2026-09-15` → `2026-10-09`).** The OceanSquad drift scanner flagged two inline prose notes ("Product naming note" and "Orchestration and authentication dependency") whose "(verified 2026-07-26)" suffix read as a non-canonical freshness marker, which can mask stale-verification detection. Both suffixes were removed so the single canonical `**Last Verified:**` stamp is the only freshness marker. Re-checked every Microsoft product claim in `README.md` against current Microsoft Learn. Still accurate, no change: the agent-level **Tenant graph grounding with semantic search** toggle name and its position on the **Generative AI** settings page; the generative-orchestration requirement for **Allow ungrounded responses** and for tenant graph grounding; the **Authenticate with Microsoft** requirement for tenant graph grounding; **Work IQ (preview)** MCP tools as a distinct capability; the Power Platform admin center **Copilot > Settings** area, the environment **Generative AI features** pane, and the tenant **Publish Copilots with AI features** setting; basic voice (classic orchestration) versus real-time voice (generative orchestration), barge-in and DTMF; Purview DLP scoped to the Microsoft 365 Copilot location; and Topic / Topic (V2) `componenttype` values 0 and 9.
+- **Corrected:** the "Microsoft 365 admin center controls" link pointed to `copilot-plugins-enable-admin`, which now redirects to the Copilot Studio "Add tools to custom agents" article and does not document those controls. It now points to [Manage agents in the Microsoft 365 admin center](https://learn.microsoft.com/microsoft-365/admin/manage/manage-copilot-agents-integrated-apps), and the wording is limited to what that page documents (enable, disable, assign, block, or remove agents surfaced in Microsoft 365 Copilot).
+- **Corrected:** the real-time voice description said these agents "run on a speech-to-speech model"; Microsoft's real-time overview also lists a text-based LLM voice model (preview), so the README now states both.
+- No regulatory or compliance wording was reviewed, added, or altered. `docs/dataverse-schema.md`, `LAB-VALIDATION.md`, and `scripts/create_dataverse_schema.py` still describe the semantic search column as "Work IQ (semantic search)"; the script is a protected file, so that wording is left unchanged for a separately approved change.
+
 ## [1.2.3] - 2026-09-14
 
 ### Fixed
