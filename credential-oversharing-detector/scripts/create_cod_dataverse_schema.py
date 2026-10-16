@@ -516,7 +516,7 @@ COLUMNS = {
             "SchemaName": f"{PUBLISHER_PREFIX}_ApprovedScopes",
             "RequiredLevel": {"Value": "None"},
             "DisplayName": {"LocalizedLabels": [{"Label": "Approved Scopes", "LanguageCode": 1033}]},
-            "Description": {"LocalizedLabels": [{"Label": "Space-separated OAuth scopes approved for this violation (matches the format written by Compare-OAuthScopeBaseline.ps1 / Test-AgentAuthMethod.ps1)", "LanguageCode": 1033}]},
+            "Description": {"LocalizedLabels": [{"Label": "Space-separated OAuth scopes approved for this violation (matches the format written by Compare-OAuthScopeBaseline.ps1)", "LanguageCode": 1033}]},
             "MaxLength": 100000,
             "Format": "Text",
         },

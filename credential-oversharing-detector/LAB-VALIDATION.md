@@ -5,6 +5,8 @@
 > **Solution version:** v2.1.1 (schema addition staged under CHANGELOG `[Unreleased]`)
 > **Branch:** `validation/credential-oversharing-detector`
 
+> **Technical re-check (2026-10-16):** The original validation date and results below are historical, not a new live-tenant certification. The [current verification record](docs/technical-verification-2026-10-16.md) supersedes the original conclusions about production authentication readiness, host compatibility, Graph being future-only, and upstream OAuth-scope signal availability. The main scanner/extractor still require a dev-only client-secret path, and their PowerShell 7 requirement conflicts with the documented Power Apps module host requirements. Static parsing and synthetic evidence export do not establish real-agent connector coverage.
+
 ## 1. Purpose and controls
 
 Configuration-time credential scope governance for Copilot Studio agent connectors. Detects overprivileged connectors, excessive OAuth scopes, unauthorized service accounts, cross-environment credential sharing, shared-credential misuse, and stale credentials against zone-based policy; persists scan/violation evidence to Dataverse.
@@ -32,7 +34,7 @@ Primary framework controls: **1.14** (Data Minimization and Agent Scope Control)
 - Power Platform programmability authentication (service-principal / management app) — https://learn.microsoft.com/power-platform/admin/programmability-authentication
 - List federatedIdentityCredentials (Graph; keyed on Application object ID) — https://learn.microsoft.com/graph/api/application-list-federatedidentitycredentials
 - Microsoft 365 connectors / Teams incoming webhook retirement — https://learn.microsoft.com/microsoftteams/platform/concepts/cards/cards-reference
-- "Enforce safe sharing by detecting credential oversharing" (upstream preview dependency) — https://learn.microsoft.com/power-platform/release-plan/2026wave1/microsoft-copilot-studio/enforce-safe-sharing-detecting-credential-oversharing
+- "Enforce safe sharing by detecting credential oversharing" (current roadmap; former release-plan link retired) — https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=566873
 
 Verified API/auth assertions: `Get-AzAccessToken -ResourceUrl ... -AsSecureString` is current (default output type is now `SecureString`, so the `ConvertFrom-SecureString -AsPlainText` unwrap is required) — matches usage in `Test-AgentAuthMethod.ps1`, `Compare-OAuthScopeBaseline.ps1`, and `Test-CredentialCompliance.ps1`. Workload-identity CA conditions (`clientApplications.includeServicePrincipals`, `servicePrincipalRiskLevels`) used by `Get-WorkloadIdentityCAPolicy.ps1` are valid CA policy surfaces.
 
@@ -54,7 +56,7 @@ Verified API/auth assertions: `Get-AzAccessToken -ResourceUrl ... -AsSecureStrin
 
 ## 5. Runtime-only caveats (cannot be verified statically)
 
-1. **Upstream preview dependency.** Connector OAuth-scope signal depends on Microsoft's "Enforce safe sharing by detecting credential oversharing" capability, listed on the AI at Work roadmap (ID 566873) as In development (preview target July 2026 / GA target September 2026; checked 2026-10-09; public availability not confirmed). Availability and shape may change; validate in a non-production tenant. Without it, scans may report zero connectors (documented in troubleshooting).
+1. **Unverified telemetry and safe-sharing availability.** Roadmap ID 566873 remains In development (preview target July 2026 / GA target September 2026; checked 2026-10-16), but does not document an OAuth-scope signal API. The extractor's nested `bot.configuration` assumptions require independent validation with a known connector-bearing agent. Zero connectors is incomplete coverage, not a pass; there is no documented safe-sharing switch here to enable scope extraction.
 2. **`bot.configuration` JSON is not a supported contract surface.** Detection parses agent configuration JSON; Microsoft schema changes can silently degrade detection (Tier 2 plans to move to supported `connectionreferences` + PP Admin V2 metadata).
 3. **Scope baseline data must be populated.** The new `fsi_approvedscopes` / `fsi_actualscopes` columns are empty until a baseline capture process writes them; `Compare-OAuthScopeBaseline.ps1` will run cleanly but report nothing until rows carry scope data.
 4. **No automatic 429/5xx retry/backoff** in the PowerShell scripts (documented); implement retry at the Power Automate / wrapper layer.
@@ -65,3 +67,5 @@ Verified API/auth assertions: `Get-AzAccessToken -ResourceUrl ... -AsSecureStrin
 **Lab-ready** for static deployment and dry-run review. The solution is mature (multiple prior council reviews) with clean parse/compile, consistent column naming, correct token audiences, compliant language, and accurate regulatory citations. The one functional defect found — the scope-baseline column mismatch that left `Compare-OAuthScopeBaseline.ps1` returning HTTP 400 — is now fixed at the schema level.
 
 Before regulated production use, validate the upstream Microsoft preview feature in a non-production tenant and exercise the live auth and Dataverse round-trip paths listed in §5.
+
+**Current acceptance gate (2026-10-16):** Also resolve the host/authentication limitations above, validate actual connector metadata rather than relying on roadmap availability, and run the Graph/auth and scope-baseline helpers separately when claiming their coverage. For CA evidence, exclude managed identities and multitenant apps from applicability and manually verify enabled state, exclusions, filters, tenant-wide selectors, and service-principal sign-in evaluation. Record these limitations alongside exported evidence; SHA-256 detects changed bytes, not missing source coverage or immutable retention.
