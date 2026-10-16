@@ -7,9 +7,9 @@ The Agent Eligibility Gateway is one layer in a two-path enforcement composition
 Custom middleware can only sit in the request path of a channel that the organization fronts itself. **First-party agent surfaces — Microsoft Teams, Microsoft 365 Copilot, and SharePoint — do not expose a middleware insertion point**, so a request to an agent on those surfaces cannot traverse an APIM gateway. As a result:
 
 - **Owned channels** (custom web chat over Direct Line / Web Chat, and Direct Line API integrations) can be fronted by this gateway, which renders a **hard allow/deny at request time**.
-- **First-party surfaces** are governed by **native Managed Environment sharing** plus **detective telemetry-drift** detection, which apply after the fact and with latency.
+- **First-party surfaces** rely on native sharing and audience controls plus **detective telemetry-drift** detection. Native authorization and after-the-fact detection are separate mechanisms.
 
-The two paths are complementary. The gateway does not replace native controls, and native controls do not provide the request-time allow/deny that the gateway provides on owned channels.
+The two paths are complementary. The gateway does not replace native controls or extend its custom request-time decision to first-party surfaces.
 
 ## Path A — Owned-channel gateway (this solution)
 
@@ -67,7 +67,7 @@ First-party agent surface
 Native Managed Environment controls
    |  - agent sharing (bot-* extended settings) governs who the agent is shared with
    |  - audience / Viewers security groups govern chat access
-   |  - enforcement applies with roughly an hour of latency
+   |  - new sharing-limit settings can take up to an hour to apply
    v
 Telemetry  (Microsoft Purview audit, Dataverse, App Insights)
    |
@@ -77,17 +77,17 @@ Detective telemetry-drift solutions in this repository
    -> raise findings after the fact; no request-time allow/deny
 ```
 
-On this path there is no hard allow/deny at request time. Access is shaped by native sharing and audience configuration, and deviations are caught after the fact by the detective solutions that monitor telemetry. The roughly one-hour enforcement latency of Managed Environment sharing is a property of the native control, not of this gateway.
+On this path there is no **gateway** allow/deny decision. Access is governed by native sharing and audience configuration, and deviations are detected after the fact by the monitoring solutions. Microsoft's [up-to-one-hour delay](https://learn.microsoft.com/en-us/power-platform/admin/managed-environment-sharing-limits#agent-sharing-rules) concerns newly configured sharing limits, which do not revoke existing access. It is not a runtime chat-ACL propagation SLA and does not establish that native authorization is absent.
 
 ## Control-layer summary
 
 | Layer | Scope | Timing | What it does | Owner |
 |---|---|---|---|---|
 | **Agent Eligibility Gateway** (this solution) | Owned custom-web / Direct Line channels | Request time (synchronous) | Hard allow/deny: token validation, audience gate, compliance + entitlement contract, per-decision audit | This solution |
-| **Managed Environment agent sharing** (`bot-*` extended settings) | First-party surfaces and platform-wide sharing | ~1 hour enforcement latency | Governs who an agent is shared with and the audience that can chat | Power Platform native |
+| **Managed Environment agent sharing limits** (`bot-*` extended settings) | New sharing changes for authenticated agents | Up to one hour for new settings to start being enforced; existing access retained | Restricts new Editor/Viewer assignments; does not replace runtime authorization | Power Platform native |
 | **Telemetry-drift detection** | First-party surfaces (and owned, as defence in depth) | After the fact | Detects sharing / scope / access drift from telemetry and raises findings | Sibling detective solutions |
 
-The gateway is the **only** layer in this composition that provides a synchronous, request-time allow/deny, and it does so **only** on owned channels. Everywhere else, governance is the combination of native sharing controls and detective telemetry-drift monitoring. This boundary is the reason the gateway is optional and conditional: a tenant whose agents run only on first-party surfaces has no owned-channel request path for the gateway to sit in.
+The gateway provides this composition's **custom** synchronous decision **only** on owned channels. First-party surfaces retain their native authorization controls alongside detective telemetry-drift monitoring. This boundary is the reason the gateway is optional and conditional: a tenant whose agents run only on first-party surfaces has no owned-channel request path for the gateway to sit in.
 
 ## Where the gateway reads its inputs
 

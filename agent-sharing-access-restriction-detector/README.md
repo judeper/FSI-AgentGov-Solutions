@@ -11,7 +11,7 @@ coe_function: govern
 > **Version:** v2.0.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Technical claims last verified:** 2026-08-09 | **Last lab validation:** 2026-06-09. Detection was proven on a real Dataverse row with SHA-256 evidence; runtime enforcement was proven at the data plane only (Flow B remediation runtime not yet exercised end-to-end). See [Scope and validation status](#scope-and-validation-status).
+> **Last Verified:** 2026-10-16 (Microsoft product documentation) | **Last lab validation:** 2026-06-09. Detection was proven on a real Dataverse row with SHA-256 evidence; the remediation metadata write was proven at the data plane only (Flow B remediation runtime not yet exercised end-to-end). See [Scope and validation status](#scope-and-validation-status) and the [technical verification record](docs/technical-verification-2026-10-16.md).
 
 See [CHANGELOG](./CHANGELOG.md) for version history.
 
@@ -19,7 +19,7 @@ Continuous detection of agent sharing configurations that exceed zone-based acce
 
 ## Overview
 
-The Agent Sharing Access Restriction Detector (ASARD) monitors Power Platform environments for Copilot Studio agents shared with unauthorized security groups or users that violate zone-based governance policies. Where UASD detects broad sharing violations (org-wide, public links, cross-tenant), ASARD validates granular zone-based restrictions by checking that each agent's sharing configuration aligns with approved security group policies for its environment tier.
+The Agent Sharing Access Restriction Detector (ASARD) monitors Power Platform environments for Copilot Studio agent chat-ACL configurations that violate zone-based governance policies. Where UASD detects broad sharing violations (org-wide, public links, cross-tenant), ASARD validates granular zone-based restrictions by checking approved security group policy for each environment tier. It classifies individual-user sharing but does not enumerate individual recipients; see [Scope and validation status](#scope-and-validation-status).
 
 ## Related Controls
 
@@ -89,13 +89,13 @@ Operational caveats from Microsoft Learn:
 
 **Relationship to ASARD:** Managed Environment sharing limits provide the preventive control layer. ASARD provides zone-specific detective controls, validates `bot.accesscontrolpolicy` and `bot.authorizedsecuritygroupids` against approved group policy, manages time-bound exceptions with approval workflows, and generates evidence for review. FSI organizations should configure Managed Environment sharing limits as the primary preventive layer and use ASARD for granular zone-based compliance auditing and exception management.
 
-### M365 Copilot Agent Store (April 2026)
+### Microsoft 365 Copilot Agent Store
 
-Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store), enabling tenant-wide deployment of prebuilt, Copilot Studio, and external platform agents. Agent Store deployments introduce a parallel sharing channel that operates outside environment-level controls:
+The [Microsoft 365 Copilot Agent Store](https://learn.microsoft.com/en-us/microsoft-365/copilot/copilot-agent-store) provides agent discovery and installation. Microsoft documents separate [agent assignment and deployment controls](https://learn.microsoft.com/en-us/microsoft-365/copilot/agent-essentials/m365-agents-admin-guide) in the Microsoft 365 admin center:
 
-- **Agent Store deployments** are managed via the M365 Admin Center (`Agents > All agents`), not through Power Platform environment sharing settings
-- Agents deployed through the Agent Store may be accessible to users who would not have access through environment-level sharing policies
-- Zone-based sharing restrictions validated by ASARD should be complemented by Agent Store admin policies to reduce policy bypass risk
+- **Agent inventory and deployment** are managed through `Agents > All agents`, including availability and deployment assignments.
+- These assignments are not enumerated by ASARD's Dataverse chat-ACL scan. A clean ASARD scan is not evidence that Microsoft 365 agent assignments were reviewed.
+- Review both administrative surfaces and test effective access on each published channel. Separate administration does not establish that Agent Store deployment bypasses a Copilot Studio runtime ACL.
 
 > **Note:** ASARD currently validates sharing configurations within Power Platform environments. Agent Store deployment governance is not yet covered by this solution. Organizations should coordinate environment-level sharing policies with M365 Admin Center agent deployment controls.
 
@@ -106,7 +106,7 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 | `fsi_agentsharingcompliances` | Detected sharing policy violations with agent identity, zone, and remediation status |
 | `fsi_approvedsecuritygrouppolicies` | Approved security group whitelist per zone |
 | `fsi_agentsharingcompliances.fsi_exception*` | Time-bound exception records with approval audit trail (columns on compliance table) |
-| `fsi_agentsharingcompliances.fsi_remediation*` | Immutable remediation action history (columns on compliance table) |
+| `fsi_agentsharingcompliances.fsi_remediation*` | Remediation status, approver, timestamp, and notes (columns on compliance table; not inherently immutable storage) |
 
 ## Prerequisites
 
@@ -114,7 +114,7 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 - Power Platform Admin (or Entra Global Admin)
 - Power Platform environment with Dataverse
 - Python 3.9+ with `msal`, `requests`, `azure-identity`
-- Power Automate Premium license (for approval workflows)
+- Power Automate Premium or appropriate Process licensing for the Dataverse/HTTP premium connector usage in these flows; the [Approvals connector itself is standard](https://learn.microsoft.com/en-us/power-automate/get-started-approvals#prerequisites). See [licensing prerequisites](docs/prerequisites.md#required-licenses).
 
 ## Documentation
 
@@ -122,11 +122,14 @@ Microsoft has launched the [M365 Copilot Agent Store](https://learn.microsoft.co
 |----------|-------------|
 | [Flow Configuration Guide](docs/flow-configuration.md) | Overview of both flows, adaptive card templates, and environment variables |
 | [Prerequisites](docs/prerequisites.md) | Required licenses, roles, connections, Dataverse tables, and network endpoints |
+| [Technical Verification Record](docs/technical-verification-2026-10-16.md) | Microsoft sources, discrepancies, downstream review, and companion-guide compatibility warnings |
 | [ASARD Deployment Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-deployment-guide/) | End-to-end setup (FSI-AgentGov) |
 | [Exception Management](https://judeper.github.io/FSI-AgentGov/playbooks/asard-exception-management/) | Exception lifecycle operations (FSI-AgentGov) |
 | [Troubleshooting Guide](https://judeper.github.io/FSI-AgentGov/playbooks/asard-troubleshooting-guide/) | Diagnostics and resolution (FSI-AgentGov) |
 
 ## Deployment
+
+> **Companion-guide compatibility:** The linked FSI-AgentGov deployment, exception, and troubleshooting playbooks still describe legacy `gov_asard*` tables, Python detection/remediation commands, and exported `src/` flows that are not this implementation. Use this repository's schema, scripts, and manual flow instructions; do not import those nonexistent exports or copy the legacy queries. See the [reviewed discrepancies and local replacements](docs/technical-verification-2026-10-16.md#companion-playbooks-outside-this-worktree).
 
 1. Create Dataverse tables using the schema creation script (see [prerequisites](docs/prerequisites.md))
 2. Build the two Power Automate cloud flows following the [flow configuration guide](docs/flow-configuration.md)
@@ -159,7 +162,7 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 > **What the 2026-06-09 lab validation proved.** *Detection* — the plane #1 detection →
 > persistence → tamper-evident-evidence path ran against a live environment: one real
 > non-compliant Dataverse row was detected, independently read-back-verified, and exported as
-> evidence with a SHA-256 hash verified three ways. *Runtime enforcement* — proven at the **data
+> evidence with a SHA-256 hash verified three ways. *Remediation metadata write* — proven at the **data
 > plane only** (a combined `accesscontrolpolicy = 2` + approved-group-list write persisted and was
 > read back). The **Flow B remediation runtime is staged as Draft behind a human approval and was
 > not exercised end-to-end**; C2 runtime enforcement is recorded as a **documented design
@@ -170,13 +173,13 @@ See the [deployment guide](https://judeper.github.io/FSI-AgentGov/playbooks/asar
 
 ## Known Limitations
 
-- **28-day approval wait limit**: Microsoft Learn notes that an approval flow can wait for 28 days before the flow fails. The sequential approval loop (concurrency=1) with 7-day timeouts means more than four agents can exceed this limit. For environments with more than four non-compliant agents, consider batch approval or a child flow pattern.
+- **Approval waits and run duration**: Microsoft documents a [28-day approval wait caveat](https://learn.microsoft.com/en-us/power-automate/approvals-known-issues#abandoned-approvals-in-the-approval-action-center) and a separate [30-day total cloud-flow run limit](https://learn.microsoft.com/en-us/power-automate/limits-and-config#duration-limits), including pending approvals. ASARD's seven-day per-approval timeout is solution-configured, not a Microsoft default. Four sequential full waits consume 28 days before other work; five need 35 days and exceed the run limit. Bound the batch and leave overhead, or persist outstanding work for later runs. A synchronously awaited child flow does not by itself remove the parent's duration limit. See [approval build invariants](docs/approvals-limits.md).
 - **Rejection cooldown**: After remediation rejection, agents are excluded from re-query for 7 days (matching the default approval timeout) to avoid repeated approval requests to the same approver. Override by manually resetting `fsi_remediationstatus` in Dataverse.
 - **Adaptive card templates (remediation)**: `adaptive-card-asard-remediation-approval.json` and `adaptive-card-asard-remediation-result.json` are reference templates for external integrations (e.g., custom Power Apps, third-party dashboards). The remediation approval workflow uses inline Markdown for approval and notification messages — these templates are not loaded by the workflow at runtime.
 - **Template URL integrity (exception review)**: The exception review workflow loads adaptive card templates via HTTP GET from a configurable URL (`fsi_ASARD_AdaptiveCardTemplateUrl`). No content hash or signature validation is performed. Verify the URL points to a trusted, immutable source (e.g., GitHub release tag, Azure Blob Storage with SAS token).
-- **Exception query pagination**: The exception review workflow retrieves up to 5,000 records per query (Dataverse maximum per request). Environments with >5,000 active exceptions should use Dataverse views or custom reporting for complete visibility.
+- **Exception query pagination**: A single page can return up to 5,000 rows for these standard Dataverse tables, not the complete query result. Enable connector pagination with an appropriate threshold or follow every Web API `@odata.nextLink` for both expiring and expired exceptions; a filtered view alone does not remove paging limits. Verify completeness with a multi-page fixture before claiming full exception coverage.
 - **Per-agent approved groups query (N+1 pattern)**: The remediation workflow queries approved security groups per-agent inside the sequential loop. Agents in the same zone redundantly fetch the same approved groups. Pre-fetching approved groups for all 3 zones before the loop would remove redundant Dataverse API calls. This is a performance optimization — correctness is unaffected.
-- **Dataverse pagination (remediation)**: The remediation workflow uses `$skip`-based pagination with `@odata.nextLink` absence detection. For deployments with >5,000 non-compliant agents, `$skip` offsets may produce inconsistent results due to server-side cursor resets. Consider reducing the query window or using Dataverse views for large-scale environments.
+- **Dataverse pagination (remediation)**: Dataverse [does not support `$skip`](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query/page-results). Manual Web API paging must GET the server-issued `@odata.nextLink` unchanged until it is absent; do not construct numeric offsets or alter its opaque `$skiptoken`. The flow guide specifies this mechanism, but no exported flow is shipped and multi-page Flow B execution has not been lab-validated.
 
 ## License
 
