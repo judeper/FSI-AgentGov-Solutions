@@ -10,6 +10,7 @@ All notable changes to the Agent Sharing Access Restriction Detector are documen
 
 ### Documentation
 
+- Re-verified Microsoft product claims on 2026-10-16 without rerunning the tenant lab. Corrected unsupported Dataverse `$skip` guidance, approval-versus-run-duration budgeting, Premium licensing rationale, and the misapplication of the Managed Environment one-hour sharing-rule delay to chat-ACL PATCH enforcement. Removed the unsourced Agent Store launch month and bypass inference, clarified individual-recipient and authentication scope, and propagated corrections to local flow/evidence guidance and sibling references. Added `docs/technical-verification-2026-10-16.md` with Microsoft sources, downstream inventory, generator commands, and the outstanding companion-playbook compatibility boundary.
 - Re-verified every Microsoft product/technical claim in `README.md` (Managed Environment agent sharing limits, M365 Copilot Agent Store, 28-day Power Automate approval wait limit) against current Microsoft Learn documentation; corrected the sharing-limits authentication scope and confirmed the remaining claims. Recorded technical-claim verification as 2026-08-09 while retaining the last lab-validation date of 2026-06-09.
 - Corrected `docs/prerequisites.md` to point to this solution's own `scripts/` folder for the schema-creation and supporting scripts (previously mislabeled as the companion FSI-AgentGov repository).
 - Added the `scripts/` subtree to the README Components listing so the Python and PowerShell automation is discoverable from the directory map.

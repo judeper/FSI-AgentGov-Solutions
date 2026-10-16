@@ -78,13 +78,14 @@ not by itself satisfy any regulation in isolation.
 For each global option set, GET its definition and read every `Options[].Value`:
 
 ```
-GET {DataverseUrl}/api/data/v9.2/GlobalOptionSetDefinitions(Name='fsi_ASARD_compliancestatus')?$select=Name
-    &$expand=Options
+GET {DataverseUrl}/api/data/v9.2/GlobalOptionSetDefinitions(Name='fsi_ASARD_compliancestatus')
 ```
 
 Repeat for `fsi_ASARD_remediationstatus` and `fsi_acv_zone`. Confirm the returned `Value`
 integers match the values this repo assumes; where they differ, the in-env value wins and the
 assuming surface must be reconciled.
+
+Retrieve the named definition directly as documented in [Query global option sets](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query-metadata-web-api#query-global-option-sets). `Options` is a structural property of `OptionSetMetadata`, not a navigation property to use with `$expand`.
 
 ## Authoritative sources
 

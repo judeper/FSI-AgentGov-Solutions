@@ -17,7 +17,7 @@ This gateway is a piece of middleware. **First-party agent surfaces — Microsof
 | Microsoft 365 Copilot | No | Native controls + telemetry-drift detection |
 | SharePoint | No | Native controls + telemetry-drift detection |
 
-The boundary is deliberate: the gateway provides a **hard allow/deny at request time on owned channels**, while first-party surfaces rely on native sharing/audience controls (which apply with roughly an hour of enforcement latency) plus the detective telemetry-drift solutions in this repository. The two layers are complementary, not interchangeable. See [docs/architecture.md](docs/architecture.md) for the control-layer summary.
+The boundary is deliberate: the gateway provides a **hard allow/deny at request time on owned channels**, while first-party surfaces rely on native sharing/audience controls plus the detective telemetry-drift solutions in this repository. Managed Environment sharing-rule changes can take **up to an hour** to start enforcement, apply only to agents requiring authentication, and do not revoke existing access. See [Microsoft's sharing rules](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits) and [docs/architecture.md](docs/architecture.md) for the control-layer summary. The two layers are complementary, not interchangeable.
 
 ## Architecture
 
@@ -109,7 +109,7 @@ The decisions below were made while scaffolding this preview and are flagged as 
 - **Optional and conditional.** This solution is not required for every tenant. It applies only where owned custom-web / Direct Line channels exist. The corrected entitlement contract allows a `none` pathway and denies only inside a metered pathway.
 - **Reference-gateway-first.** A non-production reference gateway validates the entitlement contract end-to-end before any production deployment is considered. Design validation and customer deployment are deliberately decoupled.
 - **Cross-solution columns (reconciled 2026-06-09).** Compliance posture is read from `fsi_caicompliancestate.fsi_risklevel` (`copilot-agent-inventory`, keyed on `fsi_agentid`) and the precomputed per-(agent,user) entitlement decision from `fsi_cbgentitlementmaterialized` (`copilot-billing-governance`: `fsi_decision` / `fsi_pathway` / `fsi_decisionreason`, keyed on `fsi_agentid` + `fsi_userupn`). Re-verify these logical names against live tenant metadata before production use; the `$select` / `$filter` clauses in [templates/apim-eligibility-check.policy.xml](templates/apim-eligibility-check.policy.xml) already target them.
-- **Native-control latency boundary.** Managed Environment agent sharing (`bot-*` extended settings) applies with roughly an hour of enforcement latency and governs first-party surfaces. The gateway is the hard, request-time allow/deny for owned channels; the native sharing latency does not apply to the gateway path.
+- **Native-control latency boundary.** Managed Environment agent sharing (`bot-*` extended settings) applies only to agents requiring authentication; rule changes can take up to an hour to start enforcement and do not revoke existing access. The gateway is the hard, request-time allow/deny for owned channels; the native sharing-rule propagation delay does not apply to the gateway path.
 
 ## Documentation
 

@@ -74,7 +74,7 @@ First-party agent surface
 Native Managed Environment controls
    |  - agent sharing (bot-* extended settings) governs who the agent is shared with
    |  - audience / Viewers security groups govern chat access
-   |  - enforcement applies with roughly an hour of latency
+   |  - sharing-rule changes can take up to an hour to start enforcement
    v
 Telemetry  (Microsoft Purview audit, Dataverse, App Insights)
    |
@@ -84,14 +84,21 @@ Detective telemetry-drift solutions in this repository
    -> raise findings after the fact; no request-time allow/deny
 ```
 
-On this path there is no hard allow/deny at request time. Access is shaped by native sharing and audience configuration, and deviations are caught after the fact by the detective solutions that monitor telemetry. The roughly one-hour enforcement latency of Managed Environment sharing is a property of the native control, not of this gateway.
+On this path this gateway provides no request-time allow/deny. Access is shaped by
+native sharing and audience configuration, and deviations are caught by detective
+solutions. [Managed Environment sharing rules](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits)
+can take **up to an hour** to start enforcement after a change, rather than imposing
+a fixed one-hour delay on each request. They apply only to agents that require
+authentication and do not revoke existing access. An agent exceeding a new rule
+can only be unshared until it meets the rule. This propagation behavior is not a
+property of the gateway or a substitute for checking actual access.
 
 ## Control-layer summary
 
 | Layer | Scope | Timing | What it does | Owner |
 |---|---|---|---|---|
 | **Agent Eligibility Gateway** (this solution) | Owned custom-web / Direct Line channels | Request time (synchronous) | Hard allow/deny: token validation, audience gate, compliance + entitlement contract, per-decision audit | This solution |
-| **Managed Environment agent sharing** (`bot-*` extended settings) | First-party surfaces and platform-wide sharing | ~1 hour enforcement latency | Governs who an agent is shared with and the audience that can chat | Power Platform native |
+| **Managed Environment agent sharing** (`bot-*` extended settings) | Authenticated agents in Managed Environments | Rule changes can take up to an hour to start enforcement | Restricts new sharing; does not revoke existing access | Power Platform native |
 | **Telemetry-drift detection** | First-party surfaces (and owned, as defence in depth) | After the fact | Detects sharing / scope / access drift from telemetry and raises findings | Sibling detective solutions |
 
 The gateway is the **only** layer in this composition that provides a synchronous, request-time allow/deny, and it does so **only** on owned channels. Everywhere else, governance is the combination of native sharing controls and detective telemetry-drift monitoring. This boundary is the reason the gateway is optional and conditional: a tenant whose agents run only on first-party surfaces has no owned-channel request path for the gateway to sit in.

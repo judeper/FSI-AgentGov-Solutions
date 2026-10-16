@@ -7,7 +7,7 @@ The evidence export workflow produces JSON files with SHA-256 integrity hashes f
 ## Prerequisites
 
 - AAM Dataverse schema deployed with validation history records
-- PowerShell 7.0+
+- PowerShell 7.4+ (the export script's `#Requires` minimum)
 - Modern OAuth via `Get-AAMAccessToken` (bundled in `scripts/private/AAMClient.psm1`) — no MSAL.PS module required
 - Dataverse User role (minimum) on the governance environment
 
@@ -19,6 +19,7 @@ The evidence export workflow produces JSON files with SHA-256 integrity hashes f
 ./scripts/Export-AgentAccessEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
     -TenantId "contoso.onmicrosoft.com" `
+    -ClientId "<public-client-app-id>" `
     -OutputDirectory "./exports" `
     -Interactive
 ```
@@ -47,6 +48,7 @@ $secret = Read-Host -AsSecureString -Prompt "Client secret"
 ./scripts/Export-AgentAccessEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
     -TenantId "contoso.onmicrosoft.com" `
+    -ClientId "<public-client-app-id>" `
     -OutputDirectory "./exports" `
     -Zone "3" `
     -Interactive
@@ -58,6 +60,7 @@ $secret = Read-Host -AsSecureString -Prompt "Client secret"
 ./scripts/Export-AgentAccessEvidence.ps1 `
     -DataverseUrl "https://org.crm.dynamics.com" `
     -TenantId "contoso.onmicrosoft.com" `
+    -ClientId "<public-client-app-id>" `
     -OutputDirectory "./exports" `
     -IncludeBaselines `
     -FromDate (Get-Date).AddDays(-90) `
@@ -76,9 +79,10 @@ $secret = Read-Host -AsSecureString -Prompt "Client secret"
 | `-FromDate` | No | 30 days ago | Start of date range (inclusive) |
 | `-ToDate` | No | Now | End of date range (inclusive) |
 | `-IncludeBaselines` | No | false | Include active baselines in export |
-| `-Interactive` | No | false | Use browser-based authentication |
-| `-ClientId` | Cond. | — | Required for certificate app authentication |
-| `-CertificateThumbprint` | Cond. | — | Required for certificate app authentication |
+| `-Interactive` | No | false | Use device-code authentication with a public-client app |
+| `-ClientId` | Yes | — | Application client ID, required for both interactive and service-principal authentication |
+| `-ClientSecret` | Cond. | — | SecureString; required when `-Interactive` is omitted (dev-only fallback) |
+| `-CertificateThumbprint` | No | — | Deprecated; passing this parameter throws a terminating error |
 
 ## Output Files
 
@@ -153,7 +157,7 @@ sha256sum -c aam-evidence-All-20260209-143022.json.sha256
 | Empty export (0 records) | No validation data in date range | Verify FromDate/ToDate range; run a validation first |
 | Authentication failed | Expired token or missing permissions | Re-authenticate; verify Dataverse User role |
 | Hash mismatch on verify | File modified after export | Re-export from Dataverse; check for encoding changes |
-| Truncated JSON objects | ConvertTo-Json depth insufficient | Script uses `-Depth 10` by default; verify PowerShell 7.0+ |
+| Truncated JSON objects | ConvertTo-Json depth insufficient | Script uses `-Depth 10` by default; verify PowerShell 7.4+ |
 | Output directory error | Insufficient file system permissions | Run as administrator or choose a writable path |
 
 ## Related Documentation

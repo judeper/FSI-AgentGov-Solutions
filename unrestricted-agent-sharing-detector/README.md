@@ -89,10 +89,10 @@ Microsoft introduced native admin controls in the Power Platform admin center to
 
 ### Microsoft 365 Copilot Agent Store and Package Management API (2026-Q2)
 
-Microsoft has launched the Microsoft 365 Copilot Agent Store and the [Agent and app Package Management API preview](https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/api/admin-settings/package/overview), enabling tenant-wide inventory and management of Microsoft 365 apps and agents. Agent Store deployments may operate outside Power Platform environment sharing settings, creating additional governance considerations:
+The Microsoft 365 Copilot Agent Store and the [Agent and app Package Management API preview](https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/api/admin-settings/package/overview) provide additional inventory and management surfaces for Microsoft 365 apps and agents. These assignments are not enumerated by this solution's Power Platform sharing scan:
 
-- **Prebuilt agents** deployed from the Agent Store are available to assigned users without going through environment-level sharing configuration
-- **Admin controls** in the Microsoft 365 admin center (`Agents > All agents`) allow admins to assign, block, or restrict agent access — these controls operate independently of Power Platform environment sharing settings
+- **Agent availability and deployment** are managed through the Microsoft 365 admin center (`Agents > All agents`), as documented in the [agents admin guide](https://learn.microsoft.com/en-us/microsoft-365/copilot/agent-essentials/m365-agents-admin-guide).
+- Separate administrative surfaces do not establish that deployment bypasses a Copilot Studio runtime ACL. Review assignments and test effective access on the published channels separately.
 - Organizations should verify that Agent Store deployment policies align with zone-based sharing restrictions monitored and remediated by this solution
 
 > **Note:** UASD currently detects sharing violations within Power Platform environments. Agent Store and Package Management API inventory is a recommended future extension, especially for agents outside Copilot Studio environments.
