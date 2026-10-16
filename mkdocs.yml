@@ -165,7 +165,9 @@ nav:
         - Communication Compliance: solutions/finra-supervision-workflow/communication-compliance-setup.md
         - Troubleshooting: solutions/finra-supervision-workflow/troubleshooting.md
       - HITL Workflow Governance: solutions/hitl-workflow-governance/index.md
-      - Model Risk Management Automation: solutions/model-risk-management-automation/index.md
+      - Model Risk Management Automation:
+        - solutions/model-risk-management-automation/index.md
+        - Technical Verification: solutions/model-risk-management-automation/verification-2026-10-16.md
       - Segregation Detector:
         - solutions/segregation-detector/index.md
         - Prerequisites: solutions/segregation-detector/prerequisites.md

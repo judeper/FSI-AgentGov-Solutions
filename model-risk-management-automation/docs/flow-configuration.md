@@ -164,13 +164,18 @@ Synchronizes registered agents from the Agent Registry (`fsi_agentinventory`) in
          4.4.1 HTTP - Cross-reference Agent 365 / Microsoft Entra Agent ID registry
                Purpose: Retrieve optional agent identity/package metadata for Agent Card evidence
                Configure Run After: Continue on failure
-               Note: Microsoft Learn 2026-Q2 lists Agent 365 package APIs at
-                     `/beta/copilot/admin/catalog/packages` with delegated
-                     `CopilotPackages.Read.All`; the older beta
+               Note: Current List packages documentation provides
+                     `/v1.0/copilot/admin/catalog/packages` (and beta),
+                     with application or delegated `CopilotPackages.Read.All`.
+                     A Microsoft Agent 365 license is required. Delegated
+                     administrators require AI Administrator or Global Administrator.
+                     Follow @odata.nextLink until absent for complete inventory.
+                     The older beta
                      `/agentRegistry/agentInstances` path remains available for
                      identity-only cross-reference during registry convergence.
                      Keep this step feature-flagged and use the API path your
                      tenant has approved.
+                     Ref: https://learn.microsoft.com/microsoft-365-copilot/extensibility/api/admin-settings/package/copilotpackages-list
        If No: Skip
 
    4.5 Scope: Material Change Detection (existing records only)
@@ -910,6 +915,8 @@ Performs weekly performance monitoring across all validated models, checks monit
 ## Flow 5: Generate-AgentCard-OnChange
 
 Generates an MRM Agent Card document containing model risk evidence across all three supervisory pillars (Development, Validation, Governance). Supports Word document generation with a JSON fallback when the Word Online connector is unavailable.
+
+Before building this flow, follow [Word template setup](sharepoint-setup.md#word-template-setup): use uniquely titled **Plain Text Content Controls**, not unsupported Rich Text controls. The [Word Online (Business) connector](https://learn.microsoft.com/connectors/wordonlinebusiness/) is premium. Test template access through the bound connector account; a Graph permission grant to a separate managed identity does not configure that connection.
 
 ### Trigger
 

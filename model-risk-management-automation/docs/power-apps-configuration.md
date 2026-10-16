@@ -17,6 +17,7 @@ This guide provides step-by-step instructions for manually building two Power Ap
 | **Connection References** | Deployed via `create_mrm_connection_references.py` |
 | **Power Automate Flows** | Flow 2 (Score-ModelRisk-OnSubmission) configured per [flow-configuration.md](flow-configuration.md) |
 | **Security Roles** | MRM Officer, Validator, and Agent Owner roles configured in Dataverse |
+| **App-user licensing** | Appropriate Power Apps entitlement for the Dataverse-backed Canvas and model-driven apps; Power Automate licensing alone does not license these apps. See [licensing prerequisites](prerequisites.md#licensing-requirements) |
 | **Agent Inventory** | `fsi_agentinventory` table available from the agent-registry-automation solution |
 
 ---

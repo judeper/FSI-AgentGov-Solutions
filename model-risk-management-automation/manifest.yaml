@@ -16,7 +16,7 @@ controls:
 url: https://judeper.github.io/FSI-AgentGov-Solutions/solutions/model-risk-management-automation/
 prerequisites:
   power-platform-admin: "Power Platform admin tenant role and Dataverse schema deployment access for model inventory and validation tables."
-  security-admin: "Entra Global Admin or Application Administrator permissions for managed identity setup and API consent."
+  security-admin: "Entra Global Admin or Privileged Role Administrator for Microsoft Graph application permission grants; separate Azure resource permissions for managed identity setup."
   sharepoint-admin: "SharePoint admin rights to create the MRM Governance site and Agent Card library."
 verification: "Confirm rows exist in fsi_modelinventory and fsi_validationcycle, and verify the Agent Card file is published in the SharePoint library."
 

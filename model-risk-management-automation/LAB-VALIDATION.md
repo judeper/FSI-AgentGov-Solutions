@@ -4,6 +4,8 @@
 > **Validation date:** 2026-06-04 · **Mode:** Static (no live tenant) — parse-validity, authoritative-source verification, doc completeness
 > **Verdict:** **Lab-ready** with documented runtime-only caveats.
 
+> **2026-10-16 documentation update:** The historical checks below are not a new tenant validation. The [current technical re-verification](docs/verification-2026-10-16.md) supersedes the package-API preview/delegated-only caveats: List packages now documents v1.0, application access, and Microsoft Agent 365 licensing. It also corrects licensing, Word templates, LTR configuration, and identity-migration evidence. Do not treat this historical verdict or `Test-MRMCompliance.ps1` as proof of identity migration success.
+
 ## Purpose & Controls
 
 Automated OCC / Fed model risk management (MRM) workflows for AI agents on Power

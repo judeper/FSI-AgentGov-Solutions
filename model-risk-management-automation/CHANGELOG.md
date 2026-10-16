@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Technical re-verification (2026-10-16, issue #788):** Refreshed the README verification date after live Microsoft Learn checks. Corrected service-specific licensing and approval-responder rights; Agent 365 v1.0/application access and licensing; Bot ID versus Entra identity, in-place migration evidence, and the limits of the aggregate report; managed identity permission grants; unsupported Word Rich Text controls; and LTR setup/solution portability. Propagated the corrections through prerequisites, flow/SharePoint instructions, troubleshooting, delivery checks, deployment guidance, and manifest-derived prerequisites. Sources, unchanged claims, downstream review, and validation are recorded in `docs/verification-2026-10-16.md`. No regulatory mappings or regulatory wording were changed.
+
 - **Docs**: Re-checked `README.md` and `docs/prerequisites.md` against Microsoft Learn. Corrected the Entra Agent ID rollout date (May 2026, not July 2026; new agents can no longer opt out, and pre-rollout agents are migrated by Microsoft in a future update or manually), the Power Automate for desktop self-healing heading (preview since build 2603, March 2026) and description, the "Power Platform Administrator" role name, the "Power Automate Premium" licensing name, and added the AI Administrator consent role and Word Online (Business) as a premium connector. This supersedes the earlier "after the July 2026 rollout" wording in this changelog. The `Last Verified` marker was left unchanged because the "Microsoft 365 E3+" licensing row could not be verified on Microsoft Learn. No regulatory or compliance wording was reviewed, added, or altered.
 
 ### Fixed
