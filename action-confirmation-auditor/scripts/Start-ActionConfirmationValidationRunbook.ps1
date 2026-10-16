@@ -92,11 +92,17 @@
     Control: 2.12 (Human-in-the-Loop checkpoints for AI agent actions); supports 1.10 (Communication Compliance / FINRA 3110 supervision)
 
     Azure Automation setup:
-    1. Import this script as a runbook
-    2. Upload certificate to Automation Account > Certificates
-    3. Install required modules: Az.Accounts, Microsoft.PowerApps.Administration.PowerShell
-    4. Grant application permissions as required by Power Platform admin APIs
-    5. Schedule via Schedules or trigger via webhook
+    1. Use Windows PowerShell 5.1 and deploy the supporting ACA/private/shared files
+    2. Upload the private-key certificate to Automation Account > Certificates
+       and verify thumbprint resolution in the actual worker
+    3. Install Az.Accounts >= 5.0.0 and Microsoft.PowerApps.Administration.PowerShell
+    4. Configure management-application authorization and Dataverse application
+       users/security roles in every scanned environment and the governance org
+    5. Bootstrap and validate the Power Apps administration session separately:
+       this wrapper signs into Az.Accounts but does not call Add-PowerAppsAccount
+    6. Validate known-agent coverage before scheduling or triggering via webhook
+
+    See ../docs/prerequisites.md for the current setup and verification record.
 
     Performance:
     - Compares current scan against previous scan results in Dataverse

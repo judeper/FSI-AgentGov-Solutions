@@ -13,6 +13,25 @@
 > **Authentic Topic V2 live validation date:** 2026-09-13
 > **Solution version:** v1.2.3
 
+## Prerequisites source re-verification - 2026-10-16
+
+The [prerequisites](docs/prerequisites.md) and
+[technical verification record](docs/technical-verification-2026-10-16.md)
+supersede the setup assumptions in this historical report: the current
+certificate wrapper uses Az.Accounts 5.0.0+ rather than MSAL.PS, a separate
+Power Apps administration session is required, and Dataverse S2S access requires
+application users/security roles in each environment. E5/E5 Compliance is not a
+blanket core-scan prerequisite; optional Purview licensing is separate.
+
+The optional Purview helper requires PowerShell 7+, and its Graph filters cover
+selected information-protection records, not complete Copilot activity. Its
+`Get-ActivityExplorerData` fallback is not Microsoft's documented
+`Export-ActivityExplorerData` cmdlet. Earlier mentions below of that fallback
+collecting Copilot activity are implementation intentions, not validated
+collection evidence. The MI sample's different JSON contract also remains a
+deployment boundary. This documentation-only re-check did not rerun a tenant
+scan or change the dates, results, or control coverage of prior live validation.
+
 ## Authentic Topic V2 live validation outcome - 2026-09-13
 
 Owner-attended, read-only validation exercised merged commit
