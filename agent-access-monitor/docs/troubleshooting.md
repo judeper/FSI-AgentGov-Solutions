@@ -8,7 +8,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 |-------|-------|------------|
 | Tables not created | `deploy.py` did not complete | Re-run `python scripts/deploy.py` (full deployment is the default); check Dataverse System Administrator role |
 | Environment variables missing | Selective deployment skipped variables | Run `python scripts/deploy.py --vars-only` to deploy variables only |
-| Connection reference errors | Connector not available in environment | Check connector availability in target environment; the optional Azure Automation connector requires a Power Automate Premium license (not needed for the lab model — Dataverse/Teams/Outlook are standard connectors) |
+| Connection reference errors | Connector unavailable, unbound, or not licensed | Check connection binding and licensing. Microsoft Dataverse is a [Premium connector](https://learn.microsoft.com/connectors/commondataserviceforapps/), including in the lab model. For the scheduled flow, verify the owner's Power Automate Premium entitlement or an appropriately allocated Process license; see [prerequisites.md](prerequisites.md). |
 | `deploy.py` authentication failure | Expired or invalid token | Prefer `python scripts/deploy.py --managed-identity` on Azure-hosted automation, or `--workload-identity --client-id <app-id>` for CI/CD. For manual runs, re-run `python scripts/deploy.py --interactive --client-id <app-id>` to refresh the MSAL token cache. The deployment does not use `az login`; verify tenant and environment URL. |
 | Schema version mismatch | Partial upgrade from earlier version | Re-run `python scripts/deploy.py` (full deployment is the default) to reconcile schema |
 
@@ -27,6 +27,9 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | No environments returned | PowerApps Admin module not connected | Run `Add-PowerAppsAccount` before validation; verify Power Platform Admin role |
+| Administration module cannot load under PowerShell 7.x | Microsoft's module guidance requires Windows PowerShell 5.x; AAM also has PowerShell 7.x requirements | Resolve the [collector-host compatibility gate](prerequisites.md#powershell-requirements) before scheduling scans. Changing only the Azure Automation runtime or downgrading the whole AAM chain to 5.1 is not a validated fix. |
+| New limits appear ineffective | Enforcement can take up to an hour, existing access is retained, or the agent does not require authentication | Confirm authenticated-agent scope and wait for propagation. Review existing shares separately; only unsharing is allowed for an agent exceeding the new rules. See [Microsoft's sharing semantics](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits#sharing-semantics). |
+| `Uncapped` does not match an expected product value | AAM groups non-positive, missing, and non-integer viewer-cap input into its own comparison category | Inspect raw settings and the per-agent viewer limit in Manage sharing. Do not treat AAM's handling of `0` or `-1` as Microsoft-documented agent-cap behavior; see [the verification record](verification-2026-10-16.md). |
 | Zone classification errors | Baseline record missing or zone not set | Verify `fsi_accessbaselines` has an active record for the environment, or check naming convention fallback matches environment names |
 | False positive violations | Zone assignment incorrect | Check zone classification in `fsi_accessbaselines` Dataverse table; re-capture baseline with correct zone via `Invoke-AccessBaselineCapture.ps1` |
 | Grace period not applied | `fsi_AAM_GracePeriodHours` set to 0 | Set environment variable to desired hours (default: 48) in Dataverse |
@@ -46,7 +49,7 @@ Common issues and resolutions for the Agent Access Governance Monitor.
 | Issue | Cause | Resolution |
 |-------|-------|------------|
 | Empty export (0 records) | No validation data in date range | Adjust `-FromDate` and `-ToDate`; confirm validations have run |
-| Truncated JSON objects | PowerShell version < 7.0 | Upgrade to PowerShell 7.0+; script uses `-Depth 10` for serialization |
+| Export refuses to start on an older PowerShell version | Export script requires PowerShell 7.4+ | Run the export with PowerShell 7.4+; its Dataverse REST path is separate from the administration-module collector compatibility gate |
 | Hash mismatch on verification | File modified after export | Re-export evidence; avoid opening JSON in editors that modify whitespace |
 | Output directory permission denied | Restricted file system path | Use a writable directory; run as administrator if needed |
 | Large export file (>100 MB) | Extended date range with many violations | Narrow `-FromDate`/`-ToDate` range, or filter by `-Zone` |

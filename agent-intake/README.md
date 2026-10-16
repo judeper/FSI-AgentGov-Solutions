@@ -164,7 +164,7 @@ See [`docs/pilot-deployment-runbook.md`](docs/pilot-deployment-runbook.md) for t
 | `agent-365-lifecycle-governance` | Downstream — owns sponsor-revocation and inactivity flows |
 | `unrestricted-agent-sharing-detector` | Drift integration — confirms post-deployment sharing matches the intake declaration |
 | `scope-drift-monitor` | Drift integration — confirms post-deployment data scope matches |
-| `agent-access-monitor` | Drift integration — validates approved access |
+| `agent-access-monitor` | Environment-level sharing-configuration validation; per-agent permission-grant comparison requires a separate adapter (see drift integration guide) |
 
 ## Roadmap
 

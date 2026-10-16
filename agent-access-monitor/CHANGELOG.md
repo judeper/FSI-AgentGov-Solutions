@@ -2,6 +2,13 @@
 
 All notable changes to the Agent Access Governance Monitor.
 
+## [Unreleased]
+
+### Documentation
+
+- Re-verified Microsoft product claims on 2026-10-16: corrected the viewer cap to per-agent, distinguished AAM normalization from documented product behavior, and separated the Graph Package Management beta surface from the legacy Agent Registry replacement notice.
+- Propagated runtime compatibility, Dataverse Premium-connector licensing, sharing enforcement, and evidence-export parameter corrections to operator documentation. Added a source-backed verification record and downstream artifact inventory. No runtime code, release version, or regulatory mappings changed.
+
 ## [1.2.0] - 2026-06-09
 
 ### Removed
