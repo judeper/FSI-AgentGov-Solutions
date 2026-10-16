@@ -12,6 +12,14 @@
 //   - Azure Application Insights resource
 //   - Copilot Studio agents configured with App Insights connection string
 //
+// VALIDATION GATE (2026-10-16):
+//   The exact MicrosoftCopilotStudio/EventType predicates and filter dimensions
+//   below are solution assumptions, not a verified Microsoft emission schema.
+//   Validate sanitized positive/negative tenant examples before production use.
+//   Empty rows or missing dimensions do not establish absence of filtering.
+//   Microsoft's broader property-bag query is diagnostic discovery only:
+//   https://learn.microsoft.com/troubleshoot/power-platform/copilot-studio/generative-answers/agent-response-filtered-by-responsible-ai
+//
 // SOURCE NORMALIZATION:
 //   Microsoft Learn currently documents `customEvents` for Copilot Studio's
 //   Application Insights Logs experience and `AppEvents` for workspace-based

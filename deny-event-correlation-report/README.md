@@ -124,6 +124,13 @@ For RAI telemetry, you need:
 2. Managed identity or Entra ID authentication with Monitoring Reader role on the Application Insights resource
 3. Copilot Studio agents configured with App Insights connection string
 
+**RAI validation gate:** The extractor's exact event-name/type and filter-metadata
+predicates are not a verified Microsoft emission contract. Validate sanitized
+known `ContentFiltered` examples against the script before production use; an
+empty CSV is not evidence that no filtering occurred. See
+[troubleshooting](docs/troubleshooting.md#3-no-rai-telemetry-events) and the
+[2026-10-16 verification record](docs/verification-2026-10-16.md).
+
 ```powershell
 # Authenticate with managed identity in Azure Automation, or Entra ID interactively on a workstation
 Connect-AzAccount

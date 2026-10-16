@@ -265,15 +265,17 @@ $env:AZURE_CLIENT_ID = "optional-managed-identity-or-app-client-id"
 ### Configure Scheduled Refresh
 
 - [ ] In Power BI Service, navigate to workspace
-- [ ] Click **...** next to dataset name
+- [ ] Click **...** next to the semantic model name
 - [ ] Select **Settings**
-- [ ] Expand **Scheduled refresh** section
-- [ ] Click **Keep your data up to date** toggle to **On**
+- [ ] Review **Gateway and cloud connections** / **Data source credentials**, then expand **Refresh**
+- [ ] Set **Configure a refresh schedule** to **On**
 - [ ] Set refresh frequency: **Daily**
 - [ ] Set time: **7:00 AM** (after score calculation flow at 6:00 AM)
 - [ ] Check **Send refresh failure notifications to:** and enter email
 - [ ] Click **Apply**
-- [ ] Verify "Scheduled refresh configured successfully" message
+- [ ] Verify the schedule remains enabled and inspect **Refresh > Refresh history** after a scheduled run
+
+See [Microsoft's scheduled-refresh guidance](https://learn.microsoft.com/power-bi/connect-data/refresh-scheduled-refresh).
 
 ### Assign Workspace Access
 
