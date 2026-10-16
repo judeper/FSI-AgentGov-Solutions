@@ -219,6 +219,8 @@ python scripts/import_registry_export.py \
     --output rows.json
 
 # Resolve Copilot entitlement for a list of owner UPNs (diagnostic only)
+# Current wrapper uses app-only authentication, but Graph licenseDetails is
+# delegated-only: do not treat this path as a validated unattended license read.
 #    Requires pwsh + copilot-billing-governance/scripts/Get-CopilotEntitlement.ps1
 python scripts/resolve_owner_entitlement.py \
     --upns-file upns.json \

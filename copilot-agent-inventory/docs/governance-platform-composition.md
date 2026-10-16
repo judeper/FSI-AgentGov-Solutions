@@ -104,9 +104,14 @@ and **contributes to** controls 1.18 (Application-Level Authorization and RBAC)
 and 1.14 (Data Minimization and Agent Scope Control). The entitlement contract it
 produces is the same contract Pillar 4's gateway applies at runtime.
 
-> **Upstream dependency.** Copilot Credits consumption billing applies from
-> 2026-06-16; credit policies are Chat-only today. CBG is built to read both
-> policy objects as they reach general availability.
+> **Billing boundary (verified 2026-10-16).** **2026-06-16** is the Work IQ API
+> GA / consumption-pricing date, not the start of all Copilot Credits billing.
+> Chat credit policies remain Chat-only; SharePoint agents use PAYG. Work IQ API
+> uses separate spending policies under **Copilot > Cost management**, which CBG
+> does not yet evaluate. CBG's license resolver also calls delegated-only
+> `licenseDetails`; it is not a supported unattended app-only license read.
+> Keep CBG analysis monitor-only and do not use its rows as enforcement authority.
+> See [CBG verification and Microsoft sources](../../copilot-billing-governance/README.md#technical-verification).
 
 ## Pillar 4 — Enforcement (`compose-enforcement`)
 
@@ -271,6 +276,14 @@ The CBG resolver (`Get-CopilotEntitlement.ps1`) evaluates each UPN against:
 The resolver is **fail-closed on uncertainty**: users whose license state cannot be
 determined are routed to `needsManualReview`, not silently counted as "allowed."
 
+The license-read step requires delegated Graph `LicenseAssignment.Read.All` (or
+a supported higher delegated permission) and a supported signed-in Entra role.
+Application permissions are **not supported** for
+[`licenseDetails`](https://learn.microsoft.com/graph/api/user-list-licensedetails?view=graph-rest-1.0).
+The existing wrapper's app-only token acquisition cannot satisfy this requirement;
+until its owner implements a supported path, use reviewed diagnostic inputs and
+preserve unresolved users. A complete engine score is not a platform denial test.
+
 The entitlement engine (`Invoke-EntitlementEvaluation.ps1`) then classifies each
 (agent, user) pair as `Block`, `Allow`, `Fail-open-Anomaly`, or
 `Fail-closed-ZeroRatingUnresolved` and writes results to
@@ -326,10 +339,11 @@ Defender XDR `CloudAppEvents`, Application Insights, and Microsoft Graph `aiInte
 
 #### License detection is service-plan–based; display names are not contracts
 
-The CBG resolver checks paid entitlement against **service-plan GUIDs** read from
-`GET /v1.0/users/{id}/licenseDetails`. The **eight** service plans that constitute a paid
-M365 Copilot entitlement — the six `M365_COPILOT_*` plans plus two sibling plans bundled in
-the same paid SKU (GATE0b 8-GUID allowlist; Microsoft licensing-service-plan reference):
+The CBG resolver uses an **eight-GUID implementation allowlist** read from
+`GET /v1.0/users/{id}/licenseDetails`: six `M365_COPILOT_*` plans plus two sibling
+plans. This table records the shipped implementation, not a universal current
+licensing rule for every capability or future SKU. Reconcile tenant subscriptions
+and current licensing before treating a shared plan as sufficient entitlement.
 
 | `servicePlanName` | `servicePlanId` |
 |---|---|
@@ -347,24 +361,23 @@ and E5 SKUs — is **explicitly excluded**: its friendly name in Microsoft's ref
 "RETIRED - Commercial data protection for Microsoft Copilot" and it does not constitute
 a paid M365 Copilot entitlement (GATE0b C2).
 
-Tenant-local labels such as "Microsoft 365 E7" and "Copilot Premium" are not published
-Microsoft SKU names (neither appears in the Microsoft licensing-service-plan reference
-as of 2026-06-11; GATE0b C3). The resolver MUST reconcile against live tenant
-`subscribedSkus` by GUID — never by display name.
+The resolver MUST reconcile against live tenant `subscribedSkus` by GUID rather
+than treating display names or a historical absence from a SKU list as a current
+licensing contract.
 
 ---
 
 ### Coverage model and honest limits
 
 Automated capability detection is bounded by manifest access. The entitlement and
-sharing join is **fully automated for every agent that is identified**, regardless of
-how the agent was built.
+sharing join also depends on successful delegated license reads and verified
+billing scope; identifying an agent alone does not make the scoring complete.
 
 | Tier | Population | Capability detection | Entitlement + sharing join |
 |---|---|---|---|
-| **A — source-controlled** | ~5–20% (Toolkit-built; `declarativeAgent.json` in version control or CI artifact) | ✅ Automated | ✅ Automated |
-| **B — org-catalog, no source** | Published agents without checked-in manifest | ❌ No supported API today | ✅ Automated once identified |
-| **C — Shared by creator (long tail)** | ~60–85% (Agent-Builder self-service agents) | ❌ No supported API today | ✅ Automated once identified |
+| **A — source-controlled** | ~5–20% (Toolkit-built; `declarativeAgent.json` in version control or CI artifact) | ✅ Automated | Conditional on supported license access and policy evidence |
+| **B — org-catalog, no source** | Published agents without checked-in manifest | ❌ No supported API today | Conditional once identified |
+| **C — Shared by creator (long tail)** | ~60–85% (Agent-Builder self-service agents) | ❌ No supported API today | Conditional once identified |
 
 **No supported, scalable API returns `capabilities[]` for deployed declarative agents
 as of 2026-06-11.** The following surfaces were tested and return metadata only — no
@@ -375,9 +388,10 @@ CSV export, Teams Admin Center PowerShell (`Get-TeamsApp`), Purview Audit, Defen
 GATE0a enumeration across all documented surfaces).
 
 For Tier B and C agents, **manual owner attestation is the primary recommended path**:
-the owning team confirms whether the "Reference org chart and profile info" toggle is
-enabled in Agent Builder. The entitlement and sharing join then runs automatically once
-the agent is included in the sweep.
+the owning team confirms whether **Reference people in organization** is enabled
+on Agent Builder's **Configure** tab (older records may use "Reference org chart and
+profile info"). The join additionally requires the license-read and coverage checks
+above. Source: [People data](https://learn.microsoft.com/microsoft-365/copilot/extensibility/agent-builder-add-knowledge#people-data).
 
 **Future static-API candidates — validate live, do not promise customers today:**
 

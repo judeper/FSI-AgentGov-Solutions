@@ -43,6 +43,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **2026-10-16 product-fact re-verification (#841):** refreshed the README date
+  and linked live Microsoft Learn sources; narrowed the June 16 date to Work IQ
+  API, documented its separate spending-policy surface, corrected delegated-only
+  `licenseDetails`, billing roles, Power Automate licensing, and native cap
+  availability/latency. Replaced the blanket tenant-grounding surcharge
+  interpretation with current licensed-user inclusion and exceptions, updated
+  People-toggle attestation wording, and propagated diagnostic/promotion gates
+  through CBG, inventory, and gateway documentation. No regulatory mappings or
+  wording changed. **Not a production-readiness sign-off:** manifest metadata,
+  resolver/engine implementation, and generated schema descriptions still need
+  their owning specialists; keep CBG analysis monitor-only.
 - **FNF People-Sweep lens: id-map stem collisions no longer silently drop or mis-attribute
   provisional rows.** `Resolve-FnfPeopleAgentSet` now reconciles each People feature row on a
   UNIQUE per-feature key (CAI's salted `fsi_sourceobjectid`, else `fsi_caiagentfeatureid`) in

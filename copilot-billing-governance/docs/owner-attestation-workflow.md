@@ -65,8 +65,13 @@ outreach list and the real agent ids.
 
 For each opaque agent, contact the owner (from the CSV) and ask them to confirm **one** of:
 
-- **Confirm the toggle.** Open the agent in Agent Builder and report whether **"Reference org
-  chart and profile info"** (the People capability) is **enabled** or **not enabled**; or
+- **Confirm the toggle.** On the **Configure** tab in Agent Builder, report whether
+  **"Reference people in organization"** (the People capability) is **enabled** or
+  **not enabled**; older attestations may use "Reference org chart and profile info".
+  Microsoft documents People data as enabled by default for agents created by
+  Microsoft 365 Copilot-licensed users. Record the observed setting, not the default.
+  Source (re-checked 2026-10-16):
+  [Agent Builder People data](https://learn.microsoft.com/microsoft-365/copilot/extensibility/agent-builder-add-knowledge#people-data); or
 - **Export the package.** Use Agent Builder's Export to produce the app `.zip` and return it (the
   `declarativeAgent.json` inside can then be scanned by `detect_people_capability.py`, which moves
   the agent into the **manifest-detected** tier instead).
@@ -119,6 +124,13 @@ the artifact is a complete record of the campaign; the lens skips disabled rows.
 ### Step 5 - Feed the attested artifact into the FNF lens
 
 Pass the attested artifact to the People-Sweep lens exactly as a manifest artifact:
+
+> **License-read prerequisite:** `$graphToken` below must support delegated
+> `licenseDetails` access with a supported signed-in Entra role; app-only/managed
+> identity is not supported for that API. See [prerequisites](prerequisites.md).
+> The result is a preview engine score, not proof of a Microsoft licensing denial.
+> Preserve unknown/unresolved coverage and confirm capability-specific licensing
+> before acting on "blocked" counts.
 
 ```powershell
 .\scripts\Get-FnfPeopleSweepReport.ps1 `

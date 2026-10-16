@@ -54,6 +54,13 @@ The live path requires the **Az.Accounts** module for the dev-only `Get-AzAccess
 
 ## 5. Governance store (sibling solutions)
 
+> **Promotion gate, 2026-10-16:** require evidence of supported delegated
+> license resolution (or a separately validated unattended replacement),
+> service-specific policy scope, and current billing inclusion checks before
+> using CBG cache rows to deny production traffic. The current CBG preview does
+> not evaluate Work IQ spending policies; cache freshness and row presence alone
+> are insufficient. See [CBG prerequisites](../../copilot-billing-governance/docs/prerequisites.md).
+
 The gateway **reads** governance state populated by two sibling solutions; it does not create or populate those tables:
 
 | Table | Owning solution | Fields the gateway reads (reconciled 2026-06-09) |

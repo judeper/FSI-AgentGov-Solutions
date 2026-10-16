@@ -127,6 +127,13 @@ Writing decisions to Dataverse is optional but recommended: it surfaces gateway 
 
 Exercise the entitlement contract end to end against representative agents and cohorts, and confirm each expected outcome:
 
+> **2026-10-16 dependency check:** these reference scenarios verify gateway behavior
+> only. They do not establish that CBG inputs were obtained with supported Graph
+> authentication or that Work IQ spending policies and current zero-rating
+> exceptions were evaluated. Record those checks separately and do not promote
+> billing enforcement while they remain unresolved. See
+> [CBG verification findings](../../copilot-billing-governance/README.md#technical-verification).
+
 | Scenario | Expected decision | Expected HTTP | Expected `denyReason` |
 |---|---|---|---|
 | Authorized caller, pathway `none` | Allow | 200 | None |

@@ -41,6 +41,13 @@ Agent Eligibility Gateway  (Azure API Management <inbound>)
 
 **Decision model (switch-on-pathway).** Eligibility is evaluated only inside a metered pathway:
 
+> **CBG input limitation (2026-10-16):** the table describes this reference
+> gateway's behavior, not a complete Microsoft licensing determination. CBG's
+> current license-read authentication and Work IQ spending-policy gaps must be
+> resolved before billing decisions drive production denials. Generic pathway
+> allow results are not evidence of service-specific billing coverage. See
+> [CBG verification](../../copilot-billing-governance/README.md#technical-verification).
+
 | Condition | Decision | HTTP |
 |---|---|---|
 | Token invalid / expired / wrong tenant | Deny | 401 |

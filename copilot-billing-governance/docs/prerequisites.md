@@ -11,13 +11,17 @@ Requirements for deploying Copilot Billing Governance (CBG).
 | **Microsoft 365 Copilot** | Licensed users are an input to the entitlement decision |
 | **Copilot consumption billing** (PAYG and/or prepaid credits) | The policy objects this solution governs |
 | **Azure subscription** | Backs the pay-as-you-go (PAYG) billing policy |
-| **Power Platform Premium** | Power Automate sync and coverage-gap flows |
+| **Power Automate Premium**, or an applicable **Power Automate Process** license | Premium-connector sync and coverage-gap flows; license the scheduled flow appropriately |
 | **Dataverse capacity** | Policy, entitlement, cache, and coverage-gap storage |
 
-> **Upstream dependency:** Copilot Credits consumption billing applies from **June 16
-> 2026**, and credit policies are **Chat-only today** (SharePoint grounding stays
-> PAYG). Verify current availability with Microsoft before relying on credit-policy
-> enforcement.
+> **Verified 2026-10-16:** **June 16, 2026** is the Work IQ API GA / consumption-pricing
+> date, not the start of all Copilot Credits billing. Chat credit policies remain
+> Chat-only; SharePoint agents use PAYG. Work IQ API uses separate spending policies
+> under **Copilot > Cost management**. CBG does not yet evaluate those policies.
+> Sources: [PAYG setup](https://learn.microsoft.com/microsoft-365/copilot/pay-as-you-go/setup),
+> [capacity packs](https://learn.microsoft.com/microsoft-365/copilot/pay-as-you-go/copilot-capacity-packs),
+> [usage-based billing](https://learn.microsoft.com/microsoft-365/copilot/usage-based-billing-overview-copilot-credits),
+> [Power Automate licensing](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/faqs).
 
 ---
 
@@ -27,14 +31,15 @@ Requirements for deploying Copilot Billing Governance (CBG).
 
 | Role | Required for |
 |------|--------------|
-| **Microsoft 365 Admin** | Read and configure Copilot billing and credit policies in the Microsoft 365 admin center |
+| **Billing Administrator**, **AI Administrator**, or **Entra Global Admin** | Configure PAYG billing in the Microsoft 365 admin center |
+| **Entra Global Admin** | Enable capacity-pack usage and create Copilot credit policies; purchasing packs also supports Billing Administrator |
 | **Entra Global Admin** *(or delegated group admin)* | Register maker / audience / billing security groups in the admission-gated registry |
 
 ### Azure roles
 
 | Role | Required for |
 |------|--------------|
-| **Subscription Owner or Contributor** | The Azure subscription backing the PAYG billing policy and its budget alerts |
+| **Owner or Contributor** | Both the Azure subscription and resource group backing the PAYG billing policy; the subscription must be in the Microsoft 365 tenant |
 
 ### Power Platform roles
 
@@ -47,12 +52,20 @@ Requirements for deploying Copilot Billing Governance (CBG).
 
 | Permission | Type | Purpose |
 |------------|------|---------|
-| `User.Read.All` | Application | Read user Copilot license assignment via `licenseDetails`, including transitive group-based licenses (entitlement input) |
-| `Group.Read.All` | Application | Read Entra group `securityEnabled` / `mailEnabled` / `groupTypes` at admission time, and group **transitive members** for PAYG group-scope and cohort resolution |
-| `Organization.Read.All` | Application | Read `subscribedSkus` to build the tenant SKU dictionary (resolves undocumented Copilot-bearing SKUs — e.g. "E7", "Copilot Premium" — by construction) |
+| `LicenseAssignment.Read.All` (least privileged; delegated `User.Read.All` is also supported) | **Delegated only** for `licenseDetails` | Read direct and group-assigned user licenses; the signed-in user also needs a supported Entra role, such as Directory Readers |
+| `Group.Read.All` | Delegated or Application, according to the operation/host | Read group metadata and transitive membership; grant access to user properties needed for UPN expansion and verify no limited-information member rows |
+| `LicenseAssignment.Read.All` (least privileged; `Organization.Read.All` is a supported higher privilege) | Delegated or Application for `subscribedSkus` | Read tenant SKU/service-plan mappings without inferring entitlement from display names |
 
-> Grant admin consent to the managed identity or app registration used by the
-> scripts. Request the least privilege your environment allows.
+> **Current resolver restriction:** Microsoft documents **no application permission**
+> for `GET /users/{id}/licenseDetails`. A managed-identity or client-credentials token
+> with `User.Read.All` cannot make this a supported unattended license-read path.
+> Use a delegated diagnostic run with the permission and Entra role above; do not
+> schedule the existing resolver as app-only. An unattended replacement needs a
+> separately validated implementation. A license-read failure is unresolved coverage,
+> not evidence that the user lacks a license. Sources:
+> [licenseDetails](https://learn.microsoft.com/graph/api/user-list-licensedetails?view=graph-rest-1.0),
+> [transitive members](https://learn.microsoft.com/graph/api/group-list-transitivemembers?view=graph-rest-1.0),
+> [subscribedSkus](https://learn.microsoft.com/graph/api/subscribedsku-list?view=graph-rest-1.0).
 
 ### Power Platform billing-policy REST (PAYG / credit coverage)
 
@@ -61,9 +74,12 @@ maps **PAYG / credit coverage** to the engine's `inCreditScopeGroup` input. Ther
 Microsoft Graph endpoint** for billing-policy membership, so coverage is read from the
 Power Platform licensing REST
 (`https://api.powerplatform.com/licensing/billingPolicies?api-version=2024-10-01`)
-using a token for the `https://api.powerplatform.com/` audience, acquired via the same
-managed-identity-first model. The calling principal needs **Power Platform Admin** (or an
-equivalent billing-policy reader) rights.
+using a token for the `https://api.powerplatform.com/` audience. The
+[Power Platform API reference](https://learn.microsoft.com/rest/api/power-platform/)
+documents a Licensing namespace, but does not establish that this particular list
+version returns Microsoft 365 Chat credit-policy scope or Work IQ spending policies.
+Validate endpoint-specific permissions and response fields before relying on a live
+read; a generic admin role or HTTP 200 is not evidence of complete policy coverage.
 
 > **Summary-only list view.** The live list response (verified HTTP 200 against a test
 > tenant) is a summary that omits per-policy scope and capability detail, so live-read
@@ -77,7 +93,9 @@ equivalent billing-policy reader) rights.
 
 ## Authentication model (managed-identity-first)
 
-Use a managed identity for Azure-hosted automation:
+Use a managed identity for Azure-hosted automation **where the target API supports
+application access**. The current `licenseDetails` resolver is the delegated-only
+exception described above; a client secret is not a workaround.
 
 1. Enable a **system-assigned managed identity** on the Azure Automation account,
    Function, VM, or container host running the scripts.
@@ -90,8 +108,9 @@ Use a managed identity for Azure-hosted automation:
 
 The shared `DataverseClient` (`../scripts/shared/dataverse_client.py`) accepts a token
 from any of the above, so the strongest available method can be selected without
-changing the scripts. The PowerShell scripts request a managed-identity token first
-and fall back only when one is not available.
+changing the scripts. The resolver accepts `-GraphAccessToken`; supply a suitable
+delegated token for license reads rather than relying on its app-only
+authentication guidance.
 
 ---
 
@@ -113,21 +132,33 @@ and fall back only when one is not available.
 
 ## Validation checklist
 
-- [ ] Microsoft 365 Copilot licensing available for evaluated users
-- [ ] PAYG billing policy connected (two-step add → connect) **and/or** prepaid credit
-      policy configured
+- [ ] Paid Microsoft 365 Copilot license state recorded for evaluated users;
+      unlicensed users are not automatically excluded from all metered scenarios
+- [ ] PAYG billing policy connected to the intended service (create then connect)
+      **and/or** Chat credit policy configured, with credits allocated to the
+      Microsoft Copilot Chat environment under **Licensing > Copilot Studio**
+- [ ] Record prepaid capacity and overage settings; standalone exhaustion behavior
+      must not be mistaken for an instantaneous per-agent cap
+- [ ] Work IQ API consumers reviewed separately in **Copilot > Cost management**;
+      do not infer Work IQ coverage from a Chat/SharePoint billing policy
 - [ ] Azure subscription budget alert configured for PAYG spend
-- [ ] Power Platform Premium for the flow author
+- [ ] Power Automate Premium for the scheduled flow owner, or applicable Process licensing
 - [ ] Dataverse environment ready; CBG schema deployed
       (`python scripts/create_cbg_dataverse_schema.py`)
 - [ ] Managed identity configured for the production script host
-- [ ] Graph admin consent granted (`User.Read.All`, `Group.Read.All`, `Organization.Read.All`)
+- [ ] Delegated license-read permission, supported signed-in Entra role, and consent
+      verified; app-only `licenseDetails` is not used
 - [ ] Maker / audience / billing groups registered (security-enabled, not
       mail-enabled) in `fsi_cbgapprovedgrouppolicy`
 - [ ] Per-user entitlement inputs resolved (`Get-CopilotEntitlement.ps1`); billing-policy
       coverage supplied via `-BillingPolicyInputPath` while the REST schema is unproven
 - [ ] Coverage-gap analysis run in monitor-only mode; rows present in
       `fsi_cbgcoveragegap`
+- [ ] Preserve unresolved-user / uncertain-policy evidence; row presence alone
+      does not establish complete coverage or authorize enforcement
+- [ ] Native agent limits reviewed in **Licensing > Copilot Studio > Summary >
+      Manage Agents**; record notification/hard-stop settings, enforcement latency,
+      and separately billed agent flows before treating a cap as effective
 
 ---
 
