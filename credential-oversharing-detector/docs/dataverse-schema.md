@@ -55,7 +55,7 @@
 | fsi_DetectedAt | fsi_detectedat | DateTime | Yes | When the violation was detected |  |
 | fsi_ResolvedAt | fsi_resolvedat | DateTime | No | When the violation was resolved |  |
 | fsi_Description | fsi_description | Memo | No | Detailed description of the violation |  |
-| fsi_ApprovedScopes | fsi_approvedscopes | Memo | No | Space-separated OAuth scopes approved for this violation (matches the format written by Compare-OAuthScopeBaseline.ps1 / Test-AgentAuthMethod.ps1) |  |
+| fsi_ApprovedScopes | fsi_approvedscopes | Memo | No | Space-separated OAuth scopes approved for this violation (matches the format written by Compare-OAuthScopeBaseline.ps1) |  |
 | fsi_ActualScopes | fsi_actualscopes | Memo | No | Space-separated OAuth scopes actually observed on this connector (matches the format written by Compare-OAuthScopeBaseline.ps1) |  |
 | fsi_EvidenceJson | fsi_evidencejson | Memo | No | Full evidence payload for the violation |  |
 | fsi_RemediationNotes | fsi_remediationnotes | Memo | No | Notes on remediation actions taken |  |

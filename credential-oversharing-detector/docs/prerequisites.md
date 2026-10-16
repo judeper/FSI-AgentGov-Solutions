@@ -35,7 +35,15 @@ The core `Invoke-CredentialScan.ps1` / `Get-AgentConnectorScope.ps1` path does n
 | `Application.Read.All` | Delegated or Application | Read service principals, applications, and federated identity credentials |
 | `Policy.Read.All` | Delegated or Application | Read Conditional Access policies for the CA helper |
 
-`ServicePrincipal.Read.All` is not the permission listed by Microsoft for service-principal enumeration. For delegated CA reads, the signed-in user also needs a supported role such as Security Reader. Sources: [service principals](https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list), [CA policies](https://learn.microsoft.com/en-us/graph/api/conditionalaccessroot-list-policies), [federated credentials](https://learn.microsoft.com/en-us/graph/api/application-list-federatedidentitycredentials).
+`ServicePrincipal.Read.All` is not the permission listed by Microsoft for service-principal enumeration. The delegated scopes above do not replace the signed-in user's operation-specific authorization:
+
+- **CA policy reads:** The signed-in user needs a supported role such as Security Reader.
+- **Federated-credential reads:** With delegated `Application.Read.All`, a non-admin member or Application Developer can read applications they own. Reading other applications requires a supported role such as Cloud Application Administrator or Application Administrator, or a custom role granting the required permission. Security Reader alone does not satisfy this operation's role requirement.
+- **Application authentication:** An app-only Graph session with application `Application.Read.All` does not use the delegated signed-in-user role requirement. Add application `Policy.Read.All` when running the CA helper.
+
+`Test-AgentAuthMethod.ps1` currently suppresses federated-credential lookup errors and can report a federated-only application as `NoCredentials` with a "No action required" recommendation. Verify authorization and successful credential enumeration for every application in scope before relying on that result; a failed read is incomplete coverage, not evidence that no credentials exist.
+
+Sources: [service principals](https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list), [CA policies](https://learn.microsoft.com/en-us/graph/api/conditionalaccessroot-list-policies), [federated credentials and delegated roles](https://learn.microsoft.com/en-us/graph/api/federatedidentitycredential-list).
 
 ### Service Principal Setup
 

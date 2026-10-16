@@ -69,6 +69,8 @@
 ### Graph helper fails or reports unexpected CA coverage
 
 - The existing CA/auth helpers call Graph independently of the core scanner. Establish the Graph session with `Application.Read.All` and, for CA reads, `Policy.Read.All`; delegated reads also require the documented user role
+- For delegated federated-credential reads, confirm application ownership or a supported application-administration/custom role; Security Reader alone is insufficient. Alternatively, use an app-only Graph session with application `Application.Read.All`. See the operation-specific [prerequisites](prerequisites.md#microsoft-entra-id) and [Microsoft permission requirements](https://learn.microsoft.com/en-us/graph/api/federatedidentitycredential-list)
+- Do not treat `NoCredentials` / "No action required" as a successful authentication review until federated-credential enumeration is confirmed. The current auth helper suppresses lookup errors, so missing authorization can produce that result
 - Workload-identity CA excludes managed identities and multitenant apps. Do not recommend adding such identities to CA policies
 - Treat the helper as inventory, not effective coverage: it does not fully evaluate enabled state, exclusions, filters, or `ServicePrincipalsInMyTenant`. Verify those against [Microsoft's CA guidance](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity) and service-principal sign-in logs
 
