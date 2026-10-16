@@ -1,20 +1,26 @@
 <#
 .SYNOPSIS
-    Detects workload identity Conditional Access policy coverage for
-    agent service principals and managed identities.
+    Inventories workload identity Conditional Access policies for
+    agent service-principal review.
 
 .DESCRIPTION
-    Checks that workload identities (managed identities and service principals)
-    used by Copilot Studio agents have appropriate Conditional Access policies
-    applied. Evaluates location-based restrictions, risk-based blocking, and
-    workload identity-specific CA policy coverage.
+    Produces heuristic policy inventory for agent service principals.
+    Microsoft workload-identity Conditional Access applies to eligible
+    single-tenant service principals, not managed identities or multitenant
+    apps. Creating or modifying such policies requires Workload ID Premium.
+
+    Results are not effective-policy evaluation: policy state, exclusions,
+    filters and ServicePrincipalsInMyTenant are not fully evaluated. Verify
+    applicability and service-principal sign-in evaluation manually before
+    relying on reported coverage. Establish the Graph session separately with
+    Application.Read.All and Policy.Read.All.
 
     Detection logic:
     1. Enumerates service principals tagged as agent workload identities
     2. Queries Conditional Access policies scoped to workload identities
        (servicePrincipal conditions)
-    3. Cross-references to identify unprotected workload identities
-    4. Flags workload identities without location or risk-based restrictions
+    3. Cross-references explicit inclusions for inventory findings
+    4. Reports apparent location and risk conditions for manual verification
 
     Reference: https://learn.microsoft.com/entra/identity/conditional-access/workload-identity
 

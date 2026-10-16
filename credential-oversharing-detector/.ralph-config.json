@@ -4,11 +4,11 @@
     "Zone option set uses values 100000000 (Unclassified), 100000001 (Zone1), 100000002 (Zone2), 100000003 (Zone3). Scripts convert string zone names to integers via $zoneMap before Dataverse writes.",
     "Violation records require fsi_violationid (must be unique — scripts append a GUID suffix) and fsi_violationstatus. Flow builders must populate both.",
     "Microsoft 365 (O365) connectors / Teams Incoming Webhooks stop functioning after 22 May 2026 (full deprecation rollout 18-22 May 2026 per MC1181996); '31 Mar 2026' was only an interim extended-support date, not the final retirement. Use Power Automate Teams 'Post adaptive card' action instead. Action.Submit responses require a bot or Workflow endpoint to capture acknowledgement clicks.",
-    "Power Platform connector for bot/environment control-plane is shared_powerplatformforadmins (V2), NOT shared_powerappsforadmins (legacy app/connection-only).",
-    "PowerShell scanners do not call Microsoft Graph today — Graph permissions are documented as optional/future. PP module is authenticated via Add-PowerAppsAccount in service-principal mode for unattended runs.",
-    "The 'accesscontrolpolicy' column does NOT exist on the Dataverse bot entity — do not include it in $select.",
+    "Power Platform for Admins V2 uses shared_powerplatformadminv2. shared_powerplatformforadmins is the older Power Platform for Admins connector, not V2. Existing references are skipped by setup and need manual migration. Neither connector reference establishes a per-agent OAuth-scope feed.",
+    "Core Invoke-CredentialScan/Get-AgentConnectorScope do not call Graph; existing Get-WorkloadIdentityCAPolicy and Test-AgentAuthMethod helpers do, using Application.Read.All and Policy.Read.All for CA inventory. Graph session authentication is separate. ServicePrincipal.Read.All is not the documented service-principal-list permission.",
+    "Microsoft's live bot table reference documents accesscontrolpolicy (logical name), checked 2026-10-16. Older absence guidance is stale; confirm target-environment metadata before changing selects.",
     "OData GUID filters use unquoted GUIDs (e.g., botid eq 12345678-... NOT botid eq '12345678-...').",
-    "Detection rules currently apply count-based thresholds + name-based heuristics. True semantic comparison of actual scope names against per-agent declared/approved baselines is planned (Tier 2) — see CHANGELOG Known Limitations.",
+    "The main scan applies count-based thresholds and name-based heuristics. Compare-OAuthScopeBaseline.ps1 separately compares populated approved/actual scope-name baseline rows; the main scan does not invoke it. Do not treat missing connector metadata as a passing review.",
     "fsi_AgentConnectorScope (baseline) table now carries fsi_approvedscopes and fsi_actualscopes memo columns (added [Unreleased]). Compare-OAuthScopeBaseline.ps1 queries these on fsi_agentconnectorscopes; they previously existed only on fsi_credentialviolation/fsi_credentialexception, causing HTTP 400. Re-run create_cod_dataverse_schema.py on existing tenants to add them."
   ]
 }

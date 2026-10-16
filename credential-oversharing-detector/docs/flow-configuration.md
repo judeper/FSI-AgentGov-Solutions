@@ -9,9 +9,11 @@ Manual build instructions for Power Automate flows supporting the Credential Ove
 | `fsi_cr_dataverse_credentialoversharing` | Dataverse | Read/write scan results and violations |
 | `fsi_cr_teams_credentialoversharing` | Teams | Send alert notifications to governance channel |
 | `fsi_cr_approvals_credentialoversharing` | Approvals | Exception request approval workflows |
-| `fsi_cr_powerplatformadminv2_credentialoversharing` | Power Platform for Admins V2 | Query environment and agent (bot) configurations. **Do not use the legacy Power Apps for Admins connector** — Copilot Studio bot and environment control-plane actions live in V2. |
+| `fsi_cr_powerplatformadminv2_credentialoversharing` | Power Platform for Admins V2 (`shared_powerplatformadminv2`) | Environment and supported bot control-plane operations; not a documented per-agent OAuth-scope feed. |
 
 Create each connection reference in your solution before building the flows. Bind them to connections authenticated with accounts that have the permissions described in [Prerequisites](prerequisites.md).
+
+**Existing installations:** Earlier setup scripts bound the V2-named reference to `shared_powerplatformforadmins`, which is the older **Power Platform for Admins** connector. The [V2 connector](https://learn.microsoft.com/en-us/connectors/powerplatformadminv2/) and [older connector](https://learn.microsoft.com/en-us/connectors/powerplatformforadmins/) are distinct. The setup script skips existing references; inspect the connector in the maker portal and manually recreate an incorrectly bound reference with V2, then rebind dependent flow actions. Do not delete a working reference without reviewing those dependencies.
 
 ## Environment Variables
 
@@ -42,11 +44,13 @@ Create each connection reference in your solution before building the flows. Bin
 1. **Get environment variable** — read `fsi_COD_DataverseUrl`
 2. **List environments** — use Power Platform for Admins V2 connector
 3. **Apply to each environment:**
-   a. List agents (bots) in the environment
-   b. For each agent, get connector configurations
+   a. List agents from the target environment's Dataverse `bots` entity set (the [Agent table reference](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/bot) documents this surface)
+   b. For each agent, obtain connector configurations from a tenant-validated source; see the telemetry gate below
    c. Evaluate connector OAuth scopes against zone policy
    d. If violations found, create `fsi_credentialviolations` rows (see required columns below)
 4. **Create scan record** — write `fsi_credentialscans` with summary
+
+> **Telemetry gate:** This is an implementation outline, not a claim that V2 exposes connector OAuth scopes. The repository extractor assumes nested `bot.configuration.connectorConfigurations` / `oauthScopes` fields that the Microsoft sources reviewed do not document. First compare sanitized output with a known connector-bearing agent. If scope or credential metadata is absent, report incomplete coverage and stop credential validation rather than recording a zero-finding pass. The safe-sharing roadmap and automatic security-scan warnings do not establish this API contract.
 
 > **Required columns when inserting Dataverse rows:**
 > - `fsi_credentialscans` requires `fsi_scanid` (string), `fsi_scanrunid` (string), `fsi_scanstartedat` (datetime), `fsi_scanstatus` (option set: 100000000 Completed / 100000001 CompletedWithFindings / 100000002 Failed / 100000003 InProgress).
@@ -65,8 +69,8 @@ Create each connection reference in your solution before building the flows. Bin
 
 ### Performance Considerations
 
-- Use `$top=5000` for environment queries
-- Implement pagination with `@odata.nextLink` for large agent lists
+- Use the environment-list action's documented parameters and pagination; do not assume it accepts Dataverse `$top` parameters
+- For Dataverse agent lists, follow `@odata.nextLink` until exhausted
 - Set timeout to 30 minutes for large tenants
 
 ---
@@ -125,5 +129,8 @@ After building flows, perform the following validation steps:
 3. **Verify Teams notifications** — confirm adaptive cards are posted to the configured channel
 4. **Test exception approval** — submit an exception, approve it, and verify status transitions end-to-end
 5. **Review flow run history** — check for warnings or errors in each flow's run history
+6. **Check coverage, not just row creation** — compare connector counts and scopes with a known agent; missing metadata is inconclusive. Exercise one approved baseline and one intentionally excessive scope set using test data. Confirm expected violation type/severity and the exported scope fields, not merely a nonempty scan row.
+7. **Run helpers separately if required** — the main scan does not invoke the Graph CA/auth helpers or name-level baseline comparison. Populate `fsi_agentconnectorscopes.fsi_approvedscopes` / `fsi_actualscopes` before running `Compare-OAuthScopeBaseline.ps1`. For CA, manually confirm enabled state, exclusions, filters, the `ServicePrincipalsInMyTenant` selector, and service-principal sign-in evaluation; managed identities are not CA targets.
+8. **Record execution limitations** — retain host/module versions, data-source coverage, identity type, and any missing fields with the evidence. The auto-remediation policy flag does not perform credential changes in this release.
 
 > **Note:** These flows produce supporting evidence for FINRA Rule 3110 supervision, GLBA 501(b) safeguards, and SEC 17a-3/4 record-keeping reviews. They are management-reporting metrics — not standalone regulator-grade evidence. Organizations should verify their specific implementation helps meet applicable obligations.

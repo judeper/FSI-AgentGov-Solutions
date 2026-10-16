@@ -11,11 +11,11 @@ coe_function: govern
 > **Version:** v2.1.2
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Upstream Microsoft dependency:** Preview — Copilot Studio credential-oversharing detection (Microsoft roadmap ID 566873) is listed as In development on the Microsoft AI at Work roadmap (preview target July 2026, general availability target September 2026; status checked 2026-10-09). Public availability is not confirmed; validate in a non-production tenant before regulated production use.
-> **Last Verified:** 2026-07-26
+> **Upstream Microsoft dependency:** Preview — Copilot Studio credential-oversharing detection (Microsoft roadmap ID 566873) is listed as In development on the Microsoft AI at Work roadmap (preview target July 2026, general availability target September 2026; status checked 2026-10-16). Public availability is not confirmed; validate in a non-production tenant before regulated production use.
+> **Last Verified:** 2026-10-16
 
 >
-> ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, published as **roadmap ID 566873** on the Microsoft roadmap site (now titled **AI at Work roadmap**). Microsoft lists a preview target of July 2026 and a general availability target of September 2026, with roadmap status *In development* (checked 2026-10-09; the September 2026 target month has passed without the status changing, so do not assume the capability is generally available). Microsoft Learn states that Dynamics 365 and Power Platform release plans are no longer published starting September 2026 and that new Power Platform capabilities are published to the AI at Work roadmap; the retired Copilot Studio release-plan pages now redirect to that roadmap, which is the current source for Copilot Studio feature timing. Verify current feature status on the [AI at Work roadmap (Microsoft Copilot Studio filter)](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) before production deployment.
+> ⚠️ **Preview Feature Dependency:** This solution tracks the Microsoft "Enforce safe sharing by detecting credential oversharing" capability, published as **roadmap ID 566873** on the **AI at Work roadmap**. Microsoft lists a preview target of July 2026 and a general availability target of September 2026, with roadmap status *In development* (checked 2026-10-16; elapsed target dates do not confirm availability). Microsoft Learn states that release plans are no longer published starting September 2026 and directs new Power Platform capabilities to the roadmap. Verify current status on the [AI at Work roadmap](https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=566873) before production deployment. The roadmap describes publish/share-time safe-sharing controls, **not a documented OAuth-scope telemetry API**. The existing [automatic security scan](https://learn.microsoft.com/en-us/microsoft-copilot-studio/security-scan) warns about maker-provided credentials; it does not establish the scanner's expected data contract.
 
 ## Overview
 
@@ -43,13 +43,15 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 - **Automated scanning** — scheduled via Power Automate with configurable frequency
 - **Exception management** — approval workflows with automatic expiration
 - **Evidence export** — SHA-256 hash-verified JSON for regulatory examinations
-- **Dry-run mode** — preview changes before Dataverse writes
+- **Dry-run setup** — Python setup scripts support `--dry-run`; the scope-baseline and auth-method helpers support `-WhatIf`. The main scanner has no dry-run switch.
 - **Multiple output formats** — Table, JSON, or PowerShell object
-- **Workload identity CA detection** — identifies agent service principals without Conditional Access policies (location or risk-based)
+- **Workload identity CA review** — heuristic policy inventory for agent service principals (location or risk-based). Microsoft supports workload-identity CA for eligible single-tenant service principals, not managed identities or multitenant applications; manually verify effective coverage.
 - **Auth method detection** — flags client-secret usage as legacy/risky and recommends managed identity or certificate migration
 - **Name-level OAuth scope baseline** — compares actual scopes against approved baseline at the individual scope name level, detecting excess and sensitive scopes
 
 ## Architecture
+
+Environment enumeration uses the Power Apps administration module; agent records and connection references are read from each environment's Dataverse Web API. The diagram is conceptual: the admin API is not a documented source of the nested credential/scope fields assumed by the extractor.
 
 ```
 ┌─────────────────────┐     ┌──────────────────────┐
@@ -79,6 +81,8 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## Zone Requirements
 
+These are this solution's configurable policy defaults, not Microsoft product limits. The auto-remediation value is policy metadata; this release does not implement credential rotation or automatic credential changes.
+
 | Setting | Zone 1 (Dev) | Zone 2 (Team) | Zone 3 (Prod) |
 |---------|-------------|---------------|---------------|
 | Max OAuth Scopes | 20 | 10 | 5 |
@@ -90,6 +94,8 @@ See [CHANGELOG](./CHANGELOG.md) for version history.
 | Auto-Remediate | No | No | Yes |
 
 ## Quick Start
+
+Read the [prerequisites and host-compatibility caveat](docs/prerequisites.md) first. Set `COD_TENANT_ID` and `COD_ENVIRONMENT_URL` for Python setup, or supply `--tenant-id` and `--environment-url` explicitly. The scanner separately requires its documented tenant/application authentication parameters; it does not inherit the Python interactive session. Its client-secret path is a dev-only legacy path, not a production identity recommendation.
 
 ### 1. Create Dataverse schema
 ```bash
@@ -115,13 +121,18 @@ Open Power Apps maker portal → Solutions → Default Solution → Objects → 
 Follow [Flow Configuration Guide](docs/flow-configuration.md) to manually build the 3 flows.
 
 ### 6. Run initial scan
+
+Run the remaining commands from the solution root (`credential-oversharing-detector`), not its `scripts` subdirectory.
+
 ```powershell
-.\scripts\governance\Invoke-CredentialScan.ps1 -OutputFormat Table
+.\scripts\governance\Invoke-CredentialScan.ps1 -DataverseUrl "https://org.crm.dynamics.com" -OutputFormat Table
 ```
+
+Use the governance Dataverse URL containing COD and ELM tables. Without `-DataverseUrl`, this command does not persist scan evidence or resolve ELM zones. Validate connector telemetry against a known agent before interpreting a zero-finding result.
 
 ### 7. Test compliance
 ```powershell
-.\scripts\governance\Test-CredentialCompliance.ps1 -IncludeCompliant
+.\scripts\governance\Test-CredentialCompliance.ps1 -DataverseUrl "https://org.crm.dynamics.com" -PersistResults -IncludeCompliant
 ```
 
 ## Solution Components
@@ -174,19 +185,23 @@ Follow [Flow Configuration Guide](docs/flow-configuration.md) to manually build 
 
 ## Prerequisites
 
-- PowerShell 7.1+
+- PowerShell 7.1+ for the repository scripts; Power Apps administration-module host compatibility must be validated separately (see full prerequisites)
 - Python 3.9+ (for Dataverse setup)
-- Power Platform Administrator role
-- Microsoft 365 E3/E5 (for Teams alerts)
+- Power Platform Admin role
+- Teams access for the notification connection and target channel; E3/E5 is not a specific connector prerequisite
+- Power Automate premium-connector entitlement for Dataverse flows (for example, Power Automate Premium or allocated Process capacity)
+- Microsoft Entra Workload ID Premium if creating or modifying service-principal Conditional Access policies
 
 See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 
 ## Known Limitations
 
-1. **Preview feature dependency** — Credential oversharing signals from Copilot Studio depend on a Microsoft feature listed on the AI at Work roadmap (ID 566873) with a preview target of July 2026 and general availability target of September 2026, at roadmap status *In development* as of 2026-10-09. Roadmap timelines may change, and signal availability may vary by tenant.
-2. **Connector scope visibility** — Not all connector types expose OAuth scope details through the admin API.
+1. **Unconfirmed safe-sharing availability** — Roadmap ID 566873 remains *In development* as of 2026-10-16 (preview target July 2026, general availability target September 2026). This is separate from the documented automatic security-scan warnings.
+2. **Unverified connector telemetry contract** — The extractor reads `bot.configuration.connectorConfigurations`, `oauthScopes`, and credential metadata. Microsoft documents the `bot` table and its configuration column, but the sources reviewed do not document those nested fields or a safe-sharing API supplying them. Empty or missing fields are incomplete coverage, not evidence that credentials are safe. Validate with a known connector-bearing agent; see [verification record](docs/technical-verification-2026-10-16.md).
 3. **Service principal resolution** — Cross-environment credential detection requires consistent service principal IDs across environments.
 4. **Scan performance** — Large tenants (100+ environments) may require environment filters or batched scanning.
+5. **CA inventory is not effective-policy evaluation** — The helper does not fully evaluate policy state, exclusions, service-principal filters, or the `ServicePrincipalsInMyTenant` selector. Check enabled policies and service-principal sign-in logs before treating a coverage result as effective protection. Managed identities are outside workload-identity CA scope.
+6. **Independent helper execution** — The Graph-based CA/auth helpers and the name-level scope-baseline helper are separate from the main scheduled scan. Populate approved/actual baseline rows and run the helpers explicitly; the main scan does not automatically invoke them.
 
 ## Microsoft References
 
@@ -194,6 +209,12 @@ See [full prerequisites](docs/prerequisites.md) for detailed requirements.
 - [AI at Work roadmap — Microsoft Copilot Studio](https://www.microsoft.com/en-us/microsoft-365/roadmap?filters=%5B%22Microsoft%20Copilot%20Studio%22%5D) (Microsoft's redirect target for the retired Copilot Studio release-plan pages: <https://aka.ms/MCStoM365Roadmap>)
 - [Release plans for Dynamics 365 and Power Platform](https://learn.microsoft.com/en-us/dynamics365/release-plans/) (no longer published starting September 2026; existing plans remain available for historical reference)
 - [Conditional Access for workload identities](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity)
+- [Automatic security scan in Copilot Studio](https://learn.microsoft.com/en-us/microsoft-copilot-studio/security-scan)
+- [Agent (bot) table reference](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/bot)
+- [Power Platform for Admins V2 connector](https://learn.microsoft.com/en-us/connectors/powerplatformadminv2/)
+- [Power Automate license types](https://learn.microsoft.com/en-us/power-platform/admin/power-automate-licensing/types)
+- [Microsoft Teams connector](https://learn.microsoft.com/en-us/connectors/teams/)
+- [Technical verification, sources, and downstream review (2026-10-16)](docs/technical-verification-2026-10-16.md)
 - [Power Platform Preview Terms](https://www.microsoft.com/business-applications/legal/supp-powerplatform-preview/)
 
 ## Version History

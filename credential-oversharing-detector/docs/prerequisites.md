@@ -8,38 +8,49 @@
 | Microsoft.PowerApps.Administration.PowerShell | 2.0.217+ | Power Platform environment and agent queries (`Add-PowerAppsAccount`, `Get-AdminPowerAppEnvironment`) |
 | Python | 3.9+ | Dataverse schema setup and evidence export |
 | Az.Accounts | 2.17.0+ (5.3.4 validated) | Dataverse token acquisition for compliance persistence and evidence export |
-| Microsoft.Graph (optional) | 2.36.1+ | Entra ID service principal queries when Graph enrichment is enabled |
+| Microsoft.Graph (helper-specific) | 2.36.1+ | Required for the separate CA/auth helpers; not used by the core connector scan |
+
+**Host compatibility caveat:** These script/module versions are repository requirements, not a Microsoft support matrix. Microsoft's [PowerShell support article](https://learn.microsoft.com/en-us/power-platform/admin/powerapps-powershell#prerequisites-for-powershell) requires Windows PowerShell 5.x for the Power Apps modules and explicitly warns of incompatibility with PowerShell 6+. COD scripts require PowerShell 7 and use PowerShell 7-only operations. Do not assume a supported end-to-end host combination, or simply run these scripts in 5.1. Validate the exact module/host combination in an isolated lab; a supported-host migration requires implementation work beyond this documentation re-check.
 
 ## Licensing
 
-- **Power Platform per-user or per-app plan** — required for Dataverse table creation and read/write operations
-- **Microsoft 365 E3/E5 or equivalent** — required for Teams notification delivery
-- **Power Automate per-user or per-flow plan** — required for scheduled scanning and approval flows
+- **Dataverse environment and appropriate use rights/capacity** — required for COD tables. Dataverse application users can be unlicensed; their access is controlled by assigned security roles, not an assumed "Power Platform per-user/per-app" SKU. See [application users](https://learn.microsoft.com/en-us/power-platform/admin/manage-application-users).
+- **Teams access** — the notification connection needs access to the target team/channel. The [Teams connector](https://learn.microsoft.com/en-us/connectors/teams/) is Standard; it does not specify E3/E5 as the required SKU. Allow the Workflows app for adaptive-card posting actions.
+- **Power Automate premium-connector use rights** — the Dataverse flows need an entitlement such as **Power Automate Premium** for the owner or **Process** capacity allocated to a solution-aware flow. Scheduling alone does not require Premium. Confirm the applicable licensing model with the [current license types](https://learn.microsoft.com/en-us/power-platform/admin/power-automate-licensing/types).
+- **Microsoft Entra Workload ID Premium** — required to create or modify Conditional Access policies scoped to service principals. These policies do not cover managed identities or multitenant apps. See [workload-identity Conditional Access](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity).
 
 ## Required Permissions
 
 ### Power Platform Administration
 
-- **Power Platform Administrator** or **Dynamics 365 Service Admin** role — required for cross-environment agent scanning
+- **Power Platform Admin** or **Dynamics 365 Service Admin** role — required for cross-environment agent scanning
 - **Environment-level System Administrator** — required for Dataverse table operations (schema creation, record read/write)
 
 ### Microsoft Entra ID
 
-The PowerShell scanners do **not** call Microsoft Graph today. If you extend
-this solution to enrich findings with app registration metadata or service
-principal ownership, the minimal least-privilege scopes are:
+The core `Invoke-CredentialScan.ps1` / `Get-AgentConnectorScope.ps1` path does not call Microsoft Graph. The existing, separately executed `Get-WorkloadIdentityCAPolicy.ps1` and `Test-AgentAuthMethod.ps1` helpers do. Establish a Graph session separately; neither helper authenticates it for you.
 
-| Permission | Type | Purpose (only if Graph enrichment is enabled) |
+| Permission | Type | Purpose (when running the Graph helpers) |
 |-----------|------|---------|
-| `Application.Read.All` | Application | Read app registration metadata |
-| `ServicePrincipal.Read.All` | Application | Read service principal metadata (preferred over `Directory.Read.All`) |
+| `Application.Read.All` | Delegated or Application | Read service principals, applications, and federated identity credentials |
+| `Policy.Read.All` | Delegated or Application | Read Conditional Access policies for the CA helper |
+
+`ServicePrincipal.Read.All` is not the permission listed by Microsoft for service-principal enumeration. The delegated scopes above do not replace the signed-in user's operation-specific authorization:
+
+- **CA policy reads:** The signed-in user needs a supported role such as Security Reader.
+- **Federated-credential reads:** With delegated `Application.Read.All`, a non-admin member or Application Developer can read applications they own. Reading other applications requires a supported role such as Cloud Application Administrator or Application Administrator, or a custom role granting the required permission. Security Reader alone does not satisfy this operation's role requirement.
+- **Application authentication:** An app-only Graph session with application `Application.Read.All` does not use the delegated signed-in-user role requirement. Add application `Policy.Read.All` when running the CA helper.
+
+`Test-AgentAuthMethod.ps1` currently suppresses federated-credential lookup errors and can report a federated-only application as `NoCredentials` with a "No action required" recommendation. Verify authorization and successful credential enumeration for every application in scope before relying on that result; a failed read is incomplete coverage, not evidence that no credentials exist.
+
+Sources: [service principals](https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list), [CA policies](https://learn.microsoft.com/en-us/graph/api/conditionalaccessroot-list-policies), [federated credentials and delegated roles](https://learn.microsoft.com/en-us/graph/api/federatedidentitycredential-list).
 
 ### Service Principal Setup
 
 1. Register an application in Microsoft Entra ID (requires Entra Global Admin or Application Administrator).
 2. Register the application with Microsoft Power Platform using `New-PowerAppManagementApp -ApplicationId <appId>` from an administrator context. Microsoft Learn notes that a service principal cannot register itself and that Power Platform treats the registered app similarly to a Power Platform administrator for supported admin operations.
-3. Grant Microsoft Graph application permissions only if you enable optional Graph enrichment (`Application.Read.All` and `ServicePrincipal.Read.All`). The scanner's Power Platform admin cmdlets do not require Graph scopes.
-4. Prefer certificate-backed service principal credentials where supported. If a client secret is used for this release's scanner scripts, store it in Azure Key Vault and rotate it per policy.
+3. Grant Graph permissions only if running the separate Graph helpers (`Application.Read.All`, plus `Policy.Read.All` for CA inventory). The core scanner's Power Platform admin cmdlets do not require Graph scopes.
+4. Prefer managed identity or workload federation where supported, then certificates. The current main scanner and connector extractor accept client secrets only: treat those paths as dev-only legacy, not a production-ready managed-identity implementation. Key Vault storage does not change this limitation. See [Microsoft credential guidance](https://learn.microsoft.com/en-us/entra/identity-platform/security-best-practices-for-app-registration#credentials-including-certificates-and-secrets).
 5. Create an application user in each target Dataverse environment with the System Administrator role for Dataverse table operations.
 
 ### Network Endpoints
@@ -59,6 +70,6 @@ If using the Environment Lifecycle Management (ELM) solution, zone classificatio
 
 ## Important Notes
 
-- The Microsoft "Enforce safe sharing by detecting credential oversharing" feature is listed on the Microsoft AI at Work roadmap (ID 566873) as In development, with a preview target of July 2026 and a general availability target of September 2026 (status checked 2026-10-09; public availability is not confirmed). Verify current feature status before production deployment.
+- The Microsoft "Enforce safe sharing by detecting credential oversharing" feature is listed on the [AI at Work roadmap](https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=566873) as In development (ID 566873; preview target July 2026, general availability target September 2026; checked 2026-10-16). Public availability is not confirmed. This roadmap does not document an OAuth-scope extraction API; validate the extractor's expected configuration fields independently.
 - Preview features may have different security, compliance, and data residency commitments. Review Microsoft Power Platform preview terms.
 - This solution supports compliance with FINRA Rule 4511(a) record-keeping and OCC 2011-12 operational risk requirements but does not provide regulatory compliance on its own. Organizations should verify configuration helps meet their specific obligations.
