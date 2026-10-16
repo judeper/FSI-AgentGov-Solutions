@@ -6,9 +6,38 @@ Requirements for deploying the Agent Access Governance Monitor solution.
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
-| PowerShell | 7.4 | Core runtime (Azure Automation supports PowerShell 7.4; 7.1/7.2 are retired) |
-| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform queries |
+| PowerShell | 7.4+ | Shipped AAM module, runbook, and evidence-export minimum; not a support statement for the administration module |
+| Microsoft.PowerApps.Administration.PowerShell | 2.0.180+ | Power Platform queries; Microsoft documents Windows PowerShell 5.x, not PowerShell 7.x, for this module |
 | Microsoft.Graph | 2.0+ | Entra ID group queries (optional) |
+
+> **Unresolved collector-host compatibility:** Microsoft's
+> [Power Apps PowerShell guidance](https://learn.microsoft.com/power-platform/admin/powerapps-powershell)
+> states that the administration modules require Windows PowerShell 5.x and use
+> .NET Framework dependencies incompatible with PowerShell 6.0 and later. AAM's
+> comparison script requires 7.0+, while its runbook and module require 7.4+.
+> Neither selecting an Azure Automation 7.4 runtime nor downgrading the entire
+> AAM execution chain to 5.1 establishes a supported configuration. Resolve this
+> integration boundary and validate settings retrieval before deployment. No
+> supported replacement collector or compatibility bridge is implemented by this
+> documentation update.
+
+## Licensing and product scope
+
+- Agent-sharing rules require a **Managed Environment** and apply only to
+  **agents that require authentication**. The viewer cap is per agent and is
+  available when sharing is limited to individuals (no security groups). See
+  [agent sharing controls](https://learn.microsoft.com/microsoft-copilot-studio/admin-sharing-controls-limits).
+- Verify the environment users' qualifying entitlements against
+  [Managed Environment licensing](https://learn.microsoft.com/power-platform/admin/managed-environment-licensing).
+  Qualifying plans include Power Apps Premium, Power Automate Premium, and
+  Microsoft Copilot Studio, with additional plans and meters subject to the
+  conditions on that page. An administrator role alone is not a user license.
+- The daily alert flow uses the
+  [Microsoft Dataverse Premium connector](https://learn.microsoft.com/connectors/commondataserviceforapps/),
+  even when Azure Automation is deferred. For a scheduled standalone flow,
+  confirm Power Automate Premium for the owner or an appropriately allocated
+  Power Automate Process license. Other included entitlements are context-bound;
+  see the [Power Automate licensing FAQ](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/faqs).
 
 ## Installation
 

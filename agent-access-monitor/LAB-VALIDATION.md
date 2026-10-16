@@ -1,5 +1,16 @@
 # Lab Validation Report — Agent Access Governance Monitor
 
+> **2026-10-16 documentation correction (not a new lab run):** The historical
+> runtime observations below are retained. Current Microsoft documentation defines
+> `bot-maxLimitUserSharing` as a **per-agent viewer cap**, not a per-maker cap;
+> `Capped`/`Uncapped` and the handling of `0`/`-1` are AAM conventions, not fully
+> documented agent-cap sentinel semantics. The Dataverse connector remains
+> **Premium** even with Azure Automation deferred. Microsoft's administration-module
+> documentation requires Windows PowerShell 5.x, so the historical PowerShell 7.4
+> lab observations do not establish Microsoft-supported collector compatibility.
+> See [the verification record](docs/verification-2026-10-16.md) and
+> [current prerequisites](docs/prerequisites.md) before deployment.
+
 > **Scope:** Static lab-readiness validation (no live tenant). Validation method =
 > parse-validity + authoritative-source verification + documentation completeness.
 > **Date:** 2026-06-09 · **Solution version:** v1.2.0 · **Branch:** `validation/agent-access-monitor`
@@ -51,8 +62,8 @@ three Dataverse tables, and exports tamper-evident JSON evidence with SHA-256 ha
    <https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits>
    Confirms: setting keys `bot-limitSharingMode` (values `ExcludeSharingToSecurityGroups`,
    `noLimit`), `bot-authoringSharingDisabled` (`True`/`False`), and the maximum
-   per-maker user-sharing cap surfaced as `bot-maxLimitUserSharing` (a positive integer
-   limit, or `-1`/unset for no cap); the settings object path
+   per-agent viewer cap surfaced as `bot-maxLimitUserSharing` (the documented
+   example is `20`; `-1`/unset handling is an AAM convention); the settings object path
    `$environment.Internal.properties.governanceConfiguration.settings.extendedSettings`;
    `Get-AdminPowerAppEnvironment` / `Set-AdminPowerAppEnvironmentGovernanceConfiguration`
    cmdlets; that "Exclude sharing with security groups" means sharing is limited to
@@ -158,7 +169,8 @@ applied before lab deployment:
 - **H2 — case-insensitive comparisons** for sharing-mode values.
 - **M1/M3 — deferred Azure Automation.** The runbook runs standalone locally; the daily
   flow is a Recurrence trigger + Dataverse read. No Azure subscription, Automation
-  Account, premium connector, or always-on SPN is required for the lab.
+  Account, or always-on SPN is required by the local hosting model. The Dataverse
+  flow still uses a Premium connector; see the 2026-10-16 correction above.
 
 A `lab/` harness (`Invoke-Deploy.ps1`, `Test-LabAuthReadiness.ps1`, config templates,
 `slice-build-runbook.md`) was added for the standalone deployment model.
