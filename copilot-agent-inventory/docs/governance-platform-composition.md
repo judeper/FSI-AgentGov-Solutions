@@ -151,8 +151,10 @@ The scope boundary is deliberate:
 
 **First-party surfaces (Teams, Microsoft 365 Copilot, SharePoint) cannot host
 custom middleware**, so the gateway cannot sit in front of them. Those surfaces
-rely on native sharing/audience controls (which apply with roughly an hour of
-enforcement latency) plus the detective telemetry-drift solutions above. Runtime
+rely on native sharing/audience controls plus the detective telemetry-drift
+solutions above. [Managed Environment sharing rules](https://learn.microsoft.com/power-platform/admin/managed-environment-sharing-limits)
+apply only to agents requiring authentication; changes can take up to an hour to
+start enforcement and do not revoke existing access. Runtime
 enforcement via AEG and detective drift on first-party channels are
 complementary layers, not interchangeable substitutes.
 
@@ -381,7 +383,11 @@ the agent is included in the sweep.
 
 **Future static-API candidates — validate live, do not promise customers today:**
 
-- **M365 Agent Registry Graph API (preview)** — if it returns a parsed
+- **Legacy M365 Agent Registry Graph API (beta, replacement announced)** —
+  [Microsoft's legacy resource reference](https://learn.microsoft.com/graph/api/resources/agentregistry?view=graph-rest-beta)
+  announces replacement by Agent 365-based APIs starting May 2026. Do not select
+  this legacy surface for new integrations without checking the replacement
+  contract. For any supported replacement, if it returns a parsed
   `declarativeAgent.json`, Tier B and C agents could be resolved programmatically.
   Whether `capabilities[]` is exposed is undocumented; must be validated against a live
   tenant and not relied upon until confirmed.

@@ -9,12 +9,20 @@ This flow provides automated orchestration and alerting for the Agent Access Gov
 > **Deferred Azure Automation (lab model).** For the lab, the validation runbook
 > (`Start-AccessValidationRunbook.ps1`) runs **standalone** on a workstation or build
 > agent (PowerShell 7.4 via Windows Task Scheduler) and writes results to Dataverse. No
-> Azure subscription, Automation Account, premium connector, or always-on service
-> principal is required. The daily Power Automate flow is reduced to a **Recurrence
+> Azure subscription, Automation Account, or always-on service principal is required
+> by this hosting choice. The daily Power Automate flow is reduced to a **Recurrence
 > trigger + a Dataverse read** of the validation-history and violation tables, plus
 > alert routing. The Azure Automation path described in some steps below is an
 > **optional production upgrade**, not a lab prerequisite — promoting to it later is a
-> packaging step, not a code change.
+> hosting option, subject to the runtime compatibility gate below.
+
+> **Runtime and licensing gates:** The shipped scripts target PowerShell 7.4, but
+> Microsoft's administration-module guidance requires Windows PowerShell 5.x and
+> states incompatibility with PowerShell 6.0 and later. Resolve collector-host
+> compatibility before using either local scheduling or Azure Automation. The
+> Dataverse read uses a **Premium** connector, so deferring Azure Automation does
+> not remove the flow's premium-connector licensing requirement. See
+> [prerequisites](prerequisites.md) for the official runtime and licensing sources.
 
 **What this flow does (lab model):**
 
@@ -33,6 +41,7 @@ This flow provides automated orchestration and alerting for the Agent Access Gov
 Before creating the flow, ensure you have:
 
 - [ ] **Standalone runbook host (lab default)**:
+  - Collector-host compatibility resolved and settings retrieval validated per [prerequisites](prerequisites.md)
   - PowerShell 7.4 on a workstation or build agent
   - `Start-AccessValidationRunbook.ps1` scheduled via Windows Task Scheduler (`pwsh -File ...`)
   - `Microsoft.PowerApps.Administration.PowerShell` module installed
@@ -43,6 +52,7 @@ Before creating the flow, ensure you have:
   - `Microsoft.PowerApps.Administration.PowerShell` module installed
   - A managed identity (preferred) or service-principal secret for unattended auth
 - [ ] **Dataverse environment** with AAM schema deployed (run `python scripts/deploy.py`)
+- [ ] **Premium-connector entitlement** for the scheduled Dataverse flow: Power Automate Premium for the owner or an appropriately allocated Power Automate Process license; verify any alternative included entitlement against its permitted context
 - [ ] **Runbook identity** configured for Dataverse access:
   - Prefer managed identity where your Power Platform/Dataverse automation supports it; otherwise use a service-principal secret (dev-only legacy fallback) configured for `Start-AccessValidationRunbook.ps1`.
   - The runbook identity has Create permission on the `fsi_accessvalidationhistory` table and Create permission on `fsi_accessviolations` when persisting violations.
@@ -122,12 +132,12 @@ In the lab model the flow uses **three** connection references — the standalon
 | `fsi_cr_office365_accessmonitor` | Office 365 Outlook | Send email alerts |
 
 > **Production-only (optional Azure Automation upgrade).** If you trigger the runbook
-> from Azure Automation instead of the local host, add a third connection reference,
+> from Azure Automation instead of the local host, add a fourth connection reference,
 > `fsi_cr_azureautomation_accessmonitor` (Azure Automation), to trigger and monitor
 > runbook jobs. It is configured manually in Power Automate when binding the Azure
 > Automation actions and is not created by the `create_connection_references.py`
-> script. This connection requires a Power Automate Premium license; the lab model does
-> not.
+> script. Azure Automation is also a Premium connector; the lab model already
+> requires premium-connector entitlement because it reads Dataverse.
 
 **To bind connection references:**
 
@@ -182,6 +192,7 @@ In the lab model the flow uses **three** connection references — the standalon
 
 Watch for these key actions to complete successfully:
 
+- **Runtime and license prerequisites**: Collector-host compatibility is resolved and the scheduled flow has premium-connector entitlement
 - **Recurrence**: Trigger fires on schedule
 - **List_Validation_History**: Latest validation-history rows retrieved from Dataverse (written by the standalone runbook)
 - **List_Violations**: Open violation rows retrieved from Dataverse

@@ -50,7 +50,15 @@ When Flow 3 creates the registry shell row in `agent-registry-automation`, it sh
 
 ### 3. `agent-access-monitor`
 
-**Dataverse fields read:** Registry `fsi_originintakeid`, `fsi_intaketier`, and `fsi_entraagentid`; intake source-of-truth `fsi_intakerequest.fsi_pathused`, `fsi_intakerequest.fsi_targetenvironmentid`, `fsi_intakerequest.fsi_targetenvironmentname`, and `fsi_intakedecisionlog.fsi_decisionpackjson`; connector-to-permission baseline from `fsi_connectorallowlistjson` (field added by foundation-schema workstream) when the approval board narrowed access to named connectors or Graph scopes.
+**Implementation boundary:** Shipped AAM validates the three Managed Environment
+agent-sharing settings against zone baselines. It does not enumerate per-agent
+shares, Entra service-principal grants, or intake decision packs, and does not
+revoke permissions. The per-agent rules below describe a **proposed adapter
+contract**, not an implemented AAM collector. Do not use a passing AAM environment
+scan as evidence that an agent's grants match its intake approval. See
+[AAM scope and verification](https://github.com/judeper/FSI-AgentGov-Solutions/blob/main/agent-access-monitor/README.md#scope-and-microsoft-learn-alignment).
+
+**Proposed adapter inputs (not read by shipped AAM):** Registry `fsi_originintakeid`, `fsi_intaketier`, and `fsi_entraagentid`; intake source-of-truth `fsi_intakerequest.fsi_pathused`, `fsi_intakerequest.fsi_targetenvironmentid`, `fsi_intakerequest.fsi_targetenvironmentname`, and `fsi_intakedecisionlog.fsi_decisionpackjson`; connector-to-permission baseline from `fsi_connectorallowlistjson` (field added by foundation-schema workstream) when the approval board narrowed access to named connectors or Graph scopes.
 
 - **Express-path rule:** Compare current Agent ID service principal permissions (`appRoleAssignments` and `oauth2PermissionGrants`) against the snapshot taken at handoff. Any new privileged role triggers a finding.
 - **Standard-path rule:** Treat any post-approval permission grant that falls outside the approved environment, connector allowlist, or reviewer conditions in `fsi_intakedecisionlog.fsi_decisionpackjson` as a High finding routed to the reviewer board.

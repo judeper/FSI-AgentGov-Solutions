@@ -17,11 +17,17 @@ Stores captured access configuration snapshots for each Power Platform environme
 | `fsi_zone` | OptionSet (fsi_acv_zone) | Governance zone (100000001, 100000002, or 100000003) |
 | `fsi_botlimitsharingmode` | String | Agent sharing limit setting at capture time |
 | `fsi_botauthoringsharingdisabled` | Boolean | Whether agent authoring sharing is disabled |
-| `fsi_botmaxlimitusersharing` | String | Managed Environment `bot-maxLimitUserSharing` value at capture time (max individual users an agent may be shared with; `-1` = no limit; blank when the environment is not a Managed Environment) |
+| `fsi_botmaxlimitusersharing` | String | Raw Managed Environment `bot-maxLimitUserSharing` value at capture time (viewer cap per agent when sharing is limited to individuals; AAM categorizes `-1` as Uncapped; blank when the environment is not a Managed Environment) |
 | `fsi_capturedby` | String | UPN or service principal that captured the baseline |
 | `fsi_capturedat` | DateTime | Timestamp of baseline capture (UTC) |
 | `fsi_isactive` | Boolean | Whether this is the current active baseline |
 | `fsi_rawjson` | Memo | Full JSON payload of access settings at capture time |
+
+The viewer cap is **per agent**, not per maker. `Capped`/`Uncapped` are AAM
+comparison categories; Microsoft does not document the `0` or `-1` semantics for
+the bot-prefixed cap in its agent-sharing examples. Retain raw values as evidence
+rather than interpreting a category as the measured audience size. See
+[the technical verification record](verification-2026-10-16.md).
 
 ### fsi_accessvalidationhistory
 
@@ -107,7 +113,11 @@ Individual access policy violations detected during validation. Linked to valida
 | `fsi_cr_office365_accessmonitor` | Office 365 Outlook | Email alerts for compliance violations |
 | `fsi_cr_teams_accessmonitor` | Microsoft Teams | Adaptive card alerts for drift detection |
 
-> **Note:** The Power Automate flow (see `docs/flow-configuration.md`) also uses the Azure Automation connector (`azureautomation`) to execute the validation runbook. This connection must be created manually when building the flow — it is not managed as a solution connection reference by `create_connection_references.py`.
+> **Note:** The default Power Automate flow reads Dataverse and routes alerts.
+> Only the optional Azure Automation hosting path uses the Azure Automation
+> connector (`azureautomation`) to execute the validation runbook. That connection
+> is configured manually, not by `create_connection_references.py`. Dataverse is
+> a Premium connector in either hosting model; see [prerequisites](prerequisites.md).
 
 ## Entity Relationship Diagram
 
