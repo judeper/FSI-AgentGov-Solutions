@@ -51,6 +51,14 @@ The reference implementations require these licenses or service plans across the
 
 Adopters should validate their tenant SKUs against each solution's prerequisites before scheduling a pilot.
 
+For Action Confirmation Auditor, the Copilot Studio author entitlement applies
+to users creating/managing the agents, not automatically to the Dataverse S2S
+scanner identity. The core configuration scan does not require Microsoft 365
+E5/E5 Compliance merely to read agent metadata; optional Purview features have
+separate licensing and audit-access prerequisites. See the
+[ACA prerequisites](./action-confirmation-auditor/docs/prerequisites.md) and
+[Microsoft's Copilot Studio licensing guidance](https://learn.microsoft.com/microsoft-copilot-studio/requirements-licensing).
+
 ## Solution Layers
 
 Solutions fall into three deployment layers. Deploy foundational solutions first, then add monitoring and governance solutions as needed.
