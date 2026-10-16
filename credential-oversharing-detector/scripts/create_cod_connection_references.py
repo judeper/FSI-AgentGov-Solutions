@@ -35,8 +35,8 @@ CONNECTION_REFS = [
     {
         "logical_name": "fsi_cr_powerplatformadminv2_credentialoversharing",
         "display_name": "Power Platform for Admins V2 - COD",
-        "connector": "shared_powerplatformforadmins",
-        "description": "Power Platform for Admins V2 (covers Copilot Studio bot/environment control-plane actions). Do not use the legacy shared_powerappsforadmins connector for bot/agent enumeration.",
+        "connector": "shared_powerplatformadminv2",
+        "description": "Power Platform for Admins V2 for supported environment and bot control-plane operations; does not supply a documented per-agent OAuth-scope feed.",
     },
 ]
 
