@@ -547,7 +547,7 @@
       "prerequisites": {
         "power-platform-admin": "Power Platform admin tenant role and Dataverse environment with the fsi publisher prefix."
       },
-      "verification": "Confirm Invoke-CredentialScan.ps1 writes rows to `fsi_credentialscans` and `fsi_credentialviolations`.",
+      "verification": "Validate host compatibility and connector telemetry against a known agent before interpreting findings; run Invoke-CredentialScan.ps1 with -DataverseUrl and confirm expected scan and seeded violation rows in `fsi_credentialscans` and `fsi_credentialviolations`. Zero connectors is incomplete coverage, not a passing credential review.",
       "zones": [
         "personal",
         "team",

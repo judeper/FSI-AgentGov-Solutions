@@ -6,7 +6,7 @@
 
 - Verify the service principal has **System Administrator** role in the target environment
 - Confirm the Dataverse URL is correct (format: `https://org.crm.dynamics.com`)
-- Check that the app registration has Dynamics CRM `user_impersonation` permission
+- For interactive/delegated authentication, check the delegated Dynamics CRM permission and consent; for app-only authentication, check the Dataverse application user and its security roles instead
 - If using a service principal, ensure it was added as an application user in the Dataverse environment
 
 ### Environment variables not visible in Power Automate
@@ -34,7 +34,7 @@
 
 ### "Insufficient privileges" when scanning
 
-- **Power Platform Administrator** role is required for cross-environment scanning
+- **Power Platform Admin** role is required for cross-environment scanning
 - Environment-level System Customizer is insufficient; **System Administrator** is needed
 - For Dataverse persistence, verify the app user has read/write access to COD tables (`fsi_credentialscans`, `fsi_credentialviolations`, `fsi_credentialexceptions`)
 
@@ -51,10 +51,26 @@
 
 ### Scan completes but reports zero connectors
 
-- Connector scope information depends on the Microsoft safe-sharing feature, which the AI at Work roadmap (ID 566873) lists as In development (preview target July 2026, general availability target September 2026; checked 2026-10-09), so public availability is not confirmed
-- Verify the feature is enabled in the target tenant
-- Check Power Platform admin center for feature availability status
-- Note: preview behavior may change; review current Microsoft documentation
+- Do not interpret zero connectors or missing scope metadata as a passing credential review
+- The extractor assumes nested `bot.configuration.connectorConfigurations` / `oauthScopes` fields. Microsoft documents the [bot table](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/bot), but the sources reviewed do not document this nested contract
+- Compare sanitized extractor output with a known connector-bearing agent and verify connection-reference read permissions. Record missing fields and data coverage with the evidence; do not store credential values in troubleshooting logs
+- [Roadmap ID 566873](https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=566873) remains In development (preview target July 2026, general availability target September 2026; checked 2026-10-16). It describes safe sharing, not an API to enable for scope extraction. The [automatic security scan](https://learn.microsoft.com/en-us/microsoft-copilot-studio/security-scan) warns about maker credentials but does not establish scope telemetry
+
+### Power Apps module fails under PowerShell 7
+
+- COD scripts require PowerShell 7, while Microsoft's Power Apps module guidance specifies Windows PowerShell 5.x and warns of incompatibility with 6+. This is a host-support gap, not proof of an identity or permission failure
+- Record the exact host/module versions and validate in an isolated lab. Do not simply switch the COD scripts to 5.1; see the [prerequisites](prerequisites.md)
+
+### V2 connection reference shows the older admin connector
+
+- Inspect the existing reference: V2 uses `shared_powerplatformadminv2`, not `shared_powerplatformforadmins`
+- Existing references are skipped by setup, so rerunning it alone does not migrate them. Follow the manual correction and dependent-action review in the [flow guide](flow-configuration.md#connection-references)
+
+### Graph helper fails or reports unexpected CA coverage
+
+- The existing CA/auth helpers call Graph independently of the core scanner. Establish the Graph session with `Application.Read.All` and, for CA reads, `Policy.Read.All`; delegated reads also require the documented user role
+- Workload-identity CA excludes managed identities and multitenant apps. Do not recommend adding such identities to CA policies
+- Treat the helper as inventory, not effective coverage: it does not fully evaluate enabled state, exclusions, filters, or `ServicePrincipalsInMyTenant`. Verify those against [Microsoft's CA guidance](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity) and service-principal sign-in logs
 
 ### False positives for cross-environment credentials
 
