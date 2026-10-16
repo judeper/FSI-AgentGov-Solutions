@@ -14,51 +14,62 @@ regulation in isolation.
 
 ## 1. 28-day approval-wait ceiling
 
-Microsoft Learn documents that an approval flow can wait for up to **28 days**; if the
-wait time exceeds 28 days, that flow run fails. ASARD's Remediation Approval flow uses a
-sequential (concurrency = 1) loop with a 7-day per-approval timeout, so the cumulative
-wait can approach the ceiling once several non-compliant agents queue behind one another.
+Microsoft's [Approvals known issues](https://learn.microsoft.com/en-us/power-automate/approvals-known-issues#abandoned-approvals-in-the-approval-action-center)
+documents a **28-day** approval wait caveat; a failed flow can leave an abandoned approval
+in the action center. Separately, [cloud-flow duration limits](https://learn.microsoft.com/en-us/power-automate/limits-and-config#duration-limits)
+specify a **30-day total run duration**, including pending approvals. The two figures
+are not interchangeable, and neither describes a 28-day run-history retention period.
 
-**Build invariant:** size the per-approval timeout and the per-run agent batch so the
-**cumulative** wait across the sequential loop stays well under 28 days. Treat 28 days as
-a hard platform ceiling, not a target.
+ASARD configures a **7-day** per-approval timeout (`P7D`); this is a solution default,
+not a Microsoft platform default. With concurrency = 1, four full waits consume 28 days
+before other actions and retries; five require 35 days and exceed the total run limit.
+
+**Build invariant:** keep each wait below the approval limit and size the batch so
+`batch size × configured timeout + other work/retry allowance < 30 days`.
+ASARD conservatively budgets cumulative waits **below 28 days** to leave headroom;
+that is a local safety margin, not a Microsoft-documented cumulative-loop limit.
+Handle timeout, rejection, and cancellation without changing agent access, and retain
+the pending record for a subsequent run rather than reporting successful remediation.
 
 ## 2. `Create an approval` / `Wait for an approval` adjacency
 
-The Approvals pattern is reliable only when the **`Create an approval`** action and its
-matching **`Wait for an approval`** action are **adjacent** designer actions for the same
-approval — with no intervening variable assignments, scopes, or loop boundaries that can
-delay the wait registration.
+Microsoft documents a race when a user responds after **Create an approval** but before
+**Wait for an approval** starts. Its guidance is to call the two actions **close together**;
+literal designer adjacency is not a Microsoft platform requirement.
 
 **Build invariant:** place `Create an approval` immediately before `Wait for an approval`
 for each remediation. Do not separate them with `Apply to each`, `Do until`, or
 intermediate `Compose`/variable steps. This adjacency is a build-time requirement, not a
-runtime tuning knob.
+runtime tuning knob for ASARD. The single **Start and wait for an approval** action is
+the alternative used by the lab build.
 
-## 3. More than 4 non-compliant agents per scan — batch / child-flow overflow
+## 3. Sequential batch sizing and overflow
 
-Because the loop is sequential with 7-day timeouts, **more than ~4 non-compliant agents in
-a single scan** can drive the cumulative wait past the 28-day ceiling (Section 1). The
-flow must short-circuit rather than serially walk past that ceiling.
+The sequential loop must not accept more work than the timeout budget in Section 1.
+Do not treat four agents as an unconditional safe threshold: four full waits already
+consume the entire conservative 28-day wait budget, before action/retry overhead.
 
 **Build invariant:**
 
-- For **> 4** non-compliant agents in a run, queue the overflow to a **child flow** (or a
-  staged dataset processed across runs) instead of extending one sequential loop.
-- Skeletonize the **batch / child-flow overflow branch** in the flow even when the lab
-  fixture seeds a single non-compliant bot, so the path exists and is testable before it
-  is first exercised under load.
-- This is the documented mitigation for the README "28-day approval wait limit" known
-  limitation. The lab may seed exactly one non-compliant bot so this branch is not
-  exercised in v1 validation, but the skeleton must be present.
+- Persist overflow in the existing compliance records for independently triggered later
+  runs. Record which agents were deferred and why; do not silently truncate a query.
+- A parent that synchronously waits for a child still consumes its own run-duration
+  budget. A child-flow call alone is not a long-running-approval solution. Microsoft
+  describes splitting creation and response processing in [long-running approvals](https://learn.microsoft.com/en-us/power-automate/modern-approvals#create-long-running-approvals).
+- Verify the boundary with a short test timeout and a batch large enough to force
+  deferral. Confirm no sharing writes occur on timed-out/rejected/canceled approvals,
+  deferred records remain pending, and the next run can pick them up.
+- These are build/verification requirements, not a claim that the staged Flow B overflow
+  branch has executed successfully. The June lab used one fixture and did not prove
+  multi-agent approval throughput.
 
 ## Ownership and where the build lives
 
 | Item | Recorded here | Implemented (live) in |
 |------|---------------|------------------------|
-| 28-day ceiling sizing | This doc (constraint) | Flow build — flows lane |
+| Approval-wait and total-run budget | This doc (constraint) | Flow build — flows lane |
 | Create/Wait adjacency | This doc (build invariant) | Flow build — flows lane |
-| > 4-agent batch/child overflow | This doc (build invariant) | Flow build — flows lane |
+| Budgeted batch / persisted overflow | This doc (build invariant) | Flow build — flows lane |
 
 The live Remediation Approval flow is built and documented by the flows lane in
 `docs/flow-configuration.md` and the lab `slice-build-runbook.md`. This document is the
@@ -67,7 +78,6 @@ the designer step-by-step.
 
 ## Authoritative sources
 
-- **Approvals / flow run retention (Power Automate)** —
-  https://learn.microsoft.com/power-automate/ (approval wait ceiling and the 28-day flow
-  run retention window). Mirrors the caveat captured in `LAB-VALIDATION.md` and the README
-  "Known Limitations".
+- [Approvals known issues](https://learn.microsoft.com/en-us/power-automate/approvals-known-issues) — 28-day wait caveat and split-action race.
+- [Cloud-flow duration limits](https://learn.microsoft.com/en-us/power-automate/limits-and-config#duration-limits) — 30-day total run duration and run retention.
+- [Long-running approvals](https://learn.microsoft.com/en-us/power-automate/modern-approvals#create-long-running-approvals) — split-flow design for approvals outliving a single run.

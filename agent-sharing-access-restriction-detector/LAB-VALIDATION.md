@@ -6,6 +6,14 @@
 > **Validation date:** 2026-06-09
 > **Validation type:** Live (lab tenant) — plane #1 (chat-ACL) detection proven end-to-end against a live Dataverse fixture row (independently verified; SHA-256 evidence verified three ways); C1 data-plane write proven; C2 runtime enforcement recorded as a documented boundary. Includes the static parse-validity, authoritative-source, and documentation-completeness checks below.
 
+> **Documentation re-verification: 2026-10-16; no new tenant execution.** The historical
+> observations below are retained. Current Microsoft terminology labels policy value `1`
+> **Agent readers** (formerly "Copilot readers"). The current approval, licensing, paging,
+> and evidence instructions are in the [technical verification record](docs/technical-verification-2026-10-16.md),
+> [flow guide](docs/flow-configuration.md), and [approval limits](docs/approvals-limits.md).
+> The up-to-one-hour delay for **new Managed Environment sharing rules** must not be used
+> as evidence of direct bot-column PATCH enforcement or propagation.
+
 ## Purpose and Controls
 
 ASARD provides zone-based detective controls over Copilot Studio agent sharing.
@@ -68,8 +76,8 @@ should be paired with separate controls for the authoring-share and Agent Store 
    - Confirms "You can't grant **Editor** permissions to security groups"; **Viewer**
      assignments can be shared with security groups. Matches the README "Platform Update
      Notes" and `docs/flow-configuration.md` "Current Microsoft Learn Sharing Guidance".
-3. **Approvals — Known issues / run-history retention (Power Automate)** —
-   https://learn.microsoft.com/power-automate/ (approvals + 28-day flow run retention)
+3. **Approvals — Known issues (Power Automate)** —
+   https://learn.microsoft.com/en-us/power-automate/approvals-known-issues
    - Confirms "An approval flow can wait for 28 days. If the wait time exceeds 28 days,
      that flow fails." Matches the README/flow-config "28-day approval wait limit" caveat.
 4. **Get-AdminPowerAppEnvironment / Add-PowerAppsAccount** (Microsoft.PowerApps.Administration.PowerShell) —
@@ -117,10 +125,12 @@ Platform tenant with Copilot Studio agents to exercise end-to-end:
   on the ASARD tables, plus Power Platform admin registration and Graph
   `Group.Read.All`/`User.Read.All`. Effective privilege can only be confirmed in a
   tenant.
-- **Approval throughput vs the 28-day ceiling.** The sequential (concurrency=1)
-  approval loop with 7-day timeouts can exceed the 28-day Power Automate approval
-  wait limit beyond ~4 non-compliant agents. Documented in README "Known
-  Limitations"; only observable at runtime under load.
+- **Approval throughput and duration budget.** ASARD's sequential (concurrency=1)
+  loop uses solution-configured 7-day timeouts. Four full waits take 28 days plus
+  overhead; five exceed the separate 30-day total cloud-flow run limit. The 28-day
+  approval wait caveat is not a documented cumulative-loop limit. See
+  [approval build invariants](docs/approvals-limits.md); multi-agent throughput
+  remains untested in the lab.
 - **Managed Environment sharing-limit enforcement delay.** Microsoft Learn notes up
   to one hour for new sharing rules to apply and that existing access is not
   retroactively removed. ASARD detective scans will surface pre-existing
@@ -171,7 +181,7 @@ This live run demonstrates that the plane #1 (chat-ACL) detection → persistenc
 
 - **C1 premise — proven (data plane).** A single combined PATCH of the disposable agent's `accesscontrolpolicy = 2` + `authorizedsecuritygroupids` persisted together; an independent Get-row read-back confirmed both fields stuck. Measured Dataverse write → independent read-back latency ≈ **1.9 s** (metadata-write latency, effectively immediate).
 - **Empirical guard nuance (refines the build runbook note).** A raw Dataverse `PATCH` of `authorizedsecuritygroupids` **persisted while `accesscontrolpolicy = 1`** in the lab tenant. The documented "ignored unless Access Control Policy = Group membership" behaviour is therefore a **runtime enforcement** semantic, **not** a data-layer write guard. Remediation must set **both** `accesscontrolpolicy = 2` and the approved group list; writing the group list alone is data-writable but runtime-inert.
-- **C2 runtime enforcement — not empirically forcible with this fixture (boundary documented).** The disposable fixture is a fabricated `bot` record with no published runtime endpoint, and both referenced group IDs are **synthetic** (Microsoft Graph returned HTTP 404 for each — no real members to remove, no runtime to chat against). A true "chat as a removed security-group member" test could not be driven in this lab. The governing bound is the **documented** Microsoft behaviour already recorded under "Runtime-Only Caveats": new sharing rules can take **up to ~1 hour** to apply and existing access is **not** retroactively removed. This is recorded as a documented boundary, **not** an empirically measured enforcement latency, consistent with the runbook directive to document the propagation delay as an observed result rather than a guarantee.
+- **C2 runtime enforcement — not empirically forcible with this fixture (boundary documented).** The disposable fixture is a fabricated `bot` record with no published runtime endpoint, and both referenced group IDs are **synthetic** (Microsoft Graph returned HTTP 404 for each — no real members to remove, no runtime to chat against). A true "chat as a removed security-group member" test could not be driven in this lab. **2026-10-16 source clarification:** Microsoft's up-to-one-hour delay and existing-access caveat concern new **Managed Environment sharing rules**, not direct writes to `bot.accesscontrolpolicy`/`authorizedsecuritygroupids`. They do not establish a governing bound for this PATCH. Runtime enforcement and its propagation latency remain **unmeasured**; use the published-agent test in the flow guide rather than treating metadata read-back or elapsed time as proof.
 
 ### Environmental boundary — `Add-PowerAppsAccount` (admin module) with SP secret under PowerShell 7
 
@@ -265,4 +275,3 @@ solution after upgrading**; this solution does **not** auto-migrate historical r
 ASARD **supports compliance with** Controls 1.18 (Application-Level Authorization and RBAC) and 2.8
 (Access Control and Segregation of Duties). It does **not by itself ensure, guarantee, or eliminate**
 regulatory risk.
-
