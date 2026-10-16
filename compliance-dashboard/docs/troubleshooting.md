@@ -42,11 +42,11 @@ Common issues and solutions for the Compliance Dashboard.
 **Solutions:**
 
 1. **Manual Refresh**
-   - In Power BI Service: Dataset > Refresh now
+   - In Power BI Service: Workspace > semantic model > Refresh now
    - In Power BI Desktop: Home > Refresh
 
 2. **Check Scheduled Refresh**
-   - Power BI Service > Dataset > Settings > Scheduled refresh
+   - Power BI Service > Workspace > semantic model > Settings > Refresh
    - Verify refresh is enabled and scheduled
 
 3. **Verify Flow Execution**
@@ -96,7 +96,7 @@ Common issues and solutions for the Compliance Dashboard.
    - Use variables in complex DAX
 
 3. **Enable Query Caching**
-   - Power BI Service > Dataset > Settings
+   - Power BI Service > Workspace > semantic model > Settings
    - Enable "Enhanced compute engine"
 
 4. **Use Import Mode**
@@ -216,9 +216,11 @@ Solution:
 **Solutions:**
 
 1. **Re-authenticate**
-   - Power BI Service > Dataset > Settings
-   - Click "Edit credentials"
+   - Power BI Service > Workspace > semantic model > Settings
+   - Review **Gateway and cloud connections** and **Data source credentials**; edit credentials on the owning cloud/gateway connection when applicable
    - Sign in again
+
+   See [Microsoft's scheduled-refresh guidance](https://learn.microsoft.com/power-bi/connect-data/refresh-scheduled-refresh).
 
 2. **Automation credential refresh**
    - Verify managed identity or workload identity assignment is still valid
