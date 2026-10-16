@@ -6,6 +6,23 @@
 > documentation completeness. No live tenant was used; runtime behavior against real
 > Purview/Defender/Application Insights data was not exercised.
 
+## Documentation re-verification - 2026-10-16
+
+This addendum supersedes the earlier static-readiness conclusion for RAI telemetry;
+it does not replace the historical validation date or assert a new tenant test.
+Microsoft's current RAI diagnostic searches custom dimensions for `ContentFiltered`.
+The shipped extractor/query's exact event name, `EventType`, and filter metadata
+remain unverified assumptions. Production RAI readiness requires sanitized positive
+and negative tenant examples, verified field mappings, and investigation of empty
+exports. A successful script exit or populated unrelated CSV is insufficient.
+
+The [verification record](docs/verification-2026-10-16.md) documents corrected
+audit-status context, variable delays, Conditional Access exclusions, PowerShell
+runtime/identity caveats, refresh guidance, and the Warning severity threshold.
+The September 30, 2026 announced API-key retirement extension was confirmed through
+Microsoft Release Communications; no actual shutdown behavior was tested.
+Regulatory wording and control mappings were not reviewed or changed.
+
 ## Purpose and Controls
 
 Daily operational reporting that correlates "deny / no-content-returned" events for
