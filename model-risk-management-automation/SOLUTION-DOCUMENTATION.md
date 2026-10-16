@@ -86,7 +86,7 @@ This solution requires `agent-registry-automation` to be deployed in the same Da
 ### Required APIs
 
 1. **Dataverse bot table** — `GET https://{org}.crm.dynamics.com/api/data/v9.2/bots({botId})?$select=name,schemaname,statecode,publishedon,_ownerid_value` — documented source for agent metadata (`botId` equals the Power Platform Bot ID stored in `fsi_agentid`)
-2. **Microsoft Graph — Agent 365 package inventory (preview)** — `GET https://graph.microsoft.com/beta/copilot/admin/catalog/packages?$filter=supportedHosts/any(h:h eq 'Copilot')` for delegated administrator inventory exports when `IsAgent365LifecycleEnabled` is enabled
+2. **Microsoft Graph — Agent 365 package inventory** — `GET https://graph.microsoft.com/v1.0/copilot/admin/catalog/packages?$filter=supportedHosts/any(h:h eq 'Copilot')` when `IsAgent365LifecycleEnabled` is enabled. [List packages](https://learn.microsoft.com/microsoft-365-copilot/extensibility/api/admin-settings/package/copilotpackages-list) now documents application and delegated `CopilotPackages.Read.All`, a Microsoft Agent 365 license, and both v1.0 and beta routes. Delegated administrators require AI Administrator or Global Administrator. Follow every `@odata.nextLink`
 3. **Microsoft Graph — Agent Registry agent instances (legacy/beta)** — `GET https://graph.microsoft.com/beta/agentRegistry/agentInstances/{agentInstanceId}` for identity-only cross-reference while Microsoft converges registry APIs into Agent 365
 4. **Microsoft Graph — User Profile** — `GET https://graph.microsoft.com/v1.0/users/{userUPN}?$select=id,displayName,mail,jobTitle,department`
 5. **SharePoint REST API** — Agent Card list items and document upload
@@ -99,6 +99,8 @@ This solution requires `agent-registry-automation` to be deployed in the same Da
 **PowerShell scripts** (e.g., `Deploy-MRM-Baseline.ps1`, `Test-MRMCompliance.ps1`) use Azure managed identity in production (`Get-AzAccessToken`); for local development, run `Connect-AzAccount` first.
 
 **Python deployment scripts** (`create_mrm_*.py`) use Azure Identity `DefaultAzureCredential` by default for managed identity or workload identity. Use `--interactive` for admin-workstation runs. `--client-id` with `--client-secret` is retained only as a legacy dev-only fallback and should be replaced with managed identity or workload identity in production.
+
+Managed identity Graph grants are direct service-principal app-role assignments; they do not authenticate the SharePoint/Word connector connections. See the corrected [permission and licensing prerequisites](docs/prerequisites.md).
 
 ---
 
@@ -118,6 +120,8 @@ python scripts/create_mrm_dataverse_schema.py --output-docs
 - **~20 option sets** with `fsi_mrm_` prefix
 - **1 alternate key** on fsi_modelinventory: `(fsi_agentid, fsi_environmentid)`
 - **Immutable table:** fsi_mrmcomplianceevent (no delete for non-admins, 7-year LTR)
+
+LTR archives selected inactive rows into read-only storage; it is not a deletion timer. Follow the [current setup and retrieval guidance](docs/troubleshooting.md#dataverse-long-term-retention-not-configured) and test the configured criteria independently of the institution's retention duration.
 
 ---
 
@@ -151,6 +155,8 @@ See [templates/mrm-config.sample.json](templates/mrm-config.sample.json) for all
 ## 7. SharePoint Configuration
 
 Agent Card Library setup instructions are in [docs/sharepoint-setup.md](docs/sharepoint-setup.md).
+
+Word templates must use supported, uniquely titled Plain Text controls, not Rich Text controls. Independently test document generation and the JSON fallback.
 
 ---
 

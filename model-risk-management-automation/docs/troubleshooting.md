@@ -12,7 +12,7 @@ This guide covers common issues encountered during deployment and operation of t
 
 **Resolution:**
 
-1. Navigate to **Power Platform Admin Center** → **Tables** → select the affected table
+1. Navigate to **Power Apps** (`make.powerapps.com`) → select the environment → **Tables** → select the affected table
 2. Open the Choice column → note the integer value assigned to each option
 3. Update flow conditions and script parameters with the confirmed integer values
 4. Document confirmed values in DELIVERY-CHECKLIST.md
@@ -29,7 +29,7 @@ This guide covers common issues encountered during deployment and operation of t
 
 **Resolution:**
 
-1. Navigate to **Power Platform Admin Center** → **Tables**
+1. Navigate to **Power Apps** (`make.powerapps.com`) → select the environment → **Tables**
 2. Open table properties → note the **Entity Set Name** (plural name)
 3. Expected entity set names:
 
@@ -55,10 +55,10 @@ This guide covers common issues encountered during deployment and operation of t
 **Resolution:**
 
 1. Verify `AgentCard-Template.docx` exists in the **Agent Cards** library root (not inside an agent subfolder)
-2. Confirm `Sites.ReadWrite.All` permission is granted to the Managed Identity
+2. Confirm the bound SharePoint and Word connector accounts can access the library and template. A `Sites.ReadWrite.All` grant to a separate managed identity does not authenticate these connector connections
 3. Test the Word Online connector action independently in a new test flow
 4. Check connector status in **Power Automate** → **Connections** — re-authenticate if status is "Error"
-5. Verify the template contains valid content controls (Developer tab → Design Mode)
+5. Verify the template uses uniquely titled **Plain Text Content Controls**, not Rich Text controls. Confirm all fields appear in **Populate a Microsoft Word template**; check the 10 MB limit and the connector's documented MFA Conditional Access limitation without relaxing security policies. See [Word Online (Business)](https://learn.microsoft.com/connectors/wordonlinebusiness/)
 
 > **Note:** The JSON fallback is a designed safety mechanism — Agent Cards are still created in `.json` format. Check `fsi_agentcardformat` on the inventory record to confirm which format was used.
 
@@ -72,7 +72,7 @@ This guide covers common issues encountered during deployment and operation of t
 
 **Resolution:**
 
-1. Navigate to **Power Platform Admin Center** → **Tables** → **Model Inventory** → **Keys**
+1. Navigate to **Power Apps** (`make.powerapps.com`) → select the environment → **Tables** → **Model Inventory** → **Keys**
 2. Check the status of `fsi_ModelInventoryUniqueKey`
 3. If status is **Inactive** or **Creating**, wait 5–10 minutes and refresh the page
 4. If status remains inactive after 15 minutes, delete and recreate the key
@@ -126,13 +126,15 @@ This guide covers common issues encountered during deployment and operation of t
 
 **Resolution:**
 
-1. Navigate to **Power Platform Admin Center** → **Environments** → select environment → **Settings**
-2. Enable **Long-Term Retention** on the `fsi_mrmcomplianceevent` table
+1. Confirm the environment is a Managed Environment, then open **Power Apps** (`make.powerapps.com`) in that environment → **Tables**
+2. Open `fsi_mrmcomplianceevent` → **Properties** → **Advanced options** → **Enable long term retention**; save, prepare and test a criteria view, then open **Retention policies** → **New retention policy**
 3. Configure a **7-year retention policy** to support regulatory record-keeping requirements
-4. This step cannot be automated via solution XML — it requires manual configuration post-deployment
+4. Select the table, criteria view, start date, and schedule. Retention policy definitions are solution-aware and portable; this repository intentionally supplies manual configuration instructions, not exported solution artifacts
 5. Document completion in DELIVERY-CHECKLIST.md
 
-> **Important:** Without Long-Term Retention, Dataverse default retention policies apply. Organizations should verify that their retention configuration meets specific regulatory obligations for their jurisdiction.
+> **Technical distinction:** LTR moves selected inactive rows into read-only long-term storage; it is not a seven-year deletion timer and does not automatically expire all live custom-table records. Retained rows cannot return to the active store. Verify the criteria, policy run, and retained-data retrieval separately from the institution's retention duration. Sources: [overview](https://learn.microsoft.com/power-apps/maker/data-platform/data-retention-overview), [setup](https://learn.microsoft.com/power-apps/maker/data-platform/data-retention-set).
+
+Organizations should verify that their retention configuration meets specific regulatory obligations for their jurisdiction.
 
 ---
 
@@ -145,7 +147,7 @@ This guide covers common issues encountered during deployment and operation of t
 | "Inventory Sync Failed" compliance event logged | Check that `fsi_agentinventory` table is accessible and that `agent-registry-automation` is deployed and running |
 | Agents not appearing in MRM inventory | Verify filter conditions — Flow 1 syncs only agents with `fsi_registrationstatus = "Registered"` and `fsi_lifecyclestatus` in (`Active`, `Under Review`) |
 | Duplicate records created | Verify the alternate key `fsi_ModelInventoryUniqueKey` is active (see Alternate Key section above) |
-| Agent 365 cross-reference not populating | Confirm `IsAgent365LifecycleEnabled = "true"`, verify whether your tenant uses Agent 365 package APIs or beta `agentRegistry/agentInstances`, and check the matching role/permission model (`CopilotPackages.Read.All` delegated or `AgentInstance.Read.All`) |
+| Agent 365 cross-reference not populating | Confirm `IsAgent365LifecycleEnabled = "true"` only after validating the Microsoft Agent 365 license and approved endpoint. Package inventory supports v1.0 and beta with application or delegated `CopilotPackages.Read.All`; delegated administrators need AI Admin or Global Admin. Legacy beta `agentRegistry/agentInstances` uses `AgentInstance.Read.All`. Check pagination and distinguish API licensing from portal inventory access |
 
 ### Flow 2 — Score-ModelRisk-OnSubmission
 

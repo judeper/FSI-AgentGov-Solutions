@@ -11,7 +11,9 @@ coe_function: govern
 > **Version:** v1.0.4
 > **Status:** Live
 > **Validated against framework version:** v1.6.0
-> **Last Verified:** 2026-07-26
+> **Last Verified:** 2026-10-16
+
+Technical verification sources, discrepancies, and downstream review: [2026-10-16 verification record](docs/verification-2026-10-16.md). This is a documentation re-check, not a live-tenant validation or a compliance assessment.
 
 Automated model risk management workflows for AI agents deployed on Power Platform, aligned to OCC Bulletin 2026-13 (formerly OCC Bulletin 2011-12) and Fed SR 26-2 (formerly Fed SR 11-7) principles where applicable. This solution automates model inventory submission, risk scoring, independent validation workflows, ongoing monitoring, and examiner-facing Agent Card generation.
 
@@ -109,26 +111,31 @@ This solution addresses three operational gaps that examiners consistently cite:
 | Dependency | Required | Notes |
 |-----------|----------|-------|
 | `agent-registry-automation` | **Yes (mandatory)** | Must be deployed first — Flow 1 reads from `fsi_agentinventory` |
-| `agent-365-lifecycle-governance` | No (optional) | Enables Agent 365 / Microsoft Entra Agent ID cross-reference. The Agent 365 agent registry Graph APIs are in preview and require the AI Administrator or Global Administrator role |
+| `agent-365-lifecycle-governance` | No (optional) | Enables Agent 365 / Microsoft Entra Agent ID cross-reference. The package inventory API documents both v1.0 and beta endpoints, application and delegated `CopilotPackages.Read.All`, and a Microsoft Agent 365 license requirement. Delegated administrators require AI Administrator or Global Administrator; keep enrichment disabled until tenant access is verified |
 
 ### Licensing
 
 | Requirement | Purpose |
 |-------------|---------|
-| **Power Automate Premium** | Power Automate cloud flows using premium connectors (Dataverse, HTTP, Word Online (Business)) |
+| **Power Automate Premium or Process licensing** | Premium-connector cloud flows (Dataverse, HTTP, Word Online (Business)); license by owner, invoking user, or flow as applicable |
+| **Power Apps entitlement for Dataverse apps** | Users of the Canvas submission portal and model-driven validation workbench need appropriate Power Apps licensing |
 | **Dataverse capacity** | 6 custom tables for MRM data |
 | **Managed Environment** | Required for Dataverse Long-Term Retention (LTR) |
-| **Microsoft 365 E3+** | Teams notifications and Graph API access |
+| **Teams and SharePoint Online service entitlements** | Verify the assigned plan includes each service; Teams is available in qualifying Microsoft 365 plans or as a standalone SKU. Graph access separately requires the API-specific permissions in the prerequisites |
+
+See the [Power Automate licensing FAQ](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/faqs), [Power Apps licensing FAQ](https://learn.microsoft.com/power-platform/admin/powerapps-flow-licensing-faq), and [Teams service description](https://learn.microsoft.com/office365/servicedescriptions/teams-service-description). Responding to an approval alone does not require Power Automate Premium.
 
 ### Roles
 
 | Role | Required For |
 |------|--------------|
-| **Power Platform Administrator** | Environment enumeration and Dataverse `bot` table access |
+| **Power Platform Admin** | Environment administration; Dataverse `bot` data access separately requires an appropriate Dataverse security role |
 | **System Administrator** | Dataverse table creation and security role configuration |
 | **Microsoft Entra Global Administrator** or **Privileged Role Administrator** | Granting tenant-wide admin consent for the managed identity's Microsoft Graph *application* permissions. Application Administrator, Cloud Application Administrator and AI Administrator can consent to any other API, but not to Microsoft Graph app roles |
 
 See [Prerequisites](docs/prerequisites.md) for complete details.
+
+An Entra service-admin role does not automatically assign Dataverse System Administrator in each environment; use the documented [self-elevation process](https://learn.microsoft.com/power-platform/admin/use-service-admin-role-manage-tenant) when required.
 
 ## Solution Components
 
@@ -239,11 +246,13 @@ Review and complete all items in [DELIVERY-CHECKLIST.md](DELIVERY-CHECKLIST.md) 
 
 Microsoft has introduced an AI-powered self-healing capability for Power Automate desktop flows (preview; introduced with Power Automate for desktop build 2603), which uses GPT-4.1 mini and Claude Sonnet 4.5 to recover from runtime UI errors (e.g., "Element not found" and "Window not found" failures) in actions that interact with a single UI element.
 
+The [current self-healing documentation](https://learn.microsoft.com/power-automate/desktop-flows/self-healing) limits this to supported single-element actions on Power Automate for desktop 2.66 or later. It applies to console/cloud runs, not designer runs, and requires an organization premium account and the documented admin settings, including Anthropic enablement. It can identify an unintended element; it is not deterministic error recovery.
+
 **Impact on this solution:** Self-healing desktop flows represent an emerging AI capability that may require MRM inventory tracking under institution-specific policies informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7):
 
 - **Model inventory scope:** Organizations should evaluate whether self-healing-enabled desktop flows meet the threshold for "model" classification under their MRM policy framework
 - **Risk rating considerations:** Self-healing introduces runtime AI decision-making that operates outside the original flow design — this may warrant a higher risk rating than standard RPA flows
-- **Validation requirements:** The self-healing AI models (GPT-4.1 mini, Claude Sonnet 4.5) are managed by Microsoft and not configurable by the organization — validation should focus on outcomes and error recovery accuracy
+- **Validation requirements:** Microsoft documents GPT-4.1 mini and Claude Sonnet 4.5 in combination, with administrator enablement and per-action configuration — validation should focus on outcomes and error recovery accuracy
 
 > **Note:** This solution currently governs Copilot Studio and Agent Builder agents only. Desktop flow AI capabilities (including self-healing) are not yet within scope. Organizations with significant desktop flow deployments should evaluate whether their MRM framework requires separate inventory and validation processes for AI-enabled RPA.
 
@@ -253,9 +262,9 @@ Microsoft has introduced an AI-powered self-healing capability for Power Automat
 
 Microsoft Entra Agent ID (Control 2.26) introduces a new identity model for AI agents. Organizations migrating from legacy Copilot Studio app registrations to Entra Agent IDs must maintain an auditable trail of the migration for model risk examinations informed by OCC Bulletin 2026-13 (formerly OCC 2011-12) / Fed SR 26-2 (formerly Fed SR 11-7).
 
-Copilot Studio automatically creates a Microsoft Entra Agent ID for each new agent created after the Entra Agent ID rollout in May 2026 (new agents can no longer opt out). Agents created before that rollout continue to use app registrations and will be migrated by Microsoft in a future update, or can be migrated manually; governance capabilities work for both Agent IDs and App Registration IDs during the transition period. The Entra Agent ID is a **GUID** — retrieve it in Copilot Studio under **Settings** → **Advanced** → **Metadata** → **Entra Agent ID**, then use that GUID in the Microsoft Entra admin center.
+For the standard harness, Copilot Studio automatically creates a Microsoft Entra Agent ID when a new agent is created; for the GitHub Copilot harness it is provisioned on first publication, not when saving a draft. The identity documentation dates the standard-harness rollout and removal of opt-out to May 2026. Existing app-registration agents are being migrated automatically; optional manual migration is preview. Governance capabilities work with both identity types during the transition. Retrieve the identity **GUID** in **Settings** → **Advanced** → **Metadata** → **Entra Agent ID**. Agent Builder agents currently do not use or require these identities. Sources: [identity behavior](https://learn.microsoft.com/microsoft-copilot-studio/govern-agents-identities-overview), [rollout and metadata](https://learn.microsoft.com/microsoft-copilot-studio/admin-use-entra-agent-identities), [migration](https://learn.microsoft.com/microsoft-copilot-studio/govern-migrate-api-entra-agent-identity).
 
-The MRM model inventory (`fsi_modelinventory`) stores an `fsi_agentid` column that references the agent's identity. When migrating from a legacy Bot Framework app registration to an Entra Agent ID, the old and new identifiers must be linked to preserve the validation history chain.
+The MRM model inventory stores the **Power Platform Bot ID** in `fsi_agentid` and the environment GUID in `fsi_environmentid`; together these form its alternate key. Store the separate Entra identity GUID in `fsi_entraagentid`. Do not replace `fsi_agentid` with an Entra identity or application ID. Microsoft documents in-place migration with the application (client) ID preserved; record the before/after identity metadata against the same inventory row rather than assuming every migration replaces that identifier.
 
 ### Migration Evidence Requirements
 
@@ -268,18 +277,20 @@ Examiners require documentation showing:
 
 ### Evidence Format
 
-Store migration evidence as JSON records in `fsi_mrmcomplianceevent` with `fsi_eventtype = "AgentIdMigration"`. Export for examiner review using the sample formats below.
+Store the advisory `AgentIdMigration` evidence envelope below as serialized JSON in `fsi_mrmcomplianceevent.fsi_eventdetails`, linked to the existing inventory row. It is **not** a Dataverse row-create payload: `fsi_eventtype` is an integer Choice and the deployed schema has no `AgentIdMigration` option. Use the existing **Material Change Detected** value (`100000010`) for this change record, populate required `fsi_eventtimestamp` and `fsi_triggeredby`, select valid `fsi_sr117pillar` and `fsi_complianceimpact` values per institution policy, and bind `fsi_ModelInventory_Lookup` to the existing row. Keep `eventType = "AgentIdMigration"` inside the JSON envelope. See [schema](docs/dataverse-schema.md). Export for examiner review using the sample formats below.
 
 #### JSON Evidence Record
 
 ```json
 {
-  "fsi_eventtype": "AgentIdMigration",
-  "fsi_timestamp": "2026-06-15T14:30:00Z",
-  "fsi_agentname": "Customer Service Assistant",
-  "fsi_details": {
-    "legacyAgentId": "cr8a5_customerServiceBot",
+  "eventType": "AgentIdMigration",
+  "timestamp": "2026-06-15T14:30:00Z",
+  "agentName": "Customer Service Assistant",
+  "details": {
+    "powerPlatformBotId": "19d87065-7909-41de-a4ad-436f74712854",
+    "environmentId": "b636a48c-d37a-4121-9b2d-b63066d49db4",
     "legacyAppRegistrationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "applicationClientIdAfterMigration": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "newEntraAgentId": "7f3c1d92-4a8b-4e6f-9c25-3b81d0a4f612",
     "migrationDate": "2026-06-15T14:30:00Z",
     "approvedBy": "mrm-officer@contoso.com",
@@ -288,24 +299,24 @@ Store migration evidence as JSON records in `fsi_mrmcomplianceevent` with `fsi_e
     "preMigrationValidationCount": 4,
     "postMigrationVerification": "Passed"
   },
-  "fsi_outcome": "Success",
-  "fsi_zone": 3
+  "outcome": "Success",
+  "zone": 3
 }
 ```
 
 #### CSV Export Format (Examiner-Facing)
 
 ```csv
-AgentName,LegacyAgentId,LegacyAppRegistrationId,NewEntraAgentId,MigrationDate,ApprovedBy,ApprovalTicket,ValidationHistoryPreserved,PreMigrationValidations,PostMigrationVerification
-Customer Service Assistant,cr8a5_customerServiceBot,a1b2c3d4-e5f6-7890-abcd-ef1234567890,7f3c1d92-4a8b-4e6f-9c25-3b81d0a4f612,2026-06-15T14:30:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,4,Passed
-Loan Officer Assist,cr8a5_loanOfficerAssist,b2c3d4e5-f6a7-8901-bcde-f12345678901,2c9e4b17-63da-4f80-8a55-91c7e2d6b043,2026-06-15T15:00:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,2,Passed
+AgentName,PowerPlatformBotId,EnvironmentId,LegacyAppRegistrationId,ApplicationClientIdAfterMigration,NewEntraAgentId,MigrationDate,ApprovedBy,ApprovalTicket,ValidationHistoryPreserved,PreMigrationValidations,PostMigrationVerification
+Customer Service Assistant,19d87065-7909-41de-a4ad-436f74712854,b636a48c-d37a-4121-9b2d-b63066d49db4,a1b2c3d4-e5f6-7890-abcd-ef1234567890,a1b2c3d4-e5f6-7890-abcd-ef1234567890,7f3c1d92-4a8b-4e6f-9c25-3b81d0a4f612,2026-06-15T14:30:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,4,Passed
+Loan Officer Assist,ac1078da-7a48-44fa-98e5-69f44acb183b,b636a48c-d37a-4121-9b2d-b63066d49db4,b2c3d4e5-f6a7-8901-bcde-f12345678901,b2c3d4e5-f6a7-8901-bcde-f12345678901,2c9e4b17-63da-4f80-8a55-91c7e2d6b043,2026-06-15T15:00:00Z,mrm-officer@contoso.com,CHG-2026-0451,true,2,Passed
 ```
 
 ### Generating Migration Evidence
 
-1. **Before migration**: Export current `fsi_modelinventory` records with `fsi_agentid` values
-2. **During migration**: Log each Agent ID change as an `AgentIdMigration` compliance event
-3. **After migration**: Run `Test-MRMCompliance.ps1` to verify all inventory records have valid Entra Agent IDs and linked validation history
+1. **Before migration**: Export inventory row IDs, `fsi_agentid`, `fsi_environmentid`, `fsi_entraagentid`, application/client IDs, and linked validation-cycle IDs/counts.
+2. **During migration**: Log the `AgentIdMigration` envelope as described above; retain the same inventory row and Bot ID/environment alternate key.
+3. **After migration**: Compare the before/after identifiers and linked validation rows, confirm the preserved application/client ID, and test channels, connectors, authentication, and Entra sign-in/Conditional Access results per Microsoft's [migration validation guidance](https://learn.microsoft.com/microsoft-copilot-studio/govern-migrate-api-entra-agent-identity#validate-migrated-agents). `Test-MRMCompliance.ps1` reports aggregate MRM status only; it does **not** validate Entra identities or migration-history continuity.
 
 ### MRM Alignment
 
