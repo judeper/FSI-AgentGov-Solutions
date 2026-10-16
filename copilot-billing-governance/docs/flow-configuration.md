@@ -4,6 +4,14 @@ Power Automate flow setup for Copilot Billing Governance (CBG). This solution sh
 **documentation only** — build the flows manually in the Power Automate designer. No
 exported flow JSON is included.
 
+> **2026-10-16 verification gate:** these are preview design instructions, not a
+> validated unattended integration. Graph `licenseDetails` is delegated-only; do
+> not substitute a managed-identity token for the license-read step. Microsoft
+> 365 Chat/SharePoint billing policies do not establish Work IQ API spending-policy
+> coverage. Keep the analyzer monitor-only until each source and coverage boundary
+> is validated. See [prerequisites](prerequisites.md) and
+> [current verification findings](../README.md#technical-verification).
+
 ---
 
 ## Overview
@@ -81,10 +89,17 @@ Configure these before building the flows.
 **Steps (designer build):**
 
 1. **Recurrence** trigger (15 minutes).
-2. **Read PAYG policies** — call the billing-policy admin API; for each, upsert a
+2. **Read PAYG policies** — use a validated policy read or an operator-supplied
+   normalized snapshot reconciled against **Copilot > Billing & usage >
+   Pay-as-you-go services**. Confirm scope and connection to the intended service;
+   a summary list or HTTP 200 alone is insufficient. For each, upsert a
    `fsi_cbgbillingpolicy` row (set `fsi_azuresubscriptionid`, `fsi_isconnected`,
    `fsi_budgetalertthreshold`, `fsi_spendscope`, `fsi_lastsyncedat`).
-3. **Read credit policies** — call the credit-policy admin API; for each, upsert a
+3. **Read credit policies** — do not assume a public credit-policy API is available
+   or that the PAYG list includes credit-policy scope. Use a validated read or
+   an operator-verified snapshot, recording observation time and source evidence.
+   Confirm prepaid allocation to the **Microsoft Copilot Chat** environment in
+   **Licensing > Copilot Studio**, plus tenant-pool/PAYG overage settings. For each, upsert a
    `fsi_cbgcreditpolicy` row (set `fsi_prepaidcreditpack`, `fsi_creditsconsumed`,
    `fsi_hardstopenabled`, `fsi_surfacescope`, `fsi_assignedgroupid`,
    `fsi_lastsyncedat`).
@@ -92,10 +107,13 @@ Configure these before building the flows.
    tenant total (the column `MaxValue` is 50 for PAYG and 10 for credit; a snapshot at
    or above the ceiling indicates no headroom for additional policies).
 
-> **Write-API caveat:** if credit-policy or per-agent-cap **write** APIs are
-> unavailable in your tenant, run this flow read-only and treat enforcement as
-> **detect-and-alert** (`fsi_cbg_enforcementmode = Detect-and-alert`). See the
-> [entitlement contract](entitlement-contract.md) §9 assumptions.
+> **Integration caveat:** CBG has no validated credit-policy/cap write integration;
+> treat enforcement as **detect-and-alert**. Native agent caps do exist in
+> **Licensing > Copilot Studio > Summary > Manage Agents**, with notifications
+> and delayed hard stops; they do not stop separately billed agent flows.
+> Source: [capacity and agent limits](https://learn.microsoft.com/power-platform/admin/manage-copilot-studio-messages-capacity).
+> Work IQ API requires separate policies in **Copilot > Cost management**, outside
+> this flow's two-object model.
 
 ### CBG-CoverageGapAnalyzer
 
@@ -115,7 +133,11 @@ the materialized entitlement cache.
    available; otherwise a fixture list).
 3. **Classify pathway** — for each agent, derive `fsi_pathway` from `createdIn`
    (Azure Resource Graph `PowerPlatformResources`) and `configuredTier` (Work IQ).
-4. **Evaluate entitlement** — apply the switch-on-pathway contract per intended user;
+4. **Evaluate entitlement** — use delegated diagnostic license resolution or
+   reviewed fixture inputs, not unattended app-only `licenseDetails`. Apply the
+   shipped preview contract per intended user, preserving unresolved-user and
+   policy-uncertainty evidence separately from evaluated users; do not equate engine
+   decisions with verified Microsoft access requirements;
    upsert `fsi_cbgentitlementmaterialized` rows with `fsi_decision`,
    `fsi_decisionreason`, `fsi_ttlexpiresat` (= now + `fsi_CBG_CacheTtlMinutes`).
 5. **Aggregate per agent** — upsert one `fsi_cbgcoveragegap` row per agent:
@@ -139,6 +161,9 @@ the materialized entitlement cache.
 2. Run the flow manually.
 3. Confirm `fsi_cbgbillingpolicy` and/or `fsi_cbgcreditpolicy` rows are upserted with
    a recent `fsi_lastsyncedat`.
+4. Reconcile each row to a dated admin-center observation: scope, connected
+   Chat/SharePoint service, prepaid allocation, and overage source. Reject a
+   summary-only or unparseable policy as coverage evidence.
 
 ### Test CBG-CoverageGapAnalyzer
 
@@ -147,6 +172,12 @@ the materialized entitlement cache.
 2. Run the flow manually.
 3. Confirm one `fsi_cbgcoveragegap` row per agent, with `fsi_monitoronly = Yes` and a
    bounded `fsi_blockedsampleupns` sample (see `templates/coverage-gap.sample.json`).
+4. Record intended, resolved, and unresolved user counts and policy uncertainty;
+   a row with zero blocked users does not prove full entitlement coverage.
+5. Include negative checks for app-only license reads, Work IQ API consumers
+   without verified spending-policy coverage, non-agent-triggered flows, and CUA
+   operations. The current engine does not implement all these cases; record
+   unsupported cases for manual review rather than claiming a successful gate.
 
 The PowerShell skeletons `Get-BillingPolicyInventory.ps1` and
 `Invoke-EntitlementEvaluation.ps1` reproduce the same logic for local validation

@@ -65,7 +65,7 @@ application depending on the auth mode):
 | Power Platform API (`https://api.powerplatform.com`) | `https://api.powerplatform.com/.default` | Layer 1 — ARG `resourcequery` against `PowerPlatformResources` |
 | Power Platform Admin / BAP (`https://api.bap.microsoft.com`) | `https://api.bap.microsoft.com/.default` | Environment enumeration |
 | Dataverse (per environment) | `https://<org>.crm.dynamics.com/.default` | Layer 2 — the **scanner** reads `bot` / `botcomponent` (read-only). The CAI inventory tables are written by the Power Automate flow's Dataverse connection (the **flow-writer** identity), not by the scanner. |
-| Microsoft Graph (`https://graph.microsoft.com`) | `https://graph.microsoft.com/.default` | Layer 4 — Package Management API (`CopilotPackages.Read.All`); owner licensing queries (`User.Read.All`, `Organization.Read.All`, `GroupMember.Read.All`) |
+| Microsoft Graph (`https://graph.microsoft.com`) | `https://graph.microsoft.com/.default` | Layer 4 Package API and supported app-only SKU/group reads; current owner `licenseDetails` reads require a separate delegated context, not this scanner identity |
 
 > **Note:** After configuring permissions, a Microsoft Entra admin must grant
 > tenant consent.
@@ -328,16 +328,22 @@ Administrator** must grant tenant-wide admin consent.
 4. Click **Grant admin consent for \<tenant\>** (requires Global Admin or
    Privileged Role Administrator).
 
-**Additional Graph permissions for owner licensing queries** (required by
-`resolve_owner_entitlement.py`, and reused by the `auto`-mode probe):
+**Additional Graph reads and the owner-license exception** (re-checked
+2026-10-16 against [licenseDetails](https://learn.microsoft.com/graph/api/user-list-licensedetails?view=graph-rest-1.0)
+and [subscribedSkus](https://learn.microsoft.com/graph/api/subscribedsku-list?view=graph-rest-1.0)):
 
 | Permission | Type | Purpose |
 |-----------|------|---------|
-| `User.Read.All` | Application | Read owner profile and license assignments |
+| `LicenseAssignment.Read.All` (or supported higher delegated permission) | **Delegated only** for `licenseDetails` | Owner license read also requires a supported signed-in Entra role; application access is not supported |
 | `Organization.Read.All` | Application | Read tenant SKU information for entitlement classification (also authorizes the `auto` probe) |
 | `GroupMember.Read.All` | Application | Resolve security-group memberships for sharing audience expansion |
 
-Grant admin consent for these at the same time as `CopilotPackages.Read.All`.
+The current `resolve_owner_entitlement.py` wrapper defaults to managed-identity
+authentication, so it is **not a validated unattended license-read path**.
+Granting more application permissions does not remove this restriction. Keep
+owner entitlement unresolved until a delegated diagnostic read or a supported
+replacement has been validated. The app-only Package API and SKU probe remain
+separate operations; this restriction does not disable discovery.
 
 ---
 
@@ -388,8 +394,9 @@ python scripts/discover_agents.py \
     --tenant-id <your-tenant-id> \
     --auth-mode managed-identity
 
-# Full integrated scan — Package API + registry correlation + entitlement
-# (US commercial Microsoft 365 cloud only; requires pwsh for entitlement resolution)
+# Integrated scan — Package API + registry correlation
+# Owner license resolution is excluded: the current app-only wrapper cannot
+# call delegated-only licenseDetails.
 python scripts/discover_agents.py \
     --auth-mode managed-identity \
     --tenant-id <your-tenant-id> \
@@ -397,7 +404,6 @@ python scripts/discover_agents.py \
     --registry-export registry-export.xlsx \
     --columnmap templates/registry-columnmap.sample.json \
     --as-of 2026-07-21T18:00:00Z \
-    --resolve-entitlement \
     --output scan.json
 ```
 

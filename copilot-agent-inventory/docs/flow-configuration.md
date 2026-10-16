@@ -130,8 +130,7 @@ the placeholders (`{{...}}`) with your organization's values.
    - Resource Group: `ResourceGroup` variable.
    - Automation Account: `AutomationAccount` variable.
    - Runbook / job: the wrapper that invokes the integrated scanner. For the
-     full BI-ready combined output (agents[] + registryCorrelation +
-     entitlementResolution):
+     inventory and registry output (agents[] + registryCorrelation):
      ```
      python scripts/discover_agents.py \
        --tenant-id <TenantId> \
@@ -140,9 +139,15 @@ the placeholders (`{{...}}`) with your organization's values.
        --registry-export <RegistryExportPath> \
        --columnmap <ColumnMapPath> \
        --as-of <AsOfDateTime> \
-       --resolve-entitlement \
        --output scan.json
      ```
+     **Owner-license gate (2026-10-16):** omit `--resolve-entitlement` for this
+     managed-identity job. Its current CBG resolver calls
+     [delegated-only Graph licenseDetails](https://learn.microsoft.com/graph/api/user-list-licensedetails?view=graph-rest-1.0).
+     Keep owner entitlement deferred/unresolved rather than substituting "Copilot
+     Chat Only" or a zero blocked count. Persist the entitlement-layer status and
+     limitation in the run ledger; a supported replacement requires an
+     implementation-owner change. See [prerequisites](prerequisites.md).
      Set `Agent365Mode` to `absent` (default) to defer Layer 4; the run still
      inventories available agents and marks the Package API `Deferred` (never
      an observed zero). ARG can classify Agent Builder agents through

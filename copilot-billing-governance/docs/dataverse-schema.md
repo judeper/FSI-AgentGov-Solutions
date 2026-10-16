@@ -29,6 +29,8 @@ All column logical names are the SchemaName lowercased (Dataverse never inserts 
 | fsi_EnvironmentName | fsi_environmentname | String | No | Power Platform environment connected to this billing policy. |  |
 | fsi_IsConnected | fsi_isconnected | Boolean | No | Whether the two-step add-then-connect flow has completed (environment connected). | `1` = Yes, `0` = No |
 | fsi_SpendScope | fsi_spendscope | Picklist | No | Surface this PAYG policy covers (SharePoint grounding stays PAYG). | **fsi_cbg_spendscope**: `100000000` = Chat - Credit-eligible, `100000001` = SharePoint - PAYG-only, `100000002` = Mixed |
+| fsi_UserScope | fsi_userscope | Picklist | No | Whether this PAYG policy applies to all tenant users or to a specific Entra security group. An all-users scope covers every user for the policy's surface. | **fsi_cbg_userscope**: `100000000` = All users, `100000001` = Specific security group |
+| fsi_AssignedGroupId | fsi_assignedgroupid | String | No | Entra security group object ID whose members this PAYG policy covers when UserScope is a specific security group. |  |
 | fsi_BudgetAlertThreshold | fsi_budgetalertthreshold | Decimal | No | Budget-alert threshold in tenant currency. Informational alert only; PAYG has no hard-stop. |  |
 | fsi_BudgetAlertConfigured | fsi_budgetalertconfigured | Boolean | No | Whether a budget alert has been configured for this policy. | `1` = Yes, `0` = No |
 | fsi_PolicyCountSnapshot | fsi_policycountsnapshot | Integer | No | Observed number of PAYG billing policies in the tenant at last sync (ceiling is 50). |  |
@@ -193,6 +195,15 @@ Surface a charge applies to. Chat is credit-eligible; SharePoint stays PAYG.
 | 100000000 | Chat - Credit-eligible |
 | 100000001 | SharePoint - PAYG-only |
 | 100000002 | Mixed |
+
+### fsi_cbg_userscope
+
+Whether a PAYG billing policy applies to all tenant users or only the members of a specific Entra security group. An all-users scope makes every user covered for the policy's surface and collapses the blocked set to zero.
+
+| Value | Label |
+|---|---|
+| 100000000 | All users |
+| 100000001 | Specific security group |
 
 ### fsi_cbg_blockreason
 

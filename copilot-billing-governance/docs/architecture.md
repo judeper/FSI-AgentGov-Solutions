@@ -5,6 +5,13 @@ the two billing/credit policy objects, classifies each agent's consumption pathw
 evaluates per-(agent, user) entitlement, and produces a pre-enforcement
 **coverage-gap** analysis before any spend control is enforced.
 
+> **Product verification, 2026-10-16:** the two-object model below covers the
+> Chat/SharePoint policy model, not all current Copilot Credits services. Work IQ API
+> uses separate spending policies under **Copilot > Cost management**. The preview
+> engine does not evaluate those policies; keep outputs monitor-only. The current
+> license resolver also requires delegated Graph access. See the
+> [README verification findings and sources](../README.md#technical-verification).
+
 ---
 
 ## Components
@@ -47,8 +54,11 @@ evaluates per-(agent, user) entitlement, and produces a pre-enforcement
 
 The PAYG policy uses a two-step **add → connect** flow (`fsi_isconnected`). The
 credit policy is prepaid with a non-rolling 25,000-credit monthly pack. Surfaces are
-tracked via `fsi_spendscope` (Chat is credit-eligible; SharePoint grounding stays
-PAYG). See [`entitlement-contract.md`](entitlement-contract.md) §8.
+tracked via `fsi_spendscope` (Chat is credit-eligible; SharePoint agents use
+PAYG). Credit-policy creation also requires allocating credits
+to the Microsoft Copilot Chat environment under **Licensing > Copilot Studio**.
+Standalone exhaustion is not a CBG per-agent hard-stop API. See
+[`entitlement-contract.md`](entitlement-contract.md) §8.
 
 ### 2. Three group layers (one admission-gated registry)
 
@@ -56,17 +66,19 @@ A single hardened registry, `fsi_cbgapprovedgrouppolicy`, holds three layers via
 `fsi_grouplayer` discriminator: **maker**, **audience**, and **billing**. The
 registry adopts the Agent Sharing Access Restriction Detector (ASARD) admission
 gate — a group must be `securityEnabled = true` and **not** `mailEnabled` to be
-admitted. This reuses the proven hardened shape rather than cloning the simpler
-Unrestricted Agent Sharing Detector (UASD) registry or introducing a careless third
-pattern.
+admitted. This is a solution-specific admission rule: Microsoft credit policies also
+support distribution groups and whole-tenant scope. This reuses the hardened
+shape rather than cloning the simpler Unrestricted Agent Sharing Detector (UASD)
+registry.
 
 ### 3. Entitlement engine (switch-on-pathway)
 
 Classifies the agent pathway first (`none` / `mcp-cs` / `mcp-agentbuilder` /
 `api-direct` / `metered` / `unmapped`), then applies pathway-specific eligibility,
 with an explicit `none → ALLOW` arm, a bounded metered-only `ELSE → block`, a
-fail-closed zero-rating arm for `mcp-cs`, and a fail-open-with-anomaly default for
-`unmapped`. Decisions are materialized to `fsi_cbgentitlementmaterialized` with a
+conditional zero-rating arm for `mcp-cs` (the shipped flag defaults to true), and
+a fail-open-with-anomaly default for `unmapped`. Decisions are materialized to
+`fsi_cbgentitlementmaterialized` with a
 TTL. Full contract: [`entitlement-contract.md`](entitlement-contract.md).
 
 ### 4. Coverage-gap analysis
@@ -79,9 +91,13 @@ per agent × user) keeps the output bounded.
 ### 5. Per-agent caps
 
 `fsi_cbgagentcap` carries a per-agent monthly credit cap and month-to-date
-consumption. Because the relevant write APIs (credit-policy CRUD, per-agent caps,
-hard-stop) are unproven, enforcement degrades to **detect-and-alert**
-(`fsi_cbg_enforcementmode`) where a hard-stop write path is unavailable.
+consumption. It is a monitoring record, not a configured native limit. Microsoft
+supports monthly limits, notifications, and hard stops for Copilot Studio agents
+in **Licensing > Copilot Studio > Summary > Manage Agents**, for prepaid and PAYG
+environments. Enforcement is delayed and an agent limit does not stop the agent
+flows it calls. CBG's write integration remains unvalidated, so it stays
+**detect-and-alert** (`fsi_cbg_enforcementmode`).
+Source: [Manage Copilot Credits and capacity](https://learn.microsoft.com/power-platform/admin/manage-copilot-studio-messages-capacity#manage-monthly-consumption-limits-for-copilot-studio-agents).
 
 ---
 
@@ -117,16 +133,20 @@ Work IQ dependency boundary:
 | Work IQ gap-math | `work-iq-usage-detection` | After Work IQ detection |
 | Per-agent caps | Policy read | After policy read |
 
-> **Assumption:** the Pillar-2-dependent sub-deliverables consume `configuredTier`
-> from `work-iq-usage-detection`, whose GA / consumption-billing switch is **June 16
-> 2026**. Until the sibling solutions land, the classifier and engine run on
-> sample/fixture inputs.
+> The Pillar-2-dependent sub-deliverables consume `configuredTier` from
+> `work-iq-usage-detection`. Both sibling solutions are catalog-registered previews.
+> **June 16, 2026** is the Work IQ API GA / consumption-pricing date; it does not
+> establish a billing start date for every Copilot service. Use fixtures where
+> tenant inputs are unavailable, and do not interpret a Work IQ configuration tier
+> or a licensed user alone as proof of Work IQ spending-policy coverage.
 
 ---
 
 ## Authentication
 
-All automation follows the repository's **managed-identity-first** standard. The
+Automation follows the repository's **managed-identity-first** standard where the
+API supports application access. The current Graph `licenseDetails` path supports
+delegated access only; app-only license resolution is not supported. The
 shared `DataverseClient` accepts a token from any source, so the scheduled host
 should use a system-assigned (or user-assigned) managed identity. Client secrets are
 a legacy development-only fallback. See [`prerequisites.md`](prerequisites.md).

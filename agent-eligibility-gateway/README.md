@@ -50,6 +50,15 @@ The runtime path is `Client -> Entra sign-in -> Eligibility Gateway (APIM) -> ag
 
 ### Entitlement contract (switch-on-pathway)
 
+> **CBG dependency gate, 2026-10-16:** CBG's current license resolver calls
+> delegated-only Graph `licenseDetails`; its engine does not evaluate Work IQ API
+> spending policies or all current billing inclusion exceptions. Do not promote
+> CBG-derived billing decisions into production enforcement on the strength of
+> the reference tests below. See the
+> [CBG verification findings and Microsoft sources](../copilot-billing-governance/README.md#technical-verification).
+> The gateway's Dataverse managed-identity read is a separate, supported
+> authentication concern; it does not validate the provenance of the cached inputs.
+
 The gateway applies the corrected entitlement contract. Eligibility is evaluated **only inside a metered pathway**; a non-metered request is not denied for billing reasons.
 
 | Condition | Decision |

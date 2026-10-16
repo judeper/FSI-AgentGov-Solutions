@@ -356,6 +356,13 @@ against the owner's Microsoft 365 license (delegated to
 `copilot-billing-governance/scripts/Get-CopilotEntitlement.ps1` — the GUID
 allowlist is not duplicated into CAI):
 
+> **2026-10-16 downstream verification:** the delegated-only
+> [Graph licenseDetails API](https://learn.microsoft.com/graph/api/user-list-licensedetails?view=graph-rest-1.0)
+> does not support the current wrapper's app-only license-read authentication.
+> Preserve unresolved owner state; do not equate a failed read with no license.
+> A supported unattended replacement requires an implementation-owner change.
+> See [CBG prerequisites](../../copilot-billing-governance/docs/prerequisites.md).
+
 | Value | Dataverse option | Meaning |
 |-------|-----------------|---------|
 | `Paid Copilot` | 100000000 | Owner holds a `M365_COPILOT_*` service plan |

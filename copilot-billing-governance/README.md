@@ -12,7 +12,16 @@ coe_function: optimize
 > **Status:** Preview
 > **Validated against framework version:** v1.6.0
 > **Upstream Microsoft dependency:** Mixed — Copilot Credits consumption billing from June 16 2026; credit policies Chat-only today
-> **Last Verified:** 2026-08-09
+> **Last Verified:** 2026-10-16
+
+> **Verification finding:** the manifest-managed dependency line above retains an
+> outdated scope statement pending a manifest-owner correction. **June 16, 2026
+> is the Work IQ API GA / consumption-pricing date**, not the start of all Copilot
+> Credits billing. Work IQ API now uses separate spending policies under
+> **Copilot > Cost management**; the two Chat/SharePoint policy objects below do
+> not establish Work IQ coverage. This preview remains **monitor-only**: its
+> resolver and engine are not a complete representation of current Microsoft
+> entitlement. See [Technical verification](#technical-verification).
 
 Governance for **Copilot consumption billing** — the two policy objects
 (pay-as-you-go and prepaid credits), a switch-on-pathway entitlement engine,
@@ -89,12 +98,13 @@ parts:
    Azure-subscription-backed, tenant ceiling 50, two-step add → connect, budget
    alerts only — not a hard-stop) and Copilot credit policy
    (`fsi_cbgcreditpolicy`, prepaid, tenant ceiling 10, standalone hard-stop,
-   Chat-only today — SharePoint grounding stays PAYG). Three configurations:
+   Chat-only today — SharePoint agents use PAYG). Three configurations:
    credit-only, credit + PAYG, PAYG-only.
 2. **Three group layers, one admission-gated registry.**
    `fsi_cbgapprovedgrouppolicy` holds maker, audience, and billing groups, gated on
-   `securityEnabled = true` and not `mailEnabled` — reusing the hardened ASARD
-   registry shape rather than cloning the simpler UASD registry.
+   `securityEnabled = true` and not `mailEnabled` — a deliberately narrower
+   solution rule, not a Microsoft billing-policy limitation. Microsoft credit
+   policies also support distribution groups and whole-tenant scope.
 3. **Switch-on-pathway entitlement engine.** Classifies the agent pathway first
    (`none` / `mcp-cs` / `mcp-agentbuilder` / `api-direct` / `metered` / `unmapped`),
    then applies pathway-specific eligibility, materializing each decision to
@@ -107,9 +117,9 @@ parts:
 
 The engine **switches on the consumption pathway** rather than denying by default.
 There is an explicit `none → ALLOW (eligibility N/A)` arm for the agent majority, a
-bounded `ELSE → block` **only inside the metered pathway**, a **zero-rating-resolved**
-`mcp-cs` arm (license sufficient on a zero-rated M365 surface, per the June 2026
-Licensing Guide footnotes 6 & 7; reverts to fail-closed when set false), and a
+bounded `ELSE → block` **only inside the metered pathway**, a **zero-rating-default**
+`mcp-cs` arm (the shipped default assumes included usage; current billing
+exceptions require separate validation), and a
 `unmapped → fail-open-with-anomaly` default so a classifier defect does not deny users.
 Full decision tree, pseudocode, and the zero-rating analysis are in
 [`docs/entitlement-contract.md`](docs/entitlement-contract.md).
@@ -153,11 +163,14 @@ copilot-billing-governance/
 ## Prerequisites
 
 See [`docs/prerequisites.md`](docs/prerequisites.md). In brief: Microsoft 365 Copilot
-licensing; PAYG and/or prepaid credit policy; an Azure subscription for PAYG; Power
-Platform Premium and Dataverse capacity; and Graph `User.Read.All` / `Group.Read.All`
-granted to a managed identity. Roles: Microsoft 365 Admin (billing/credit policy),
-Azure subscription Owner/Contributor (PAYG), Entra security-group admin (group
-registry), Power Platform Admin (Dataverse and flows).
+license state for evaluated users (a paid license is not required for every
+metered scenario); PAYG and/or prepaid credit policy; an Azure subscription and
+resource group for PAYG; Power Automate Premium (or a suitable Process license)
+and Dataverse capacity. The resolver's Graph `licenseDetails` call requires
+**delegated** access, not a managed-identity/app-only token. PAYG setup requires
+Billing Administrator, AI Administrator, or Entra Global Admin; activating
+capacity packs requires Entra Global Admin. Azure Owner/Contributor rights are
+needed on both the PAYG subscription and resource group.
 
 ## Deployment
 
@@ -172,21 +185,23 @@ registry), Power Platform Admin (Dataverse and flows).
    [`docs/flow-configuration.md`](docs/flow-configuration.md) to build the 15-minute
    policy-sync flow and the nightly coverage-gap flow (no exported flow JSON is
    shipped).
-5. **Resolve per-user entitlement inputs (real tenant data).**
+5. **Resolve per-user entitlement inputs (delegated diagnostic run).**
    [`scripts/Get-CopilotEntitlement.ps1`](scripts/Get-CopilotEntitlement.ps1) reads each
    user's Copilot license (by the paid service-plan allowlist, including transitive group
    assignments) and PAYG / credit coverage, and emits the engine-ready per-user booleans
    plus a Find-No-Filter "blocked" lens. Supply the audience UPNs (from
    `copilot-agent-inventory`); for the policy dimension, prefer `-BillingPolicyInputPath`
-   (the normalized `Get-BillingPolicyInventory.ps1` output) while the billing-policy REST
-   schema remains unproven.
+   (the normalized `Get-BillingPolicyInventory.ps1` output), reconciled against
+   admin-center scope and service connection evidence. Do not schedule the
+   current `licenseDetails` resolver with an app-only token.
 6. **Run coverage-gap analysis monitor-only.**
    [`scripts/Invoke-EntitlementEvaluation.ps1`](scripts/Invoke-EntitlementEvaluation.ps1)
    evaluates the resolved entitlement inputs and writes per-agent gaps; confirm rows in
    `fsi_cbgcoveragegap` before enabling any enforcement.
 
-Authentication is **managed-identity-first**; client secrets are a legacy
-development-only fallback. See [`docs/prerequisites.md`](docs/prerequisites.md).
+Authentication is **managed-identity-first where the API supports app-only
+access**; the current license-read path is delegated-only. Client secrets do not
+remove that API restriction. See [`docs/prerequisites.md`](docs/prerequisites.md).
 
 ## Assumptions and build-time verifications
 
@@ -196,26 +211,28 @@ sources.
 - **Switch-on-pathway replaces deny-by-default.** The corrected contract uses an
   explicit `none → ALLOW` arm and a bounded metered-only `ELSE → block`. Assumption:
   the agent majority is `none`-pathway (consumes no metered features).
-- **Zero-rating is RESOLVED per the June 2026 Licensing Guide (footnotes 6 & 7).** A
-  Microsoft 365 Copilot–licensed user on a Microsoft 365 surface under their own
-  identity is included in the Microsoft 365 Copilot User SL at no additional charge, so
-  `fsi_zeroratingresolved` now defaults `true` and a Copilot-licensed `mcp-cs` user on a
-  zero-rated surface resolves to **Allow** — the license is sufficient, no credit scope
-  required. Non-Microsoft-365 surfaces, unlicensed users, and the
-  generative-answer-with-tenant-grounding / beyond-fair-use refinements remain
-  credit-metered — confirm per tenant. Set `-ZeroRatingResolved:$false` to revert to the
-  conservative fail-closed posture.
-- **Write APIs are unproven.** Credit-policy CRUD, per-agent caps, and hard-stop may
-  have no public write API. Where absent, enforcement degrades to **detect-and-alert**
-  (`fsi_cbg_enforcementmode`); CBG ships read/analysis-first.
+- **Zero-rating is conditional, not a universal license entitlement.** The shipped
+  `fsi_zeroratingresolved` default remains `true`, but Microsoft's current billing
+  table includes employee-facing usage only under the authenticated licensed user's
+  identity and fair-use limits. Agent flows require the **When an agent calls the
+  flow** trigger for inclusion; Computer-Using Agents are excluded. Work IQ API
+  consumption has its own billing requirements. Do not infer included usage solely
+  from a channel name or the resolver's default `surfaceZeroRated = true`. See
+  [`docs/entitlement-contract.md`](docs/entitlement-contract.md) §5.
+- **Native caps exist; CBG write integration is unproven.** Power Platform admin
+  center **Licensing > Copilot Studio > Summary > Manage Agents** supports monthly
+  per-agent limits, notifications, and hard stops for prepaid and PAYG environments.
+  Limits are not immediate and do not stop separately billed agent flows. CBG's
+  `fsi_cbgagentcap` row does not configure that native limit; CBG remains
+  **detect-and-alert** until an integration is validated.
 - **Policy ceilings.** PAYG **50** and credit **10** per tenant are encoded as the
   `MaxValue` on the `fsi_policycountsnapshot` columns and surfaced in the schema docs.
 - **Upstream dependencies.** `createdIn` comes from `copilot-agent-inventory` (Azure
   Resource Graph `PowerPlatformResources`); `configuredTier` from
-  `work-iq-usage-detection`. Both siblings are built in the same
-  `feat/copilot-agent-governance` wave; until they are catalog-registered, the engine
-  runs on fixture inputs via `-InputPath`. Work IQ GA / consumption-billing switch is
-  **June 16 2026**.
+  `work-iq-usage-detection`. Both siblings are catalog-registered previews; use
+  fixtures via `-InputPath` when tenant inputs are unavailable. The **Work IQ API**
+  GA / consumption-pricing date is **June 16, 2026**, not a universal Copilot
+  Credits billing start date.
 - **Per-user inputs from real tenant data.** `Get-CopilotEntitlement.ps1` produces the
   engine's per-user booleans from Microsoft Graph (license by the paid service-plan
   allowlist — including transitive group assignments — with `Bing_Chat_Enterprise` and
@@ -231,6 +248,51 @@ sources.
   billing-policy REST schema is **unproven**; prefer `-BillingPolicyInputPath` (the
   `Get-BillingPolicyInventory.ps1` output) over the best-effort live read.
 - **2.27 is a proposal**, not an implemented control in this manifest.
+
+## Technical verification
+
+Re-checked on **2026-10-16** against live Microsoft Learn documentation. This is a
+product-fact review, not a tenant validation or a compliance judgement.
+
+- Confirmed the **50 PAYG / 10 credit-policy** ceilings, PAYG **create then
+  connect**, alert-only PAYG policy budgets, the three Chat billing configurations,
+  **25,000 credits per monthly pack**, and Chat-only credit-policy scope.
+- Corrected the billing date/scope, role requirements, flow-license product name,
+  app-only license-read claim, and the implication that native agent caps are
+  unavailable. Added current inclusion exceptions and capacity-allocation checks.
+- **Implementation gaps remain:** `Get-CopilotEntitlement.ps1` still documents
+  app-only `licenseDetails`; the engine still requires a paid license on every
+  `mcp-cs` / `mcp-agentbuilder` path and does not evaluate Work IQ spending policies.
+  These are preview implementation rules, **not authoritative Microsoft access
+  requirements**. A coverage-gap row or an FNF "blocked" count alone is not proof
+  of a platform denial. Do not enable enforcement from these results.
+- **Manifest/schema follow-up:** the dependency metadata still overgeneralizes
+  June 16; generated schema descriptions still carry the older zero-rating
+  interpretation. They require their owning specialists, not hand-edited generated
+  output. The verification date records this review, not resolution of those gaps.
+- **Sample-evidence limitation:** `coverage-gap.sample.json` and
+  `entitlement-decision.sample.json` still illustrate the older zero-rating
+  interpretation (including an inconsistent SharePoint/non-M365 note), and the
+  attestation samples retain the older People-toggle label. Their template owner
+  must update them; treat these as historical shape examples, not current product
+  evidence or enforcement acceptance criteria.
+
+### Sources
+
+- [PAYG setup, roles, policy ceiling, budgets, and connection](https://learn.microsoft.com/microsoft-365/copilot/pay-as-you-go/setup)
+- [Capacity packs, credit policies, scope, overage, and allocation](https://learn.microsoft.com/microsoft-365/copilot/pay-as-you-go/copilot-capacity-packs)
+- [Work IQ API GA and consumption-pricing announcement](https://learn.microsoft.com/partner-center/announcements/2026-june#work-iq-api-and-consumptive-pricing-update)
+- [Usage-based billing and separate Work IQ spending policies](https://learn.microsoft.com/microsoft-365/copilot/usage-based-billing-overview-copilot-credits)
+- [Work IQ API licensing and delegated authentication](https://learn.microsoft.com/microsoft-365/copilot/extensibility/work-iq/api-overview)
+- [Copilot Studio billing rates and inclusion exceptions](https://learn.microsoft.com/microsoft-copilot-studio/requirements-messages-management)
+- [Native agent limits, hard stops, and capacity reporting](https://learn.microsoft.com/power-platform/admin/manage-copilot-studio-messages-capacity)
+- [Graph licenseDetails permissions and group-assigned licenses](https://learn.microsoft.com/graph/api/user-list-licensedetails?view=graph-rest-1.0)
+- [Graph transitive group members](https://learn.microsoft.com/graph/api/group-list-transitivemembers?view=graph-rest-1.0)
+- [Graph subscribedSkus permissions](https://learn.microsoft.com/graph/api/subscribedsku-list?view=graph-rest-1.0)
+- [Power Platform API reference (not proof of Copilot policy-schema parity)](https://learn.microsoft.com/rest/api/power-platform/)
+- [Power Automate licensing FAQ](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/faqs)
+- [Agent Builder People data and current toggle name](https://learn.microsoft.com/microsoft-365/copilot/extensibility/agent-builder-add-knowledge#people-data)
+- [Power Platform inventory resource types](https://learn.microsoft.com/power-platform/admin/inventory-schema) and [agent `properties.createdIn` schema](https://learn.microsoft.com/microsoft-copilot-studio/admin-agent-inventory)
 
 ## Changelog
 
