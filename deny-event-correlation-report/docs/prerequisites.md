@@ -121,6 +121,10 @@ Connect-ExchangeOnline `
     -ExchangeOrganization "example.onmicrosoft.com"
 ```
 
+The thumbprint example requires Windows and an accessible certificate/private key.
+Complete Microsoft's [app-only permission, consent, and role setup](https://learn.microsoft.com/powershell/exchange/app-only-auth-powershell-v2);
+a successful connection alone does not establish audit-search authorization.
+
 ### Microsoft Graph Audit Search (v1.0)
 
 The production extractors currently use `Search-UnifiedAuditLog`. Microsoft Graph also exposes Microsoft Purview audit search at `POST /security/auditLog/queries` (create an `auditLogQuery`), generally available on the Microsoft Graph v1.0 endpoint with `AuditLogsQuery.Read.All` (or service-specific `AuditLogsQuery-*.Read.All`) permissions. This is a supported migration path; validate query coverage and latency for your tenant before switching production evidence collection to it.
@@ -184,7 +188,9 @@ For RAI telemetry, each Copilot Studio agent requires Application Insights confi
 3. Navigate to **Settings** > **Advanced**
 4. Locate the **Application Insights** section
 5. Enter Application Insights **Connection String** (not Instrumentation Key)
-6. **Save** and **Publish** the agent
+6. Save the configuration and test telemetry in the test canvas; validate the deployed channel separately. Publishing is not a prerequisite for test-canvas telemetry.
+
+See [agent-level telemetry](https://learn.microsoft.com/microsoft-copilot-studio/advanced-bot-framework-composer-capture-telemetry).
 
 ### Connection String Format
 
@@ -194,16 +200,24 @@ InstrumentationKey=xxx;IngestionEndpoint=https://xxx.in.applicationinsights.azur
 
 ### Verification
 
-After configuration, send a test message to the agent and verify telemetry appears:
+After configuration, send a test message and inspect telemetry without assuming
+a particular event name:
 
 ```kql
 union isfuzzy=true
     (customEvents | project EventTime = timestamp, EventName = name, Dimensions = todynamic(customDimensions)),
     (AppEvents | project EventTime = TimeGenerated, EventName = Name, Dimensions = todynamic(Properties))
 | where EventTime > ago(1h)
-| where EventName == "MicrosoftCopilotStudio"
 | take 10
 ```
+
+For a known `ContentFiltered` scenario, use the
+[troubleshooting discovery query](troubleshooting.md#3-no-rai-telemetry-events).
+Microsoft documents searching the property bag for this error, not the shipped
+extractor's exact event-name/type and filter-metadata schema. Validate those
+predicates against sanitized positive and negative examples before enabling
+production RAI collection. Preserve observed fields; an empty export is not proof
+that no filtering occurred.
 
 ## Pre-Deployment Checklist
 
@@ -211,7 +225,8 @@ union isfuzzy=true
 - [ ] Managed identity enabled, or certificate-based Exchange Online app-only auth configured
 - [ ] Application Insights resource created
 - [ ] Monitoring Reader assigned to the managed identity or certificate-backed service principal
-- [ ] Copilot Studio agents configured with App Insights (Zone 2/3)
+- [ ] Copilot Studio agents configured with App Insights (Zone 2/3), with test-canvas and deployed-channel telemetry checked separately
+- [ ] Known ContentFiltered examples validated against the RAI extractor's exact predicates and optional dimensions; no-data and missing fields investigated
 - [ ] Azure Blob Storage account created (optional)
 - [ ] Azure Key Vault configured for non-secret settings or certificate metadata (optional)
 - [ ] Power BI workspace created with appropriate access
@@ -244,6 +259,9 @@ union isfuzzy=true
 
 - [Azure Monitor API migration guide](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/migrate-batch-and-beta)
 - [Entra ID authentication for Azure Monitor](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/access-api)
+- [Application Insights query authentication](https://learn.microsoft.com/azure/azure-monitor/app/azure-ad-authentication#query-application-insights-by-using-microsoft-entra-authentication)
+- [Monitoring Reader role](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles/monitor#monitoring-reader)
+- [Microsoft retirement extension notice](https://www.microsoft.com/releasecommunications/api/v2/Azure/rss/transition-to-azure-ad-to-query-data-from-azure-monitor-application-insights-by-31-march-2026) (September 30, 2026, re-fetched 2026-10-16; announced timing, not observed shutdown)
 
 ---
 

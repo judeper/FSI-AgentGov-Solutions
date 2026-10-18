@@ -99,9 +99,9 @@ The Deny Event Correlation Report solution implements a batch processing pipelin
 
 #### Application Insights
 
-- **ContentFiltered events** - Logged by Copilot Studio when RAI blocks response
-- **Per-agent configuration required** - No tenant-wide telemetry
-- **Key fields:** FilterReason, FilterCategory, FilterSeverity. Application Insights Logs can expose the classic `customEvents` shape; workspace-based Azure Monitor Logs use `AppEvents` with `Properties`.
+- **ContentFiltered errors** - Microsoft's [diagnostic guidance](https://learn.microsoft.com/troubleshoot/power-platform/copilot-studio/generative-answers/agent-response-filtered-by-responsible-ai) searches custom dimensions for this error; input or output filtering can block the response.
+- **Per-agent configuration used by this solution** - Validate test-canvas and deployed-channel telemetry separately; the test canvas emits telemetry without publication.
+- **Schema boundary:** The shipped extractor assumes `name == "MicrosoftCopilotStudio"` and `EventType == "ContentFiltered"`, plus fields such as `FilterReason`, `FilterCategory`, and `FilterSeverity`. Those exact predicates/fields were not established by the current Microsoft documentation review. Validate them against sanitized tenant examples before production use; empty results are not evidence of no filtering. Application Insights Logs expose `customEvents`; workspace-scoped Azure Monitor Logs use `AppEvents` with `Properties`.
 
 #### Defender CloudAppEvents (Optional - Advanced)
 
@@ -265,7 +265,7 @@ CSV exports contain sensitive compliance data that requires protection:
 
 - Standard refresh limited to 8 times per day
 - Premium supports 48 refreshes per day
-- Consider incremental refresh for large datasets
+- For CSV sources, configure `RangeStart`/`RangeEnd` and date-based source pruning before relying on incremental refresh; local filtering alone can still retrieve every row. See [Microsoft's requirements](https://learn.microsoft.com/power-bi/connect-data/incremental-refresh-overview).
 
 ## Disaster Recovery
 
