@@ -95,9 +95,12 @@ Common issues and solutions for the Compliance Dashboard.
    - Replace calculated columns with measures
    - Use variables in complex DAX
 
-3. **Enable Query Caching**
-   - Power BI Service > Workspace > semantic model > Settings
-   - Enable "Enhanced compute engine"
+3. **Query Caching (Eligible Import Models Only)**
+   - Requires a Power BI Premium or Power BI Embedded capacity and an Import semantic model; not available on shared capacity or for DirectQuery models
+   - Power BI Service > Workspace > semantic model > Settings > **Query caching** > **On**
+   - [Enhanced compute engine](https://learn.microsoft.com/power-bi/transform-model/dataflows/dataflows-fabric-capacity-workload-configuration#enhanced-compute-engine---an-opportunity-to-improve-performance) is a separate dataflow setting, not the semantic model's query-cache switch
+
+   See [query caching requirements and settings](https://learn.microsoft.com/power-bi/connect-data/power-bi-query-caching).
 
 4. **Use Import Mode**
    - If using DirectQuery, switch to Import
