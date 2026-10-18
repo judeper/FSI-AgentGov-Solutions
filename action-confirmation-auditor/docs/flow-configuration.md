@@ -52,14 +52,22 @@ replacement for this flow's runbook.
      - `ClientId`: Service principal app registration client ID
      - `CertificateThumbprint`: Certificate thumbprint for authentication
      - `DataverseUrl`: Dataverse environment URL
-   - Wait for completion: Yes
+   - **Wait for Job: No** (return the job ID without waiting; step 4 owns completion polling)
+   - Retain the **Job ID** (`properties.jobId`) returned by Create job for status, output, and failure diagnostics
    - Before enabling the recurrence, test a fresh worker with the configured identity and a known agent in every intended environment. An Az sign-in or a completed job alone does not demonstrate enumeration or Dataverse authorization
 
 4. **Wait for Runbook Completion**
-   - Action: "Get status of job" (Azure Automation), using the job ID from Create job
-   - Poll until job status is `Completed`; route `Failed`, `Stopped`, or `Suspended` to error handling rather than parsing them as successful scan output
-   - **Timeout:** Configure 30-minute timeout (PT30M)
-   - Retrieve output only after successful completion. The [connector reference](https://learn.microsoft.com/connectors/azureautomation/) distinguishes status retrieval from output retrieval
+   - Add a **Do until** loop. Inside it, add a **Delay** of 30 seconds followed by **Get status of job** (Azure Automation), using the retained job ID from Create job
+   - Exit when the returned **Status** (`properties.status`) is `Completed`, `Failed`, `Stopped`, or `Suspended`; `Running` or another nonterminal state must not proceed to output parsing
+   - Set the loop limits explicitly: **Count: 60**, **Timeout: PT30M**. These are this flow's polling limits, not a Microsoft job-duration guarantee
+   - After the loop, add a **Condition** that requires the last status to be exactly `Completed`. Put step 5 and all subsequent successful-scan processing in its **Yes** branch only
+   - Route the **No** branch (including a nonterminal status after iteration exhaustion) to error handling with the retained job ID and last status. Do not parse output or write successful scan evidence
+   - Configure the polling error handler's **Run after** for **Has failed** and **Has timed out**, so status-request failures and loop timeouts also log/alert and do not enter the successful branch
+   - A polling timeout does not stop the remote Automation job. Preserve its job ID for separately authorized investigation or cancellation; do not automatically start a duplicate scan
+
+   The [connector reference](https://learn.microsoft.com/connectors/azureautomation/)
+   distinguishes **Wait for Job**, job status, and job output. See also
+   [Power Automate loop limits](https://learn.microsoft.com/power-automate/limits-and-config#concurrency-looping-and-debatching-limits).
 
 5. **Get Runbook Output**
    - Action: "Get job output" (Azure Automation)
@@ -320,6 +328,7 @@ After building all flows:
    - Check `fsi_ActionScanRun` table for scan run record
    - Check `fsi_ActionAuditResult` table for violation records (if any)
    - Retain the expected-versus-scanned environment/agent inventory alongside the run output. A zero-agent result is not proof of a complete scan
+   - Before scheduling, exercise the polling branches: `Completed` retrieves output; `Failed`/`Stopped`/`Suspended`, status-request failure, iteration exhaustion, and timeout produce failure diagnostics without successful scan evidence. Confirm Create job has **Wait for Job: No** and retain the remote job ID when polling ends without completion. These are deployment acceptance checks, not live results from this documentation review
 
 2. **Alert Test**
    - Verify Teams card posted to configured channel (if violations found)
@@ -338,6 +347,10 @@ After building all flows:
 ---
 
 ## Troubleshooting
+
+**Issue: ACA-Scanner waits in Create job instead of reaching the polling timeout**
+- **Cause:** Create job is configured to wait for completion, or the polling failure/timeout branches are not wired
+- **Resolution:** Set **Wait for Job: No**, use the returned job ID in step 4's bounded status loop, and permit output processing only after status `Completed`. Configure failure/timeout run-after handling and check the remote job by its retained ID before any retry; the polling timeout does not cancel it.
 
 **Issue: Azure Automation runbook fails with authentication error**
 - **Cause:** Certificate/private key unavailable or expired, missing Power Apps administration session, or missing per-environment Dataverse authorization

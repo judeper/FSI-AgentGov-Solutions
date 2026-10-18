@@ -21,7 +21,7 @@ This is documentation verification, not new live deployment evidence.
 | Same-region placement is a requirement | Labeled co-location as a deployment choice. No ACA API same-region requirement was established. | [Automation security/accounts][automation-security] |
 | AI Hub/DSPM setup implies complete Copilot activity correlation | Current branding is Data Security Posture Management, replacing the earlier classic experiences. The optional helper requires PowerShell 7+, unlike the core scanner. Its Graph filters select information-protection records; `Get-ActivityExplorerData` is a separately supplied fallback, not the documented `Export-ActivityExplorerData`. Added explicit incomplete-collection, query-completion, and paging boundaries to prerequisites, README, troubleshooting, script help, and the historical lab report. | [Current DSPM][dspm], [Classic prerequisites][dspm-classic], [Copilot Studio/Purview][purview-copilot], [Activity Explorer export][activity], [Create audit query][create-query] |
 | `AuditLogsQuery.Read.All` is the only API permission | Confirmed that the broad permission is accepted for both query creation and record retrieval, delegated or application; service-scoped alternatives also exist. The example retains this broad delegated scope and requires consent. Creating a query is a POST that creates a query object, despite the permission's Read name. | [Create audit query][create-query], [Read query records][read-records] |
-| Get job output polls job status; connector and runbook identities are interchangeable | Corrected the flow guide to use **Get status of job** and retrieve output after successful completion. The Azure Automation connector's managed-identity authentication is documented for Logic Apps, not Power Automate. The Power Automate OAuth connection and runbook identity are separate. | [Automation connector][automation-connector], [Runbook execution/status][job-status] |
+| Get job output polls job status; connector and runbook identities are interchangeable | Corrected the flow guide to use **Get status of job** and retrieve output after successful completion. Owner review on 2026-10-17 also corrected **Wait for Job: No** before a bounded Do until loop, all terminal states, failure/timeout handling, and a separate Completed-only output gate; timeout does not cancel the remote job. The Azure Automation connector's managed-identity authentication is documented for Logic Apps, not Power Automate. The Power Automate OAuth connection and runbook identity are separate. | [Automation connector][automation-connector], [Runbook execution/status][job-status], [Power Automate loop limits][flow-limits] |
 
 ## Claims retained and boundaries
 
@@ -71,7 +71,7 @@ prerequisite corrections was needed, not a new audit of every unrelated statemen
 |---|---|
 | `action-confirmation-auditor/docs/prerequisites.md` | Changed: factual corrections, source citations, complete deployment/optional checklist distinction, current version and verification date. |
 | `action-confirmation-auditor/README.md` | Changed: repeated licensing, role/runtime requirements and Purview evidence claims; added verification-record link. The README's whole-solution/live-validation date was not advanced. |
-| `action-confirmation-auditor/docs/flow-configuration.md` | Changed: dependency/bootstrap prerequisites, job-status action, connector identity distinction, known-agent/evidence acceptance checks, and authentication/zero-result/Purview troubleshooting. |
+| `action-confirmation-auditor/docs/flow-configuration.md` | Changed: dependency/bootstrap prerequisites, nonblocking job creation, bounded status loop and Completed-only output gate, connector identity distinction, known-agent/evidence acceptance checks, and job-wait/authentication/zero-result/Purview troubleshooting. |
 | `action-confirmation-auditor/LAB-VALIDATION.md` | Changed: dated clarification supersedes old setup/collection assumptions without rewriting historical observations or claiming new tenant results. |
 | `action-confirmation-auditor/CHANGELOG.md` | Changed: new Unreleased entry. Prior verification and implementation history retained. No release/version bump. |
 | `action-confirmation-auditor/docs/technical-verification-2026-10-16.md` | Added: this source/discrepancy/downstream/validation record. |
@@ -140,16 +140,18 @@ No complete hosted CI run or live tenant success is claimed.
 
 ## Sources
 
-All linked Microsoft sources were retrieved live using Microsoft Learn tools on
-2026-10-16. License and runtime conclusions are limited to the components described
-above; they are not a tenant-specific entitlement determination.
+The original Microsoft sources were retrieved live using Microsoft Learn tools on
+2026-10-16. Owner review on 2026-10-17 rechecked the connector and added the
+Power Automate loop-limits source. License and runtime conclusions are limited
+to the components described above; they are not a tenant-specific entitlement
+determination.
 
 | Area | Live primary sources |
 |---|---|
 | Licensing | [Power Automate][flow-license], [Dataverse connector][dv-connector], [Automation connector][automation-connector], [Copilot Studio][copilot], [Audit capabilities][audit], [Purview service description][purview-license] |
 | Identity and roles | [App registration][register], [Application roles][app-roles], [Management applications][management-app], [Dataverse S2S][s2s], [Single-tenant setup][single-tenant], [Application users][app-users], [Database security][security], [Agent table][bot], [Agent component table][botcomponent] |
 | Runtime and tokens | [Administration PowerShell][admin-powershell], [Module installation][install], [Automation runtime][runtime], [Az authentication][az-auth], [Access tokens][token], [Certificate assets][certificates], [Automation security/accounts][automation-security] |
-| Network and job monitoring | [Power Platform required services][network], [Automation networking][automation-network], [Runbook execution/status][job-status] |
+| Network and job monitoring | [Power Platform required services][network], [Automation networking][automation-network], [Runbook execution/status][job-status], [Power Automate loop limits][flow-limits] |
 | Optional activity correlation | [Current DSPM][dspm], [Classic prerequisites][dspm-classic], [Copilot Studio/Purview][purview-copilot], [Create audit query][create-query], [Read audit records][read-records], [Activity Explorer export][activity] |
 
 [s2s]: https://learn.microsoft.com/power-apps/developer/data-platform/build-web-applications-server-server-s2s-authentication
@@ -181,5 +183,38 @@ above; they are not a tenant-specific entitlement determination.
 [network]: https://learn.microsoft.com/power-apps/maker/canvas-apps/limits-and-config
 [automation-network]: https://learn.microsoft.com/azure/automation/automation-network-configuration
 [job-status]: https://learn.microsoft.com/azure/automation/automation-runbook-execution
+[flow-limits]: https://learn.microsoft.com/power-automate/limits-and-config#concurrency-looping-and-debatching-limits
 [bot]: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/bot
 [botcomponent]: https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/botcomponent
+
+## Owner review follow-up - 2026-10-17
+
+Reviewed PR 392 at head `062c978514fdac5c3d3ca9f43b52d8f01e7add3d`
+against base `c13b640105e90020b68b5bdb66d36878c763639b`, including its complete
+diff, source issue `judeper/OceanSquad#810`, repository instructions, linked
+implementation, and the current Microsoft sources for the key product claims.
+
+| Review axis | Finding and disposition |
+|---|---|
+| Standards | No remaining finding in the changed scope. Source guides are edited and mirrors regenerated; schema documentation matches the existing generator. No executable, release-version, or regulatory-mapping changes were introduced. |
+| Spec / technical correctness | Confirmed the current-head inline review finding: **Wait for completion: Yes** kept execution in Create job instead of entering the new polling step. Corrected to **Wait for Job: No**, retained the job ID, made polling limits and terminal states explicit, and added Completed-only output processing plus failure/timeout/iteration-exhaustion handling. |
+| Spec / downstream propagation | Updated flow deployment acceptance checks, troubleshooting, the Unreleased changelog, and this record. The added checks are instructions for adopter testing, not evidence of an executed flow. |
+| Spec / publication evidence | The PR description must include Sources and downstream dispositions, not only a publication provenance statement. Publication copies this record's source table/reference definitions and downstream table into the description. |
+
+Post-fix offline validation regenerated the ACA schema documentation and
+43-manifest/78-control site from the same **v1.6.0** framework input as CI.
+The manifest consistency check, strict MkDocs build, language, commercial-scope,
+agent-version, version-drift, option-set, and whitespace checks passed. Tracked
+catalogs and mappings did not drift; the existing unrelated MkDocs INFO-level
+navigation/anchor notices are not claimed fixed.
+
+ACA Pester passed **35/35** offline tests; the documentation-autonomy contracts
+passed **5/5**. All three help-edited scripts parsed, their executable tokens
+matched the pinned base after BOM/line-ending normalization, and solution-scoped
+PSScriptAnalyzer reported zero Warning/Error findings. An initial unnormalized
+token comparison detected Git/worktree line-ending differences; correcting the
+comparison required no source-code change.
+
+No tenant job, flow execution, certificate import, permission assignment,
+unattended bootstrap, MI token handoff, or complete Purview collection was tested
+or activated. These deployment boundaries remain explicit.
