@@ -8,8 +8,7 @@ Auto-generated schema documentation. Do not edit manually.
 
 | Option Set | Values |
 |-----------|--------|
-| fsi_acv_zone | Unclassified (100000000), Zone 1 / Enterprise (100000001), Zone 2 / Team (100000002), Zone 3 / Personal (100000003) — Zone 1 = most-restrictive |
-| fsi_acv_severity | Passed (100000000), Warning (100000001), GracePeriod (100000002), Failed (100000003), Error (100000004) — monitoring-result set (ACA's fsi_Severity is a free String, not bound to this set) |
+| fsi_acv_zone | Unclassified (100000000), Zone 1 (100000001), Zone 2 (100000002), Zone 3 (100000003) |
 
 ### ACA-Specific Option Sets
 

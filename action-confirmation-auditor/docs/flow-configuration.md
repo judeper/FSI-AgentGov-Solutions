@@ -9,11 +9,17 @@ This guide provides step-by-step instructions for manually building the Action C
 2. ACA-Exception-Approval (Automated Cloud Flow)
 
 **Prerequisites:**
-- Power Automate Premium license
-- Power Platform Admin role in target environment
-- Access to Dataverse and Teams
+- Power Automate Premium for the relevant owner or an allocated Power Automate Process license, as applicable, for the premium connectors
+- Power Platform Admin for tenant administration, separate management-application registration for unattended enumeration, and per-environment Dataverse application-user security roles
+- Access to Dataverse and Teams; Microsoft 365 E5/E5 Compliance is not a blanket prerequisite for the core scan
 - Connection references configured (see deployment guide)
-- Azure Automation account with `Start-ActionConfirmationValidationRunbook` imported as a Windows PowerShell 5.1 runbook
+- Azure Automation account with `Start-ActionConfirmationValidationRunbook` imported as a Windows PowerShell 5.1 runbook, `Az.Accounts` 5.0.0+, `Microsoft.PowerApps.Administration.PowerShell`, and the supporting ACA/private/shared scripts deployed with their relative paths intact
+
+Complete the [detailed prerequisites](prerequisites.md), including the worker's
+certificate/private-key setup and separate Power Apps administration session.
+The wrapper signs into Az.Accounts but does not initialize that session itself.
+The managed-identity sample has a different JSON envelope and is not an unchanged
+replacement for this flow's runbook.
 
 ---
 
@@ -46,12 +52,22 @@ This guide provides step-by-step instructions for manually building the Action C
      - `ClientId`: Service principal app registration client ID
      - `CertificateThumbprint`: Certificate thumbprint for authentication
      - `DataverseUrl`: Dataverse environment URL
-   - Wait for completion: Yes
+   - **Wait for Job: No** (return the job ID without waiting; step 4 owns completion polling)
+   - Retain the **Job ID** (`properties.jobId`) returned by Create job for status, output, and failure diagnostics
+   - Before enabling the recurrence, test a fresh worker with the configured identity and a known agent in every intended environment. An Az sign-in or a completed job alone does not demonstrate enumeration or Dataverse authorization
 
 4. **Wait for Runbook Completion**
-   - Action: "Get job output" (Azure Automation)
-   - Poll until job status is `Completed` or `Failed`
-   - **Timeout:** Configure 30-minute timeout (PT30M)
+   - Add a **Do until** loop. Inside it, add a **Delay** of 30 seconds followed by **Get status of job** (Azure Automation), using the retained job ID from Create job
+   - Exit when the returned **Status** (`properties.status`) is `Completed`, `Failed`, `Stopped`, or `Suspended`; `Running` or another nonterminal state must not proceed to output parsing
+   - Set the loop limits explicitly: **Count: 60**, **Timeout: PT30M**. These are this flow's polling limits, not a Microsoft job-duration guarantee
+   - After the loop, add a **Condition** that requires the last status to be exactly `Completed`. Put step 5 and all subsequent successful-scan processing in its **Yes** branch only
+   - Route the **No** branch (including a nonterminal status after iteration exhaustion) to error handling with the retained job ID and last status. Do not parse output or write successful scan evidence
+   - Configure the polling error handler's **Run after** for **Has failed** and **Has timed out**, so status-request failures and loop timeouts also log/alert and do not enter the successful branch
+   - A polling timeout does not stop the remote Automation job. Preserve its job ID for separately authorized investigation or cancellation; do not automatically start a duplicate scan
+
+   The [connector reference](https://learn.microsoft.com/connectors/azureautomation/)
+   distinguishes **Wait for Job**, job status, and job output. See also
+   [Power Automate loop limits](https://learn.microsoft.com/power-automate/limits-and-config#concurrency-looping-and-debatching-limits).
 
 5. **Get Runbook Output**
    - Action: "Get job output" (Azure Automation)
@@ -268,7 +284,13 @@ Before deploying flows, create connection references in Power Automate:
 | `fsi_cr_dataverse_actionconfirmationauditor` | Dataverse | Service Principal or User |
 | `fsi_cr_teams_actionconfirmationauditor` | Microsoft Teams | Current User |
 | `fsi_cr_office365_actionconfirmationauditor` | Office 365 Outlook | Current User |
-| `fsi_cr_azureautomation_actionconfirmationauditor` | Azure Automation | Service Principal |
+| `fsi_cr_azureautomation_actionconfirmationauditor` | Azure Automation | OAuth user connection for this Power Automate path; separate from the runbook identity |
+
+The [Azure Automation connector](https://learn.microsoft.com/connectors/azureautomation/)
+documents managed-identity connection authentication for **Logic Apps**, not
+Power Automate. Do not infer that the runbook's managed identity authenticates
+the Power Automate connector as well. The connector's service-principal option
+uses a client secret; it is not the recommended production credential path here.
 
 **Steps to Create Connection Reference:**
 1. Power Automate > Solutions > ACA
@@ -300,9 +322,13 @@ After creating connection references:
 After building all flows:
 
 1. **Scanner Flow Test**
+   - Confirm premium connector licensing, worker module versions, certificate/private-key availability, management-application registration, and Dataverse application-user roles
+   - Confirm the worker bootstrap establishes the Power Apps administration session before the wrapper runs; verify `Get-AdminPowerAppEnvironment` and reads of known `bot`/`botcomponent` records in each intended environment
    - Run ACA-Scanner manually > Should succeed
    - Check `fsi_ActionScanRun` table for scan run record
    - Check `fsi_ActionAuditResult` table for violation records (if any)
+   - Retain the expected-versus-scanned environment/agent inventory alongside the run output. A zero-agent result is not proof of a complete scan
+   - Before scheduling, exercise the polling branches: `Completed` retrieves output; `Failed`/`Stopped`/`Suspended`, status-request failure, iteration exhaustion, and timeout produce failure diagnostics without successful scan evidence. Confirm Create job has **Wait for Job: No** and retain the remote job ID when polling ends without completion. These are deployment acceptance checks, not live results from this documentation review
 
 2. **Alert Test**
    - Verify Teams card posted to configured channel (if violations found)
@@ -322,9 +348,13 @@ After building all flows:
 
 ## Troubleshooting
 
+**Issue: ACA-Scanner waits in Create job instead of reaching the polling timeout**
+- **Cause:** Create job is configured to wait for completion, or the polling failure/timeout branches are not wired
+- **Resolution:** Set **Wait for Job: No**, use the returned job ID in step 4's bounded status loop, and permit output processing only after status `Completed`. Configure failure/timeout run-after handling and check the remote job by its retained ID before any retry; the polling timeout does not cancel it.
+
 **Issue: Azure Automation runbook fails with authentication error**
-- **Cause:** Service principal certificate expired or insufficient permissions
-- **Resolution:** Verify the certificate uploaded to the Azure Automation account has not expired. Confirm the service principal has Power Platform Admin permissions. Ensure `ClientId` and `CertificateThumbprint` runbook parameters are correct.
+- **Cause:** Certificate/private key unavailable or expired, missing Power Apps administration session, or missing per-environment Dataverse authorization
+- **Resolution:** Verify the worker can resolve the private-key certificate by thumbprint and that its public certificate matches the Entra app registration. Check `TenantId`, `ClientId`, and `CertificateThumbprint`. Confirm management-application registration and the separate Power Apps administration session, then check each environment's Dataverse application user/security role. Graph `Application.Read.All` is not a substitute for either authorization.
 
 **Issue: Flow fails with "Invalid URI" error**
 - **Cause:** Dataverse URL or API endpoint malformed
@@ -343,8 +373,12 @@ After building all flows:
 - **Resolution:** Verify user has Dataverse System Administrator or equivalent security role
 
 **Issue: Scan results show zero agents**
-- **Cause:** Service principal lacks permissions to read bot/botcomponent tables
-- **Resolution:** Grant Dataverse read permissions on `bot` and `botcomponent` system tables to the service principal
+- **Cause:** Missing Power Apps administration session, missing per-environment Dataverse permissions, or scan filters excluding expected agents
+- **Resolution:** Verify enumeration independently, then grant the Dataverse application user read permissions on `bot` and `botcomponent` in each intended environment. Compare against a known-agent inventory and inspect warnings; do not accept zero as proof of no agents or no missing confirmations.
+
+**Issue: Optional Purview correlation is empty**
+- **Cause:** Separate runtime, licensing, audit access, query completion, or collection-path limitations
+- **Resolution:** Run the helper in PowerShell 7+ with its Graph session and a separate Dataverse-audience token. Review the [optional integration's collection boundary](prerequisites.md#optional-microsoft-purview-dspm-integration); the shipped fallback is not the documented Activity Explorer export cmdlet, and an empty output does not establish complete Copilot activity collection.
 
 ---
 

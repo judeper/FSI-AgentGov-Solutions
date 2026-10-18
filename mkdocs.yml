@@ -252,6 +252,7 @@ nav:
         - Prerequisites: solutions/action-confirmation-auditor/prerequisites.md
         - Dataverse Schema: solutions/action-confirmation-auditor/dataverse-schema.md
         - Flow Configuration: solutions/action-confirmation-auditor/flow-configuration.md
+        - Technical Verification: solutions/action-confirmation-auditor/technical-verification-2026-10-16.md
       - Credential Oversharing Detector: solutions/credential-oversharing-detector/index.md
     - Lifecycle & Operations:
       - Agent 365 Lifecycle Governance: solutions/agent-365-lifecycle-governance/index.md

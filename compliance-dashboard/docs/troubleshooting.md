@@ -42,11 +42,11 @@ Common issues and solutions for the Compliance Dashboard.
 **Solutions:**
 
 1. **Manual Refresh**
-   - In Power BI Service: Dataset > Refresh now
+   - In Power BI Service: Workspace > semantic model > Refresh now
    - In Power BI Desktop: Home > Refresh
 
 2. **Check Scheduled Refresh**
-   - Power BI Service > Dataset > Settings > Scheduled refresh
+   - Power BI Service > Workspace > semantic model > Settings > Refresh
    - Verify refresh is enabled and scheduled
 
 3. **Verify Flow Execution**
@@ -95,9 +95,12 @@ Common issues and solutions for the Compliance Dashboard.
    - Replace calculated columns with measures
    - Use variables in complex DAX
 
-3. **Enable Query Caching**
-   - Power BI Service > Dataset > Settings
-   - Enable "Enhanced compute engine"
+3. **Query Caching (Eligible Import Models Only)**
+   - Requires a Power BI Premium or Power BI Embedded capacity and an Import semantic model; not available on shared capacity or for DirectQuery models
+   - Power BI Service > Workspace > semantic model > Settings > **Query caching** > **On**
+   - [Enhanced compute engine](https://learn.microsoft.com/power-bi/transform-model/dataflows/dataflows-fabric-capacity-workload-configuration#enhanced-compute-engine---an-opportunity-to-improve-performance) is a separate dataflow setting, not the semantic model's query-cache switch
+
+   See [query caching requirements and settings](https://learn.microsoft.com/power-bi/connect-data/power-bi-query-caching).
 
 4. **Use Import Mode**
    - If using DirectQuery, switch to Import
@@ -216,9 +219,11 @@ Solution:
 **Solutions:**
 
 1. **Re-authenticate**
-   - Power BI Service > Dataset > Settings
-   - Click "Edit credentials"
+   - Power BI Service > Workspace > semantic model > Settings
+   - Review **Gateway and cloud connections** and **Data source credentials**; edit credentials on the owning cloud/gateway connection when applicable
    - Sign in again
+
+   See [Microsoft's scheduled-refresh guidance](https://learn.microsoft.com/power-bi/connect-data/refresh-scheduled-refresh).
 
 2. **Automation credential refresh**
    - Verify managed identity or workload identity assignment is still valid
