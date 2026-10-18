@@ -110,8 +110,8 @@ Flow 5 uses Word Online connector to populate Agent Card documents from a templa
 
 ### Steps
 
-1. Create **AgentCard-Template.docx** using the Word content control feature
-2. Add the following content controls (Developer tab → Rich Text Content Control):
+1. Create **AgentCard-Template.docx** in Word desktop for Windows using the Developer tab.
+2. Add the following **Plain Text Content Controls** (Developer tab → Plain Text Content Control). Give each control a unique **Title** matching the mapping name below; optionally use the same Tag. Rich Text controls are not supported by the [Word Online (Business) connector](https://learn.microsoft.com/connectors/wordonlinebusiness/). For multi-paragraph values, enable **Allow carriage returns (multiple paragraphs)** in the control properties.
 
 | Content Control Tag | Maps To | Section |
 |--------------------|---------|---------|
@@ -133,7 +133,7 @@ Flow 5 uses Word Online connector to populate Agent Card documents from a templa
 | `monitoringSummary` | Latest monitoring summary | Monitoring |
 
 3. Upload **AgentCard-Template.docx** to the **Agent Cards** library root (not inside an agent folder)
-4. Verify the template is accessible by opening it from the library
+4. Verify the template is accessible through the bound Word Online (Business) connection and that **Populate a Microsoft Word template** discovers every uniquely titled field. Opening the file in a browser alone does not validate the connector. The connector documents a 10 MB input limit and a limitation with MFA Conditional Access policies; test under the intended policy without weakening it to make generation work.
 
 > **Important:** If the Word Online connector cannot access the template, Flow 5 falls back to JSON format. This is a designed safety mechanism — Agent Cards are still created, but in `.json` format instead of `.docx`.
 
@@ -157,5 +157,6 @@ Complete all items before setting `IsMRMAutomationEnabled` to `"true"`:
 - [ ] Permissions configured per the permissions table
 - [ ] `AgentCard-Template.docx` uploaded to library root and accessible
 - [ ] `Sites.ReadWrite.All` permission granted to Managed Identity
-- [ ] Word Online connector tested independently in Power Automate
+- [ ] Bound SharePoint and Word connector accounts can access the library/template; a managed identity Graph grant alone is not sufficient
+- [ ] Word template uses uniquely titled Plain Text controls (not Rich Text); independent generation succeeds under the intended access policies
 - [ ] Document completion in DELIVERY-CHECKLIST.md

@@ -45,6 +45,10 @@ Post-Deployment Steps
 2. LTR -- Enable Dataverse Long-Term Retention:
    - Enable on fsi_mrmcomplianceevent with 7-year retention policy
    - Required to support SOX 302/404 and SEC 17a-4 recordkeeping
+   - Technical setup: Power Apps > Tables > Properties > Advanced options >
+     Enable long term retention; then Retention policies > New retention policy
+   - LTR archives selected inactive rows; it is not a deletion timer.
+     Test criteria and retained-data retrieval per docs/troubleshooting.md.
 
 3. ALTERNATE KEY -- Verify fsi_ModelInventoryUniqueKey status:
    - Navigate to Tables > Model Inventory > Keys

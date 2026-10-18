@@ -18,7 +18,7 @@ Dataverse auto-generates entity set names (plural forms) at deployment time. Con
 | fsi_mrmcomplianceevent | `fsi_mrmcomplianceevents` | [ ] | |
 | fsi_agentinventory (from ARA) | `fsi_agentinventories` | [ ] | |
 
-**How to confirm:** Navigate to Power Platform admin center → Tables → select table → Properties → Entity Set Name.
+**How to confirm:** In Power Apps (`make.powerapps.com`), select the environment → Tables → select table → Properties → Entity Set Name.
 
 ### OptionSet Integer Value Confirmation
 
@@ -34,7 +34,7 @@ OptionSet integer values are defined in `scripts/create_mrm_dataverse_schema.py`
 | fsi_mrmstatus | Pending Submission=100000000, Submitted=100000001, Risk Scored=100000002, Validation Scheduled=100000003, In Validation=100000004, Validated=100000005, Conditionally Approved=100000006, Rejected=100000007, Retired=100000008 (option set `fsi_mrm_mrmstatus`, 0-based) | [ ] |
 | fsi_compositerating | Critical=100000000, High=100000001, Medium=100000002, Low=100000003 (option set `fsi_mrm_compositerating`, 0-based — note: DIFFERENT BASE from `fsi_severity` which is 1-based) | [ ] |
 
-**How to confirm:** Navigate to Power Platform admin center → Tables → select table → Columns → select Choice column → View options with integer values.
+**How to confirm:** In Power Apps (`make.powerapps.com`), select the environment → Tables → select table → Columns → select Choice column → View options with integer values.
 
 ### API Field Confirmation
 
@@ -51,6 +51,8 @@ OptionSet integer values are defined in `scripts/create_mrm_dataverse_schema.py`
 | SharePoint MRM Governance site created | [ ] |
 | "Agent Cards" document library created | [ ] |
 | AgentCard-Template.docx deployed to library root | [ ] |
+| Template uses uniquely titled Plain Text controls; Word connector discovers fields and generates a document under the intended access policies | [ ] |
+| SharePoint/Word connector accounts have library access independently of managed identity Graph grants | [ ] |
 | Metadata columns added to Agent Cards library | [ ] |
 | Library permissions configured per docs/sharepoint-setup.md | [ ] |
 | Sites.ReadWrite.All granted to Managed Identity | [ ] |
@@ -75,6 +77,19 @@ OptionSet integer values are defined in `scripts/create_mrm_dataverse_schema.py`
 | fsi_mrmcomplianceevent: Delete privilege removed for all roles except System Administrator | [ ] |
 | Dataverse Long-Term Retention enabled on fsi_mrmcomplianceevent (7-year policy) | [ ] |
 | Alternate key fsi_ModelInventoryUniqueKey status is Active | [ ] |
+| LTR criteria view, schedule, completed policy run, and retained-data retrieval tested in Power Apps; archiving is distinct from retention duration/deletion | [ ] |
+| Graph managed identity app-role assignments read back and confirmed; Entra service-admin role not mistaken for Dataverse data permissions | [ ] |
+| Power Automate owner/invoker or Process licensing, Dataverse app entitlements, and Teams/SharePoint service plans verified | [ ] |
+| Optional package inventory: Microsoft Agent 365 license, v1.0 endpoint, application/delegated permissions, and complete pagination verified before enabling enrichment | [ ] |
+
+### Identity Migration Evidence (if applicable)
+
+- [ ] Preserve the inventory row and `(fsi_agentid, fsi_environmentid)` Bot ID/environment key; store Entra identity separately in `fsi_entraagentid`
+- [ ] Capture before/after application/client ID (preserved in place) and linked validation-row IDs/counts; do not require an Entra ID for Agent Builder agents
+- [ ] Store the advisory `AgentIdMigration` envelope in `fsi_eventdetails` with the existing integer event Choice, timestamp, actor, and inventory lookup per [README migration evidence](README.md#agent-id-migration-evidence)
+- [ ] Validate channels, connectors, authentication, and sign-in/Conditional Access results; do not treat `Test-MRMCompliance.ps1` as an identity/history validator
+
+Technical sources and re-verification scope: [2026-10-16 record](docs/verification-2026-10-16.md).
 
 ### Dependency Verification
 

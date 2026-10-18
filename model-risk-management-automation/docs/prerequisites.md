@@ -6,24 +6,27 @@ Complete all prerequisites before deploying the Model Risk Management Automation
 
 | Requirement | Purpose |
 |-------------|---------|
-| Power Automate Premium | Power Automate cloud flows using premium connectors (Dataverse, HTTP, Approvals, SharePoint, Word Online) |
+| Power Automate Premium or Process licensing | Premium-connector cloud flows (Dataverse, HTTP, Word Online (Business)); Approvals and SharePoint are standard connectors |
+| Power Apps entitlement for Dataverse apps | Appropriate Power Apps licensing for each user of the Canvas portal or model-driven workbench |
 | Dataverse capacity | 6 custom tables for MRM data storage |
 | Managed Environment | Required for Dataverse Long-Term Retention (LTR) |
-| Microsoft 365 E3+ | Teams notifications, Graph API, SharePoint |
+| Teams and SharePoint Online service entitlements | Confirm assigned plans include each service; Teams may be bundled in a qualifying Microsoft 365 plan or licensed separately |
 | Power BI Pro or Premium Per User | MRM Compliance Dashboard (optional but recommended) |
 
-> **Note:** Power Automate Premium licensing is required for each user who triggers or interacts with approval flows. Service account licensing may differ — consult your Microsoft licensing representative.
+> **Licensing context:** Automated/scheduled premium flows use the owner's license context; instant premium flows use the invoking user's context unless covered by a Process license or applicable app-context rights. Responding to an approval alone does not require Premium. Power Automate licensing does not replace Power Apps rights for these Dataverse apps. Microsoft Graph authorization is API-specific, not a blanket "E3+" entitlement. See [Power Automate licensing](https://learn.microsoft.com/power-platform/admin/power-automate-licensing/faqs), [Power Apps licensing](https://learn.microsoft.com/power-platform/admin/powerapps-flow-licensing-faq), [Teams plans](https://learn.microsoft.com/office365/servicedescriptions/teams-service-description), and [Graph user-read permissions](https://learn.microsoft.com/graph/api/user-get?view=graph-rest-1.0).
 
 ## Required Roles
 
 | Role | Required For |
 |------|--------------|
-| Power Platform Administrator | Environment enumeration, Dataverse `bot` table access, and Managed Environment configuration |
+| Power Platform Admin | Environment administration and Managed Environment configuration; Dataverse `bot` data access additionally requires a Dataverse security role |
 | System Administrator (Dataverse) | Dataverse table creation, solution import, and alternate key configuration |
-| Microsoft Entra Global Administrator or Privileged Role Administrator | Managed identity creation and tenant-wide admin consent for Microsoft Graph application permissions (Application Administrator and Cloud Application Administrator cannot consent to Microsoft Graph app roles) |
+| Entra Global Admin or Privileged Role Administrator | Tenant-wide consent / app-role assignment for Microsoft Graph application permissions; enabling a managed identity on an Azure resource separately requires Azure resource permissions |
 | SharePoint Admin | MRM Governance site creation and permission configuration |
 
 > **Important:** These roles are required during initial deployment. Day-to-day operation requires only the service account / Managed Identity permissions listed below.
+
+Entra service-admin assignment does not automatically grant Dataverse System Administrator in environments. [Self-elevate when required](https://learn.microsoft.com/power-platform/admin/use-service-admin-role-manage-tenant), or assign an appropriately scoped Dataverse role to the operator/application user.
 
 ## API Permissions (Managed Identity and Delegated Admin)
 
@@ -47,16 +50,16 @@ Optional Agent 365 registry enrichment depends on which Microsoft Graph preview 
 
 | Permission | Type | Scope | Purpose |
 |-----------|------|-------|---------|
-| `CopilotPackages.Read.All` | Delegated | Microsoft Graph beta Agent 365 package APIs | Inventory/export agents from `/beta/copilot/admin/catalog/packages`; current Microsoft Learn lists delegated permissions only and requires AI Admin or Global Admin role |
+| `CopilotPackages.Read.All` | Application or Delegated | Microsoft Graph Agent 365 package APIs | Inventory/export from `/v1.0/copilot/admin/catalog/packages`; beta is also documented. Requires a Microsoft Agent 365 license; delegated administrators require AI Admin or Global Admin |
 | `AgentInstance.Read.All` | Application or Delegated | Microsoft Graph beta `/agentRegistry/agentInstances` | Identity-only cross-reference during Agent Registry convergence; feature-flag with `IsAgent365LifecycleEnabled` and plan migration to Agent 365 APIs |
 
 ### Granting Permissions
 
-1. Navigate to **Microsoft Entra ID** → **Enterprise Applications** → locate the managed identity
-2. Select **API Permissions** → **Add a permission**
-3. Add the application permissions listed above
-4. Select **Grant admin consent** (the Microsoft Graph application permissions above require Microsoft Entra Global Administrator or Privileged Role Administrator)
-5. For `CopilotPackages.Read.All`, use a delegated administrator connection or offline export until Microsoft supports application permissions for the Agent 365 package APIs.
+1. For managed identities, follow Microsoft's [grant API permissions to managed identities](https://learn.microsoft.com/powershell/entra-powershell/grant-api-permissions-managed-identity) procedure. Assign Graph app roles directly to the managed identity's service principal; do not look for **Add a permission** under Enterprise applications.
+2. Identify the managed identity by its service-principal object ID, resolve the Microsoft Graph resource service principal and the required app roles, then grant only the reviewed application permissions. Graph grants require Privileged Role Administrator (or Entra Global Admin), not Application Administrator.
+3. Read back the service principal's app-role assignments and verify the resource and role IDs match the requested permissions.
+4. For an app registration instead, configure **App registrations** → **API permissions** and use the documented [tenant-wide admin consent](https://learn.microsoft.com/entra/identity/enterprise-apps/grant-admin-consent) process.
+5. For optional package inventory, validate the [List packages](https://learn.microsoft.com/microsoft-365-copilot/extensibility/api/admin-settings/package/copilotpackages-list) license and permission requirements. Application access is now documented; delegated access remains an option. Granting a managed identity Graph permissions does not authenticate the SharePoint or Word connector connections: configure each connection according to its supported authentication.
 
 > **Note:** Agent 365 / Agent ID registry permissions are only required when `IsAgent365LifecycleEnabled` is set to `"true"`. If Agent 365 registry APIs are unavailable in your tenant or cloud, keep the flag disabled and rely on `agent-registry-automation` as the source of registered agents.
 
@@ -65,7 +68,7 @@ Optional Agent 365 registry enrichment depends on which Microsoft Graph preview 
 | Dependency | Required | Notes |
 |-----------|----------|-------|
 | agent-registry-automation | **Yes (mandatory)** | Must be deployed first. Flow 1 reads from `fsi_agentinventory` to sync registered agents into the MRM inventory. |
-| agent-365-lifecycle-governance | No (optional) | If deployed, enables Agent 365 / Microsoft Entra Agent ID cross-reference via `IsAgent365LifecycleEnabled`. Set the flag to `"true"` only after confirming the selected preview API path, roles, and permissions in your tenant. |
+| agent-365-lifecycle-governance | No (optional) | If deployed, enables Agent 365 / Microsoft Entra Agent ID cross-reference via `IsAgent365LifecycleEnabled`. Set the flag to `"true"` only after confirming the selected API version, license, roles, and permissions in your tenant. |
 
 ### Verifying agent-registry-automation
 
@@ -115,7 +118,8 @@ Feature flags are implemented as Dataverse environment variables. Both default t
 
 ## Pre-Deployment Checklist
 
-- [ ] Power Automate Premium licensing confirmed for all flow users
+- [ ] Power Automate owner/invoker or Process licensing confirmed for the selected flow design; approval responders are not automatically Premium users
+- [ ] Power Apps entitlements confirmed for Dataverse app users; Teams and SharePoint Online service plans verified
 - [ ] Managed Environment enabled on target environment
 - [ ] Dataverse capacity sufficient for 6 custom tables
 - [ ] `agent-registry-automation` deployed and `fsi_agentinventory` populated
@@ -125,3 +129,5 @@ Feature flags are implemented as Dataverse environment variables. Both default t
 - [ ] Power BI Pro or Premium Per User available (if deploying dashboard)
 - [ ] Network connectivity to all required endpoints verified
 - [ ] Both feature flags confirmed at `"false"` (default)
+
+Current technical verification and downstream review: [2026-10-16 record](verification-2026-10-16.md).
