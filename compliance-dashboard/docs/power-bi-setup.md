@@ -262,12 +262,14 @@ RETURN
 
 ### Configure in Power BI Service
 
-1. Go to dataset settings
-2. Click **Scheduled refresh**
+1. Open the workspace and the **semantic model's Settings**
+2. Expand **Refresh**; review **Gateway and cloud connections** and **Data source credentials** as applicable
 3. Configure:
    - Refresh frequency: Daily
    - Time: 7:00 AM (after score calculation flow)
    - Notify on failure: Yes
+
+See [Microsoft's scheduled-refresh guidance](https://learn.microsoft.com/power-bi/connect-data/refresh-scheduled-refresh).
 
 ### Gateway Requirements
 

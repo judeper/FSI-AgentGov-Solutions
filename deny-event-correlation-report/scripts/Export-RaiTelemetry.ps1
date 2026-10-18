@@ -3,8 +3,9 @@
     Exports RAI (Responsible AI) telemetry from Azure Application Insights.
 
 .DESCRIPTION
-    Queries Application Insights for Copilot Studio ContentFiltered events (classic `customEvents` schema on the Application Insights Logs API),
-    which indicate when Azure AI Content Safety blocked agent responses.
+    Queries Application Insights using solution-specific ContentFiltered predicates
+    (classic customEvents schema). Validate the event name, EventType, and filter
+    dimensions against tenant telemetry before production use.
 
     Uses Microsoft Entra ID authentication for secure access.
 
@@ -36,6 +37,14 @@
     Version: 1.4
     Requires: Az.Accounts module
     Authentication: Microsoft Entra ID - uses Connect-AzAccount
+
+    Documentation review 2026-10-16: Microsoft documents searching customDimensions
+    for "ContentFiltered", not this script's exact MicrosoftCopilotStudio/EventType
+    predicates or BotId/BotName/FilterReason/FilterCategory/FilterSeverity dimensions.
+    Empty results or blank dimensions do not establish absence of filtering.
+    Preserve the existing classifier until validated; the broad diagnostic is not
+    a drop-in production classifier. See docs/troubleshooting.md and:
+    https://learn.microsoft.com/troubleshoot/power-platform/copilot-studio/generative-answers/agent-response-filtered-by-responsible-ai
 
     This script targets the Application Insights query endpoint
     (api.applicationinsights.io) with Microsoft Entra authentication and the
