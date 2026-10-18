@@ -323,7 +323,7 @@ Loan Officer Assist,ac1078da-7a48-44fa-98e5-69f44acb183b,b636a48c-d37a-4121-9b2d
 | MRM Requirement | How Migration Evidence Helps |
 |---------------------|------------------------------|
 | Complete model inventory | Migration records help demonstrate no agents were lost during identity transition |
-| Audit trail for model changes | `fsi_mrmcomplianceevent` with `AgentIdMigration` type provides timestamped change records |
+| Audit trail for model changes | `fsi_mrmcomplianceevent` uses Material Change Detected (`fsi_eventtype = 100000010`), with the `AgentIdMigration` envelope serialized in `fsi_eventdetails`, to provide timestamped change records |
 | Ongoing monitoring continuity | `validationHistoryPreserved` flag helps confirm pre-migration validation cycles remain linked |
 | Governance approval | `approvedBy` and `approvalTicket` fields help document authorization chain |
 

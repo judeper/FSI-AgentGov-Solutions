@@ -2,7 +2,7 @@
 
 **Last Verified:** 2026-10-16
 
-This record addresses issue #788. Live Microsoft Learn search and fetch were used
+This record addresses `judeper/OceanSquad#788`. Live Microsoft Learn search and fetch were used
 to re-check the README's Microsoft product statements and their downstream
 implementation, troubleshooting, checklist, and evidence instructions. This is
 technical documentation verification, not a compliance assessment or a live-tenant
@@ -162,3 +162,46 @@ corrected manifest prerequisite in `solutions.json`.
 
 No solution-specific Pester test files exist in this solution. No dependencies
 were installed, remote state changed, or live CI run claimed by this worker.
+
+## Owner-requested review - 2026-10-18 (UTC)
+
+The review compared original head `6fa10a257a7195ea97d807f7a6f83bd6c99474c4`
+with base `c13b640105e90020b68b5bdb66d36878c763639b` and the requirements in
+`judeper/OceanSquad#788`. The isolated review branch then incorporated the already
+reviewed `main` at `53b8db2e20e3e4e68e9ec97baa2470bc1570ea4f` before validation.
+
+**Standards:** Checked the root `AGENTS.md`, Copilot instructions, language and
+commercial-scope rules, and solution `.ralph-config.json`. Canonical schema,
+generated-file ownership, supported content types, and technical-only scope were
+preserved.
+
+**Specification:** Confirmed the product corrections against live Microsoft Learn
+search/fetch, including licensing, Agent 365 package permissions, identity
+provisioning/migration, managed identity grants, Word controls, LTR, and
+self-healing. The live identity article includes harness-specific provisioning;
+an older cached web copy omitted that section. No rollout completion was inferred.
+
+The README's later **MRM Alignment** summary still described `AgentIdMigration`
+as a Dataverse event type, contradicting its corrected evidence instructions.
+Corrected the summary to use **Material Change Detected**
+(`fsi_eventtype = 100000010`) and keep the `AgentIdMigration` envelope inside
+`fsi_eventdetails`. The schema generator and generated schema agree; no new
+Choice or schema change is needed. Searches of the README, delivery checklist,
+verification record, and intake handoff found no further contradictory migration
+instructions. The original downstream inventory above remains applicable.
+
+| Post-integration validation | Result |
+|---|---|
+| Schema `--output-docs`; pinned v1.6.0 catalog generation and `--check` | Passed; no tracked generated drift. |
+| `python -m mkdocs build --strict --quiet` | Passed with the reviewed `main` changes integrated. |
+| `python -m pytest scripts/tests/ -q` | 120 passed, including documentation-autonomy contracts. |
+| Language, commercial scope, catalog agent versions, strict version drift, strict OptionSet lint | Passed; zero OptionSet findings. |
+| Ruff and `py_compile` on `scripts/deploy.py` | Passed. |
+| Deployment Python AST comparison against the original base | Executable code unchanged; only `POST_DEPLOYMENT_GUIDANCE` differs. |
+| Local migration JSON/CSV, sample GUID, and schema/summary assertions | Passed; sample application/client IDs are preserved and the summary uses the deployed integer Choice. |
+| Exact comparison of seven README regulatory/policy sections against the original base | Unchanged: Overview, Control Mapping, MRM Three-Pillar Coverage, MRM Scope Decision Matrix, Regulatory Alignment, Related Controls, and Migration Evidence Requirements. |
+| `git diff --check` | Passed. |
+
+The PR description must include the source and downstream tables above, together
+with these review results. Local checks are not live-tenant validation or CI
+evidence; no deployment, migration, permission change, or retention run was made.
