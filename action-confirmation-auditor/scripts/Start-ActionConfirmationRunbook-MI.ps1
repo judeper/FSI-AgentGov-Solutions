@@ -11,7 +11,7 @@
     This sample:
     1. Authenticates using system-assigned managed identity (default) or
        user-assigned managed identity (via -ManagedIdentityClientId)
-    2. Connects to Microsoft Graph and Power Platform admin APIs
+    2. Acquires Power Apps and Dataverse tokens for the scan (no Graph calls)
     3. Runs the action confirmation compliance scan
     4. Outputs structured JSON for downstream Power Automate consumption
 
@@ -49,14 +49,17 @@
     MIGRATION GUIDE (RunAs → Managed Identity):
     1. Enable system-assigned MI on your Automation account
        (Portal → Automation Account → Identity → System assigned → On)
-    2. Grant the MI the following roles:
-       - Power Platform admin role (via Entra ID role assignment)
-       - Dataverse System Administrator on the governance environment
-       - Microsoft Graph: Application.Read.All, Directory.Read.All
-    3. Replace Start-ActionConfirmationValidationRunbook.ps1 with this
-       runbook (or update existing to use Connect-AzAccount -Identity)
-    4. Remove the RunAs account from the Automation account
+    2. Configure and validate Power Platform management authorization and
+       Dataverse application users/security roles in every scanned environment
+       and the governance environment. Graph Application.Read.All and
+       Directory.Read.All are not required by this sample's scan.
+    3. Validate this sample's Power Apps token handoff in the target worker.
+       Its JSON envelope differs from the certificate wrapper; adapt and test
+       ACA-Scanner before replacing Start-ActionConfirmationValidationRunbook.
+    4. Remove the retired RunAs account only after validating the replacement
     5. Remove the certificate-based app registration if no longer needed
+
+    See ../docs/prerequisites.md for runtime and collection boundaries.
 #>
 
 #Requires -Version 5.1

@@ -53,6 +53,16 @@
     Requires: Microsoft.Graph.Authentication (Connect-MgGraph). Az.Accounts is
              required only when -DataverseAccessToken is not supplied.
 
+    Collection boundary: the Graph query selects information-protection audit
+    records, not complete Copilot interactions. The optional
+    Get-ActivityExplorerData command must be supplied separately; it is not
+    Microsoft's documented Export-ActivityExplorerData cmdlet. An empty or
+    partial result is not proof of complete activity collection. Validate query
+    completion, paging, licensing, and audit access independently.
+    Current Purview experience: Data Security Posture Management (DSPM);
+    the AI Hub name is retained for script compatibility.
+    See ../docs/prerequisites.md for current setup and runtime separation.
+
     Microsoft Graph delegated/application scope required for the audit log
     query API (security/auditLog/queries): AuditLogsQuery.Read.All. Connect
     with, e.g.:

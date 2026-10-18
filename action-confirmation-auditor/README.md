@@ -97,7 +97,7 @@ When a required confirmation is missing, severity is classified as:
 - **Evidence Export** -- SHA-256 hashed evidence packages for regulatory examination
 - **v1.1 Risk Classification Import** -- Stub for custom risk rules per connector/action (deferred)
 - **Managed Identity Runbook** -- Sample Azure Automation runbook using system-assigned or user-assigned managed identity authentication (Azure Automation Run As accounts were retired on 30 September 2023 and are replaced by managed identities)
-- **Microsoft Purview DSPM Integration** -- Cross-references action confirmation events with Microsoft Purview AI activity collected from the unified audit log and Activity Explorer, producing dual-confirmation evidence. The capability formerly branded *AI hub* is now **Data Security Posture Management (DSPM)**; the earlier releases appear in the Purview portal as *DSPM for AI (classic)* and *Data Security Posture Management (classic)*. The script file name (`Get-PurviewAIHubEvidence.ps1`) retains the historical name
+- **Microsoft Purview DSPM Integration (optional, bounded)** -- Correlates ACA results with selected Purview audit records. The current **Data Security Posture Management (DSPM)** experience replaces *DSPM for AI (classic)* and *Data Security Posture Management (classic)*. `Get-PurviewAIHubEvidence.ps1` retains the historical AI Hub name, requires a separate PowerShell 7+ session, and is not a complete Copilot interaction collector. See the [collection boundary and optional dependencies](docs/prerequisites.md#optional-microsoft-purview-dspm-integration) before using its output as evidence
 
 ## Detection Boundaries
 
@@ -154,11 +154,12 @@ Power Automate flows are built manually using the instructions in `docs/flow-con
 
 ## Prerequisites
 
-- Microsoft 365 E5 or E5 Compliance
 - Power Platform environment with Dataverse
-- Power Automate Premium license (for cloud flows)
-- Power Platform Administrator or Microsoft Entra Global Administrator role for tenant-level administration
-- A Dataverse **System Administrator** security role in each scanned environment. Microsoft no longer automatically assigns the Dataverse System Administrator role to accounts holding the Power Platform Administrator or Dynamics 365 Administrator role, so the scanning identity needs that role assigned per environment (or obtained through self-elevation)
+- Power Automate Premium or an allocated Power Automate Process license, as applicable, for the premium connectors in the cloud flows; the script-only scanner does not require these flows
+- Appropriate Copilot Studio entitlement for agent authors; Microsoft 365 E5/E5 Compliance is not a blanket requirement for Dataverse configuration scans. Optional Purview features have separate licensing and audit-access requirements
+- Power Platform Admin for tenant administration; unattended enumeration additionally needs management-application registration and an authenticated Power Apps administration session
+- Explicit Dataverse security-role assignments in every scanned environment and the central evidence environment, using application users for unattended S2S access. Tenant administrative roles do not automatically provide Dataverse access. **System Administrator** is a broad setup option; a custom scan role can instead grant the required read privileges
+- Windows PowerShell 5.1 with `Microsoft.PowerApps.Administration.PowerShell`, plus `Az.Accounts` 5.0.0+ for the certificate runbook. Its Az sign-in does not initialize the Power Apps administration session; validate the worker bootstrap and known-agent coverage before scheduling
 - The Python setup scripts (`scripts/create_dataverse_schema.py`) depend on a shared `DataverseClient` module located at `../scripts/shared/dataverse_client.py` (relative to the repository root containing this solution). Ensure the [FSI-AgentGov-Solutions](https://github.com/judeper/FSI-AgentGov-Solutions) repository structure is intact, or install the `dataverse_client` module on `PYTHONPATH`.
 
 See [docs/prerequisites.md](docs/prerequisites.md) for detailed requirements.
@@ -210,6 +211,7 @@ Test-ActionConfirmationCompliance -WhatIf
 - [Prerequisites](docs/prerequisites.md) -- Licensing, permissions, and setup requirements
 - [Dataverse Schema](docs/dataverse-schema.md) -- Table and column reference (auto-generated)
 - [Flow Configuration](docs/flow-configuration.md) -- Manual build instructions for Power Automate flows
+- [Technical verification record](docs/technical-verification-2026-10-16.md) -- Microsoft Learn sources, downstream review, and remaining runtime boundaries
 - See [CHANGELOG](./CHANGELOG.md) for version history.
 
 ## License
