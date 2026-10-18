@@ -32,6 +32,7 @@ surface.
 | Telemetry configuration, publication, delay | **Corrected:** test-canvas telemetry is documented, so publishing is not a universal prerequisite. Check connection string, logging configuration, and possible data-policy blocking at the documented settings path. Replace fixed 5-10-minute timing with variable ingestion delay. Input or output filtering can trigger the error [S13-S16]. |
 | Blob access | **Retained, qualified:** Storage Blob Data Contributor and `UseConnectedAccount` are appropriate. Container listing tests read/list access, not upload. Use a new name rather than disabling immutable protection. Automation is not covered by the storage trusted-services exception [S17-S19]. |
 | Power BI refresh | **Corrected and propagated:** use semantic model/settings/Refresh terminology, connection-owned credential maintenance, and Desktop schema refresh/republish. Key rotation applies only to account-key connections [S20-S22]. |
+| Downstream Power BI query caching (owner review, 2026-10-17) | **Corrected:** the updated dashboard navigation still directed readers to enable the dataflow enhanced compute engine as though it were semantic-model query caching. Use **Settings > Query caching > On** only for eligible Premium/Embedded Import models; not shared-capacity or DirectQuery models [S34-S35]. |
 | Large exports | **Qualified:** ZIP is an archival copy unless ingestion/decompression is implemented; CSV incremental refresh needs `RangeStart`/`RangeEnd` and effective date/file pruning. Cold is online; Archive requires rehydration before reading [S23-S25]. Local symptom sizes/durations are not product limits. |
 | Exchange connections and Conditional Access | **Retained, qualified:** managed-identity and certificate command patterns are documented, but need app permission/consent/effective roles. Thumbprint authentication is Windows-only. **Corrected:** workload-identity Conditional Access excludes managed identities and has licensing/supported-principal constraints [S26-S28]. |
 | Graph audit search | **Retained:** `/security/auditLog/queries` is documented on v1.0, with `AuditLogsQuery.Read.All` or applicable workload-specific permissions. The non-beta SDK cmdlet is in `Microsoft.Graph.Security`, with beta equivalents in `Microsoft.Graph.Beta.Security`; no migration was performed [S29-S31]. |
@@ -78,6 +79,8 @@ tenant configuration, end-to-end completeness, or regulatory outcomes.
 | S31 | [New-MgBetaSecurityAuditLogQuery](https://learn.microsoft.com/powershell/module/microsoft.graph.beta.security/new-mgbetasecurityauditlogquery) |
 | S32 | [Runbook output and messages](https://learn.microsoft.com/azure/automation/automation-runbook-output-and-messages) |
 | S33 | [Application Insights SeverityLevel](https://learn.microsoft.com/dotnet/api/microsoft.applicationinsights.datacontracts.severitylevel) |
+| S34 | [Query caching in Power BI Premium or Embedded](https://learn.microsoft.com/power-bi/connect-data/power-bi-query-caching) (owner review, 2026-10-17) |
+| S35 | [Dataflow enhanced compute engine](https://learn.microsoft.com/power-bi/transform-model/dataflows/dataflows-fabric-capacity-workload-configuration#enhanced-compute-engine---an-opportunity-to-improve-performance) (owner review, 2026-10-17) |
 
 S6 was retrieved with `get_recent_azure_updates` (title search) followed by
 `get_azure_update_by_id`, using the notice's slug as the ID. The full description
@@ -116,7 +119,7 @@ a certification of every unrelated claim in that artifact.
 | `deny-event-correlation-report/manifest.yaml` | **Unchanged:** generic runbook/CSV verification remains necessary but must be read with the new positive-example RAI gate. No metadata or compliance mapping changed. |
 | `deny-event-correlation-report/controls-covered.json` | **Regenerated, unchanged:** manifest/control coverage unchanged; mapping decisions are outside this review. |
 | `compliance-dashboard/docs/prerequisites.md` | **Unchanged:** optional Deny Event source dependency only; no corrected diagnostic/schema claim restated. |
-| `compliance-dashboard/docs/troubleshooting.md` | **Changed:** repeated old Power BI navigation and credential ownership. Other dashboard issues were not re-audited. |
+| `compliance-dashboard/docs/troubleshooting.md` | **Changed:** repeated old Power BI navigation and credential ownership, plus the query-caching setting and capacity/storage-mode eligibility in the edited performance block. Other dashboard issues were not re-audited. |
 | `compliance-dashboard/docs/power-bi-setup.md` | **Changed:** semantic-model refresh/settings terminology and source link. |
 | `compliance-dashboard/docs/deployment-checklist.md` | **Changed:** same navigation, current schedule slider, and refresh-history evidence instead of an assumed success message. |
 | `compliance-dashboard/CHANGELOG.md` | **Changed:** downstream correction entry. |
@@ -179,3 +182,31 @@ and `git diff --check` also passed. Regeneration updated eight gitignored soluti
 pages (the Deny Event detail page plus four sub-docs, and three dashboard
 sub-docs); tracked catalogs/mappings remained byte-identical. No live Microsoft
 tenant was used.
+
+## Owner review follow-up - 2026-10-17
+
+Reviewed PR 391 at head `e9d8102e34589aa1b5cc5ca239e6b13a19b08a30`
+against base `c13b640105e90020b68b5bdb66d36878c763639b`, including the
+complete diff, source issue `judeper/OceanSquad#828`, repository instructions,
+linked implementation, and current primary Microsoft sources.
+
+| Review axis | Result |
+|---|---|
+| Standards | No remaining finding in the reviewed changes. Source documents, not generated mirrors, are edited; existing runtime/classifier behavior, CSV interfaces, versions, and regulatory wording remain unchanged. |
+| Spec / technical correctness | Corrected the query-cache/dataflow-setting mix-up in the dashboard block already edited by the PR, with explicit capacity and Import-mode eligibility [S34-S35]. |
+| Spec / publication evidence | Sources and downstream dispositions must also appear in the PR description, not only this record. The publication step copies the tables above into that description. |
+
+Post-fix validation used the same local framework **v1.6.0** controls export as
+the original review. Generation processed 43 manifests and 78 controls, wrote
+283 generated artifacts, and `--check` found no drift. Tracked catalogs and
+control mappings remained unchanged. Strict MkDocs, language, commercial-scope,
+agent-version, version-drift, and option-set checks passed. The strict build
+still prints existing informational navigation/anchor notices for unrelated
+solutions; they are not claimed fixed. All six Deny Event PowerShell scripts
+parsed without execution and solution-scoped PSScriptAnalyzer returned zero
+Warning/Error findings. The five documentation-autonomy contract tests passed.
+
+This remains a documentation review: no live tenant query, deployment,
+permission change, or RAI emission-schema validation was performed. The
+positive/negative tenant-evidence requirement is retained, not represented
+as completed.
