@@ -25,7 +25,6 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
-    - announce.dismiss
   palette:
     - scheme: default
       primary: custom
